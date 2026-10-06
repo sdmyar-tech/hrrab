@@ -8,12 +8,12 @@
             @foreach ($pengumuman as $p)
                 @php $k = $p->kategoriInfo(); @endphp
                 <div class="{{ $kolom ?? 'col-12 col-md-6 col-xl-3' }}">
-                    <a href="{{ route('pengumuman.index') }}#pengumuman-{{ $p->id }}" class="d-block h-100 border rounded p-3 text-reset text-decoration-none {{ $p->penting ? 'border-danger-subtle' : '' }}">
+                    <div class="position-relative h-100 border rounded p-3 {{ $p->penting ? 'border-danger-subtle' : '' }}">
                         <div class="d-flex flex-wrap gap-1 mb-2">
                             <span class="badge {{ $k['badge'] }}"><i class="bi {{ $k['ikon'] }} me-1"></i>{{ $k['label'] }}</span>
                             @if ($p->penting)<span class="badge text-bg-danger"><i class="bi bi-pin-angle-fill"></i></span>@endif
                         </div>
-                        <div class="fw-semibold mb-1">{{ $p->judul }}</div>
+                        <a href="{{ route('pengumuman.index') }}#pengumuman-{{ $p->id }}" class="stretched-link d-block fw-semibold mb-1 text-reset text-decoration-none">{{ $p->judul }}</a>
                         @if ($p->jadwalLabel())
                             <div class="small text-muted"><i class="bi {{ $p->isRutin() ? 'bi-arrow-repeat' : 'bi-calendar-event' }} me-1"></i>{{ $p->jadwalLabel() }}</div>
                         @endif
@@ -23,7 +23,7 @@
                         @unless ($p->jadwalLabel())
                             <div class="small text-muted">{{ \Illuminate\Support\Str::limit($p->isi, 90) }}</div>
                         @endunless
-                    </a>
+                    </div>
                 </div>
             @endforeach
         </div>
