@@ -14,6 +14,18 @@ class RekrutmenAccess
         return $user->isKepalaSdm() || $user->isGm();
     }
 
+    /** Admin (super admin) mengelola lowongan semua divisi bersama Kepala SDM & GM. */
+    public static function canKelolaSemuaLowongan(User $user): bool
+    {
+        return self::canReview($user) || $user->isAdmin();
+    }
+
+    /** Hak lihat seluruh data rekrutmen (lamaran, formasi) tanpa batas divisi. */
+    public static function canLihatSemua(User $user): bool
+    {
+        return self::canReview($user) || $user->isAdmin() || $user->isPembina();
+    }
+
     /** Kepala Bagian mengajukan untuk unit yang dipimpin; Kepala SDM boleh mengajukan untuk unit mana pun. */
     public static function bisaAjukanFormasi(User $user): bool
     {
@@ -45,7 +57,7 @@ class RekrutmenAccess
 
     public static function canLihatSemuaFormasi(User $user): bool
     {
-        return self::canReview($user) || $user->isPembina();
+        return self::canLihatSemua($user);
     }
 
     public static function scopeUnitKerja(Builder $query, User $user, string $column = 'unit_kerja'): Builder

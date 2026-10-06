@@ -92,7 +92,7 @@ class LamaranController extends Controller
             'lowongan',
         ]);
 
-        if (! RekrutmenAccess::canReview($user)) {
+        if (! RekrutmenAccess::canLihatSemua($user)) {
             $units = $user->unitsDipimpinUntukQuery();
             $query->where(function ($q) use ($units) {
                 $q->whereHas('lowongan', fn ($l) => $l->whereIn('unit_kerja', $units))
@@ -704,7 +704,7 @@ class LamaranController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (RekrutmenAccess::canReview($user)) {
+        if (RekrutmenAccess::canLihatSemua($user)) {
             return;
         }
 
@@ -724,7 +724,7 @@ class LamaranController extends Controller
         $user = Auth::user();
 
         if (! RekrutmenAccess::canReview($user)) {
-            abort(403, 'Hanya Admin/SDM yang berwenang melakukan aksi ini.');
+            abort(403, 'Hanya Kepala SDM/GM yang berwenang melakukan aksi ini.');
         }
     }
 }

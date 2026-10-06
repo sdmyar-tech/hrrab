@@ -201,7 +201,7 @@ class LowonganController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (RekrutmenAccess::canReview($user)) {
+        if (RekrutmenAccess::canKelolaSemuaLowongan($user)) {
             return;
         }
 
