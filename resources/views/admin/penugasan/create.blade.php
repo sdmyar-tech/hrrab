@@ -58,7 +58,7 @@
                                 <input type="text" name="jabatan" list="daftarJabatan" class="form-control @error('jabatan') is-invalid @enderror"
                                     value="{{ old('jabatan', $mutasi ? $utama?->jabatan : '') }}" {{ $mutasi ? 'required' : '' }} autocomplete="off">
                                 <datalist id="daftarJabatan">
-                                    @foreach (config('kepegawaian.jabatan') as $j)
+                                    @foreach (\App\Models\Jabatan::daftar() as $j)
                                         <option value="{{ $j }}">
                                     @endforeach
                                 </datalist>

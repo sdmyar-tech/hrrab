@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use App\Support\ExcelExporter;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class UserController extends Controller
 {
@@ -20,7 +22,34 @@ class UserController extends Controller
 
     public function index(Request $request): View
     {
-        $query = User::with(['dataPegawai', 'dataPelamar'])->latest();
+        return view('admin.users.index', [
+            'users' => $this->filteredQuery($request)->latest()->paginate(15)->withQueryString(),
+            'roles' => self::ROLES,
+        ]);
+    }
+
+    public function export(Request $request): BinaryFileResponse
+    {
+        $rows = $this->filteredQuery($request)->orderBy('id')->get()->map(fn (User $u) => [
+            optional($u->created_at)->format('d-m-Y'),
+            $u->name,
+            $u->email,
+            $u->roleLabel(),
+            $u->nip,
+            $u->isGm() ? ($u->divisi ? implode(', ', $u->divisi) : 'Semua divisi') : null,
+            implode(', ', $u->unitsDipimpin()),
+            $u->dataPegawai ? 'Pegawai: ' . $u->dataPegawai->nama_lengkap : ($u->dataPelamar ? 'Pelamar: ' . $u->dataPelamar->nama_lengkap : null),
+            $u->google_id ? 'Ya' : 'Tidak',
+        ]);
+
+        return ExcelExporter::download(ExcelExporter::namaFile('akun-pengguna'), [
+            'Dibuat', 'Nama', 'Email', 'Role', 'NIP', 'Bidang GM', 'Kepala Unit', 'Terhubung Dengan', 'Login Google',
+        ], $rows, 'Akun Pengguna');
+    }
+
+    private function filteredQuery(Request $request)
+    {
+        $query = User::with(['dataPegawai.penugasanAktif', 'dataPelamar']);
 
         if ($search = $request->query('q')) {
             $query->where(function ($q) use ($search) {
@@ -34,12 +63,7 @@ class UserController extends Controller
             $query->where('role', $role);
         }
 
-        $users = $query->paginate(15)->withQueryString();
-
-        return view('admin.users.index', [
-            'users' => $users,
-            'roles' => self::ROLES,
-        ]);
+        return $query;
     }
 
     public function create(): View

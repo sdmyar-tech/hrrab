@@ -14,6 +14,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use App\Support\ExcelExporter;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PenugasanController extends Controller
 {
@@ -21,9 +23,44 @@ class PenugasanController extends Controller
 
     public function index(Request $request): View
     {
+        $hariIni = now()->toDateString();
+        $query = $this->filteredQuery($request)->latest('updated_at')->latest('id');
+
+        return view('admin.penugasan.index', [
+            'penugasans' => $query->paginate(20)->withQueryString(),
+            'unitsTanpaKepala' => PenugasanService::unitsTanpaKepala(),
+            'jumlahRangkapAktif' => Penugasan::aktif()->where('is_utama', false)->count(),
+            'jumlahTerjadwal' => Penugasan::where('tanggal_mulai', '>', $hariIni)->count(),
+        ]);
+    }
+
+    public function export(Request $request): BinaryFileResponse
+    {
+        $rows = $this->filteredQuery($request)->orderBy('id')->get()->map(fn (Penugasan $p) => [
+            optional($p->created_at)->format('d-m-Y H:i'),
+            $p->dataPegawai?->nip,
+            $p->dataPegawai?->nama_lengkap,
+            $p->jenisLabel(),
+            $p->unit_kerja,
+            $p->jabatan,
+            $p->peranLabel(),
+            optional($p->tanggal_mulai)->format('d-m-Y'),
+            optional($p->tanggal_selesai)->format('d-m-Y'),
+            $p->statusLabel(),
+            $p->dibuatOleh?->name,
+            $p->keterangan,
+        ]);
+
+        return ExcelExporter::download(ExcelExporter::namaFile('mutasi-rangkap'), [
+            'Dicatat', 'NIP', 'Nama Pegawai', 'Jenis', 'Unit', 'Jabatan', 'Peran',
+            'Mulai', 'Selesai', 'Status', 'Dicatat Oleh', 'Keterangan',
+        ], $rows, 'Mutasi & Rangkap');
+    }
+
+    private function filteredQuery(Request $request)
+    {
         $query = Penugasan::with(['dataPegawai.kepegawaian', 'dibuatOleh'])
-            ->where('jenis', '!=', Penugasan::JENIS_AWAL)
-            ->latest('updated_at')->latest('id');
+            ->where('jenis', '!=', Penugasan::JENIS_AWAL);
 
         if (in_array($jenis = $request->query('jenis'), [Penugasan::JENIS_MUTASI, Penugasan::JENIS_RANGKAP], true)) {
             $query->where('jenis', $jenis);
@@ -42,12 +79,7 @@ class PenugasanController extends Controller
                 ->orWhereHas('dataPegawai', fn ($p) => $p->where('nama_lengkap', 'like', "%{$search}%")->orWhere('nip', 'like', "%{$search}%")));
         }
 
-        return view('admin.penugasan.index', [
-            'penugasans' => $query->paginate(20)->withQueryString(),
-            'unitsTanpaKepala' => PenugasanService::unitsTanpaKepala(),
-            'jumlahRangkapAktif' => Penugasan::aktif()->where('is_utama', false)->count(),
-            'jumlahTerjadwal' => Penugasan::where('tanggal_mulai', '>', $hariIni)->count(),
-        ]);
+        return $query;
     }
 
     public function create(Request $request, DataPegawai $pegawai): View

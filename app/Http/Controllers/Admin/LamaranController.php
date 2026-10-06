@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Support\InterviewFlow;
 use App\Support\OnboardingFlow;
 use App\Support\PenugasanService;
+use App\Support\ExcelExporter;
 use App\Support\RekrutmenAccess;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Support\Notifikasi;
 
 class LamaranController extends Controller
@@ -32,12 +34,63 @@ class LamaranController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        $lamarans = $this->filteredQuery($request, $user)->latest()->paginate(15)->withQueryString();
+
+        return view('admin.lamaran.index', [
+            'lamarans' => $lamarans,
+            'canReview' => RekrutmenAccess::canReview($user),
+        ]);
+    }
+
+    public function export(Request $request): BinaryFileResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $lamarans = $this->filteredQuery($request, $user)
+            ->with(['interviewJadwals', 'diverifikasiOleh', 'diputuskanOleh'])->orderBy('id')->get();
+
+        $headers = [
+            'Tanggal Melamar', 'Nama Kandidat', 'Email', 'No. HP', 'NIK', 'Jenis Kelamin', 'Pendidikan Terakhir',
+            'Jalur', 'Posisi', 'Unit Kerja Tujuan', 'Status', 'Tahap', 'Interview Lulus',
+            'Diverifikasi Oleh', 'Diputuskan Oleh', 'Tanggal Keputusan', 'Catatan',
+        ];
+
+        $rows = $lamarans->map(function (Lamaran $l) {
+            $orang = $l->dataPegawai ?? $l->dataPelamar;
+
+            return [
+                optional($l->created_at)->format('d-m-Y H:i'),
+                $l->namaKandidat(),
+                $l->emailKandidat(),
+                $orang?->no_hp,
+                $orang?->nik,
+                $orang?->jenis_kelamin,
+                $orang?->pendidikan_terakhir,
+                $l->isJalurInternal() ? 'Jalur Langsung' : 'Lowongan',
+                $l->judulPosisi(),
+                $l->unitKerjaTujuan(),
+                $l->statusLabel(),
+                $l->tahapLabel(),
+                $l->interviewJadwals->where('hasil_status', InterviewJadwal::HASIL_LULUS)->count(),
+                $l->diverifikasiOleh?->name,
+                $l->diputuskanOleh?->name,
+                optional($l->diputuskan_pada)->format('d-m-Y'),
+                $l->catatan_admin,
+            ];
+        });
+
+        return ExcelExporter::download(ExcelExporter::namaFile('lamaran-masuk'), $headers, $rows, 'Lamaran Masuk');
+    }
+
+    private function filteredQuery(Request $request, User $user)
+    {
         $query = Lamaran::with([
             'dataPelamar.user',
             'dataPelamar.lamarans' => fn ($q) => $q->with('lowongan')->latest(),
             'dataPegawai.kepegawaian',
             'lowongan',
-        ])->latest();
+        ]);
 
         if (! RekrutmenAccess::canReview($user)) {
             $units = $user->unitsDipimpinUntukQuery();
@@ -67,12 +120,7 @@ class LamaranController extends Controller
             $query->where('lowongan_id', $request->integer('lowongan_id'));
         }
 
-        $lamarans = $query->paginate(15)->withQueryString();
-
-        return view('admin.lamaran.index', [
-            'lamarans' => $lamarans,
-            'canReview' => RekrutmenAccess::canReview($user),
-        ]);
+        return $query;
     }
 
     public function show(Lamaran $lamaran): View

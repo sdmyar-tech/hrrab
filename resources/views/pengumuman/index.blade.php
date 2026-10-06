@@ -13,7 +13,8 @@
                 </div>
             </div>
             @if ($bisaKelola)
-                <div class="heading-actions">
+                <div class="heading-actions d-flex flex-wrap gap-2">
+                    @include('partials.tombol-ekspor', ['route' => 'pengumuman.export', 'ukuran' => ''])
                     <a href="{{ route('pengumuman.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Buat Pengumuman</a>
                 </div>
             @endif
@@ -60,7 +61,7 @@
                                 @if ($p->jadwalLabel())
                                     <span><i class="bi {{ $p->isRutin() ? 'bi-arrow-repeat' : 'bi-calendar-event' }} me-1 text-muted"></i>{{ $p->jadwalLabel() }}</span>
                                 @endif
-                                @if ($p->lokasi)<span><i class="bi bi-geo-alt me-1 text-muted"></i>{{ $p->lokasi }}</span>@endif
+                                @if ($p->lokasi)<span>@include('partials.lokasi', ['lokasi' => $p->lokasi])</span>@endif
                             </div>
                         @endif
                         @if ($berikut && $p->isRutin())

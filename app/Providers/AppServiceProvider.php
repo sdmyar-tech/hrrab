@@ -40,11 +40,28 @@ class AppServiceProvider extends ServiceProvider
             $view->with('hitung', $user instanceof User && in_array($user->role, User::INTERNAL_ROLES, true) ? SidebarHitung::untuk($user) : []);
         });
 
+        View::composer('layouts.pelamar.sidebar', function ($view) {
+            $user = Auth::user();
+            $view->with('hitungPelamar', $user instanceof User ? ['notifikasi' => $user->unreadNotifications()->count()] : []);
+        });
+
         View::composer('layouts.partials.navbar', function ($view) {
             $user = Auth::user();
 
-            if (! $user instanceof User || ! in_array($user->role, User::INTERNAL_ROLES, true)) {
+            if (! $user instanceof User) {
                 $view->with('lonceng', null);
+
+                return;
+            }
+
+            // Pelamar hanya menerima notifikasi pribadi (tidak ada pengumuman internal).
+            if (! in_array($user->role, User::INTERNAL_ROLES, true)) {
+                $view->with('lonceng', [
+                    'notifikasi' => $user->notifications()->latest()->take(6)->get(),
+                    'notifikasiBelum' => $user->unreadNotifications()->count(),
+                    'pengumuman' => null,
+                    'pengumumanBelum' => 0,
+                ]);
 
                 return;
             }

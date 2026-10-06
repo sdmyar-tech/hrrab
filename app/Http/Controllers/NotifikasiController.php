@@ -63,7 +63,7 @@ class NotifikasiController extends Controller
 
         return response()->json([
             'notifikasi_belum' => $user->unreadNotifications()->count(),
-            'pengumuman_belum' => Pengumuman::untuk($user)->berlaku()->belumDibaca($user)->count(),
+            'pengumuman_belum' => $user->isPelamar() ? 0 : Pengumuman::untuk($user)->berlaku()->belumDibaca($user)->count(),
             'terbaru' => $notif->map(fn ($n) => [
                 'id' => $n->id,
                 'judul' => $n->data['judul'] ?? '',

@@ -12,13 +12,14 @@
                     <p class="text-muted mb-0">Permintaan kekurangan pegawai dari Kepala/Koordinator Divisi.</p>
                 </div>
             </div>
-            @if ($canSubmit)
-                <div class="heading-actions">
+            <div class="heading-actions d-flex flex-wrap gap-2">
+                @include('partials.tombol-ekspor', ['route' => 'admin.pengajuan-formasi.export', 'ukuran' => ''])
+                @if ($canSubmit)
                     <a href="{{ route('admin.pengajuan-formasi.create') }}" class="btn btn-primary">
                         <i class="bi bi-plus-lg me-1"></i> Ajukan Formasi
                     </a>
-                </div>
-            @endif
+                @endif
+            </div>
         </div>
 
         <section class="panel">

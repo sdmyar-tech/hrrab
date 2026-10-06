@@ -108,7 +108,7 @@
                                         <div class="border rounded p-2 mb-1 small">
                                             <strong>Interview {{ $jadwal->tahap_interview }}</strong>
                                             &mdash; {{ $jadwal->tanggal->format('d M Y') }}, {{ $jadwal->waktu_mulai }}
-                                            @if ($jadwal->lokasi) &middot; {{ $jadwal->lokasi }} @endif
+                                            @if ($jadwal->lokasi) &middot; @include('partials.lokasi', ['lokasi' => $jadwal->lokasi, 'tanpaIkon' => true]) @endif
                                             <br>
                                             <span class="badge text-bg-light border">{{ $jadwal->statusLabel() }}</span>
                                             <span class="badge {{ $jadwal->hasilBadgeClass() }}">{{ $jadwal->hasilLabel() }}</span>
@@ -152,7 +152,7 @@
                                         <div class="border rounded p-2 mb-1 small">
                                             {{ $jadwal->tanggal->format('d M Y') }}
                                             @if ($jadwal->waktu) , {{ $jadwal->waktu }} @endif
-                                            @if ($jadwal->lokasi) &middot; {{ $jadwal->lokasi }} @endif
+                                            @if ($jadwal->lokasi) &middot; @include('partials.lokasi', ['lokasi' => $jadwal->lokasi, 'tanpaIkon' => true]) @endif
                                             <span class="badge text-bg-light border">{{ $jadwal->statusLabel() }}</span>
                                         </div>
                                     @endforeach

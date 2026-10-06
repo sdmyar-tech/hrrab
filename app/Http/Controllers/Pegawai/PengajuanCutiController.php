@@ -62,19 +62,28 @@ class PengajuanCutiController extends Controller
                 ->with('error', 'Anda belum bisa mengajukan cuti karena masa kerja belum genap 1 tahun.');
         }
 
+        // Cuti mendadak (duka, melahirkan, bencana, panggilan) tidak terikat aturan H-7.
+        $dadakan = PengajuanCuti::isDadakan($request->input('jenis_cuti'), $request->input('kategori_cuti_besar'));
+        $tanggalMinimal = $dadakan
+            ? now()->subDays(PengajuanCuti::MAX_HARI_SUSULAN)
+            : now()->addDays(self::MIN_HARI_SEBELUM_CUTI);
+
         $validated = $request->validate([
             'jenis_cuti' => ['required', 'in:tahunan,besar'],
             'kategori_cuti_besar' => ['required_if:jenis_cuti,besar', 'nullable', 'in:' . implode(',', array_keys(PengajuanCuti::KATEGORI_BESAR_OPTIONS))],
             'tanggal_mulai' => [
                 'required',
                 'date',
-                'after_or_equal:' . now()->addDays(self::MIN_HARI_SEBELUM_CUTI)->format('Y-m-d'),
+                'after_or_equal:' . $tanggalMinimal->format('Y-m-d'),
             ],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
-            'keterangan' => ['nullable', 'string', 'max:1000'],
+            'keterangan' => [$dadakan ? 'required' : 'nullable', 'string', 'max:1000'],
         ], [
             'kategori_cuti_besar.required_if' => 'Jenis cuti besar wajib dipilih.',
-            'tanggal_mulai.after_or_equal' => 'Tanggal mulai cuti minimal ' . self::MIN_HARI_SEBELUM_CUTI . ' hari setelah tanggal pengajuan.',
+            'tanggal_mulai.after_or_equal' => $dadakan
+                ? 'Cuti mendadak boleh diajukan susulan paling lambat ' . PengajuanCuti::MAX_HARI_SUSULAN . ' hari setelah kejadian.'
+                : 'Tanggal mulai cuti minimal ' . self::MIN_HARI_SEBELUM_CUTI . ' hari setelah tanggal pengajuan.',
+            'keterangan.required' => 'Keterangan wajib diisi untuk cuti mendadak (mis. nama keluarga & hubungan).',
             'tanggal_selesai.after_or_equal' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
         ]);
 

@@ -57,7 +57,7 @@
                             <div class="small mt-1">
                                 <i class="bi bi-calendar-event me-1"></i><strong>{{ $jadwal->tahapLabel() }}</strong>:
                                 {{ $jadwal->tanggal->translatedFormat('l, d F Y') }}, {{ substr($jadwal->waktu_mulai, 0, 5) }} WIB
-                                {{ $jadwal->lokasi ? '· ' . $jadwal->lokasi : '' }}
+                                @if ($jadwal->lokasi) &middot; @include('partials.lokasi', ['lokasi' => $jadwal->lokasi, 'tanpaIkon' => true])@endif
                             </div>
                         @endforeach
                     </div>

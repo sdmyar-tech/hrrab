@@ -60,11 +60,11 @@
                                 <label class="form-label">Jenis Cuti</label>
                                 <div class="d-flex gap-3">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="jenis_cuti" id="jenisTahunan" value="tahunan" checked>
+                                        <input class="form-check-input" type="radio" name="jenis_cuti" id="jenisTahunan" value="tahunan" @checked(old('jenis_cuti', 'tahunan') === 'tahunan')>
                                         <label class="form-check-label" for="jenisTahunan">Cuti Tahunan</label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="jenis_cuti" id="jenisBesar" value="besar">
+                                        <input class="form-check-input" type="radio" name="jenis_cuti" id="jenisBesar" value="besar" @checked(old('jenis_cuti') === 'besar')>
                                         <label class="form-check-label" for="jenisBesar">Cuti Besar</label>
                                     </div>
                                 </div>
@@ -75,7 +75,7 @@
                                 <select name="kategori_cuti_besar" id="kategori_cuti_besar" class="form-select @error('kategori_cuti_besar') is-invalid @enderror">
                                     <option value="">-- Pilih --</option>
                                     @foreach ($kategoriBesarOptions as $value => $label)
-                                        <option value="{{ $value }}" data-durasi="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_DURASI[$value] ?? '' }}" {{ old('kategori_cuti_besar') == $value ? 'selected' : '' }}>{{ $label }}</option>
+                                        <option value="{{ $value }}" data-durasi="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_DURASI[$value] ?? '' }}" data-dadakan="{{ in_array($value, \App\Models\PengajuanCuti::KATEGORI_DADAKAN, true) ? 1 : 0 }}" {{ old('kategori_cuti_besar') == $value ? 'selected' : '' }}>{{ $label }}</option>
                                     @endforeach
                                 </select>
                                 <small id="durasiHint" class="text-muted d-block mt-1"></small>
@@ -90,8 +90,10 @@
                                     <input type="date" name="tanggal_mulai" id="tanggal_mulai"
                                         class="form-control @error('tanggal_mulai') is-invalid @enderror"
                                         value="{{ old('tanggal_mulai', now()->addDays(7)->format('Y-m-d')) }}"
-                                        min="{{ now()->addDays(7)->format('Y-m-d') }}" required>
-                                    <small class="text-muted">Tanggal mulai minimal 7 hari setelah tanggal pengajuan.</small>
+                                        min="{{ now()->addDays(7)->format('Y-m-d') }}" required
+                                        data-min-normal="{{ now()->addDays(7)->format('Y-m-d') }}"
+                                        data-min-dadakan="{{ now()->subDays(\App\Models\PengajuanCuti::MAX_HARI_SUSULAN)->format('Y-m-d') }}">
+                                    <small class="text-muted" id="hintTanggalMulai">Tanggal mulai minimal 7 hari setelah tanggal pengajuan.</small>
                                     @error('tanggal_mulai')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -236,7 +238,30 @@
             return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
         }
 
+        const hintMulai = document.getElementById('hintTanggalMulai');
+        const keterangan = document.getElementById('keterangan');
+
+        // Cuti mendadak (duka, melahirkan, bencana) boleh mulai hari ini / susulan, tanpa aturan H-7.
+        function updateAturanTanggal() {
+            const opsi = kategoriSelect.options[kategoriSelect.selectedIndex];
+            const dadakan = document.getElementById('jenisBesar').checked && opsi && opsi.dataset.dadakan === '1';
+            const minBaru = dadakan ? tanggalMulai.dataset.minDadakan : tanggalMulai.dataset.minNormal;
+            const minLama = tanggalMulai.min;
+
+            tanggalMulai.min = minBaru;
+            if (dadakan && tanggalMulai.value === minLama) {
+                tanggalMulai.value = toDateInputValue(new Date());
+            } else if (!dadakan && tanggalMulai.value < minBaru) {
+                tanggalMulai.value = minBaru;
+            }
+            hintMulai.textContent = dadakan
+                ? 'Cuti mendadak: boleh mulai hari ini atau diajukan susulan maks. {{ \App\Models\PengajuanCuti::MAX_HARI_SUSULAN }} hari setelah kejadian. Keterangan wajib diisi.'
+                : 'Tanggal mulai minimal 7 hari setelah tanggal pengajuan.';
+            keterangan.required = dadakan;
+        }
+
         function updateKategori() {
+            updateAturanTanggal();
             if (!document.getElementById('jenisBesar').checked) {
                 return;
             }
@@ -288,7 +313,15 @@
             radio.addEventListener('change', toggleJenis);
         });
         kategoriSelect.addEventListener('change', updateKategori);
-        tanggalMulai.addEventListener('change', updateKategori);
+        tanggalMulai.addEventListener('change', function () {
+            if (!document.getElementById('jenisBesar').checked) { updateLamaCuti(); return; }
+            const opsi = kategoriSelect.options[kategoriSelect.selectedIndex];
+            const durasi = opsi ? parseInt(opsi.getAttribute('data-durasi'), 10) : NaN;
+            if (!isNaN(durasi) && tanggalMulai.value) {
+                tanggalSelesai.value = toDateInputValue(addWorkingDays(new Date(tanggalMulai.value + 'T00:00:00'), durasi));
+            }
+            updateLamaCuti();
+        });
         tanggalSelesai.addEventListener('change', updateLamaCuti);
 
         toggleJenis();

@@ -12,13 +12,14 @@
                     <p class="text-muted mb-0">Verifikasi, interview, kontrak, hingga keputusan akhir.</p>
                 </div>
             </div>
-            @if ($canReview)
-                <div class="heading-actions">
+            <div class="heading-actions d-flex flex-wrap gap-2">
+                @include('partials.tombol-ekspor', ['route' => 'admin.lamaran.export', 'ukuran' => ''])
+                @if ($canReview)
                     <a href="{{ route('admin.lamaran.internal.create') }}" class="btn btn-primary">
                         <i class="bi bi-person-plus me-1"></i> Tambah Kandidat Langsung
                     </a>
-                </div>
-            @endif
+                @endif
+            </div>
         </div>
 
         <section class="panel">

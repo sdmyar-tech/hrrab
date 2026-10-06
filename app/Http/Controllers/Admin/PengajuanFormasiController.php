@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Lowongan;
 use App\Models\PengajuanFormasi;
-use App\Support\PengajuanWorkflow;
+use App\Support\ExcelExporter;
 use App\Support\RekrutmenAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Support\Notifikasi;
 
 class PengajuanFormasiController extends Controller
@@ -21,7 +22,45 @@ class PengajuanFormasiController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        $query = PengajuanFormasi::with(['diajukanOleh.dataPegawai.kepegawaian', 'direviewOleh', 'lowongan'])->latest();
+        $pengajuanFormasis = $this->filteredQuery($request, $user)->latest()->paginate(15)->withQueryString();
+
+        return view('admin.pengajuan-formasi.index', [
+            'pengajuanFormasis' => $pengajuanFormasis,
+            'canReview' => RekrutmenAccess::canReview($user),
+            'canSubmit' => RekrutmenAccess::bisaAjukanFormasi($user),
+        ]);
+    }
+
+    public function export(Request $request): BinaryFileResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $rows = $this->filteredQuery($request, $user)->orderBy('id')->get()->map(fn (PengajuanFormasi $f) => [
+            optional($f->created_at)->format('d-m-Y H:i'),
+            $f->diajukanOleh?->name,
+            $f->unit_kerja,
+            $f->jabatan,
+            $f->jumlah_dibutuhkan,
+            $f->kualifikasi,
+            $f->alasan,
+            optional($f->target_waktu)->format('d-m-Y'),
+            $f->statusLabel(),
+            $f->direviewOleh?->name,
+            optional($f->direview_pada)->format('d-m-Y'),
+            $f->catatan_admin,
+            $f->lowongan?->judul,
+        ]);
+
+        return ExcelExporter::download(ExcelExporter::namaFile('pengajuan-formasi'), [
+            'Tanggal Pengajuan', 'Diajukan Oleh', 'Unit', 'Jabatan', 'Jumlah', 'Kualifikasi', 'Alasan',
+            'Target Waktu', 'Status', 'Direview Oleh', 'Tanggal Review', 'Catatan', 'Lowongan Terbit',
+        ], $rows, 'Pengajuan Formasi');
+    }
+
+    private function filteredQuery(Request $request, \App\Models\User $user)
+    {
+        $query = PengajuanFormasi::with(['diajukanOleh.dataPegawai.kepegawaian', 'direviewOleh', 'lowongan']);
 
         if (! RekrutmenAccess::canLihatSemuaFormasi($user)) {
             $query->where('diajukan_oleh', $user->id);
@@ -38,13 +77,7 @@ class PengajuanFormasiController extends Controller
             $query->where('status', $request->string('status'));
         }
 
-        $pengajuanFormasis = $query->paginate(15)->withQueryString();
-
-        return view('admin.pengajuan-formasi.index', [
-            'pengajuanFormasis' => $pengajuanFormasis,
-            'canReview' => RekrutmenAccess::canReview($user),
-            'canSubmit' => PengajuanWorkflow::submitterLevel($user) === PengajuanWorkflow::LEVEL_KEPALA_DIVISI,
-        ]);
+        return $query;
     }
 
     public function create(): View|RedirectResponse
@@ -52,13 +85,13 @@ class PengajuanFormasiController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (PengajuanWorkflow::submitterLevel($user) !== PengajuanWorkflow::LEVEL_KEPALA_DIVISI) {
+        if (! RekrutmenAccess::bisaAjukanFormasi($user)) {
             return redirect()
                 ->route('admin.pengajuan-formasi.index')
-                ->with('error', 'Hanya Kepala/Koordinator Divisi yang dapat mengajukan permintaan kekurangan pegawai.');
+                ->with('error', 'Hanya Kepala Bagian/Koordinator dan Kepala SDM yang dapat mengajukan permintaan kekurangan pegawai.');
         }
 
-        return view('admin.pengajuan-formasi.create', ['unitOptions' => $user->unitsDipimpin()]);
+        return view('admin.pengajuan-formasi.create', ['unitOptions' => RekrutmenAccess::unitAjuanFormasi($user)]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -66,13 +99,13 @@ class PengajuanFormasiController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (PengajuanWorkflow::submitterLevel($user) !== PengajuanWorkflow::LEVEL_KEPALA_DIVISI) {
-            abort(403, 'Hanya Kepala/Koordinator Divisi yang dapat mengajukan permintaan kekurangan pegawai.');
+        if (! RekrutmenAccess::bisaAjukanFormasi($user)) {
+            abort(403, 'Hanya Kepala Bagian/Koordinator dan Kepala SDM yang dapat mengajukan permintaan kekurangan pegawai.');
         }
 
         $validated = $request->validate([
-            'unit_kerja' => ['nullable', 'string', Rule::in($user->unitsDipimpin())],
-            'jabatan' => ['required', 'string', Rule::in(config('kepegawaian.jabatan'))],
+            'unit_kerja' => ['nullable', 'string', Rule::in(RekrutmenAccess::unitAjuanFormasi($user))],
+            'jabatan' => ['required', 'string', Rule::in(\App\Models\Jabatan::daftar())],
             'jumlah_dibutuhkan' => ['required', 'integer', 'min:1', 'max:50'],
             'kualifikasi' => ['required', 'string', 'max:2000'],
             'target_waktu' => ['nullable', 'date', 'after_or_equal:today'],
@@ -92,7 +125,7 @@ class PengajuanFormasiController extends Controller
 
         return redirect()
             ->route('admin.pengajuan-formasi.index')
-            ->with('success', 'Pengajuan formasi berhasil dikirim. Menunggu review Admin/SDM.');
+            ->with('success', 'Pengajuan formasi berhasil dikirim. Menunggu review ' . ($user->isKepalaSdm() ? 'GM.' : 'Kepala SDM/GM.'));
     }
 
     public function approve(PengajuanFormasi $pengajuanFormasi): RedirectResponse

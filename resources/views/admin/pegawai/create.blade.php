@@ -187,7 +187,7 @@
                                             <label class="form-label required">Jabatan Utama</label>
                                             <select name="jabatan" class="form-select @error('jabatan') is-invalid @enderror" required>
                                                 <option value="">-- Pilih Jabatan --</option>
-                                                @foreach (config('kepegawaian.jabatan') as $j)
+                                                @foreach (\App\Models\Jabatan::daftar() as $j)
                                                     <option value="{{ $j }}" {{ old('jabatan', $pegawai->kepegawaian->jabatan ?? '') == $j ? 'selected' : '' }}>{{ $j }}</option>
                                                 @endforeach
                                             </select>
@@ -197,7 +197,7 @@
                                             <label class="form-label">Jabatan Tambahan <span class="text-muted">(silahkan diisi bagi yang memiliki jabatan lebih dari 1)</span></label>
                                             <select name="jabatan_tambahan" class="form-select">
                                                 <option value="">-- Tidak Ada --</option>
-                                                @foreach (config('kepegawaian.jabatan') as $j)
+                                                @foreach (\App\Models\Jabatan::daftar() as $j)
                                                     <option value="{{ $j }}" {{ old('jabatan_tambahan', $pegawai->kepegawaian->jabatan_tambahan ?? '') == $j ? 'selected' : '' }}>{{ $j }}</option>
                                                 @endforeach
                                             </select>

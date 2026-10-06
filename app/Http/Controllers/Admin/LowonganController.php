@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use App\Support\ExcelExporter;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class LowonganController extends Controller
 {
@@ -20,7 +22,39 @@ class LowonganController extends Controller
 
         Lowongan::tutupYangKedaluwarsa();
 
-        $query = Lowongan::with('pengajuanFormasi')->withCount('lamarans')->latest();
+        $lowongans = $this->filteredQuery($request, $user)->latest()->paginate(15)->withQueryString();
+
+        return view('admin.lowongan.index', compact('lowongans'));
+    }
+
+    public function export(Request $request): BinaryFileResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $rows = $this->filteredQuery($request, $user)->with('dipublikasikanOleh')->orderBy('id')->get()->map(fn (Lowongan $l) => [
+            optional($l->created_at)->format('d-m-Y'),
+            $l->judul,
+            $l->jabatan,
+            $l->unit_kerja,
+            $l->jumlah_dibutuhkan,
+            $l->lamarans_count,
+            $l->statusLabel(),
+            optional($l->dipublikasikan_pada)->format('d-m-Y'),
+            optional($l->tanggal_tutup)->format('d-m-Y'),
+            $l->dipublikasikanOleh?->name,
+            $l->pengajuanFormasi ? 'Formasi #' . $l->pengajuanFormasi->id : 'Manual',
+        ]);
+
+        return ExcelExporter::download(ExcelExporter::namaFile('lowongan'), [
+            'Dibuat', 'Judul', 'Jabatan', 'Unit Kerja', 'Kebutuhan', 'Jumlah Pelamar', 'Status',
+            'Dipublikasikan', 'Tanggal Tutup', 'Dipublikasikan Oleh', 'Sumber',
+        ], $rows, 'Lowongan');
+    }
+
+    private function filteredQuery(Request $request, \App\Models\User $user)
+    {
+        $query = Lowongan::with('pengajuanFormasi')->withCount('lamarans');
         RekrutmenAccess::scopeUnitKerja($query, $user);
 
         if ($search = $request->query('q')) {
@@ -35,9 +69,7 @@ class LowonganController extends Controller
             $query->where('status', $request->string('status'));
         }
 
-        $lowongans = $query->paginate(15)->withQueryString();
-
-        return view('admin.lowongan.index', compact('lowongans'));
+        return $query;
     }
 
     public function create(): View
@@ -192,7 +224,7 @@ class LowonganController extends Controller
         return $request->validate([
             'judul' => ['required', 'string', 'max:150'],
             'unit_kerja' => ['required', 'string', Rule::in(config('kepegawaian.unit_kerja'))],
-            'jabatan' => ['required', 'string', Rule::in(config('kepegawaian.jabatan'))],
+            'jabatan' => ['required', 'string', Rule::in(\App\Models\Jabatan::daftar())],
             'jumlah_dibutuhkan' => ['required', 'integer', 'min:1', 'max:50'],
             'deskripsi' => ['nullable', 'string', 'max:5000'],
             'kualifikasi' => ['nullable', 'string', 'max:5000'],

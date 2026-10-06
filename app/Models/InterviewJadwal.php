@@ -10,6 +10,16 @@ class InterviewJadwal extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::created(fn (self $jadwal) => \App\Support\Notifikasi::jadwalKandidat($jadwal));
+        static::updated(function (self $jadwal) {
+            if ($jadwal->wasChanged(['tanggal', 'waktu_mulai', 'lokasi']) && $jadwal->status === self::STATUS_TERJADWAL) {
+                \App\Support\Notifikasi::jadwalKandidat($jadwal);
+            }
+        });
+    }
+
     protected $table = 'interview_jadwals';
 
     public const STATUS_TERJADWAL = 'terjadwal';

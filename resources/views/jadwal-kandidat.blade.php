@@ -90,14 +90,7 @@
                                     &middot; <i class="bi bi-clock me-1"></i>{{ substr($jadwal->waktu_mulai, 0, 5) }}{{ $jadwal->waktu_selesai ? ' – ' . substr($jadwal->waktu_selesai, 0, 5) : '' }} WIB
                                 </div>
                                 @if ($jadwal->lokasi)
-                                    <div class="small mt-1">
-                                        <i class="bi bi-geo-alt me-1"></i>
-                                        @if (filter_var($jadwal->lokasi, FILTER_VALIDATE_URL))
-                                            <a href="{{ $jadwal->lokasi }}" target="_blank" rel="noopener">Buka link meeting</a>
-                                        @else
-                                            {{ $jadwal->lokasi }}
-                                        @endif
-                                    </div>
+                                    <div class="small mt-1">@include('partials.lokasi', ['lokasi' => $jadwal->lokasi])</div>
                                 @endif
                                 @if ($jadwal->interviewer)
                                     <div class="small text-muted mt-1"><i class="bi bi-person me-1"></i>Pewawancara: {{ $jadwal->interviewer->name }}</div>
@@ -136,7 +129,7 @@
                                     <i class="bi bi-calendar-event me-1"></i>{{ $kontrak->tanggal->translatedFormat('l, d F Y') }}{{ $kontrak->waktu ? ', ' . substr($kontrak->waktu, 0, 5) . ' WIB' : '' }}
                                 </div>
                                 @if ($kontrak->lokasi)
-                                    <div class="small mt-1"><i class="bi bi-geo-alt me-1"></i>{{ $kontrak->lokasi }}</div>
+                                    <div class="small mt-1">@include('partials.lokasi', ['lokasi' => $kontrak->lokasi])</div>
                                 @endif
                             </div>
                         </div>

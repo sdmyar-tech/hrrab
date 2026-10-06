@@ -103,8 +103,23 @@ html[data-theme="dark"] .btn-outline-primary { --bs-btn-border-color: #c9474a; }
     border-color: var(--hr-primary);
 }
 
+.sidebar-nav {
+    gap: .12rem;
+    padding: .75rem .75rem 1rem;
+}
+.sidebar-nav .nav-link {
+    min-height: 38px;
+    padding: .42rem .7rem;
+    gap: .6rem;
+    font-size: .9rem;
+}
+.sidebar-nav .nav-icon {
+    width: 26px;
+    height: 26px;
+    font-size: .95rem;
+}
 .sidebar-nav .nav-section {
-    margin: .9rem .9rem .15rem;
+    margin: .7rem .7rem .1rem;
     font-size: .68rem;
     font-weight: 800;
     letter-spacing: .06em;
@@ -139,3 +154,26 @@ body.sidebar-mini .sidebar-nav .nav-badge {
     padding: 0;
     font-size: 0;
 }
+
+/* Tabel menyesuaikan lebar layar: teks dibungkus, tanpa scroll horizontal. */
+@media (min-width: 768px) {
+    .table-responsive { overflow-x: visible; }
+    .table { width: 100%; }
+    .table thead th { white-space: normal; }
+    .table tbody td { min-width: 0; overflow-wrap: anywhere; }
+    .table tbody td.text-nowrap { white-space: normal !important; }
+    .table tbody td .btn,
+    .table tbody td .badge { overflow-wrap: normal; white-space: nowrap; }
+    .table tbody td.text-end { white-space: normal; }
+}
+
+.aksi-grup {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: .3rem;
+}
+.table td.text-end > .btn,
+.table td.text-end > form,
+.table td.text-end > a { margin-bottom: .2rem; }
+.table td.text-end form.d-inline { display: inline-block !important; }

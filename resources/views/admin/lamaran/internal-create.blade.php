@@ -175,7 +175,7 @@
                                 <label class="form-label">Jabatan Tujuan</label>
                                 <select name="jabatan_tujuan" class="form-select @error('jabatan_tujuan') is-invalid @enderror">
                                     <option value="">-- Pilih Jabatan --</option>
-                                    @foreach (config('kepegawaian.jabatan') as $j)
+                                    @foreach (\App\Models\Jabatan::daftar() as $j)
                                         <option value="{{ $j }}" {{ old('jabatan_tujuan') === $j ? 'selected' : '' }}>{{ $j }}</option>
                                     @endforeach
                                 </select>

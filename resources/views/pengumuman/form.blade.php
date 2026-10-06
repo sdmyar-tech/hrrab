@@ -88,7 +88,7 @@
                         </div>
                         <div>
                             <label class="form-label small" for="lokasi">Lokasi</label>
-                            <input type="text" name="lokasi" id="lokasi" class="form-control" maxlength="150" value="{{ old('lokasi', $pengumuman->lokasi) }}" placeholder="mis. Masjid Yayasan">
+                            <input type="text" name="lokasi" id="lokasi" class="form-control" maxlength="150" value="{{ old('lokasi', $pengumuman->lokasi) }}" placeholder="mis. Masjid Yayasan, atau tempel link Google Maps">
                         </div>
                     </section>
 

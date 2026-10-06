@@ -43,7 +43,7 @@ class KandidatInternalController extends Controller
             'jenis' => ['required', Rule::in([self::JENIS_LUAR, self::JENIS_PEGAWAI])],
             'posisi' => ['required', Rule::in(['lowongan', 'manual'])],
             'lowongan_id' => ['required_if:posisi,lowongan', 'nullable', 'exists:lowongans,id'],
-            'jabatan_tujuan' => ['required_if:posisi,manual', 'nullable', Rule::in(config('kepegawaian.jabatan'))],
+            'jabatan_tujuan' => ['required_if:posisi,manual', 'nullable', Rule::in(\App\Models\Jabatan::daftar())],
             'unit_kerja_tujuan' => ['required_if:posisi,manual', 'nullable', Rule::in(config('kepegawaian.unit_kerja'))],
             'lokasi_kerja_tujuan' => ['nullable', Rule::in(config('kepegawaian.lokasi_kerja'))],
             'direkomendasikan_oleh' => ['nullable', 'string', 'max:150'],

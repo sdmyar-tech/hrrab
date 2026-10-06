@@ -12,7 +12,8 @@
                     <p class="text-muted mb-0">Kelola akun login (nama, email, role, password).</p>
                 </div>
             </div>
-            <div class="heading-actions">
+            <div class="heading-actions d-flex flex-wrap gap-2">
+                @include('partials.tombol-ekspor', ['route' => 'admin.users.export', 'ukuran' => ''])
                 <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
                     <i class="bi bi-plus-lg me-1"></i> Tambah User
                 </a>

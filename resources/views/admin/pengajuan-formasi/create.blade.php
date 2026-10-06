@@ -23,7 +23,7 @@
                         <label class="form-label">Unit</label>
                         <select name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror" required>
                             @foreach ($unitOptions as $u)
-                                <option value="{{ $u }}" {{ old('unit_kerja') === $u ? 'selected' : '' }}>{{ $u }}</option>
+                                <option value="{{ $u }}" {{ old('unit_kerja', auth()->user()->unitDipimpin()) === $u ? 'selected' : '' }}>{{ $u }}</option>
                             @endforeach
                         </select>
                         @error('unit_kerja')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -34,7 +34,7 @@
                     <label class="form-label">Jabatan/Posisi yang Dibutuhkan</label>
                     <select name="jabatan" class="form-select @error('jabatan') is-invalid @enderror" required>
                         <option value="">-- Pilih Jabatan --</option>
-                        @foreach (config('kepegawaian.jabatan') as $j)
+                        @foreach (\App\Models\Jabatan::daftar() as $j)
                             <option value="{{ $j }}" {{ old('jabatan') == $j ? 'selected' : '' }}>{{ $j }}</option>
                         @endforeach
                     </select>

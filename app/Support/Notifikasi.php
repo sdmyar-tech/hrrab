@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\InterviewJadwal;
+use App\Models\KontrakJadwal;
+use App\Models\Lamaran;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanFormasi;
 use App\Models\PengajuanLembur;
@@ -133,7 +135,63 @@ public static function formasiBaru(PengajuanFormasi $formasi): void
             route('admin.lamaran.show', $screening->lamaran_id), Pemberitahuan::JENIS_TUGAS, 'bi-clipboard-check');
     }
 
-public static function penugasanBerubah(int $dataPegawaiId, string $judul, string $pesan): void
+    /** Kabar perkembangan lamaran untuk kandidat (pelamar eksternal atau pegawai jalur internal). */
+    public static function kandidat(Lamaran $lamaran, string $judul, string $pesan, string $ikon = 'bi-send'): void
+    {
+        $akun = $lamaran->data_pegawai_id
+            ? User::where('data_pegawai_id', $lamaran->data_pegawai_id)->get()
+            : User::where('data_pelamar_id', $lamaran->data_pelamar_id)->get();
+
+        // Pelamar diarahkan ke detail lamarannya; akun internal tidak punya halaman itu.
+        foreach ($akun->groupBy(fn (User $u) => $u->isPelamar()) as $pelamar => $kelompok) {
+            self::kirim($kelompok, $judul, $pesan, $pelamar ? route('pelamar.lamaran.show', $lamaran) : null,
+                Pemberitahuan::JENIS_INFO, $ikon, 'Tim Rekrutmen');
+        }
+    }
+
+    public static function lamaranBerubah(Lamaran $lamaran): void
+    {
+        $posisi = $lamaran->lowongan?->judul ?? $lamaran->jabatan_tujuan ?? 'posisi yang dilamar';
+
+        [$judul, $pesan, $ikon] = match (true) {
+            $lamaran->wasChanged('status') && $lamaran->status === Lamaran::STATUS_DITERIMA
+                => ['Selamat, Anda diterima!', "Anda resmi diterima sebagai {$posisi}.", 'bi-trophy'],
+            $lamaran->wasChanged('status') && $lamaran->status === Lamaran::STATUS_DITOLAK
+                => ['Lamaran tidak dilanjutkan', "Terima kasih telah melamar {$posisi}. Lamaran Anda belum dapat kami lanjutkan.", 'bi-x-circle'],
+            $lamaran->wasChanged('tahap') && $lamaran->tahap === Lamaran::TAHAP_INTERVIEW
+                => ['Lamaran lolos verifikasi', "Data Anda untuk {$posisi} sudah diverifikasi. Tunggu jadwal interview.", 'bi-check-circle'],
+            $lamaran->wasChanged('tahap') && $lamaran->tahap === Lamaran::TAHAP_SCREENING
+                => ['Interview selesai', "Anda lolos tahap interview {$posisi}. Berikutnya masa onboarding.", 'bi-check2-all'],
+            $lamaran->wasChanged('tahap') && $lamaran->tahap === Lamaran::TAHAP_KONTRAK
+                => ['Onboarding lulus', "Anda lulus masa onboarding {$posisi}. Tunggu jadwal tanda tangan kontrak.", 'bi-clipboard-check'],
+            default => [null, null, null],
+        };
+
+        if ($judul) {
+            self::kandidat($lamaran, $judul, $pesan, $ikon);
+        }
+    }
+
+    public static function jadwalKandidat(InterviewJadwal|ScreeningOnboarding|KontrakJadwal $jadwal): void
+    {
+        $lamaran = $jadwal->lamaran;
+        if (! $lamaran) {
+            return;
+        }
+
+        [$judul, $pesan, $ikon] = match (true) {
+            $jadwal instanceof InterviewJadwal => ["Jadwal {$jadwal->tahapLabel()}",
+                $jadwal->tanggal->translatedFormat('l, d M Y') . ' pukul ' . substr((string) $jadwal->waktu_mulai, 0, 5), 'bi-chat-square-text'],
+            $jadwal instanceof ScreeningOnboarding => ['Jadwal onboarding',
+                $jadwal->tanggal_mulai->translatedFormat('d M') . ' – ' . $jadwal->tanggal_selesai->translatedFormat('d M Y'), 'bi-clipboard-check'],
+            default => ['Jadwal tanda tangan kontrak',
+                $jadwal->tanggal->translatedFormat('l, d M Y') . ($jadwal->waktu ? ' pukul ' . substr((string) $jadwal->waktu, 0, 5) : ''), 'bi-pen'],
+        };
+
+        self::kandidat($lamaran, $judul, $pesan . ($jadwal->lokasi ? " · {$jadwal->lokasi}" : '') . '.', $ikon);
+    }
+
+    public static function penugasanBerubah(int $dataPegawaiId, string $judul, string $pesan): void
     {
         self::kirim(User::where('data_pegawai_id', $dataPegawaiId)->get(), $judul, $pesan, null, Pemberitahuan::JENIS_INFO, 'bi-arrow-left-right');
     }

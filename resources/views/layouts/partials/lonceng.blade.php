@@ -1,9 +1,15 @@
-@php $totalBelum = $lonceng['notifikasiBelum'] + $lonceng['pengumumanBelum']; @endphp
+@php
+    $totalBelum = $lonceng['notifikasiBelum'] + $lonceng['pengumumanBelum'];
+    $adaPengumuman = $lonceng['pengumuman'] !== null;
+@endphp
 <style>
     .lonceng-btn { position: relative; }
     .lonceng-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
         background: #dc3545; color: #fff; font-size: .68rem; font-weight: 700; line-height: 18px; text-align: center; }
-    .lonceng-menu { width: min(380px, 92vw); padding: 0; overflow: hidden; }
+    .lonceng-menu { width: min(380px, calc(100vw - 24px)); max-width: calc(100vw - 24px); padding: 0; overflow: hidden; }
+    @media (max-width: 575.98px) {
+        .lonceng-menu.show { position: fixed !important; inset: 64px 12px auto 12px !important; transform: none !important; width: auto; }
+    }
     .lonceng-menu .nav-tabs { border-bottom: 1px solid var(--bs-border-color); }
     .lonceng-menu .nav-link { color: var(--bs-secondary-color); border: 0; border-bottom: 2px solid transparent; border-radius: 0; font-size: .85rem; font-weight: 600; padding: .65rem .5rem; }
     .lonceng-menu .nav-link.active { color: var(--bs-body-color); border-bottom-color: #880f12; background: transparent; }
@@ -22,13 +28,14 @@
 </style>
 
 <div class="dropdown">
-    <button class="icon-button lonceng-btn" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
+    <button class="icon-button lonceng-btn" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-display="static" aria-expanded="false"
         aria-label="Notifikasi & pengumuman" title="Notifikasi & pengumuman">
         <i class="bi bi-bell" aria-hidden="true"></i>
         <span class="lonceng-badge" data-lonceng-total @if (! $totalBelum) hidden @endif>{{ $totalBelum > 99 ? '99+' : $totalBelum }}</span>
     </button>
 
     <div class="dropdown-menu dropdown-menu-end lonceng-menu shadow">
+        @if ($adaPengumuman)
         <ul class="nav nav-tabs nav-fill" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#lonceng-notif" type="button" role="tab">
@@ -43,6 +50,9 @@
                 </button>
             </li>
         </ul>
+        @else
+            <div class="px-3 py-2 border-bottom fw-semibold small"><i class="bi bi-bell me-1"></i>Notifikasi</div>
+        @endif
 
         <div class="tab-content">
             <div class="tab-pane fade show active" id="lonceng-notif" role="tabpanel">
@@ -72,6 +82,7 @@
                 </div>
             </div>
 
+            @if ($adaPengumuman)
             <div class="tab-pane fade" id="lonceng-umum" role="tabpanel">
                 <div class="lonceng-list">
                     @forelse ($lonceng['pengumuman'] as $p)
@@ -96,6 +107,7 @@
                     @endif
                 </div>
             </div>
+            @endif
         </div>
     </div>
 </div>

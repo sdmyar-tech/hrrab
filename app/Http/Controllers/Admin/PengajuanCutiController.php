@@ -10,7 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Support\Notifikasi;
 
 class PengajuanCutiController extends Controller
@@ -40,11 +40,11 @@ class PengajuanCutiController extends Controller
         return view('admin.pengajuan-cuti.show', compact('pengajuanCuti'));
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): BinaryFileResponse
     {
-        $pengajuanCutis = $this->filteredQuery($request)->get();
+        $pengajuanCutis = $this->filteredQuery($request)->reorder('id')->get();
 
-        $filename = 'pengajuan-cuti-' . now()->format('Ymd-His') . '.xls';
+        $filename = ExcelExporter::namaFile('pengajuan-cuti');
 
         $headers = [
             'Nama Pegawai', 'NIP', 'Divisi', 'Jenis Cuti', 'Kategori Cuti Besar',
@@ -68,7 +68,7 @@ class PengajuanCutiController extends Controller
             optional($item->created_at)->format('d-m-Y'),
         ]);
 
-        return ExcelExporter::download($filename, $headers, $rows);
+        return ExcelExporter::download($filename, $headers, $rows, 'Pengajuan Cuti');
     }
 
     private function filteredQuery(Request $request)

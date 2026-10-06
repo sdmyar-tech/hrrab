@@ -17,9 +17,7 @@
     </div>
     <div class="heading-actions">
         @if (request()->routeIs('admin.pegawai.index'))
-            <a href="{{ route('admin.pegawai.export', request()->query()) }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-download" aria-hidden="true"></i> Export
-            </a>
+            @include('partials.tombol-ekspor', ['route' => 'admin.pegawai.export'])
             @can('kelola-pegawai')
                 <a href="{{ route('admin.pegawai.create') }}" class="btn btn-primary btn-sm">
                     <i class="bi bi-person-plus" aria-hidden="true"></i> Tambah Pegawai

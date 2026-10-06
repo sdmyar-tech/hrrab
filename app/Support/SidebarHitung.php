@@ -29,7 +29,7 @@ class SidebarHitung
             $hitung['interview'] = InterviewJadwal::where('interviewer_id', $user->id)->where('status', InterviewJadwal::STATUS_TERJADWAL)->count();
         }
         if (RekrutmenAccess::canReview($user) || $user->isPembina()) {
-            $hitung['formasi'] = PengajuanFormasi::where('status', PengajuanFormasi::STATUS_PENDING)->get()
+            $hitung['formasi'] = PengajuanFormasi::with('diajukanOleh')->where('status', PengajuanFormasi::STATUS_PENDING)->get()
                 ->filter(fn ($f) => RekrutmenAccess::canReviewFormasi($user, $f))->count();
         }
         if (RekrutmenAccess::canReview($user)) {

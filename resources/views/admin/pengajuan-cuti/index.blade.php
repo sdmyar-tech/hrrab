@@ -61,10 +61,8 @@
                             </a>
                         </div>
                     @endif
-                    <div class="col-md-1 ms-auto text-end">
-                        <a href="{{ route('admin.pengajuan-cuti.export', request()->query()) }}" class="btn btn-outline-secondary btn-sm" title="Export CSV">
-                            <i class="bi bi-download"></i> Export
-                        </a>
+                    <div class="col-auto ms-auto text-end">
+                        @include('partials.tombol-ekspor', ['route' => 'admin.pengajuan-cuti.export'])
                     </div>
                 </div>
             </form>

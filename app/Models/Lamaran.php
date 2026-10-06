@@ -11,6 +11,11 @@ class Lamaran extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::updated(fn (self $lamaran) => \App\Support\Notifikasi::lamaranBerubah($lamaran));
+    }
+
     protected $table = 'lamarans';
 
     public const STATUS_MENUNGGU_VERIFIKASI = 'menunggu_verifikasi';

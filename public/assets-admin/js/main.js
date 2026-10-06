@@ -176,7 +176,49 @@
       });
     }
 
+    // Dropdown di dalam tabel memakai posisi fixed agar menu tidak terpotong oleh wadah tabel.
+    function initTableDropdowns() {
+      var toggles = document.querySelectorAll(".table-responsive [data-bs-toggle='dropdown'], .panel [data-bs-toggle='dropdown']");
+
+      Array.prototype.forEach.call(toggles, function (toggle) {
+        if (!toggle.hasAttribute("data-bs-popper-config")) {
+          toggle.setAttribute("data-bs-popper-config", '{"strategy":"fixed"}');
+        }
+      });
+    }
+
+    // Kolom lokasi: tampilkan tautan cek ke Google Maps (atau link meeting) sesuai isian.
+    function initLokasiMaps() {
+      var inputs = document.querySelectorAll("input[name='lokasi']");
+
+      Array.prototype.forEach.call(inputs, function (input) {
+        var link = document.createElement("a");
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.className = "small d-inline-block mt-1";
+        var jangkar = input.parentElement.classList.contains("input-group") ? input.parentElement : input;
+        jangkar.insertAdjacentElement("afterend", link);
+
+        function perbarui() {
+          var nilai = input.value.trim();
+          var url = /^https?:\/\//i.test(nilai);
+          var peta = !url || /google\.[a-z.]+\/maps|maps\.google\.|maps\.app\.goo\.gl|goo\.gl\/maps/i.test(nilai);
+
+          link.hidden = nilai === "";
+          link.href = url ? nilai : "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(nilai);
+          link.innerHTML = peta
+            ? '<i class="bi bi-map me-1"></i>Cek lokasi di Google Maps'
+            : '<i class="bi bi-box-arrow-up-right me-1"></i>Buka link meeting';
+        }
+
+        input.addEventListener("input", perbarui);
+        perbarui();
+      });
+    }
+
     initValidation();
+    initLokasiMaps();
+    initTableDropdowns();
     initTableSearch();
     initResponsiveTables();
     initThemeToggle();

@@ -222,12 +222,20 @@ public function hasAbility(string $ability): bool
 
     public function panelLayout(): string
     {
-        return $this->isStaff() ? 'layouts.pegawai.app' : 'layouts.admin.app';
+        return match (true) {
+            $this->isPelamar() => 'layouts.pelamar.app',
+            $this->isStaff() => 'layouts.pegawai.app',
+            default => 'layouts.admin.app',
+        };
     }
 
     public function dashboardRoute(): string
     {
-        return $this->isStaff() ? 'pegawai.dashboard' : 'admin.dashboard';
+        return match (true) {
+            $this->isPelamar() => 'pelamar.lamaran.index',
+            $this->isStaff() => 'pegawai.dashboard',
+            default => 'admin.dashboard',
+        };
     }
 
     public function unitKerja(): ?string

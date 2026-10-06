@@ -10,7 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Support\Notifikasi;
 
 class PengajuanLemburController extends Controller
@@ -40,15 +40,15 @@ class PengajuanLemburController extends Controller
         return view('admin.pengajuan-lembur.show', compact('pengajuanLembur'));
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): BinaryFileResponse
     {
-        $pengajuanLemburs = $this->filteredQuery($request)->get();
+        $pengajuanLemburs = $this->filteredQuery($request)->reorder('id')->get();
 
-        $filename = 'pengajuan-lembur-' . now()->format('Ymd-His') . '.xls';
+        $filename = ExcelExporter::namaFile('pengajuan-lembur');
 
         $headers = [
             'Nama Pegawai', 'NIP', 'Unit Kerja', 'Tanggal', 'Hari', 'Uraian Tugas',
-            'Jam Mulai', 'Jam Selesai', 'Jumlah Jam', 'Status', 'Tahap Saat Ini', 'Catatan Admin',
+            'Jam Mulai', 'Jam Selesai', 'Jumlah Jam', 'Status', 'Tahap Saat Ini', 'Catatan Admin', 'Tanggal Pengajuan',
         ];
 
         $rows = $pengajuanLemburs->map(fn ($item) => [
@@ -64,9 +64,10 @@ class PengajuanLemburController extends Controller
             $item->statusLabel(),
             $item->isPending() ? $item->currentLevelLabel() : '-',
             $item->catatan_admin,
+            optional($item->created_at)->format('d-m-Y H:i'),
         ]);
 
-        return ExcelExporter::download($filename, $headers, $rows);
+        return ExcelExporter::download($filename, $headers, $rows, 'Pengajuan Lembur');
     }
 
     private function filteredQuery(Request $request)

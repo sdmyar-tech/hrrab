@@ -18,7 +18,7 @@
                             <div class="small text-muted"><i class="bi {{ $p->isRutin() ? 'bi-arrow-repeat' : 'bi-calendar-event' }} me-1"></i>{{ $p->jadwalLabel() }}</div>
                         @endif
                         @if ($p->lokasi)
-                            <div class="small text-muted"><i class="bi bi-geo-alt me-1"></i>{{ $p->lokasi }}</div>
+                            <div class="small text-muted">@include('partials.lokasi', ['lokasi' => $p->lokasi])</div>
                         @endif
                         @unless ($p->jadwalLabel())
                             <div class="small text-muted">{{ \Illuminate\Support\Str::limit($p->isi, 90) }}</div>

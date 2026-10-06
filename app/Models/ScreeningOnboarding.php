@@ -10,6 +10,11 @@ class ScreeningOnboarding extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::created(fn (self $jadwal) => \App\Support\Notifikasi::jadwalKandidat($jadwal));
+    }
+
     protected $table = 'screening_onboardings';
 
     public const DURASI_HARI = 3;

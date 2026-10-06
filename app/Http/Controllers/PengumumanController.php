@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use App\Support\ExcelExporter;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PengumumanController extends Controller
 {
@@ -37,6 +39,34 @@ class PengumumanController extends Controller
             'arsip' => $arsip,
             'bisaKelola' => $user->can(User::ABILITY_KELOLA_PENGUMUMAN),
         ]);
+    }
+
+    public function export(Request $request): BinaryFileResponse
+    {
+        $user = $this->user();
+        abort_unless($user->can(User::ABILITY_KELOLA_PENGUMUMAN), 403);
+        $kategori = array_key_exists($request->query('kategori'), Pengumuman::KATEGORI) ? $request->query('kategori') : null;
+
+        $rows = Pengumuman::with('pembuat')->withCount('pembaca')->untuk($user)
+            ->when($kategori, fn ($q) => $q->where('kategori', $kategori))
+            ->orderBy('id')->get()
+            ->map(fn (Pengumuman $p) => [
+                optional($p->created_at)->format('d-m-Y H:i'),
+                $p->judul,
+                $p->kategoriInfo()['label'],
+                $p->jadwalLabel(),
+                $p->lokasi,
+                $p->sasaranLabel(),
+                $p->penting ? 'Ya' : 'Tidak',
+                optional($p->tampil_sampai)->format('d-m-Y'),
+                $p->pembaca_count,
+                $p->pembuat?->name,
+                $p->isi,
+            ]);
+
+        return ExcelExporter::download(ExcelExporter::namaFile('pengumuman'), [
+            'Dibuat', 'Judul', 'Kategori', 'Jadwal', 'Lokasi', 'Sasaran', 'Penting', 'Tampil Sampai', 'Dibaca', 'Pembuat', 'Isi',
+        ], $rows, 'Pengumuman');
     }
 
     public function create(): View

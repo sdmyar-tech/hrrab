@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\JabatanController as AdminJabatanController;
 use App\Http\Controllers\Admin\KandidatInternalController;
 use App\Http\Controllers\Admin\LamaranController as AdminLamaranController;
 use App\Http\Controllers\Admin\LowonganController as AdminLowonganController;
@@ -72,6 +73,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
 
         Route::prefix('users')->name('users.')->middleware('can:kelola-sistem')->group(function () {
             Route::get('/', [AdminUserController::class, 'index'])->name('index');
+            Route::get('/export', [AdminUserController::class, 'export'])->name('export');
             Route::get('/create', [AdminUserController::class, 'create'])->name('create');
             Route::post('/', [AdminUserController::class, 'store'])->name('store');
             Route::get('/{user}/edit', [AdminUserController::class, 'edit'])->name('edit');
@@ -79,8 +81,17 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::delete('/{user}', [AdminUserController::class, 'destroy'])->name('destroy');
         });
 
+        Route::prefix('jabatan')->name('jabatan.')->middleware('can:kelola-sistem')->group(function () {
+            Route::get('/', [AdminJabatanController::class, 'index'])->name('index');
+            Route::get('/export', [AdminJabatanController::class, 'export'])->name('export');
+            Route::post('/', [AdminJabatanController::class, 'store'])->name('store');
+            Route::put('/{jabatan}', [AdminJabatanController::class, 'update'])->name('update');
+            Route::delete('/{jabatan}', [AdminJabatanController::class, 'destroy'])->name('destroy');
+        });
+
 Route::middleware('can:kelola-penugasan')->group(function () {
             Route::get('/penugasan', [AdminPenugasanController::class, 'index'])->name('penugasan.index');
+            Route::get('/penugasan/export', [AdminPenugasanController::class, 'export'])->name('penugasan.export');
             Route::get('/pegawai/{pegawai}/penugasan/create', [AdminPenugasanController::class, 'create'])->name('penugasan.create');
             Route::post('/pegawai/{pegawai}/penugasan', [AdminPenugasanController::class, 'store'])->name('penugasan.store');
             Route::post('/penugasan/{penugasan}/akhiri', [AdminPenugasanController::class, 'akhiri'])->name('penugasan.akhiri');
@@ -105,6 +116,7 @@ Route::middleware('can:kelola-penugasan')->group(function () {
 
 Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function () {
             Route::get('/', [AdminPengajuanFormasiController::class, 'index'])->name('index');
+            Route::get('/export', [AdminPengajuanFormasiController::class, 'export'])->name('export');
             Route::get('/create', [AdminPengajuanFormasiController::class, 'create'])->name('create');
             Route::post('/', [AdminPengajuanFormasiController::class, 'store'])->name('store');
             Route::post('/{pengajuanFormasi}/approve', [AdminPengajuanFormasiController::class, 'approve'])->name('approve');
@@ -114,6 +126,7 @@ Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function (
 
         Route::prefix('lowongan')->name('lowongan.')->group(function () {
             Route::get('/', [AdminLowonganController::class, 'index'])->name('index');
+            Route::get('/export', [AdminLowonganController::class, 'export'])->name('export');
             Route::get('/create', [AdminLowonganController::class, 'create'])->name('create');
             Route::post('/', [AdminLowonganController::class, 'store'])->name('store');
             Route::get('/{lowongan}/edit', [AdminLowonganController::class, 'edit'])->name('edit');
@@ -125,6 +138,7 @@ Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function (
 
         Route::prefix('lamaran')->name('lamaran.')->group(function () {
             Route::get('/', [AdminLamaranController::class, 'index'])->name('index');
+            Route::get('/export', [AdminLamaranController::class, 'export'])->name('export');
 
             Route::get('/internal/create', [KandidatInternalController::class, 'create'])->name('internal.create');
             Route::post('/internal', [KandidatInternalController::class, 'store'])->name('internal.store');
@@ -182,21 +196,24 @@ Route::prefix('pelamar')->name('pelamar.')->middleware('pelamar')->group(functio
         Route::post('/pengumuman/baca-semua', [PengumumanController::class, 'bacaSemua'])->name('pengumuman.baca-semua');
         Route::middleware('can:kelola-pengumuman')->group(function () {
             Route::get('/pengumuman/create', [PengumumanController::class, 'create'])->name('pengumuman.create');
+            Route::get('/pengumuman/export', [PengumumanController::class, 'export'])->name('pengumuman.export');
             Route::post('/pengumuman', [PengumumanController::class, 'store'])->name('pengumuman.store');
             Route::get('/pengumuman/{pengumuman}/edit', [PengumumanController::class, 'edit'])->name('pengumuman.edit');
             Route::put('/pengumuman/{pengumuman}', [PengumumanController::class, 'update'])->name('pengumuman.update');
             Route::delete('/pengumuman/{pengumuman}', [PengumumanController::class, 'destroy'])->name('pengumuman.destroy');
         });
 
-        Route::get('/notifikasi', [NotifikasiController::class, 'index'])->name('notifikasi.index');
-        Route::get('/notifikasi/ringkas', [NotifikasiController::class, 'ringkas'])->name('notifikasi.ringkas');
-        Route::post('/notifikasi/baca-semua', [NotifikasiController::class, 'bacaSemua'])->name('notifikasi.baca-semua');
         Route::middleware('can:kirim-notifikasi')->group(function () {
             Route::get('/notifikasi/kirim', [NotifikasiController::class, 'kirimForm'])->name('notifikasi.kirim');
             Route::post('/notifikasi/kirim', [NotifikasiController::class, 'kirim'])->name('notifikasi.kirim.store')->middleware('throttle:10,1');
         });
-        Route::get('/notifikasi/{id}', [NotifikasiController::class, 'buka'])->name('notifikasi.buka');
     });
+
+    // Notifikasi pribadi: semua akun login (internal & pelamar).
+    Route::get('/notifikasi', [NotifikasiController::class, 'index'])->name('notifikasi.index');
+    Route::get('/notifikasi/ringkas', [NotifikasiController::class, 'ringkas'])->name('notifikasi.ringkas');
+    Route::post('/notifikasi/baca-semua', [NotifikasiController::class, 'bacaSemua'])->name('notifikasi.baca-semua');
+    Route::get('/notifikasi/{id}', [NotifikasiController::class, 'buka'])->name('notifikasi.buka');
 
     Route::get('/profile', [LoginController::class, 'profile'])->name('profile');
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');

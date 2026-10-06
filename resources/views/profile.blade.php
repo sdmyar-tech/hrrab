@@ -29,7 +29,10 @@
                                 style="width:72px;height:72px;object-fit:cover;">
                             <div>
                                 <h4 class="mb-1">Informasi Akun</h4>
-                                <p class="text-muted small mb-0">Ringkasan data autentikasi dan identitas pegawai.</p>
+                                <p class="text-muted small mb-0">Ringkasan data autentikasi dan identitas {{ $user->isPelamar() ? 'pelamar' : 'pegawai' }}.</p>
+                                @if ($user->isPelamar())
+                                    <a href="{{ route('pelamar.data-pelamar.edit') }}" class="small text-primary">Ubah data & pas foto di Data Pelamar</a>
+                                @endif
                                 @if (! $user->dataPegawai?->dokumen?->pas_foto && $user->isStaff())
                                     <a href="{{ route('pegawai.pengkinian-data') }}" class="small text-primary">Unggah pas foto lewat Pengkinian Data</a>
                                 @endif
@@ -37,6 +40,18 @@
                         </div>
                     </div>
 
+                    @if ($user->isPelamar())
+                        @php $pelamar = $user->dataPelamar; @endphp
+                        <div class="row g-2">
+                            @foreach (['Nama' => $user->name, 'Email' => $user->email, 'No. HP' => $pelamar?->no_hp, 'NIK' => $pelamar?->nik,
+                                'Pendidikan Terakhir' => $pelamar?->pendidikan_terakhir, 'Alamat Domisili' => $pelamar?->alamat_domisili] as $label => $nilai)
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small">{{ $label }}</label>
+                                    <input class="form-control form-control-sm" value="{{ $nilai ?: '-' }}" readonly>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label class="form-label text-muted small">Nama</label>
@@ -78,10 +93,11 @@
                             <label class="form-label text-muted small">BPJS Kesehatan</label>
                             <input class="form-control form-control-sm" value="{{ $bpjs?->no_bpjs_kesehatan ?? '-' }}" readonly>
                         </div>
-                    </div>
+                    </div>                    @endif
+
 
                     <div class="mt-4 d-flex gap-2">
-                        <a href="{{ route($user->dashboardRoute()) }}" class="btn btn-primary">Kembali ke Dashboard</a>
+                        <a href="{{ route($user->dashboardRoute()) }}" class="btn btn-primary">{{ $user->isPelamar() ? 'Kembali ke Lamaran Saya' : 'Kembali ke Dashboard' }}</a>
                         <form action="{{ route('logout') }}" method="POST">
                             @csrf
                             <button type="submit"

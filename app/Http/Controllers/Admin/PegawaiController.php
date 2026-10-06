@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PegawaiController extends Controller
 {
@@ -40,19 +40,23 @@ class PegawaiController extends Controller
         return view('admin.pegawai.index', compact('pegawais', 'unitKerjaOptions'));
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): BinaryFileResponse
     {
-        $pegawais = $this->filteredQuery($request)->latest()->get();
+        $pegawais = $this->filteredQuery($request)->orderBy('id')->get();
 
-        $filename = 'data-pegawai-' . now()->format('Ymd-His') . '.xls';
+        $filename = ExcelExporter::namaFile('data-pegawai');
 
         $headers = [
-            'NIP', 'Nama Lengkap', 'Email', 'NIK', 'Jenis Kelamin', 'No. HP',
-            'Jabatan', 'Unit Kerja', 'Status Rekrutmen', 'Status Kerja', 'Tanggal Masuk',
+            'NIP', 'Nama Lengkap', 'Email', 'NIK', 'Jenis Kelamin', 'Tempat Lahir', 'Tanggal Lahir', 'Agama',
+            'Status Pernikahan', 'Pendidikan Terakhir', 'No. HP', 'Alamat Domisili',
+            'Jabatan', 'Jabatan Tambahan', 'Unit Kerja', 'Rangkap Tugas', 'Lokasi Kerja',
+            'Status Rekrutmen', 'Status Kerja', 'Tanggal Masuk', 'Habis Kontrak',
+            'BPJS Ketenagakerjaan', 'BPJS Kesehatan', 'Kontak Darurat',
         ];
 
         $rows = $pegawais->map(function ($p) {
             $kepegawaian = $p->kepegawaian;
+            $kontak = $p->kontakDarurat;
 
             return [
                 $p->nip,
@@ -60,16 +64,29 @@ class PegawaiController extends Controller
                 $p->email,
                 $p->nik,
                 $p->jenis_kelamin,
+                $p->tempat_lahir,
+                optional($p->tanggal_lahir)->format('d-m-Y'),
+                $p->agama,
+                $p->status_pernikahan,
+                $p->pendidikan_terakhir,
                 $p->no_hp,
+                $p->alamat_domisili ?: $p->alamat_ktp,
                 $kepegawaian?->jabatan,
+                $kepegawaian?->jabatan_tambahan,
                 $kepegawaian?->unit_kerja,
+                $p->penugasanAktif->where('is_utama', false)->pluck('unit_kerja')->implode(', '),
+                $kepegawaian?->lokasi_kerja,
                 $kepegawaian?->status_rekrutmen,
                 $kepegawaian?->status_kerja,
                 optional($kepegawaian?->tanggal_masuk)->format('d-m-Y'),
+                optional($kepegawaian?->tanggal_habis_kontrak)->format('d-m-Y'),
+                $p->bpjs?->no_bpjs_ketenagakerjaan,
+                $p->bpjs?->no_bpjs_kesehatan,
+                $kontak ? trim("{$kontak->nama_kerabat} ({$kontak->hubungan_kerabat}) {$kontak->no_hp_kerabat}") : null,
             ];
         });
 
-        return ExcelExporter::download($filename, $headers, $rows);
+        return ExcelExporter::download($filename, $headers, $rows, 'Data Pegawai');
     }
 
     private function filteredQuery(Request $request)
@@ -121,7 +138,7 @@ class PegawaiController extends Controller
         $validated = $this->validateRequest($request);
 
         try {
-            DB::transaction(function () use ($request, $validated) {
+            $pegawai = DB::transaction(function () use ($request, $validated) {
                 $pegawai = DataPegawai::create($validated['biodata']);
 
                 $pegawai->kepegawaian()->create($validated['kepegawaian']);
@@ -133,6 +150,8 @@ class PegawaiController extends Controller
 
                 $dokumenPaths = $this->handleFileUploads($request, $pegawai->nip);
                 $pegawai->dokumen()->create($dokumenPaths);
+
+                return $pegawai;
             });
         } catch (\Throwable $e) {
             report($e);
@@ -140,7 +159,7 @@ class PegawaiController extends Controller
             return redirect()->back()->withInput()->with('error', 'Gagal menyimpan data pegawai. Silakan coba lagi. (' . $e->getMessage() . ')');
         }
 
-        return redirect()->route('admin.pegawai.index')->with('success', 'Data pegawai berhasil ditambahkan.');
+        return redirect()->route('admin.pegawai.show', $pegawai->id)->with('success', 'Data pegawai berhasil ditambahkan.');
     }
 
     private function authorizeManage(): void
@@ -269,7 +288,7 @@ class PegawaiController extends Controller
             return redirect()->back()->withInput()->with('error', 'Gagal memperbarui data pegawai. Silakan coba lagi. (' . $e->getMessage() . ')');
         }
 
-        return redirect()->route('admin.pegawai.index')->with('success', 'Data pegawai berhasil diperbarui.');
+        return redirect()->route('admin.pegawai.show', $pegawai->id)->with('success', 'Data pegawai berhasil diperbarui.');
     }
 
     public function destroy(string $id): RedirectResponse
@@ -329,8 +348,8 @@ class PegawaiController extends Controller
             'pendidikan_terakhir' => ['required', 'string', 'max:100'],
             'alamat_ktp' => ['required', 'string'],
             'alamat_domisili' => ['nullable', 'string'],
-            'jabatan' => ['required', 'string', Rule::in(config('kepegawaian.jabatan'))],
-            'jabatan_tambahan' => ['nullable', 'string', Rule::in(config('kepegawaian.jabatan'))],
+            'jabatan' => ['required', 'string', Rule::in(\App\Models\Jabatan::daftar())],
+            'jabatan_tambahan' => ['nullable', 'string', Rule::in(\App\Models\Jabatan::daftar())],
             'unit_kerja' => [$ignoreId ? 'nullable' : 'required', 'string', Rule::in(config('kepegawaian.unit_kerja'))],
             'lokasi_kerja' => ['required', 'string', Rule::in(config('kepegawaian.lokasi_kerja'))],
             'tanggal_masuk' => ['required', 'date'],

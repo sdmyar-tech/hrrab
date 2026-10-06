@@ -11,7 +11,7 @@
     $dokumen = $employee?->dokumen;
     $kosong = fn ($value) => is_null($value) || $value === '' || $value === [];
 
-    $jabatanOptions = [...config('kepegawaian.jabatan'), 'Lainnya'];
+    $jabatanOptions = [...\App\Models\Jabatan::daftar(), 'Lainnya'];
     $infoFile = 'PDF/JPG/PNG, maks. 2 MB.';
 
     $bagian = [

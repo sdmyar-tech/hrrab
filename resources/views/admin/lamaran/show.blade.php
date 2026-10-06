@@ -64,6 +64,7 @@
                     <div class="panel p-4">
                         <h2 class="h6 fw-bold mb-3">Data Pegawai</h2>
                         <dl class="row mb-0 small">
+                            <dt class="col-5 text-muted">Nama Lengkap</dt><dd class="col-7 fw-semibold">{{ $pg?->nama_lengkap ?? '-' }}</dd>
                             <dt class="col-5 text-muted">NIP</dt><dd class="col-7">{{ $pg?->nip }}</dd>
                             <dt class="col-5 text-muted">Email</dt><dd class="col-7">{{ $pg?->email }}</dd>
                             <dt class="col-5 text-muted">No. HP</dt><dd class="col-7">{{ $pg?->no_hp }}</dd>
@@ -81,11 +82,18 @@
                 <div class="panel p-4">
                     <h2 class="h6 fw-bold mb-3">Data Pelamar</h2>
                     @php $p = $lamaran->dataPelamar; @endphp
-                    @if ($p?->foto_path)
-                        <img src="{{ asset('storage/' . $p->foto_path) }}" alt="Pas Foto {{ $p->nama_lengkap }}"
-                            class="rounded mb-3" style="width:120px;height:120px;object-fit:cover;">
-                    @endif
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        @if ($p?->foto_path)
+                            <img src="{{ asset('storage/' . $p->foto_path) }}" alt="Pas Foto {{ $p->nama_lengkap }}"
+                                class="rounded border flex-shrink-0" style="width:96px;height:96px;object-fit:cover;">
+                        @endif
+                        <div>
+                            <div class="fw-bold fs-5 lh-sm">{{ $p?->nama_lengkap ?? '-' }}</div>
+                            <div class="text-muted small">{{ $lamaran->judulPosisi() }}</div>
+                        </div>
+                    </div>
                     <dl class="row mb-0 small">
+                        <dt class="col-5 text-muted">Nama Lengkap</dt><dd class="col-7 fw-semibold">{{ $p?->nama_lengkap ?? '-' }}</dd>
                         <dt class="col-5 text-muted">Email</dt><dd class="col-7">{{ $p?->email }}</dd>
                         <dt class="col-5 text-muted">NIK</dt><dd class="col-7">{{ $p?->nik ?? '-' }}</dd>
                         <dt class="col-5 text-muted">No. HP</dt><dd class="col-7">{{ $p?->no_hp }}</dd>
@@ -199,7 +207,7 @@
                             <div class="border rounded p-2 mb-2 small {{ $jadwal->isTerjadwal() ? 'border-primary' : '' }}">
                                 <strong>{{ $jadwal->tahapLabel() }}</strong>
                                 &mdash; {{ $jadwal->tanggal->format('d M Y') }}, {{ substr($jadwal->waktu_mulai, 0, 5) }}
-                                @if ($jadwal->lokasi) &middot; {{ $jadwal->lokasi }} @endif
+                                @if ($jadwal->lokasi) &middot; @include('partials.lokasi', ['lokasi' => $jadwal->lokasi, 'tanpaIkon' => true]) @endif
                                 <span class="badge text-bg-light border">{{ $jadwal->statusLabel() }}</span>
                                 <span class="badge {{ $jadwal->hasilBadgeClass() }}">
                                     @if ($jadwal->hasil_status)<i class="bi bi-lock-fill me-1" title="Hasil sudah final, tidak bisa diubah"></i>@endif{{ $jadwal->hasilLabel() }}
@@ -267,7 +275,7 @@
                                                     <input type="time" name="waktu_selesai" class="form-control form-control-sm" value="{{ $jadwal->waktu_selesai ? substr($jadwal->waktu_selesai, 0, 5) : '' }}">
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Lokasi / link meeting" value="{{ $jadwal->lokasi }}">
+                                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Nama tempat, link Google Maps, atau link meeting" value="{{ $jadwal->lokasi }}">
                                                 </div>
                                                 <div class="col-md-6">
                                                     <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Catatan jadwal (opsional)" value="{{ $jadwal->catatan }}">
@@ -317,7 +325,7 @@
                                     <input type="time" name="waktu_selesai" class="form-control form-control-sm">
                                 </div>
                                 <div class="col-md-8">
-                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Lokasi / link meeting">
+                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Nama tempat, link Google Maps, atau link meeting">
                                 </div>
                                 <div class="col-md-4 d-grid">
                                     <button type="submit" class="btn btn-primary btn-sm">
@@ -386,7 +394,7 @@
                                                     <input type="time" name="waktu_selesai" class="form-control form-control-sm">
                                                 </div>
                                                 <div class="col-12">
-                                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Lokasi / link meeting">
+                                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Nama tempat, link Google Maps, atau link meeting">
                                                 </div>
                                                 <div class="col-12">
                                                     <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Tujuan interview ini (opsional), mis. tes praktik">
@@ -442,7 +450,7 @@
                                         <span class="badge {{ $screening->hasilBadgeClass() }}">{{ $screening->hasilLabel() }}</span>
                                     </span>
                                 </div>
-                                <span class="text-muted">Pengawas: {{ $screening->pengawas?->name ?? '-' }}@if ($screening->lokasi) &middot; {{ $screening->lokasi }}@endif</span>
+                                <span class="text-muted">Pengawas: {{ $screening->pengawas?->name ?? '-' }}@if ($screening->lokasi) &middot; @include('partials.lokasi', ['lokasi' => $screening->lokasi, 'tanpaIkon' => true])@endif</span>
                                 @if ($screening->catatan)
                                     <br><span class="text-muted">Arahan: {{ $screening->catatan }}</span>
                                 @endif
@@ -546,7 +554,7 @@
                                                     <div class="alert alert-info small py-2 mb-0" id="onboarding-ringkasan"></div>
                                                 </div>
                                                 <div class="col-12">
-                                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Lokasi onboarding (opsional)" maxlength="255">
+                                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Lokasi onboarding / link Google Maps (opsional)" maxlength="255">
                                                 </div>
                                                 <div class="col-12">
                                                     <textarea name="catatan" rows="2" class="form-control form-control-sm" placeholder="Arahan selama onboarding (opsional)" maxlength="1000"></textarea>
@@ -578,7 +586,7 @@
                                     <span>
                                         <strong>{{ $jadwal->tanggal->translatedFormat('d M Y') }}</strong>
                                         @if ($jadwal->waktu), {{ substr($jadwal->waktu, 0, 5) }} @endif
-                                        @if ($jadwal->lokasi) &middot; {{ $jadwal->lokasi }} @endif
+                                        @if ($jadwal->lokasi) &middot; @include('partials.lokasi', ['lokasi' => $jadwal->lokasi, 'tanpaIkon' => true]) @endif
                                         <span class="badge text-bg-light border">{{ $jadwal->statusLabel() }}</span>
                                     </span>
                                     @if ($canReview && $jadwal->status === \App\Models\KontrakJadwal::STATUS_TERJADWAL && $tanggalKontrakMinimal)
@@ -645,7 +653,7 @@
                                     <button type="submit" class="btn btn-primary btn-sm">Jadwalkan Kontrak</button>
                                 </div>
                                 <div class="col-12">
-                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Lokasi">
+                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Nama tempat atau link Google Maps">
                                 </div>
                             </form>
                         @endif
