@@ -1,0 +1,204 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Lowongan;
+use App\Support\RekrutmenAccess;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+
+class LowonganController extends Controller
+{
+    public function index(Request $request): View
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        Lowongan::tutupYangKedaluwarsa();
+
+        $query = Lowongan::with('pengajuanFormasi')->withCount('lamarans')->latest();
+        RekrutmenAccess::scopeUnitKerja($query, $user);
+
+        if ($search = $request->query('q')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('judul', 'like', "%{$search}%")
+                    ->orWhere('jabatan', 'like', "%{$search}%")
+                    ->orWhere('unit_kerja', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
+        }
+
+        $lowongans = $query->paginate(15)->withQueryString();
+
+        return view('admin.lowongan.index', compact('lowongans'));
+    }
+
+    public function create(): View
+    {
+        return view('admin.lowongan.create');
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $this->validated($request);
+
+        Lowongan::create($validated);
+
+        return redirect()
+            ->route('admin.lowongan.index')
+            ->with('success', 'Draft lowongan berhasil dibuat.');
+    }
+
+    public function edit(Lowongan $lowongan): View
+    {
+        $this->authorizeAccess($lowongan);
+
+        return view('admin.lowongan.edit', compact('lowongan'));
+    }
+
+    public function update(Request $request, Lowongan $lowongan): RedirectResponse
+    {
+        $this->authorizeAccess($lowongan);
+
+        $validated = $this->validated($request, $lowongan);
+
+        if ($request->input('submit_action') === 'publish') {
+            if (! $validated['deskripsi'] || ! $validated['kualifikasi']) {
+                return redirect()->back()->withInput()->with('error', 'Lengkapi deskripsi & kualifikasi sebelum mempublikasikan lowongan.');
+            }
+
+            if ($this->tanggalTutupLewat($validated['tanggal_tutup'] ?? null)) {
+                return redirect()->back()->withInput()->with('error', self::PESAN_TANGGAL_LEWAT);
+            }
+
+            $validated['status'] = Lowongan::STATUS_DIPUBLIKASIKAN;
+            $validated['dipublikasikan_oleh'] = Auth::id();
+            $validated['dipublikasikan_pada'] = now();
+        }
+
+        $lowongan->update($validated);
+
+        return redirect()
+            ->route('admin.lowongan.index')
+            ->with('success', $request->input('submit_action') === 'publish'
+                ? 'Lowongan berhasil disimpan & dipublikasikan.'
+                : 'Lowongan berhasil diperbarui.');
+    }
+
+    public function publish(Lowongan $lowongan): RedirectResponse
+    {
+        $this->authorizeAccess($lowongan);
+
+        if (! $lowongan->deskripsi || ! $lowongan->kualifikasi) {
+            return redirect()->back()->with('error', 'Lengkapi deskripsi & kualifikasi sebelum mempublikasikan lowongan.');
+        }
+
+        if ($this->tanggalTutupLewat($lowongan->tanggal_tutup)) {
+            return redirect()->back()->with('error', self::PESAN_TANGGAL_LEWAT);
+        }
+
+        $lowongan->update([
+            'status' => Lowongan::STATUS_DIPUBLIKASIKAN,
+            'dipublikasikan_oleh' => Auth::id(),
+            'dipublikasikan_pada' => now(),
+        ]);
+
+        return redirect()
+            ->route('admin.lowongan.index')
+            ->with('success', 'Lowongan berhasil dipublikasikan.');
+    }
+
+    public function reopen(Request $request, Lowongan $lowongan): RedirectResponse
+    {
+        $this->authorizeAccess($lowongan);
+
+        if ($lowongan->status !== Lowongan::STATUS_DITUTUP) {
+            return redirect()->back()->with('error', 'Hanya lowongan berstatus Ditutup yang bisa dibuka kembali.');
+        }
+
+        if ($lowongan->isKuotaPenuh()) {
+            return redirect()->back()->with('error', 'Kuota lowongan ini sudah terpenuhi, tidak bisa dibuka kembali.');
+        }
+
+        if (! $lowongan->deskripsi || ! $lowongan->kualifikasi) {
+            return redirect()->back()->with('error', 'Lengkapi deskripsi & kualifikasi (Edit) sebelum membuka kembali lowongan.');
+        }
+
+        $validated = $request->validate([
+            'tanggal_tutup' => ['required', 'date', 'after_or_equal:today'],
+        ], [
+            'tanggal_tutup.required' => 'Tanggal tutup baru wajib diisi.',
+            'tanggal_tutup.after_or_equal' => 'Tanggal tutup baru minimal hari ini.',
+        ]);
+
+        $lowongan->update([
+            'status' => Lowongan::STATUS_DIPUBLIKASIKAN,
+            'tanggal_tutup' => $validated['tanggal_tutup'],
+        ]);
+
+        return redirect()->back()->with('success', 'Lowongan dibuka kembali sampai ' . $lowongan->tanggal_tutup->translatedFormat('d F Y') . '.');
+    }
+
+    public function close(Lowongan $lowongan): RedirectResponse
+    {
+        $this->authorizeAccess($lowongan);
+
+        $lowongan->update(['status' => Lowongan::STATUS_DITUTUP]);
+
+        return redirect()
+            ->route('admin.lowongan.index')
+            ->with('success', 'Lowongan ditutup.');
+    }
+
+    private const PESAN_TANGGAL_LEWAT = 'Tanggal tutup sudah lewat. Perpanjang tanggal tutup dulu (Edit) sebelum mempublikasikan lowongan.';
+
+    private function tanggalTutupLewat($tanggalTutup): bool
+    {
+        return $tanggalTutup && \Illuminate\Support\Carbon::parse($tanggalTutup)->lt(now()->startOfDay());
+    }
+
+    private function authorizeAccess(Lowongan $lowongan): void
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (RekrutmenAccess::canReview($user)) {
+            return;
+        }
+
+        if (! $user->memimpinUnit($lowongan->unit_kerja)) {
+            abort(403, 'Anda hanya bisa mengelola lowongan divisi Anda sendiri.');
+        }
+    }
+
+    private function validated(Request $request, ?Lowongan $lowongan = null): array
+    {
+        $tanggalTutupBerubah = $lowongan === null
+            || $request->input('tanggal_tutup') !== optional($lowongan->tanggal_tutup)->format('Y-m-d');
+        $sudahDitutup = $lowongan?->status === Lowongan::STATUS_DITUTUP;
+
+        $tanggalTutupRules = ['nullable', 'date'];
+        if ($tanggalTutupBerubah && ! $sudahDitutup) {
+            $tanggalTutupRules[] = 'after_or_equal:today';
+        }
+
+        return $request->validate([
+            'judul' => ['required', 'string', 'max:150'],
+            'unit_kerja' => ['required', 'string', Rule::in(config('kepegawaian.unit_kerja'))],
+            'jabatan' => ['required', 'string', Rule::in(config('kepegawaian.jabatan'))],
+            'jumlah_dibutuhkan' => ['required', 'integer', 'min:1', 'max:50'],
+            'deskripsi' => ['nullable', 'string', 'max:5000'],
+            'kualifikasi' => ['nullable', 'string', 'max:5000'],
+            'lokasi_kerja' => ['nullable', 'string', Rule::in(config('kepegawaian.lokasi_kerja'))],
+            'tipe_kerja' => ['nullable', 'string', 'max:50'],
+            'tanggal_tutup' => $tanggalTutupRules,
+        ]);
+    }
+}

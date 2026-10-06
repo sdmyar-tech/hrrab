@@ -1,0 +1,190 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\DataPegawai;
+use App\Models\User;
+use App\Support\PenugasanService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
+
+class UserController extends Controller
+{
+    private const ROLES = [...User::INTERNAL_ROLES, User::ROLE_PELAMAR];
+
+    public function index(Request $request): View
+    {
+        $query = User::with(['dataPegawai', 'dataPelamar'])->latest();
+
+        if ($search = $request->query('q')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('nip', 'like', "%{$search}%");
+            });
+        }
+
+        if ($role = $request->query('role')) {
+            $query->where('role', $role);
+        }
+
+        $users = $query->paginate(15)->withQueryString();
+
+        return view('admin.users.index', [
+            'users' => $users,
+            'roles' => self::ROLES,
+        ]);
+    }
+
+    public function create(): View
+    {
+        return view('admin.users.create', $this->formOptions());
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
+            'role' => ['required', Rule::in(self::ROLES)],
+            'divisi' => ['nullable', 'array'],
+            'divisi.*' => ['string', Rule::in(config('kepegawaian.unit_kerja'))],
+            'kepala_unit' => ['nullable', 'array'],
+            'kepala_unit.*' => ['string', Rule::in(config('kepegawaian.unit_kerja'))],
+            'nip' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        unset($validated['password_confirmation']);
+        $validated = $this->normalizeDivisi($validated);
+        [$validated, $kepalaUnit] = $this->pisahkanKepalaUnit($validated);
+
+        DB::transaction(fn () => $this->simpanKepalaUnit(User::create($validated), $kepalaUnit));
+
+        return redirect()->route('admin.users.index')->with('success', 'Akun user berhasil ditambahkan.');
+    }
+
+    public function edit(User $user): View
+    {
+        return view('admin.users.edit', ['user' => $user, ...$this->formOptions()]);
+    }
+
+    public function update(Request $request, User $user): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'password' => ['nullable', 'string', 'min:6', 'confirmed'],
+            'role' => ['required', Rule::in(self::ROLES)],
+            'divisi' => ['nullable', 'array'],
+            'divisi.*' => ['string', Rule::in(config('kepegawaian.unit_kerja'))],
+            'kepala_unit' => ['nullable', 'array'],
+            'kepala_unit.*' => ['string', Rule::in(config('kepegawaian.unit_kerja'))],
+            'nip' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        if (empty($validated['password'])) {
+            unset($validated['password']);
+        }
+        unset($validated['password_confirmation']);
+        $validated = $this->normalizeDivisi($validated);
+
+        if ($user->isAdmin() && $validated['role'] !== User::ROLE_ADMIN && User::where('role', User::ROLE_ADMIN)->count() <= 1) {
+            return redirect()->back()->withInput()->with('error', 'Tidak bisa mengubah role — ini Admin terakhir di sistem.');
+        }
+
+        [$validated, $kepalaUnit] = $this->pisahkanKepalaUnit($validated);
+
+        DB::transaction(function () use ($user, $validated, $kepalaUnit) {
+            $user->update($validated);
+            $this->simpanKepalaUnit($user, $kepalaUnit);
+        });
+
+        return redirect()->route('admin.users.index')->with('success', 'Akun user berhasil diperbarui.');
+    }
+
+    public function destroy(User $user): RedirectResponse
+    {
+        /** @var User $current */
+        $current = Auth::user();
+
+        if ($user->id === $current->id) {
+            return redirect()->back()->with('error', 'Anda tidak bisa menghapus akun Anda sendiri.');
+        }
+
+        if ($user->isAdmin() && User::where('role', User::ROLE_ADMIN)->count() <= 1) {
+            return redirect()->back()->with('error', 'Tidak bisa menghapus — ini Admin terakhir di sistem.');
+        }
+
+        $user->delete();
+
+        return redirect()->route('admin.users.index')->with('success', 'Akun user berhasil dihapus.');
+    }
+
+    private function formOptions(): array
+    {
+        return [
+            'roles' => self::ROLES,
+            'divisiOptions' => config('kepegawaian.unit_kerja'),
+            'gmBidang' => config('kepegawaian.gm_bidang'),
+        ];
+    }
+
+    private function normalizeDivisi(array $validated): array
+    {
+        $divisi = array_values(array_unique($validated['divisi'] ?? []));
+        $validated['divisi'] = ($validated['role'] === User::ROLE_GM && $divisi) ? $divisi : null;
+        $validated['kepala_unit'] = in_array($validated['role'], [User::ROLE_GM, User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM], true)
+            ? array_values(array_unique($validated['kepala_unit'] ?? []))
+            : [];
+
+        return $validated;
+    }
+
+    /**
+     * @return array{0: array, 1: list<string>}
+     */
+    private function pisahkanKepalaUnit(array $validated): array
+    {
+        $kepalaUnit = $validated['kepala_unit'];
+        unset($validated['kepala_unit']);
+
+        if (! empty($validated['nip']) && ($pegawaiId = DataPegawai::where('nip', $validated['nip'])->value('id'))) {
+            $validated['data_pegawai_id'] = $pegawaiId;
+        }
+
+        return [$validated, $kepalaUnit];
+    }
+
+    /**
+     * @param  list<string>  $units
+     */
+    private function simpanKepalaUnit(User $user, array $units): void
+    {
+        $pegawai = $user->dataPegawai;
+
+        if (! $pegawai) {
+            if ($units) {
+                throw ValidationException::withMessages([
+                    'kepala_unit' => 'Akun ini belum tertaut ke Data Pegawai. Isi NIP yang sama dengan Data Pegawai agar bisa memimpin unit.',
+                ]);
+            }
+
+            return;
+        }
+
+        if (! $units && ($user->isKepalaBagian() || $user->isKepalaSdm()) && $pegawai->kepegawaian?->unit_kerja) {
+            $units = [$pegawai->kepegawaian->unit_kerja];
+        }
+
+        if (in_array($user->role, [User::ROLE_GM, User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM, User::ROLE_STAFF], true)) {
+            PenugasanService::aturKepala($pegawai, $units, Auth::user());
+        }
+    }
+}
