@@ -26,16 +26,22 @@ class OnboardingFlow
         return ($kepala && ! $kepala->isKepalaSdm()) ? $kepala : null;
     }
 
-    /** Hari terakhir onboarding: durasi dihitung termasuk hari pertama (3 hari mulai Senin = Senin-Rabu). */
+    /** Hari terakhir onboarding: durasi = jumlah HARI KERJA termasuk hari pertama (3 hari mulai Jumat = Jumat, Senin, Selasa). */
     public static function tanggalSelesai(Carbon $mulai, int $durasiHari): Carbon
     {
-        return $mulai->copy()->addDays(max(1, $durasiHari) - 1);
+        return Kalender::hariKerjaKe($mulai, $durasiHari);
     }
 
-    /** Tanggal kontrak paling awal: sehari setelah hari terakhir onboarding (tidak boleh di masa lalu). */
+    /** Tanggal kontrak paling awal: hari kerja pertama setelah onboarding selesai, dan tidak di masa lalu. */
     public static function tanggalKontrakMinimal(ScreeningOnboarding $screening): Carbon
     {
-        return $screening->tanggal_selesai->copy()->addDay()->max(now()->startOfDay());
+        return Kalender::hariKerjaTerdekat(Kalender::hariKerjaSetelah($screening->tanggal_selesai)->max(now()->startOfDay()));
+    }
+
+    /** Hasil Lulus baru boleh dikonfirmasi mulai hari terakhir onboarding (Tidak Lulus boleh kapan saja). */
+    public static function bolehKonfirmasiLulus(ScreeningOnboarding $screening): bool
+    {
+        return now()->startOfDay()->gte($screening->tanggal_selesai);
     }
 
     public static function onboardingLulus(Lamaran $lamaran): ?ScreeningOnboarding

@@ -223,13 +223,21 @@
             updateKategori();
         }
 
+        // Hari kerja & libur sama dengan App\Support\Kalender di server.
+        const HARI_KERJA = @json(config('hrrab.hari_kerja'));
+        const LIBUR = @json(config('hrrab.hari_libur'));
+        function isHariKerja(d) {
+            const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            return HARI_KERJA.includes(d.getDay() || 7) && ! LIBUR.includes(iso);
+        }
+
         function addWorkingDays(startDate, totalHariKerja) {
             const result = new Date(startDate.getTime());
+            while (! isHariKerja(result)) result.setDate(result.getDate() + 1);
             let count = 1;
             while (count < totalHariKerja) {
                 result.setDate(result.getDate() + 1);
-                const day = result.getDay();
-                if (day !== 0 && day !== 6) {
+                if (isHariKerja(result)) {
                     count++;
                 }
             }
@@ -299,8 +307,7 @@
                 let hariKerja = 0;
                 const cursor = new Date(mulai.getTime());
                 while (cursor <= selesai) {
-                    const day = cursor.getDay();
-                    if (day !== 0 && day !== 6) {
+                    if (isHariKerja(cursor)) {
                         hariKerja++;
                     }
                     cursor.setDate(cursor.getDate() + 1);

@@ -23,3 +23,10 @@ Artisan::command('penugasan:sinkron', function () {
 })->purpose('Berlakukan mutasi/rangkap tugas terjadwal (unit kerja, role kepala, interviewer tahap 2)');
 
 Schedule::command('penugasan:sinkron')->dailyAt('00:02');
+
+Artisan::command('rekrutmen:pengingat', function () {
+    $hasil = App\Support\Notifikasi::pengingatRekrutmen();
+    $this->info("Pengingat terkirim — onboarding: {$hasil['onboarding']}, interview: {$hasil['interview']}, kontrak: {$hasil['kontrak']}.");
+})->purpose('Ingatkan konfirmasi onboarding/interview/kontrak yang tanggalnya sudah sampai atau lewat');
+
+Schedule::command('rekrutmen:pengingat')->weekdays()->at('07:30');

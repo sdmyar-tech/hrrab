@@ -191,6 +191,49 @@ public static function formasiBaru(PengajuanFormasi $formasi): void
         self::kandidat($lamaran, $judul, $pesan . ($jadwal->lokasi ? " · {$jadwal->lokasi}" : '') . '.', $ikon);
     }
 
+    /**
+     * Pengingat harian rekrutmen yang macet karena belum dikonfirmasi (tidak ada yang lanjut otomatis):
+     * onboarding yang sudah sampai hari terakhir, interview & kontrak yang tanggalnya sudah lewat.
+     *
+     * @return array{onboarding: int, interview: int, kontrak: int}
+     */
+    public static function pengingatRekrutmen(): array
+    {
+        $hariIni = now()->toDateString();
+        $kepalaSdm = User::where('role', User::ROLE_KEPALA_SDM)->get();
+        $hasil = ['onboarding' => 0, 'interview' => 0, 'kontrak' => 0];
+
+        ScreeningOnboarding::with(['lamaran.dataPelamar', 'lamaran.dataPegawai', 'lamaran.lowongan', 'kepala'])
+            ->where('status', ScreeningOnboarding::STATUS_BERJALAN)->whereDate('tanggal_selesai', '<=', $hariIni)->get()
+            ->filter(fn ($s) => $s->lamaran?->isProses())
+            ->each(function (ScreeningOnboarding $s) use ($kepalaSdm, &$hasil) {
+                $penerima = collect($s->hasil_sdm === null ? $kepalaSdm : [])->concat($s->hasil_kepala === null && $s->kepala ? [$s->kepala] : []);
+                $hasil['onboarding'] += self::kirim($penerima, "Konfirmasi onboarding: {$s->lamaran->namaKandidat()}",
+                    'Masa onboarding berakhir ' . $s->tanggal_selesai->translatedFormat('d M Y') . '. Tahap ini tidak lanjut otomatis — isi hasil Lulus/Tidak Lulus.',
+                    route('admin.lamaran.show', $s->lamaran_id), Pemberitahuan::JENIS_PENGINGAT, 'bi-clipboard-check', 'Sistem');
+            });
+
+        InterviewJadwal::with(['lamaran.dataPelamar', 'lamaran.dataPegawai', 'lamaran.lowongan', 'interviewer'])
+            ->where('status', InterviewJadwal::STATUS_TERJADWAL)->whereDate('tanggal', '<', $hariIni)->get()
+            ->filter(fn ($j) => $j->lamaran?->isProses())
+            ->each(function (InterviewJadwal $j) use (&$hasil) {
+                $hasil['interview'] += self::kirim($j->interviewer, "Hasil interview belum diisi: {$j->lamaran->namaKandidat()}",
+                    "{$j->tahapLabel()} tanggal " . $j->tanggal->translatedFormat('d M Y') . ' sudah lewat. Isi hasilnya atau jadwalkan ulang.',
+                    route('admin.lamaran.show', $j->lamaran_id), Pemberitahuan::JENIS_PENGINGAT, 'bi-chat-square-text', 'Sistem');
+            });
+
+        KontrakJadwal::with(['lamaran.dataPelamar', 'lamaran.dataPegawai', 'lamaran.lowongan'])
+            ->where('status', KontrakJadwal::STATUS_TERJADWAL)->whereDate('tanggal', '<', $hariIni)->get()
+            ->filter(fn ($k) => $k->lamaran?->isProses())
+            ->each(function (KontrakJadwal $k) use ($kepalaSdm, &$hasil) {
+                $hasil['kontrak'] += self::kirim($kepalaSdm, "Kontrak belum diproses: {$k->lamaran->namaKandidat()}",
+                    'Jadwal tanda tangan ' . $k->tanggal->translatedFormat('d M Y') . ' sudah lewat. Rekrut kandidat atau ubah jadwalnya.',
+                    route('admin.lamaran.show', $k->lamaran_id), Pemberitahuan::JENIS_PENGINGAT, 'bi-pen', 'Sistem');
+            });
+
+        return $hasil;
+    }
+
     public static function penugasanBerubah(int $dataPegawaiId, string $judul, string $pesan): void
     {
         self::kirim(User::where('data_pegawai_id', $dataPegawaiId)->get(), $judul, $pesan, null, Pemberitahuan::JENIS_INFO, 'bi-arrow-left-right');

@@ -161,16 +161,6 @@ class PengajuanCutiController extends Controller
 
     private function hitungHariKerja(Carbon $mulai, Carbon $selesai): int
     {
-        $hariKerja = 0;
-        $tanggal = $mulai->copy();
-
-        while ($tanggal->lte($selesai)) {
-            if (! $tanggal->isWeekend()) {
-                $hariKerja++;
-            }
-            $tanggal->addDay();
-        }
-
-        return $hariKerja;
+        return \App\Support\Kalender::jumlahHariKerja($mulai, $selesai);
     }
 }

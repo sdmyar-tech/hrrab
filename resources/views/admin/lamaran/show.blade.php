@@ -314,7 +314,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small mb-1">Tanggal</label>
-                                    <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>
+                                    <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ \App\Support\Kalender::hariKerjaTerdekat(now())->format('Y-m-d') }}" required>
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label small mb-1">Jam Mulai</label>
@@ -383,7 +383,7 @@
                                                 </div>
                                                 <div class="col-md-6">
                                                     <label class="form-label small mb-1">Tanggal</label>
-                                                    <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" min="{{ now()->format('Y-m-d') }}" required>
+                                                    <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ \App\Support\Kalender::hariKerjaTerdekat(now())->format('Y-m-d') }}" min="{{ now()->format('Y-m-d') }}" required>
                                                 </div>
                                                 <div class="col-md-3">
                                                     <label class="form-label small mb-1">Jam Mulai</label>
@@ -492,10 +492,17 @@
                                                         </div>
                                                         <div class="modal-body">
                                                             <p class="small text-muted">{{ $lamaran->namaKandidat() }} &middot; {{ $screening->tanggal_mulai->translatedFormat('d M') }} &ndash; {{ $screening->tanggal_selesai->translatedFormat('d M Y') }}</p>
+                                                            @php $lulusTerkunci = ! \App\Support\OnboardingFlow::bolehKonfirmasiLulus($screening) && ! auth()->user()->isAdmin(); @endphp
+                                                            @if ($lulusTerkunci)
+                                                                <div class="alert alert-warning small py-2">
+                                                                    <i class="bi bi-hourglass-split me-1"></i>Onboarding masih berjalan. <strong>Lulus</strong> bisa dikonfirmasi mulai
+                                                                    {{ $screening->tanggal_selesai->translatedFormat('l, d M Y') }}. <strong>Tidak Lulus</strong> bisa kapan saja.
+                                                                </div>
+                                                            @endif
                                                             <label class="form-label small mb-1">Hasil</label>
                                                             <div class="d-flex gap-3 mb-3">
                                                                 <div class="form-check">
-                                                                    <input class="form-check-input" type="radio" name="hasil_status" value="lulus" id="hasil-{{ $screening->id }}-{{ $sisi }}-l" required>
+                                                                    <input class="form-check-input" type="radio" name="hasil_status" value="lulus" id="hasil-{{ $screening->id }}-{{ $sisi }}-l" required @disabled($lulusTerkunci)>
                                                                     <label class="form-check-label" for="hasil-{{ $screening->id }}-{{ $sisi }}-l">Lulus</label>
                                                                 </div>
                                                                 <div class="form-check">
@@ -543,7 +550,7 @@
                                                 <div class="col-md-7">
                                                     <label class="form-label small mb-1">Hari Pertama</label>
                                                     <input type="date" name="tanggal_mulai" id="onboarding-mulai" class="form-control form-control-sm"
-                                                        value="{{ now()->format('Y-m-d') }}" min="{{ now()->format('Y-m-d') }}" required>
+                                                        value="{{ \App\Support\Kalender::hariKerjaTerdekat(now())->format('Y-m-d') }}" min="{{ now()->format('Y-m-d') }}" required>
                                                 </div>
                                                 <div class="col-md-5">
                                                     <label class="form-label small mb-1">Durasi (hari)</label>
@@ -883,6 +890,23 @@
             });
         }
 
+        // Sama dengan App\Support\Kalender di server: hari kerja, libur, dan masa kontrak tanpa loncat bulan.
+        const Kalender = {
+            hariKerja: @json(config('hrrab.hari_kerja')),
+            libur: @json(config('hrrab.hari_libur')),
+            tanggal: function (s) { const p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); },
+            iso: function (d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); },
+            isHariKerja: function (d) { return this.hariKerja.includes(d.getDay() || 7) && ! this.libur.includes(this.iso(d)); },
+            terdekat: function (d) { const h = new Date(d); while (! this.isHariKerja(h)) h.setDate(h.getDate() + 1); return h; },
+            hariKerjaSetelah: function (d) { const h = new Date(d); h.setDate(h.getDate() + 1); return this.terdekat(h); },
+            hariKerjaKe: function (mulai, n) { let h = this.terdekat(mulai); for (let i = 1; i < n; i++) h = this.hariKerjaSetelah(h); return h; },
+            habisKontrak: function (masuk, bulan) {
+                const t = new Date(masuk.getFullYear(), masuk.getMonth() + bulan, 1);
+                t.setDate(Math.min(masuk.getDate(), new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()) - 1);
+                return t;
+            },
+        };
+
         const inputTanggalMasuk = document.getElementById('rekrut-tanggal-masuk');
         const selectMasaKontrak = document.getElementById('rekrut-masa-kontrak');
         const outputTanggalHabis = document.getElementById('rekrut-tanggal-habis');
@@ -896,9 +920,8 @@
                 return;
             }
 
-            const tanggal = new Date(inputTanggalMasuk.value);
-            tanggal.setMonth(tanggal.getMonth() + bulan);
-            outputTanggalHabis.value = tanggal.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+            outputTanggalHabis.value = Kalender.habisKontrak(Kalender.tanggal(inputTanggalMasuk.value), bulan)
+                .toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
         }
 
         if (inputTanggalMasuk && selectMasaKontrak) {
@@ -914,13 +937,16 @@
             if (!inputMulai || !inputDurasi || !ringkasan || !inputMulai.value) return;
 
             const durasi = Math.max(1, parseInt(inputDurasi.value, 10) || 1);
-            const format = { day: '2-digit', month: 'long', year: 'numeric' };
-            const selesai = new Date(inputMulai.value);
-            selesai.setDate(selesai.getDate() + durasi - 1);
-            const kontrak = new Date(selesai);
-            kontrak.setDate(kontrak.getDate() + 1);
+            const format = { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' };
+            const mulai = Kalender.tanggal(inputMulai.value);
+            const selesai = Kalender.hariKerjaKe(mulai, durasi);
+            const hariIni = new Date(); hariIni.setHours(0, 0, 0, 0);
+            let kontrak = Kalender.hariKerjaSetelah(selesai);
+            if (kontrak < hariIni) kontrak = Kalender.terdekat(hariIni);
 
-            ringkasan.innerHTML = 'Hari terakhir: <strong>' + selesai.toLocaleDateString('id-ID', format) + '</strong><br>'
+            ringkasan.innerHTML = (Kalender.isHariKerja(mulai) ? '' : '<span class="text-danger">Hari pertama bukan hari kerja — pilih ' + @json(\App\Support\Kalender::namaHariKerja()) + '.</span><br>')
+                + durasi + ' hari kerja (' + @json(\App\Support\Kalender::namaHariKerja()) + ', libur tidak dihitung)<br>'
+                + 'Hari terakhir: <strong>' + selesai.toLocaleDateString('id-ID', format) + '</strong><br>'
                 + 'Kontrak paling cepat: <strong>' + kontrak.toLocaleDateString('id-ID', format) + '</strong>';
         }
 

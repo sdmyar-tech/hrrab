@@ -12,6 +12,7 @@ use App\Models\Penugasan;
 use App\Models\ScreeningOnboarding;
 use App\Models\User;
 use App\Support\InterviewFlow;
+use App\Support\Kalender;
 use App\Support\OnboardingFlow;
 use App\Support\PenugasanService;
 use App\Support\ExcelExporter;
@@ -232,14 +233,15 @@ class LamaranController extends Controller
 
         $validated = $request->validate([
             'interviewer_id' => [$lanjutan ? 'required' : 'prohibited', Rule::in(InterviewFlow::opsiInterviewerLanjutan($lamaran)->pluck('id'))],
-            'tanggal' => ['required', 'date', ...($this->adminBebas() ? [] : ['after_or_equal:today'])],
-            'waktu_mulai' => ['required'],
-            'waktu_selesai' => ['nullable', 'after:waktu_mulai'],
+            'tanggal' => ['required', 'date', ...$this->aturanTanggal()],
+            'waktu_mulai' => ['required', 'date_format:H:i', $this->aturanJamBelumLewat()],
+            'waktu_selesai' => ['nullable', 'date_format:H:i', 'after:waktu_mulai'],
             'lokasi' => ['nullable', 'string', 'max:255'],
             'catatan' => ['nullable', 'string', 'max:1000'],
         ], [
             'interviewer_id.required' => 'Pilih interviewer untuk interview lanjutan.',
             'waktu_selesai.after' => 'Jam selesai harus setelah jam mulai.',
+            'tanggal.after_or_equal' => 'Tanggal interview tidak boleh di masa lalu.',
         ]);
 
         $interviewer = $lanjutan
@@ -281,14 +283,19 @@ class LamaranController extends Controller
             abort(403, 'Jadwal ini sudah selesai/dibatalkan atau Anda tidak berwenang mengubahnya.');
         }
 
+        // Aturan tanggal/jam hanya berlaku bila jadwalnya dipindah (ubah lokasi/catatan saja tetap boleh).
+        $dipindah = $request->input('tanggal') !== $interview->tanggal->toDateString()
+            || $request->input('waktu_mulai') !== substr((string) $interview->waktu_mulai, 0, 5);
+
         $validated = $request->validate([
-            'tanggal' => ['required', 'date'],
-            'waktu_mulai' => ['required'],
-            'waktu_selesai' => ['nullable', 'after:waktu_mulai'],
+            'tanggal' => ['required', 'date', ...($dipindah ? $this->aturanTanggal() : [])],
+            'waktu_mulai' => ['required', 'date_format:H:i', ...($dipindah ? [$this->aturanJamBelumLewat()] : [])],
+            'waktu_selesai' => ['nullable', 'date_format:H:i', 'after:waktu_mulai'],
             'lokasi' => ['nullable', 'string', 'max:255'],
             'catatan' => ['nullable', 'string', 'max:1000'],
         ], [
             'waktu_selesai.after' => 'Jam selesai harus setelah jam mulai.',
+            'tanggal.after_or_equal' => 'Tanggal interview tidak boleh di masa lalu.',
         ]);
 
         $interview->update($validated);
@@ -336,6 +343,11 @@ class LamaranController extends Controller
             'catatan_hasil' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        if ($interview->tanggal->isAfter(now()->endOfDay()) && ! $this->adminBebas()) {
+            return redirect()->back()->with('error', 'Hasil interview baru bisa diisi pada hari interview ('
+                . $interview->tanggal->translatedFormat('l, d M Y') . '). Ubah jadwalnya bila interview dimajukan.');
+        }
+
         $tidakLulus = $validated['hasil_status'] === InterviewJadwal::HASIL_TIDAK_LULUS;
 
         DB::transaction(function () use ($interview, $lamaran, $validated, $user, $tidakLulus) {
@@ -375,15 +387,16 @@ class LamaranController extends Controller
             && InterviewFlow::tahapBerikutnya($lamaran) === InterviewJadwal::TAHAP_KEPALA_BAGIAN) {
             $interviewer2 = InterviewFlow::interviewerTahap2($lamaran);
 
+            // Interview 2 dijadwalkan hari kerja berikutnya (jam sama) agar tidak bentrok dengan slot Interview 1.
             $this->buatJadwal($lamaran, InterviewJadwal::TAHAP_KEPALA_BAGIAN, $interviewer2, [
-                'tanggal' => $interview->tanggal,
+                'tanggal' => Kalender::hariKerjaSetelah($interview->tanggal->copy()->max(now()->startOfDay()))->toDateString(),
                 'waktu_mulai' => $interview->waktu_mulai,
                 'waktu_selesai' => $interview->waktu_selesai,
                 'lokasi' => $interview->lokasi,
                 'catatan' => 'Lanjutan otomatis dari Interview 1.',
             ]);
 
-            return redirect()->back()->with('success', "Interview 1 lulus. Interview 2 otomatis dibuat dengan {$interviewer2->name} — silakan isi hasilnya.");
+            return redirect()->back()->with('success', "Interview 1 lulus. Interview 2 otomatis dijadwalkan hari kerja berikutnya dengan {$interviewer2->name} (bisa diubah).");
         }
 
         return redirect()->back()->with('success', InterviewFlow::bisaKonfirmasiSelesai($lamaran)
@@ -421,7 +434,7 @@ class LamaranController extends Controller
 
         $validated = $request->validate([
             'pengawas_id' => ['required', 'exists:users,id'],
-            'tanggal_mulai' => ['required', 'date', ...($this->adminBebas() ? [] : ['after_or_equal:today'])],
+            'tanggal_mulai' => ['required', 'date', ...$this->aturanTanggal()],
             'durasi_hari' => ['required', 'integer', 'min:' . OnboardingFlow::DURASI_MIN, 'max:' . OnboardingFlow::DURASI_MAX],
             'lokasi' => ['nullable', 'string', 'max:255'],
             'catatan' => ['nullable', 'string', 'max:1000'],
@@ -464,6 +477,11 @@ class LamaranController extends Controller
 
         if (! OnboardingFlow::bisaKonfirmasi($user, $screening, $validated['sisi'])) {
             abort(403, 'Anda tidak berwenang mengonfirmasi onboarding ini, atau konfirmasinya sudah diisi.');
+        }
+
+        if ($validated['hasil_status'] === ScreeningOnboarding::HASIL_LULUS && ! OnboardingFlow::bolehKonfirmasiLulus($screening) && ! $this->adminBebas()) {
+            return redirect()->back()->with('error', 'Hasil Lulus baru bisa dikonfirmasi mulai hari terakhir onboarding ('
+                . $screening->tanggal_selesai->translatedFormat('l, d M Y') . '). Tidak Lulus bisa dikonfirmasi kapan saja.');
         }
 
         $pesan = OnboardingFlow::konfirmasi($screening, $validated['sisi'], $validated['hasil_status'], $validated['catatan_hasil'] ?? null, $user);
@@ -521,7 +539,7 @@ class LamaranController extends Controller
         $minimal = $onboarding && ! $this->adminBebas() ? OnboardingFlow::tanggalKontrakMinimal($onboarding) : null;
 
         return $request->validate([
-            'tanggal' => ['required', 'date', ...($minimal ? ['after_or_equal:' . $minimal->toDateString()] : [])],
+            'tanggal' => ['required', 'date', ...($minimal ? ['after_or_equal:' . $minimal->toDateString()] : []), ...$this->aturanTanggal(false)],
             'waktu' => ['nullable', 'date_format:H:i'],
             'lokasi' => ['nullable', 'string', 'max:255'],
             'catatan' => ['nullable', 'string', 'max:1000'],
@@ -571,7 +589,7 @@ class LamaranController extends Controller
         ]);
 
         $tanggalHabisKontrak = ! empty($validated['masa_kontrak_bulan'])
-            ? Carbon::parse($validated['tanggal_masuk'])->addMonths((int) $validated['masa_kontrak_bulan'])
+            ? Kalender::habisKontrak(Carbon::parse($validated['tanggal_masuk']), (int) $validated['masa_kontrak_bulan'])
             : null;
 
         DB::transaction(function () use ($validated, $lamaran, $pelamar, $tanggalHabisKontrak) {
@@ -634,7 +652,7 @@ class LamaranController extends Controller
         ]);
 
         $tanggalHabisKontrak = ! empty($validated['masa_kontrak_bulan'])
-            ? Carbon::parse($validated['tanggal_masuk'])->addMonths((int) $validated['masa_kontrak_bulan'])
+            ? Kalender::habisKontrak(Carbon::parse($validated['tanggal_masuk']), (int) $validated['masa_kontrak_bulan'])
             : null;
 
         try {
@@ -709,6 +727,38 @@ class LamaranController extends Controller
         ]);
 
         return redirect()->back()->with('success', "Lamaran dipindah ke tahap {$lamaran->tahapLabel()} dengan status {$lamaran->statusLabel()}.");
+    }
+
+    /**
+     * Aturan tanggal jadwal rekrutmen: hari kerja (bukan akhir pekan/libur) dan tidak di masa lalu. Admin bebas.
+     *
+     * @return list<mixed>
+     */
+    private function aturanTanggal(bool $mulaiHariIni = true): array
+    {
+        if ($this->adminBebas()) {
+            return [];
+        }
+
+        return [
+            ...($mulaiHariIni ? ['after_or_equal:today'] : []),
+            function (string $atribut, mixed $nilai, \Closure $gagal) {
+                if (strtotime((string) $nilai) !== false && ! Kalender::isHariKerja(Carbon::parse($nilai))) {
+                    $gagal('Tanggal ' . Carbon::parse($nilai)->translatedFormat('l, d M Y') . ' bukan hari kerja (' . Kalender::namaHariKerja() . ', di luar hari libur).');
+                }
+            },
+        ];
+    }
+
+    /** Untuk jadwal hari ini, jam mulai tidak boleh sudah lewat. */
+    private function aturanJamBelumLewat(): \Closure
+    {
+        return function (string $atribut, mixed $nilai, \Closure $gagal) {
+            $tanggal = request('tanggal');
+            if (! $this->adminBebas() && $tanggal && Carbon::parse($tanggal)->isToday() && (string) $nilai <= now()->format('H:i')) {
+                $gagal('Jam mulai sudah lewat untuk jadwal hari ini (sekarang ' . now()->format('H:i') . ' WIB).');
+            }
+        };
     }
 
     /** Admin (super admin) bebas dari aturan urutan tahap rekrutmen. */
