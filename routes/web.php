@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\EksporController;
 use App\Http\Controllers\InterviewJadwalController;
 use App\Http\Controllers\JadwalKandidatController;
 use App\Http\Controllers\NotifikasiController;
@@ -67,6 +68,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::delete('/pegawai/{pegawai}', [AdminPegawaiController::class, 'destroy'])->name('pegawai.destroy');
         });
         Route::get('/pegawai/{pegawai}', [AdminPegawaiController::class, 'show'])->name('pegawai.show')->middleware('can:lihat-tabel-karyawan');
+        Route::get('/pegawai/{pegawai}/export', [AdminPegawaiController::class, 'exportDetail'])->name('pegawai.export-detail')->middleware('can:lihat-tabel-karyawan');
     });
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
@@ -152,6 +154,7 @@ Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function (
         Route::prefix('lamaran')->name('lamaran.')->group(function () {
             Route::get('/', [AdminLamaranController::class, 'index'])->name('index');
             Route::get('/export', [AdminLamaranController::class, 'export'])->name('export');
+            Route::get('/export-jadwal', [AdminLamaranController::class, 'exportJadwal'])->name('export-jadwal');
 
             Route::get('/internal/create', [KandidatInternalController::class, 'create'])->name('internal.create');
             Route::post('/internal', [KandidatInternalController::class, 'store'])->name('internal.store');
@@ -204,6 +207,10 @@ Route::prefix('pelamar')->name('pelamar.')->middleware('pelamar')->group(functio
     });
 
     Route::get('/interview-saya', [InterviewJadwalController::class, 'milikSaya'])->name('interview.saya');
+    Route::get('/interview-saya/export', [EksporController::class, 'jadwalInterviewSaya'])->name('interview.saya.export');
+    Route::get('/pegawai/pengajuan-cuti/export', [EksporController::class, 'riwayatCuti'])->name('pegawai.pengajuan-cuti.export');
+    Route::get('/pegawai/pengajuan-lembur/export', [EksporController::class, 'riwayatLembur'])->name('pegawai.pengajuan-lembur.export');
+    Route::get('/pelamar/lamaran-export', [EksporController::class, 'lamaranSaya'])->name('pelamar.lamaran.export')->middleware('pelamar');
 
     Route::middleware('internal')->group(function () {
         Route::get('/pengumuman', [PengumumanController::class, 'index'])->name('pengumuman.index');
@@ -226,6 +233,7 @@ Route::prefix('pelamar')->name('pelamar.')->middleware('pelamar')->group(functio
     // Notifikasi pribadi: semua akun login (internal & pelamar).
     Route::get('/notifikasi', [NotifikasiController::class, 'index'])->name('notifikasi.index');
     Route::get('/notifikasi/ringkas', [NotifikasiController::class, 'ringkas'])->name('notifikasi.ringkas');
+    Route::get('/notifikasi/export', [EksporController::class, 'notifikasi'])->name('notifikasi.export');
     Route::post('/notifikasi/baca-semua', [NotifikasiController::class, 'bacaSemua'])->name('notifikasi.baca-semua');
     Route::get('/notifikasi/{id}', [NotifikasiController::class, 'buka'])->name('notifikasi.buka');
 

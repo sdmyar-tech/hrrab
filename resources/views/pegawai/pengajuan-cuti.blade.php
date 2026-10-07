@@ -148,7 +148,10 @@
 
             <div class="col-12 {{ $eligible ? 'col-xl-6' : '' }}">
                 <div class="panel p-4">
-                    <h2 class="h6 fw-bold mb-3">Riwayat Pengajuan Cuti</h2>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h2 class="h6 fw-bold mb-0">Riwayat Pengajuan Cuti</h2>
+                        @include('partials.tombol-ekspor', ['route' => 'pegawai.pengajuan-cuti.export'])
+                    </div>
                     <div class="table-responsive">
                         <table class="table align-middle mb-0">
                             <thead>

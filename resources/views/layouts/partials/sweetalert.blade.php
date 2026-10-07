@@ -142,15 +142,33 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    function pulihkanTombol(btn) {
+        if (btn && btn.dataset.originalText !== undefined) {
+            btn.innerHTML = btn.dataset.originalText;
+            btn.disabled = false;
+            delete btn.dataset.originalText;
+        }
+    }
+
+    // Spinner hanya untuk form yang benar-benar terkirim. Dicek setelah semua handler submit lain
+    // berjalan, supaya batal di dialog konfirmasi / validasi gagal tidak membuat tombol berputar terus.
     document.querySelectorAll('form').forEach(function (form) {
-        form.addEventListener('submit', function () {
-            const btn = form.querySelector('button[type="submit"]');
-            if (btn && !btn.disabled) {
-                btn.disabled = true;
-                btn.dataset.originalText = btn.innerHTML;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
-            }
+        form.addEventListener('submit', function (e) {
+            setTimeout(function () {
+                if (e.defaultPrevented) return;
+                const btn = e.submitter && e.submitter.form === form ? e.submitter : form.querySelector('button[type="submit"]');
+                if (btn && !btn.disabled) {
+                    btn.dataset.originalText = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
+                }
+            }, 0);
         });
+    });
+
+    // Kembali lewat tombol Back browser (halaman dari cache): kembalikan tombol ke keadaan semula.
+    window.addEventListener('pageshow', function () {
+        document.querySelectorAll('[data-original-text]').forEach(pulihkanTombol);
     });
 
 });

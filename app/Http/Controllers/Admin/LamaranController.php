@@ -83,6 +83,18 @@ class LamaranController extends Controller
         return ExcelExporter::download(ExcelExporter::namaFile('lamaran-masuk'), $headers, $rows, 'Lamaran Masuk');
     }
 
+    /** Semua jadwal rekrutmen (interview, onboarding, kontrak) dari lamaran sesuai filter aktif, satu sheet per jenis. */
+    public function exportJadwal(Request $request): BinaryFileResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $lamarans = $this->filteredQuery($request, $user)
+            ->with(['interviewJadwals.interviewer', 'screeningOnboardings', 'kontrakJadwals'])->orderBy('id')->get();
+
+        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('jadwal-rekrutmen'), \App\Http\Controllers\EksporController::sheetJadwal($lamarans));
+    }
+
     private function filteredQuery(Request $request, User $user)
     {
         $query = Lamaran::with([

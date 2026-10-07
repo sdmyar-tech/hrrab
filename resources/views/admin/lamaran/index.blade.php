@@ -14,6 +14,7 @@
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
                 @include('partials.tombol-ekspor', ['route' => 'admin.lamaran.export', 'ukuran' => ''])
+                @include('partials.tombol-ekspor', ['route' => 'admin.lamaran.export-jadwal', 'label' => 'Ekspor Jadwal', 'ikon' => 'bi-calendar-week', 'ukuran' => ''])
                 @if ($canReview)
                     <a href="{{ route('admin.lamaran.internal.create') }}" class="btn btn-primary">
                         <i class="bi bi-person-plus me-1"></i> Tambah Kandidat Langsung

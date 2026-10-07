@@ -11,7 +11,8 @@
                     <h1 class="mb-0">Lamaran Saya</h1>
                 </div>
             </div>
-            <div class="heading-actions">
+            <div class="heading-actions d-flex flex-wrap gap-2">
+                @include('partials.tombol-ekspor', ['route' => 'pelamar.lamaran.export', 'label' => 'Ekspor Lamaran & Jadwal', 'ukuran' => ''])
                 <a href="{{ route('lowongan.index') }}" class="btn btn-primary">
                     <i class="bi bi-briefcase me-1"></i> Cari Lowongan
                 </a>

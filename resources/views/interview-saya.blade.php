@@ -12,6 +12,9 @@
                     <p class="text-muted mb-0">Jadwal wawancara kandidat yang ditugaskan kepada Anda.</p>
                 </div>
             </div>
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['route' => 'interview.saya.export', 'label' => 'Ekspor Jadwal', 'ukuran' => ''])
+            </div>
         </div>
 
         <section class="panel">
