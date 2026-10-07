@@ -16,14 +16,9 @@ class JabatanController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Jabatan::orderBy('nama');
-
-        if ($cari = $request->query('q')) {
-            $query->where('nama', 'like', "%{$cari}%");
-        }
-
+        // Pencarian & penyaringan dilakukan langsung di halaman (?q= dipakai sebagai isian awal kotak cari).
         return view('admin.jabatan.index', [
-            'jabatans' => $query->get(),
+            'jabatans' => Jabatan::orderBy('nama')->get(),
             'semuaJabatan' => Jabatan::orderBy('nama')->get(['id', 'nama']),
             'dipakai' => $this->hitungPemakaian(),
         ]);
