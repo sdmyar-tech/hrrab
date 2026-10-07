@@ -52,7 +52,7 @@ class PengajuanCuti extends Model
         'izin_studi' => null,
     ];
 
-    /** Kejadian mendadak: bebas aturan H-7, boleh diajukan susulan maksimal MAX_HARI_SUSULAN hari setelah kejadian. */
+    /** Cuti besar mendadak: bebas aturan H-7, boleh mulai di hari yang sama dengan pengajuan (tidak boleh tanggal lampau). */
     public const KATEGORI_DADAKAN = [
         'keluarga_inti_meninggal',
         'orang_tua_mertua_meninggal',
@@ -62,7 +62,6 @@ class PengajuanCuti extends Model
         'panggilan_pengadilan',
     ];
 
-    public const MAX_HARI_SUSULAN = 3;
 
     public static function isDadakan(?string $jenis, ?string $kategori): bool
     {

@@ -92,7 +92,7 @@
                                         value="{{ old('tanggal_mulai', now()->addDays(7)->format('Y-m-d')) }}"
                                         min="{{ now()->addDays(7)->format('Y-m-d') }}" required
                                         data-min-normal="{{ now()->addDays(7)->format('Y-m-d') }}"
-                                        data-min-dadakan="{{ now()->subDays(\App\Models\PengajuanCuti::MAX_HARI_SUSULAN)->format('Y-m-d') }}">
+                                        data-min-dadakan="{{ now()->format('Y-m-d') }}">
                                     <small class="text-muted" id="hintTanggalMulai">Tanggal mulai minimal 7 hari setelah tanggal pengajuan.</small>
                                     @error('tanggal_mulai')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -241,7 +241,7 @@
         const hintMulai = document.getElementById('hintTanggalMulai');
         const keterangan = document.getElementById('keterangan');
 
-        // Cuti mendadak (duka, melahirkan, bencana) boleh mulai hari ini / susulan, tanpa aturan H-7.
+        // Cuti besar mendadak (duka, melahirkan, bencana, panggilan) boleh mulai hari ini, tanpa aturan H-7.
         function updateAturanTanggal() {
             const opsi = kategoriSelect.options[kategoriSelect.selectedIndex];
             const dadakan = document.getElementById('jenisBesar').checked && opsi && opsi.dataset.dadakan === '1';
@@ -255,7 +255,7 @@
                 tanggalMulai.value = minBaru;
             }
             hintMulai.textContent = dadakan
-                ? 'Cuti mendadak: boleh mulai hari ini atau diajukan susulan maks. {{ \App\Models\PengajuanCuti::MAX_HARI_SUSULAN }} hari setelah kejadian. Keterangan wajib diisi.'
+                ? 'Cuti mendadak: boleh mulai di hari yang sama dengan pengajuan. Keterangan wajib diisi.'
                 : 'Tanggal mulai minimal 7 hari setelah tanggal pengajuan.';
             keterangan.required = dadakan;
         }

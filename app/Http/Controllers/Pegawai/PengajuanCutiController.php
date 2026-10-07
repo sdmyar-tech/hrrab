@@ -65,7 +65,7 @@ class PengajuanCutiController extends Controller
         // Cuti mendadak (duka, melahirkan, bencana, panggilan) tidak terikat aturan H-7.
         $dadakan = PengajuanCuti::isDadakan($request->input('jenis_cuti'), $request->input('kategori_cuti_besar'));
         $tanggalMinimal = $dadakan
-            ? now()->subDays(PengajuanCuti::MAX_HARI_SUSULAN)
+            ? now()
             : now()->addDays(self::MIN_HARI_SEBELUM_CUTI);
 
         $validated = $request->validate([
@@ -81,7 +81,7 @@ class PengajuanCutiController extends Controller
         ], [
             'kategori_cuti_besar.required_if' => 'Jenis cuti besar wajib dipilih.',
             'tanggal_mulai.after_or_equal' => $dadakan
-                ? 'Cuti mendadak boleh diajukan susulan paling lambat ' . PengajuanCuti::MAX_HARI_SUSULAN . ' hari setelah kejadian.'
+                ? 'Cuti mendadak paling cepat dimulai hari ini (tidak bisa untuk tanggal yang sudah lewat).'
                 : 'Tanggal mulai cuti minimal ' . self::MIN_HARI_SEBELUM_CUTI . ' hari setelah tanggal pengajuan.',
             'keterangan.required' => 'Keterangan wajib diisi untuk cuti mendadak (mis. nama keluarga & hubungan).',
             'tanggal_selesai.after_or_equal' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
