@@ -504,7 +504,17 @@
                                                                     <i class="bi bi-box-arrow-right"></i> Akhiri
                                                                 </button>
                                                             </form>
-                                                        @else
+                                                        @endif
+                                                        @if (! $p->isAkanDatang() && $p->jenis !== \App\Models\Penugasan::JENIS_AWAL)
+                                                            <form action="{{ route('admin.penugasan.destroy', $p) }}" method="POST" class="mt-1"
+                                                                data-confirm="Hapus {{ strtolower($p->jenisLabel()) }} ke {{ $p->unit_kerja }} (koreksi salah input)?{{ $p->is_utama ? ' Pegawai dikembalikan ke unit sebelumnya.' : '' }}">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-link btn-sm text-danger p-0">
+                                                                    <i class="bi bi-trash"></i> Hapus
+                                                                </button>
+                                                            </form>
+                                                        @elseif ($p->jenis === \App\Models\Penugasan::JENIS_AWAL)
                                                             <span class="text-muted small">&mdash;</span>
                                                         @endif
                                                     </td>

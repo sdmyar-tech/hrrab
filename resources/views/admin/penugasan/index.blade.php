@@ -80,6 +80,7 @@
                             <th>Periode</th>
                             <th>Status</th>
                             <th>SK / Dicatat</th>
+                            <th class="text-end">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -105,10 +106,23 @@
                                     {{ $p->no_sk ?? '-' }}
                                     <span class="text-muted d-block">{{ $p->dibuatOleh?->name ?? 'sistem' }}</span>
                                 </td>
+                                <td class="text-end">
+                                    <form action="{{ route('admin.penugasan.destroy', $p) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <input type="hidden" name="kembali" value="daftar">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Hapus"
+                                            data-confirm="true" data-icon="warning" data-confirm-color="#dc3545" data-confirm-text="Ya, hapus"
+                                            data-title="Hapus {{ strtolower($p->jenisLabel()) }}?"
+                                            data-text="{{ $p->jenisLabel() }} {{ $p->dataPegawai?->nama_lengkap }} ke {{ $p->unit_kerja }} akan dihapus.{{ $p->is_utama ? ' Pegawai dikembalikan ke unit sebelumnya.' : '' }}">
+                                            <i class="bi bi-trash"></i> Hapus
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
+                                <td colspan="8" class="text-center py-4 text-muted">
                                     <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                     Belum ada mutasi atau rangkap tugas.
                                 </td>

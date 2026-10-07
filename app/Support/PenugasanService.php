@@ -154,30 +154,44 @@ class PenugasanService
     }
 
     /**
-     * Batalkan penugasan yang belum mulai (mutasi/rangkap terjadwal).
+     * Hapus mutasi/rangkap (terjadwal, berlaku, maupun selesai) — untuk pembatalan atau koreksi salah input.
+     * Mutasi hanya bisa dihapus bila merupakan mutasi terakhir; penugasan utama sebelumnya dibuka kembali.
      *
      * @return list<string>
      */
-    public static function batalkan(Penugasan $penugasan): array
+    public static function hapus(Penugasan $penugasan): array
     {
-        if (! $penugasan->isAkanDatang()) {
-            throw ValidationException::withMessages(['penugasan' => 'Hanya penugasan yang belum mulai yang bisa dibatalkan.']);
+        if ($penugasan->jenis === Penugasan::JENIS_AWAL) {
+            throw ValidationException::withMessages(['penugasan' => 'Penempatan awal pegawai tidak bisa dihapus. Gunakan Mutasi untuk memindahkan unit.']);
         }
 
-        return DB::transaction(function () use ($penugasan) {
-            $pegawai = $penugasan->dataPegawai;
-            $sehariSebelum = $penugasan->tanggal_mulai->copy()->subDay()->toDateString();
+        $pegawai = $penugasan->dataPegawai;
 
+        if ($penugasan->is_utama && $pegawai->penugasans()->where('is_utama', true)
+            ->where('tanggal_mulai', '>', $penugasan->tanggal_mulai->toDateString())->exists()) {
+            throw ValidationException::withMessages(['penugasan' => 'Masih ada mutasi setelah ini. Hapus mutasi yang lebih baru terlebih dahulu.']);
+        }
+
+        return DB::transaction(function () use ($penugasan, $pegawai) {
             if ($penugasan->is_utama) {
-                $pegawai->penugasans()->where('is_utama', true)->whereDate('tanggal_selesai', $sehariSebelum)
-                    ->update(['tanggal_selesai' => null]);
+                $sehariSebelum = $penugasan->tanggal_mulai->copy()->subDay()->toDateString();
+
+                // Buka lagi penempatan utama sebelumnya (dan rangkap di unit tujuan yang ditutup oleh mutasi ini).
+                $pegawai->penugasans()->where('is_utama', true)->whereKeyNot($penugasan->id)
+                    ->whereDate('tanggal_selesai', $sehariSebelum)
+                    ->update(['tanggal_selesai' => $penugasan->tanggal_selesai?->toDateString()]);
                 $pegawai->penugasans()->where('is_utama', false)->where('unit_kerja', $penugasan->unit_kerja)
                     ->whereDate('tanggal_selesai', $sehariSebelum)->update(['tanggal_selesai' => null]);
             }
 
             $penugasan->delete();
 
-            return self::sinkron($pegawai);
+            $peringatan = self::sinkron($pegawai);
+            if ($penugasan->isKepala() && self::unitTanpaKepala($penugasan->unit_kerja)) {
+                $peringatan[] = "Unit {$penugasan->unit_kerja} sekarang tidak punya kepala aktif.";
+            }
+
+            return $peringatan;
         });
     }
 

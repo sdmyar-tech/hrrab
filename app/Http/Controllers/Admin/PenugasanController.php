@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use App\Support\ExcelExporter;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -148,12 +149,25 @@ class PenugasanController extends Controller
         return $this->kembali($penugasan->dataPegawai, "Rangkap tugas di {$penugasan->unit_kerja} diakhiri.", $peringatan);
     }
 
-    public function destroy(Penugasan $penugasan): RedirectResponse
+    public function destroy(Request $request, Penugasan $penugasan): RedirectResponse
     {
         $pegawai = $penugasan->dataPegawai;
-        $peringatan = PenugasanService::batalkan($penugasan);
 
-        return $this->kembali($pegawai, "{$penugasan->jenisLabel()} terjadwal ke {$penugasan->unit_kerja} dibatalkan.", $peringatan);
+        try {
+            $peringatan = PenugasanService::hapus($penugasan);
+        } catch (ValidationException $e) {
+            return back()->with('error', collect($e->errors())->flatten()->first());
+        }
+
+        $pesan = "{$penugasan->jenisLabel()} {$pegawai?->nama_lengkap} ke {$penugasan->unit_kerja} dihapus."
+            . ($penugasan->is_utama ? ' Pegawai dikembalikan ke penempatan sebelumnya.' : '');
+
+        // Dari halaman daftar Mutasi & Rangkap: tetap di daftar, peringatan digabung ke pesan.
+        if ($request->input('kembali') === 'daftar') {
+            return back()->with('success', trim($pesan . ' ' . implode(' ', $peringatan)));
+        }
+
+        return $this->kembali($pegawai, $pesan, $peringatan);
     }
 
     /**
