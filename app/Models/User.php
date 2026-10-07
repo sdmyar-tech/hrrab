@@ -82,6 +82,7 @@ class User extends Authenticatable
         self::ROLE_ADMIN => [
             self::ABILITY_LIHAT_DASHBOARD,
             self::ABILITY_LIHAT_TABEL_KARYAWAN,
+            self::ABILITY_LIHAT_LAPORAN,
             self::ABILITY_KELOLA_SISTEM,
             self::ABILITY_KELOLA_PENUGASAN,
             self::ABILITY_KELOLA_PENGUMUMAN,

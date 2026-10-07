@@ -158,6 +158,10 @@
                         <div class="alert alert-secondary small mb-0">Menunggu persetujuan: {{ $pengajuanCuti->currentLevelLabel() }}</div>
                     @endif
                 @endif
+
+                @can('kelola-sistem')
+                    @include('admin.pengajuan-cuti._ubah-admin')
+                @endcan
             </div>
         </div>
     </div>

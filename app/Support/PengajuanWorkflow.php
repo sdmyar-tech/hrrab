@@ -235,8 +235,23 @@ class PengajuanWorkflow
         return $updates;
     }
 
-    /** $gm menangani pengajuan di luar bidang utamanya (menggantikan GM lain). */
-    public static function isGmPengganti(User $gm, PengajuanCuti|PengajuanLembur $pengajuan): bool
+    /**
+     * Kolom status yang di-set Admin secara langsung (tanpa tahapan).
+     * Disetujui/ditolak = final atas nama Admin; menunggu = dikembalikan ke tahap $level.
+     */
+    public static function statusAdmin(PengajuanCuti|PengajuanLembur $pengajuan, string $status, ?string $level, User $admin): array
+    {
+        return match ($status) {
+            $pengajuan::STATUS_PENDING => ['current_level' => $level, 'approved_by' => null, 'approved_at' => null],
+            default => [
+                'current_level' => null,
+                'approved_by' => $pengajuan->status === $status ? ($pengajuan->approved_by ?? $admin->id) : $admin->id,
+                'approved_at' => $pengajuan->status === $status ? ($pengajuan->approved_at ?? now()) : now(),
+            ],
+        };
+    }
+
+    /** $gm menangani pengajuan di luar bidang utamanya (menggantikan GM lain). */    public static function isGmPengganti(User $gm, PengajuanCuti|PengajuanLembur $pengajuan): bool
     {
         return ! $gm->memegangDivisi(self::unitPengajuan($pengajuan));
     }
@@ -290,7 +305,7 @@ class PengajuanWorkflow
     public static function scopeVisibleTo(Builder $query, User $viewer): Builder
     {
         return match ($viewer->role) {
-            User::ROLE_PEMBINA => $query,
+            User::ROLE_PEMBINA, User::ROLE_ADMIN => $query,
             User::ROLE_GM => $query->where(function ($q) use ($viewer) {
                 $q->whereIn('data_pegawai_id', User::whereIn('role', [User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM])
                     ->whereNotNull('data_pegawai_id')->select('data_pegawai_id'))

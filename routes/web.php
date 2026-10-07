@@ -96,6 +96,10 @@ Route::middleware('can:kelola-penugasan')->group(function () {
             Route::post('/pegawai/{pegawai}/penugasan', [AdminPenugasanController::class, 'store'])->name('penugasan.store');
             Route::post('/penugasan/{penugasan}/akhiri', [AdminPenugasanController::class, 'akhiri'])->name('penugasan.akhiri');
             Route::delete('/penugasan/{penugasan}', [AdminPenugasanController::class, 'destroy'])->name('penugasan.destroy');
+            Route::middleware('can:kelola-sistem')->group(function () {
+                Route::get('/penugasan/{penugasan}/edit', [AdminPenugasanController::class, 'edit'])->name('penugasan.edit');
+                Route::put('/penugasan/{penugasan}', [AdminPenugasanController::class, 'update'])->name('penugasan.update');
+            });
         });
 
         Route::prefix('pengajuan-lembur')->name('pengajuan-lembur.')->middleware('can:lihat-laporan')->group(function () {
@@ -104,6 +108,10 @@ Route::middleware('can:kelola-penugasan')->group(function () {
             Route::get('/{pengajuanLembur}', [AdminPengajuanLemburController::class, 'show'])->name('show');
             Route::post('/{pengajuanLembur}/approve', [AdminPengajuanLemburController::class, 'approve'])->name('approve')->middleware('can:approve');
             Route::post('/{pengajuanLembur}/reject', [AdminPengajuanLemburController::class, 'reject'])->name('reject')->middleware('can:approve');
+            Route::middleware('can:kelola-sistem')->group(function () {
+                Route::put('/{pengajuanLembur}/ubah-admin', [AdminPengajuanLemburController::class, 'ubahAdmin'])->name('ubah-admin');
+                Route::delete('/{pengajuanLembur}', [AdminPengajuanLemburController::class, 'destroy'])->name('destroy');
+            });
         });
 
         Route::prefix('pengajuan-cuti')->name('pengajuan-cuti.')->middleware('can:lihat-laporan')->group(function () {
@@ -112,6 +120,10 @@ Route::middleware('can:kelola-penugasan')->group(function () {
             Route::get('/{pengajuanCuti}', [AdminPengajuanCutiController::class, 'show'])->name('show');
             Route::post('/{pengajuanCuti}/approve', [AdminPengajuanCutiController::class, 'approve'])->name('approve')->middleware('can:approve');
             Route::post('/{pengajuanCuti}/reject', [AdminPengajuanCutiController::class, 'reject'])->name('reject')->middleware('can:approve');
+            Route::middleware('can:kelola-sistem')->group(function () {
+                Route::put('/{pengajuanCuti}/ubah-admin', [AdminPengajuanCutiController::class, 'ubahAdmin'])->name('ubah-admin');
+                Route::delete('/{pengajuanCuti}', [AdminPengajuanCutiController::class, 'destroy'])->name('destroy');
+            });
         });
 
 Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function () {
@@ -122,6 +134,7 @@ Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function (
             Route::post('/{pengajuanFormasi}/approve', [AdminPengajuanFormasiController::class, 'approve'])->name('approve');
             Route::post('/{pengajuanFormasi}/reject', [AdminPengajuanFormasiController::class, 'reject'])->name('reject');
             Route::post('/{pengajuanFormasi}/batalkan', [AdminPengajuanFormasiController::class, 'batalkan'])->name('batalkan');
+            Route::delete('/{pengajuanFormasi}', [AdminPengajuanFormasiController::class, 'destroy'])->name('destroy')->middleware('can:kelola-sistem');
         });
 
         Route::prefix('lowongan')->name('lowongan.')->group(function () {
@@ -157,6 +170,7 @@ Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function (
             Route::put('/{lamaran}/kontrak/{kontrak}', [AdminLamaranController::class, 'kontrakUpdate'])->name('kontrak.update');
             Route::post('/{lamaran}/rekrut', [AdminLamaranController::class, 'rekrut'])->name('rekrut');
             Route::post('/{lamaran}/tolak', [AdminLamaranController::class, 'tolak'])->name('tolak');
+            Route::put('/{lamaran}/ubah-admin', [AdminLamaranController::class, 'ubahAdmin'])->name('ubah-admin')->middleware('can:kelola-sistem');
         });
     });
 

@@ -129,6 +129,10 @@
                         <div class="alert alert-secondary small mb-0">Menunggu persetujuan: {{ $pengajuanLembur->currentLevelLabel() }}</div>
                     @endif
                 @endif
+
+                @can('kelola-sistem')
+                    @include('admin.pengajuan-lembur._ubah-admin')
+                @endcan
             </div>
         </div>
     </div>

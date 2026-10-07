@@ -483,6 +483,9 @@
                                                 </td>
                                                 @can('kelola-penugasan')
                                                     <td class="text-end">
+                                                        @if (auth()->user()->isAdmin())
+                                                            <a href="{{ route('admin.penugasan.edit', $p) }}" class="btn btn-link btn-sm p-0 me-2" title="Ubah langsung (Admin)"><i class="bi bi-pencil"></i> Ubah</a>
+                                                        @endif
                                                         @if ($p->isAkanDatang())
                                                             <form action="{{ route('admin.penugasan.destroy', $p) }}" method="POST"
                                                                 data-confirm="Batalkan {{ strtolower($p->jenisLabel()) }} terjadwal ke {{ $p->unit_kerja }}?">
@@ -505,7 +508,7 @@
                                                                 </button>
                                                             </form>
                                                         @endif
-                                                        @if (! $p->isAkanDatang() && $p->jenis !== \App\Models\Penugasan::JENIS_AWAL)
+                                                        @if (! $p->isAkanDatang() && ($p->jenis !== \App\Models\Penugasan::JENIS_AWAL || auth()->user()->isAdmin()))
                                                             <form action="{{ route('admin.penugasan.destroy', $p) }}" method="POST" class="mt-1"
                                                                 data-confirm="Hapus {{ strtolower($p->jenisLabel()) }} ke {{ $p->unit_kerja }} (koreksi salah input)?{{ $p->is_utama ? ' Pegawai dikembalikan ke unit sebelumnya.' : '' }}">
                                                                 @csrf
@@ -514,7 +517,7 @@
                                                                     <i class="bi bi-trash"></i> Hapus
                                                                 </button>
                                                             </form>
-                                                        @elseif ($p->jenis === \App\Models\Penugasan::JENIS_AWAL)
+                                                        @elseif ($p->jenis === \App\Models\Penugasan::JENIS_AWAL && ! auth()->user()->isAdmin())
                                                             <span class="text-muted small">&mdash;</span>
                                                         @endif
                                                     </td>

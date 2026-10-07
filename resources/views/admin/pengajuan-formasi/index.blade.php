@@ -90,8 +90,8 @@
                                     @endif
                                 </td>
                                 <td class="text-end">
-                                    @if ($item->isPending() && \App\Support\RekrutmenAccess::canReviewFormasi(auth()->user(), $item))
-                                        <div class="d-flex gap-1 justify-content-end">
+                                    @if (($item->isPending() || auth()->user()->isAdmin()) && \App\Support\RekrutmenAccess::canReviewFormasi(auth()->user(), $item))
+                                        <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <form action="{{ route('admin.pengajuan-formasi.approve', $item) }}" method="POST"
                                                 data-confirm="Setujui pengajuan formasi ini?">
                                                 @csrf
@@ -107,6 +107,14 @@
                                                     <i class="bi bi-x-lg"></i> Tolak
                                                 </button>
                                             </form>
+                                            @if (auth()->user()->isAdmin())
+                                                <form action="{{ route('admin.pengajuan-formasi.destroy', $item) }}" method="POST"
+                                                    data-confirm="Hapus permanen pengajuan formasi {{ $item->jabatan }}?">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-outline-secondary btn-sm" title="Hapus"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            @endif
                                         </div>
                                     @elseif ($item->diajukan_oleh === auth()->id() && $item->isPending())
                                         <form action="{{ route('admin.pengajuan-formasi.batalkan', $item) }}" method="POST"

@@ -159,15 +159,20 @@ class PenugasanService
      *
      * @return list<string>
      */
-    public static function hapus(Penugasan $penugasan): array
+    public static function hapus(Penugasan $penugasan, bool $bebas = false): array
     {
-        if ($penugasan->jenis === Penugasan::JENIS_AWAL) {
+        if ($penugasan->jenis === Penugasan::JENIS_AWAL && ! $bebas) {
             throw ValidationException::withMessages(['penugasan' => 'Penempatan awal pegawai tidak bisa dihapus. Gunakan Mutasi untuk memindahkan unit.']);
         }
 
         $pegawai = $penugasan->dataPegawai;
 
-        if ($penugasan->is_utama && $pegawai->penugasans()->where('is_utama', true)
+        if ($penugasan->jenis === Penugasan::JENIS_AWAL && ! $pegawai->penugasans()->where('is_utama', true)->whereKeyNot($penugasan->id)->exists()) {
+            throw ValidationException::withMessages(['penugasan' => 'Ini satu-satunya penempatan utama pegawai, tidak bisa dihapus. Ubah unitnya lewat Edit.']);
+        }
+
+        // Mutasi di tengah riwayat boleh dihapus Admin: penempatan sebelumnya disambung sampai tanggal selesai mutasi ini.
+        if (! $bebas && $penugasan->is_utama && $pegawai->penugasans()->where('is_utama', true)
             ->where('tanggal_mulai', '>', $penugasan->tanggal_mulai->toDateString())->exists()) {
             throw ValidationException::withMessages(['penugasan' => 'Masih ada mutasi setelah ini. Hapus mutasi yang lebih baru terlebih dahulu.']);
         }
@@ -192,6 +197,21 @@ class PenugasanService
             }
 
             return $peringatan;
+        });
+    }
+
+    /**
+     * Admin: ubah langsung satu baris penugasan (unit, jabatan, peran, tanggal) tanpa aturan mutasi.
+     *
+     * @param  array{unit_kerja: string, jabatan: ?string, peran: string, tanggal_mulai: string, tanggal_selesai: ?string, no_sk: ?string, keterangan: ?string}  $data
+     * @return list<string>
+     */
+    public static function ubahLangsung(Penugasan $penugasan, array $data): array
+    {
+        return DB::transaction(function () use ($penugasan, $data) {
+            $penugasan->update($data);
+
+            return self::sinkron($penugasan->dataPegawai);
         });
     }
 

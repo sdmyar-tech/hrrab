@@ -220,7 +220,7 @@ class LamaranController extends Controller
 
         $validated = $request->validate([
             'interviewer_id' => [$lanjutan ? 'required' : 'prohibited', Rule::in(InterviewFlow::opsiInterviewerLanjutan($lamaran)->pluck('id'))],
-            'tanggal' => ['required', 'date', 'after_or_equal:today'],
+            'tanggal' => ['required', 'date', ...($this->adminBebas() ? [] : ['after_or_equal:today'])],
             'waktu_mulai' => ['required'],
             'waktu_selesai' => ['nullable', 'after:waktu_mulai'],
             'lokasi' => ['nullable', 'string', 'max:255'],
@@ -385,7 +385,7 @@ class LamaranController extends Controller
 
         $lamaran->load('lowongan', 'interviewJadwals');
 
-        if (! InterviewFlow::bisaKonfirmasiSelesai($lamaran)) {
+        if (! InterviewFlow::bisaKonfirmasiSelesai($lamaran) && ! $this->adminBebas()) {
             return redirect()->back()->with('error', 'Interview belum bisa dikonfirmasi selesai: minimal ' . InterviewFlow::MIN_LULUS
                 . ' interview Lulus (termasuk Interview 1) dan tidak ada jadwal yang masih berjalan.');
         }
@@ -399,7 +399,7 @@ class LamaranController extends Controller
     {
         $this->authorizeReview();
 
-        if ($lamaran->tahap !== Lamaran::TAHAP_SCREENING) {
+        if ($lamaran->tahap !== Lamaran::TAHAP_SCREENING && ! $this->adminBebas()) {
             return redirect()->back()->with('error', 'Lamaran belum berada di tahap screening/onboarding.');
         }
 
@@ -409,7 +409,7 @@ class LamaranController extends Controller
 
         $validated = $request->validate([
             'pengawas_id' => ['required', 'exists:users,id'],
-            'tanggal_mulai' => ['required', 'date', 'after_or_equal:today'],
+            'tanggal_mulai' => ['required', 'date', ...($this->adminBebas() ? [] : ['after_or_equal:today'])],
             'durasi_hari' => ['required', 'integer', 'min:' . OnboardingFlow::DURASI_MIN, 'max:' . OnboardingFlow::DURASI_MAX],
             'lokasi' => ['nullable', 'string', 'max:255'],
             'catatan' => ['nullable', 'string', 'max:1000'],
@@ -465,7 +465,7 @@ class LamaranController extends Controller
 
         $onboarding = OnboardingFlow::onboardingLulus($lamaran->load('screeningOnboardings'));
 
-        if (! $onboarding || $lamaran->tahap !== Lamaran::TAHAP_KONTRAK) {
+        if ((! $onboarding || $lamaran->tahap !== Lamaran::TAHAP_KONTRAK) && ! $this->adminBebas()) {
             return redirect()->back()->with('error', 'Jadwal kontrak hanya bisa dibuat setelah onboarding dinyatakan Lulus.');
         }
 
@@ -494,7 +494,7 @@ class LamaranController extends Controller
 
         $onboarding = OnboardingFlow::onboardingLulus($lamaran->load('screeningOnboardings'));
 
-        if ($kontrak->status !== KontrakJadwal::STATUS_TERJADWAL || ! $onboarding || $lamaran->isSelesai()) {
+        if (($kontrak->status !== KontrakJadwal::STATUS_TERJADWAL || ! $onboarding || $lamaran->isSelesai()) && ! $this->adminBebas()) {
             return redirect()->back()->with('error', 'Jadwal kontrak ini tidak bisa diubah lagi.');
         }
 
@@ -503,17 +503,18 @@ class LamaranController extends Controller
         return redirect()->back()->with('success', 'Jadwal tanda tangan kontrak diperbarui.');
     }
 
-    private function validasiKontrak(Request $request, ScreeningOnboarding $onboarding): array
+    private function validasiKontrak(Request $request, ?ScreeningOnboarding $onboarding): array
     {
-        $minimal = OnboardingFlow::tanggalKontrakMinimal($onboarding);
+        // Admin bebas memilih tanggal; selain admin minimal sehari setelah onboarding selesai.
+        $minimal = $onboarding && ! $this->adminBebas() ? OnboardingFlow::tanggalKontrakMinimal($onboarding) : null;
 
         return $request->validate([
-            'tanggal' => ['required', 'date', 'after_or_equal:' . $minimal->toDateString()],
+            'tanggal' => ['required', 'date', ...($minimal ? ['after_or_equal:' . $minimal->toDateString()] : [])],
             'waktu' => ['nullable', 'date_format:H:i'],
             'lokasi' => ['nullable', 'string', 'max:255'],
             'catatan' => ['nullable', 'string', 'max:1000'],
         ], [
-            'tanggal.after_or_equal' => 'Tanggal kontrak paling cepat ' . $minimal->translatedFormat('d M Y') . ' (sehari setelah onboarding selesai).',
+            'tanggal.after_or_equal' => 'Tanggal kontrak paling cepat ' . $minimal?->translatedFormat('d M Y') . ' (sehari setelah onboarding selesai).',
         ]);
     }
 
@@ -521,7 +522,7 @@ class LamaranController extends Controller
     {
         $this->authorizeReview();
 
-        if ($lamaran->isSelesai()) {
+        if ($lamaran->status === Lamaran::STATUS_DITERIMA || ($lamaran->isSelesai() && ! $this->adminBebas())) {
             return redirect()->back()->with('error', 'Lamaran ini sudah memiliki keputusan akhir.');
         }
 
@@ -529,11 +530,14 @@ class LamaranController extends Controller
 
         $onboarding = OnboardingFlow::onboardingLulus($lamaran);
 
-        if (! $onboarding) {
+        if (! $onboarding && ! $this->adminBebas()) {
             return redirect()->back()->with('error', 'Rekrut hanya bisa dilakukan setelah onboarding dinyatakan Lulus oleh Kepala SDM & Kepala Bagian.');
         }
 
-        $request->merge(['tanggal_masuk' => $onboarding->tanggal_mulai->toDateString()]);
+        // Tanggal masuk = hari pertama onboarding; Admin tanpa onboarding mengisi manual.
+        if ($onboarding) {
+            $request->merge(['tanggal_masuk' => $onboarding->tanggal_mulai->toDateString()]);
+        }
 
         if ($lamaran->isKandidatPegawai()) {
             return $this->tetapkanPosisiPegawai($request, $lamaran);
@@ -673,11 +677,39 @@ class LamaranController extends Controller
         }
     }
 
+    /** Admin: pindahkan tahap/status lamaran langsung tanpa mengikuti alur. */
+    public function ubahAdmin(Request $request, Lamaran $lamaran): RedirectResponse
+    {
+        abort_unless($this->adminBebas(), 403);
+
+        $v = $request->validate([
+            'tahap' => ['required', Rule::in([Lamaran::TAHAP_VERIFIKASI, Lamaran::TAHAP_INTERVIEW, Lamaran::TAHAP_SCREENING, Lamaran::TAHAP_KONTRAK, Lamaran::TAHAP_SELESAI])],
+            'status' => ['required', Rule::in([Lamaran::STATUS_MENUNGGU_VERIFIKASI, Lamaran::STATUS_PROSES, Lamaran::STATUS_DITERIMA, Lamaran::STATUS_DITOLAK, Lamaran::STATUS_DIBATALKAN])],
+            'catatan_admin' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $final = in_array($v['status'], [Lamaran::STATUS_DITERIMA, Lamaran::STATUS_DITOLAK, Lamaran::STATUS_DIBATALKAN], true);
+
+        $lamaran->update([
+            ...$v,
+            'diputuskan_oleh' => $final ? Auth::id() : null,
+            'diputuskan_pada' => $final ? now() : null,
+        ]);
+
+        return redirect()->back()->with('success', "Lamaran dipindah ke tahap {$lamaran->tahapLabel()} dengan status {$lamaran->statusLabel()}.");
+    }
+
+    /** Admin (super admin) bebas dari aturan urutan tahap rekrutmen. */
+    private function adminBebas(): bool
+    {
+        return (bool) Auth::user()?->isAdmin();
+    }
+
     public function tolak(Request $request, Lamaran $lamaran): RedirectResponse
     {
         $this->authorizeReview();
 
-        if ($lamaran->isSelesai()) {
+        if ($lamaran->isSelesai() && ! $this->adminBebas()) {
             return redirect()->back()->with('error', 'Lamaran ini sudah memiliki keputusan akhir.');
         }
 

@@ -137,7 +137,7 @@ class PengajuanFormasiController extends Controller
             abort(403, 'Anda tidak berwenang mereview pengajuan formasi ini.');
         }
 
-        if (! $pengajuanFormasi->isPending()) {
+        if (! $pengajuanFormasi->isPending() && ! $reviewer->isAdmin()) {
             return redirect()->back()->with('error', 'Pengajuan formasi ini sudah diproses.');
         }
 
@@ -147,6 +147,8 @@ class PengajuanFormasiController extends Controller
             'direview_pada' => now(),
         ]);
 
+        // Admin bisa menyetujui ulang formasi yang sudah diproses; lowongan tidak dibuat dobel.
+        if (! $pengajuanFormasi->lowongan()->exists()) {
         $pengajuanFormasi->lowongan()->create([
             'judul' => $pengajuanFormasi->jabatan,
             'unit_kerja' => $pengajuanFormasi->unit_kerja,
@@ -159,6 +161,7 @@ class PengajuanFormasiController extends Controller
             'dipublikasikan_oleh' => $reviewer->id,
             'dipublikasikan_pada' => now(),
         ]);
+        }
         Notifikasi::formasiDiputuskan($pengajuanFormasi);
 
         return redirect()
@@ -175,7 +178,7 @@ class PengajuanFormasiController extends Controller
             abort(403, 'Anda tidak berwenang mereview pengajuan formasi ini.');
         }
 
-        if (! $pengajuanFormasi->isPending()) {
+        if (! $pengajuanFormasi->isPending() && ! $reviewer->isAdmin()) {
             return redirect()->back()->with('error', 'Pengajuan formasi ini sudah diproses.');
         }
 
@@ -196,6 +199,13 @@ class PengajuanFormasiController extends Controller
         return redirect()
             ->route('admin.pengajuan-formasi.index')
             ->with('success', 'Pengajuan formasi ditolak.');
+    }
+
+    public function destroy(PengajuanFormasi $pengajuanFormasi): RedirectResponse
+    {
+        $pengajuanFormasi->delete();
+
+        return redirect()->route('admin.pengajuan-formasi.index')->with('success', "Pengajuan formasi {$pengajuanFormasi->jabatan} ({$pengajuanFormasi->unit_kerja}) dihapus.");
     }
 
     public function batalkan(PengajuanFormasi $pengajuanFormasi): RedirectResponse

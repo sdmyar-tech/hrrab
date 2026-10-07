@@ -173,7 +173,16 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Unit Kerja (Utama)</label>
-                                        <input type="text" class="form-control" value="{{ $pegawai->kepegawaian->unit_kerja ?? '-' }}" disabled>
+                                        @if (auth()->user()->isAdmin())
+                                            <select name="unit_kerja" class="form-select">
+                                                @foreach (config('kepegawaian.unit_kerja') as $unit)
+                                                    <option value="{{ $unit }}" @selected(old('unit_kerja', $pegawai->kepegawaian->unit_kerja ?? '') === $unit)>{{ $unit }}</option>
+                                                @endforeach
+                                            </select>
+                                            <div class="form-text text-warning-emphasis"><i class="bi bi-shield-lock me-1"></i>Mode Admin: ubah langsung (koreksi) tanpa membuat riwayat mutasi.</div>
+                                        @else
+                                            <input type="text" class="form-control" value="{{ $pegawai->kepegawaian->unit_kerja ?? '-' }}" disabled>
+                                        @endif
                                         <div class="form-text">
                                             Ubah unit lewat
                                             <a href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'mutasi']) }}">Mutasi</a>

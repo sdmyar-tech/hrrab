@@ -251,18 +251,29 @@ class PegawaiController extends Controller
         $pegawai = DataPegawai::with(['dokumen', 'bpjs'])->findOrFail($id);
         $validated = $this->validateRequest($request, $pegawai->id);
 
+        // Selain Admin, unit utama hanya bisa diubah lewat Mutasi. Admin boleh koreksi langsung.
+        $unitBaru = Auth::user()->isAdmin() ? ($validated['kepegawaian']['unit_kerja'] ?? null) : null;
         unset($validated['kepegawaian']['unit_kerja']);
 
         try {
-            DB::transaction(function () use ($request, $validated, $pegawai) {
+            DB::transaction(function () use ($request, $validated, $pegawai, $unitBaru) {
                 $pegawai->update($validated['biodata']);
 
-                $pegawai->penugasans()->aktif()->where('is_utama', true)->update(['jabatan' => $validated['kepegawaian']['jabatan']]);
+                $pegawai->penugasans()->aktif()->where('is_utama', true)->update(array_filter([
+                    'jabatan' => $validated['kepegawaian']['jabatan'],
+                    'unit_kerja' => $unitBaru,
+                ]));
+                if ($unitBaru) {
+                    $validated['kepegawaian']['unit_kerja'] = $unitBaru;
+                }
 
                 $pegawai->kepegawaian()->updateOrCreate(
                     ['data_pegawai_id' => $pegawai->id],
                     $validated['kepegawaian']
                 );
+                if ($unitBaru) {
+                    PenugasanService::sinkron($pegawai);
+                }
 
                 $pegawai->kontakDarurat()->updateOrCreate(
                     ['data_pegawai_id' => $pegawai->id],

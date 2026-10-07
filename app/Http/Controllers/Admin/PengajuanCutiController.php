@@ -9,6 +9,7 @@ use App\Support\PengajuanWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Support\Notifikasi;
@@ -165,5 +166,43 @@ class PengajuanCutiController extends Controller
         return redirect()
             ->route('admin.pengajuan-cuti.index')
             ->with('success', 'Pengajuan cuti ditolak.');
+    }
+
+    /** Admin: ubah langsung data & status pengajuan tanpa mengikuti tahapan persetujuan. */
+    public function ubahAdmin(Request $request, PengajuanCuti $pengajuanCuti): RedirectResponse
+    {
+        $v = $request->validate([
+            'status' => ['required', Rule::in([PengajuanCuti::STATUS_PENDING, PengajuanCuti::STATUS_APPROVED, PengajuanCuti::STATUS_REJECTED])],
+            'current_level' => ['nullable', 'required_if:status,pending', Rule::in(array_keys(PengajuanWorkflow::LEVEL_LABELS))],
+            'jenis_cuti' => ['required', Rule::in([PengajuanCuti::JENIS_TAHUNAN, PengajuanCuti::JENIS_BESAR])],
+            'kategori_cuti_besar' => ['nullable', 'required_if:jenis_cuti,besar', Rule::in(array_keys(PengajuanCuti::KATEGORI_BESAR_OPTIONS))],
+            'tanggal_mulai' => ['required', 'date'],
+            'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
+            'lama_cuti' => ['required', 'integer', 'min:1', 'max:365'],
+            'pengganti_nama' => ['nullable', 'string', 'max:150'],
+            'keterangan' => ['nullable', 'string', 'max:1000'],
+            'catatan_admin' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $statusLama = $pengajuanCuti->status;
+        $pengajuanCuti->update([
+            ...$v,
+            'kategori_cuti_besar' => $v['jenis_cuti'] === PengajuanCuti::JENIS_BESAR ? $v['kategori_cuti_besar'] : null,
+            ...PengajuanWorkflow::statusAdmin($pengajuanCuti, $v['status'], $v['current_level'] ?? null, Auth::user()),
+        ]);
+
+        if ($statusLama !== $pengajuanCuti->status || $pengajuanCuti->wasChanged('current_level')) {
+            Notifikasi::pengajuanDiproses($pengajuanCuti);
+        }
+
+        return back()->with('success', 'Pengajuan cuti diperbarui langsung oleh Admin.');
+    }
+
+    public function destroy(PengajuanCuti $pengajuanCuti): RedirectResponse
+    {
+        $nama = $pengajuanCuti->dataPegawai?->nama_lengkap;
+        $pengajuanCuti->delete();
+
+        return redirect()->route('admin.pengajuan-cuti.index')->with('success', "Pengajuan cuti {$nama} dihapus.");
     }
 }

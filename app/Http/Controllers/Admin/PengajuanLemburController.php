@@ -9,6 +9,7 @@ use App\Support\PengajuanWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Support\Notifikasi;
@@ -145,5 +146,41 @@ class PengajuanLemburController extends Controller
         return redirect()
             ->route('admin.pengajuan-lembur.index')
             ->with('success', 'Pengajuan lembur ditolak.');
+    }
+
+    /** Admin: ubah langsung data & status pengajuan tanpa mengikuti tahapan persetujuan. */
+    public function ubahAdmin(Request $request, PengajuanLembur $pengajuanLembur): RedirectResponse
+    {
+        $v = $request->validate([
+            'status' => ['required', Rule::in([PengajuanLembur::STATUS_PENDING, PengajuanLembur::STATUS_APPROVED, PengajuanLembur::STATUS_REJECTED])],
+            'current_level' => ['nullable', 'required_if:status,pending', Rule::in(array_keys(PengajuanWorkflow::LEVEL_LABELS))],
+            'tanggal' => ['required', 'date'],
+            'uraian_tugas' => ['required', 'string', 'max:2000'],
+            'jam_mulai' => ['required', 'date_format:H:i'],
+            'jam_selesai' => ['required', 'date_format:H:i'],
+            'jumlah_jam' => ['required', 'numeric', 'min:0', 'max:24'],
+            'catatan_admin' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $statusLama = $pengajuanLembur->status;
+        $pengajuanLembur->update([
+            ...$v,
+            'hari' => \Carbon\Carbon::parse($v['tanggal'])->translatedFormat('l'),
+            ...PengajuanWorkflow::statusAdmin($pengajuanLembur, $v['status'], $v['current_level'] ?? null, Auth::user()),
+        ]);
+
+        if ($statusLama !== $pengajuanLembur->status || $pengajuanLembur->wasChanged('current_level')) {
+            Notifikasi::pengajuanDiproses($pengajuanLembur);
+        }
+
+        return back()->with('success', 'Pengajuan lembur diperbarui langsung oleh Admin.');
+    }
+
+    public function destroy(PengajuanLembur $pengajuanLembur): RedirectResponse
+    {
+        $nama = $pengajuanLembur->dataPegawai?->nama_lengkap;
+        $pengajuanLembur->delete();
+
+        return redirect()->route('admin.pengajuan-lembur.index')->with('success', "Pengajuan lembur {$nama} dihapus.");
     }
 }

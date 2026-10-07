@@ -56,7 +56,7 @@ class OnboardingFlow
 
         return match ($sisi) {
             self::SISI_SDM => $screening->hasil_sdm === null && RekrutmenAccess::canReview($user),
-            self::SISI_KEPALA => $screening->hasil_kepala === null && $screening->kepala_id !== null && $screening->kepala_id === $user->id,
+            self::SISI_KEPALA => $screening->hasil_kepala === null && ($user->isAdmin() || ($screening->kepala_id !== null && $screening->kepala_id === $user->id)),
             default => false,
         };
     }

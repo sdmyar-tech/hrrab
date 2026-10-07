@@ -140,6 +140,30 @@ class PenugasanController extends Controller
         return $this->kembali($pegawai, $pesan, $peringatan);
     }
 
+    public function edit(Penugasan $penugasan): View
+    {
+        return view('admin.penugasan.edit', ['penugasan' => $penugasan->load('dataPegawai')]);
+    }
+
+    /** Admin: koreksi langsung satu baris penugasan tanpa aturan mutasi/rangkap. */
+    public function update(Request $request, Penugasan $penugasan): RedirectResponse
+    {
+        $v = $request->validate([
+            'unit_kerja' => ['required', Rule::in(config('kepegawaian.unit_kerja'))],
+            'jabatan' => ['nullable', 'string', 'max:255'],
+            'peran' => ['required', Rule::in([Penugasan::PERAN_ANGGOTA, Penugasan::PERAN_KEPALA])],
+            'tanggal_mulai' => ['required', 'date'],
+            'tanggal_selesai' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
+            'no_sk' => ['nullable', 'string', 'max:100'],
+            'keterangan' => ['nullable', 'string', 'max:1000'],
+        ], ['tanggal_selesai.after_or_equal' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.']);
+
+        $v['jabatan'] = filled($v['jabatan'] ?? null) ? mb_strtoupper(trim($v['jabatan'])) : null;
+        $peringatan = PenugasanService::ubahLangsung($penugasan, $v);
+
+        return $this->kembali($penugasan->dataPegawai, "{$penugasan->jenisLabel()} di {$penugasan->unit_kerja} diperbarui langsung oleh Admin.", $peringatan);
+    }
+
     public function akhiri(Request $request, Penugasan $penugasan): RedirectResponse
     {
         $validated = $request->validate(['tanggal_selesai' => ['required', 'date']]);
@@ -154,7 +178,7 @@ class PenugasanController extends Controller
         $pegawai = $penugasan->dataPegawai;
 
         try {
-            $peringatan = PenugasanService::hapus($penugasan);
+            $peringatan = PenugasanService::hapus($penugasan, (bool) Auth::user()?->isAdmin());
         } catch (ValidationException $e) {
             return back()->with('error', collect($e->errors())->flatten()->first());
         }

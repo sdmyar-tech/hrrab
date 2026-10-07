@@ -666,13 +666,20 @@
                             <form action="{{ route('admin.lamaran.rekrut', $lamaran) }}" method="POST" class="row g-2 mb-3" id="form-rekrut"
                                 data-confirm="{{ $lamaran->isKandidatPegawai() ? 'Tetapkan pegawai ini ke posisi baru?' : 'Rekrut pelamar ini menjadi pegawai?' }}">
                                 @csrf
-                                @unless ($onboardingLulus)
+                                @php $adminBebas = auth()->user()->isAdmin() && ! $onboardingLulus; @endphp
+                                @if ($adminBebas)
+                                    <div class="col-12">
+                                        <div class="alert alert-warning small py-2 mb-1">
+                                            <i class="bi bi-shield-lock me-1"></i><strong>Mode Admin:</strong> rekrut langsung tanpa menunggu interview/onboarding. Isi tanggal masuk manual.
+                                        </div>
+                                    </div>
+                                @elseif (! $onboardingLulus)
                                     <div class="col-12">
                                         <div class="alert alert-warning small py-2 mb-1">
                                             <i class="bi bi-lock me-1"></i>Rekrut tersedia setelah onboarding dinyatakan <strong>Lulus</strong> (tanggal masuk diambil dari hari pertama onboarding).
                                         </div>
                                     </div>
-                                @endunless
+                                @endif
                                 @if ($lamaran->isKandidatPegawai())
                                     <div class="col-12">
                                         <div class="alert alert-info small py-2 mb-1">
@@ -682,7 +689,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1">Tanggal Efektif</label>
-                                        <input type="date" id="rekrut-tanggal-masuk" class="form-control form-control-sm bg-light" value="{{ $onboardingLulus?->tanggal_mulai?->format('Y-m-d') }}" readonly>
+                                        @if ($adminBebas)<input type="date" name="tanggal_masuk" id="rekrut-tanggal-masuk" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>@else<input type="date" id="rekrut-tanggal-masuk" class="form-control form-control-sm bg-light" value="{{ $onboardingLulus?->tanggal_mulai?->format('Y-m-d') }}" readonly>@endif
                                         <div class="form-text" style="font-size:.72rem;">Otomatis: hari pertama onboarding</div>
                                     </div>
                                     <div class="col-md-6">
@@ -700,7 +707,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small mb-1">Tanggal Masuk</label>
-                                    <input type="date" id="rekrut-tanggal-masuk" class="form-control form-control-sm bg-light" value="{{ $onboardingLulus?->tanggal_mulai?->format('Y-m-d') }}" readonly>
+                                    @if ($adminBebas)<input type="date" name="tanggal_masuk" id="rekrut-tanggal-masuk" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>@else<input type="date" id="rekrut-tanggal-masuk" class="form-control form-control-sm bg-light" value="{{ $onboardingLulus?->tanggal_mulai?->format('Y-m-d') }}" readonly>@endif
                                     <div class="form-text" style="font-size:.72rem;">Otomatis: hari pertama onboarding</div>
                                 </div>
                                 <div class="col-md-4">
@@ -728,7 +735,7 @@
                                     <input type="text" id="rekrut-tanggal-habis" class="form-control form-control-sm" disabled placeholder="Otomatis terkalkulasi">
                                 </div>
                                 <div class="col-12 d-flex gap-2 pt-3 mt-1 border-top">
-                                    <button type="submit" class="btn btn-success flex-fill" @disabled(! $onboardingLulus)>
+                                    <button type="submit" class="btn btn-success flex-fill" @disabled(! $onboardingLulus && ! $adminBebas)>
                                         <i class="bi bi-check-circle me-1"></i> {{ $lamaran->isKandidatPegawai() ? 'Tetapkan ke Posisi Baru' : 'Rekrut Jadi Pegawai' }}
                                     </button>
                                     <button type="button" form="form-tolak-lamaran" class="btn btn-outline-danger flex-fill btn-reject-lamaran">
@@ -753,6 +760,40 @@
                             <p class="mb-1"><strong>Catatan:</strong> {{ $lamaran->catatan_admin }}</p>
                         @endif
                         <p class="text-muted small mb-0">Diputuskan: {{ optional($lamaran->diputuskan_pada)->format('d M Y H:i') }}</p>
+                    </div>
+                @endif
+
+                @if (auth()->user()->isAdmin())
+                    <div class="panel p-4 mt-3 border-warning-subtle">
+                        <h2 class="h6 fw-bold mb-1"><i class="bi bi-shield-lock me-1"></i>Ubah Langsung (Admin)</h2>
+                        <p class="small text-muted mb-3">Pindahkan tahap/status lamaran tanpa mengikuti alur (mis. lompat ke onboarding, buka kembali lamaran yang ditolak).</p>
+                        <form action="{{ route('admin.lamaran.ubah-admin', $lamaran) }}" method="POST" class="row g-2"
+                            data-confirm="Ubah tahap/status lamaran ini secara langsung?">
+                            @csrf
+                            @method('PUT')
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">Tahap</label>
+                                <select name="tahap" class="form-select form-select-sm">
+                                    @foreach (['verifikasi' => 'Verifikasi', 'interview' => 'Interview', 'screening' => 'Screening / Onboarding', 'kontrak' => 'Kontrak', 'selesai' => 'Selesai'] as $nilai => $label)
+                                        <option value="{{ $nilai }}" @selected($lamaran->tahap === $nilai)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">Status</label>
+                                <select name="status" class="form-select form-select-sm">
+                                    @foreach (['menunggu_verifikasi' => 'Menunggu Verifikasi', 'proses' => 'Proses', 'diterima' => 'Diterima', 'ditolak' => 'Ditolak', 'dibatalkan' => 'Dibatalkan'] as $nilai => $label)
+                                        <option value="{{ $nilai }}" @selected($lamaran->status === $nilai)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <input type="text" name="catatan_admin" class="form-control form-control-sm" maxlength="1000" placeholder="Catatan (opsional)" value="{{ $lamaran->catatan_admin }}">
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-warning btn-sm"><i class="bi bi-save me-1"></i>Simpan Langsung</button>
+                            </div>
+                        </form>
                     </div>
                 @endif
             </div>
