@@ -25,7 +25,7 @@
 </div>
 
 <div class="mb-3">
-    <label class="form-label">Kepala Unit <span class="text-muted">(GM / Kepala Bagian / Kepala SDM — bisa lebih dari satu)</span></label>
+    <label class="form-label">Kepala Unit <span class="text-muted">(bisa lebih dari satu — akun Staff yang dicentang otomatis jadi Kepala Bagian)</span></label>
     <div class="row row-cols-2 row-cols-md-3 g-1">
         @foreach ($divisiOptions as $unit)
             <div class="col">

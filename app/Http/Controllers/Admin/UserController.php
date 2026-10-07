@@ -164,9 +164,20 @@ class UserController extends Controller
     {
         $divisi = array_values(array_unique($validated['divisi'] ?? []));
         $validated['divisi'] = ($validated['role'] === User::ROLE_GM && $divisi) ? $divisi : null;
-        $validated['kepala_unit'] = in_array($validated['role'], [User::ROLE_GM, User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM], true)
-            ? array_values(array_unique($validated['kepala_unit'] ?? []))
-            : [];
+        $kepalaUnit = array_values(array_unique($validated['kepala_unit'] ?? []));
+
+        // Staff yang dicentang memimpin unit otomatis naik menjadi Kepala Bagian (sebelumnya centangan diabaikan diam-diam).
+        if ($kepalaUnit && $validated['role'] === User::ROLE_STAFF) {
+            $validated['role'] = User::ROLE_KEPALA_BAGIAN;
+        }
+
+        if ($kepalaUnit && ! in_array($validated['role'], [User::ROLE_GM, User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM], true)) {
+            throw ValidationException::withMessages([
+                'kepala_unit' => 'Role ' . User::roleLabelFor($validated['role']) . ' tidak bisa memimpin unit. Pilih role Kepala Bagian, Kepala SDM, GM, atau Staff.',
+            ]);
+        }
+
+        $validated['kepala_unit'] = $kepalaUnit;
 
         return $validated;
     }
