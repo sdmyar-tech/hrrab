@@ -24,6 +24,7 @@ class JabatanController extends Controller
 
         return view('admin.jabatan.index', [
             'jabatans' => $query->get(),
+            'semuaJabatan' => Jabatan::orderBy('nama')->get(['id', 'nama']),
             'dipakai' => $this->hitungPemakaian(),
         ]);
     }
@@ -54,15 +55,24 @@ class JabatanController extends Controller
         return back()->with('success', "Jabatan diubah menjadi {$nama}. Data pegawai, penugasan, lowongan & formasi ikut diperbarui.");
     }
 
-    public function destroy(Jabatan $jabatan): RedirectResponse
+    public function destroy(Request $request, Jabatan $jabatan): RedirectResponse
     {
-        if (($jumlah = $jabatan->jumlahDipakai()) > 0) {
-            return back()->with('error', "Jabatan {$jabatan->nama} masih dipakai di {$jumlah} data. Ganti dulu jabatannya, atau ubah namanya saja.");
+        $request->validate([
+            'pengganti_id' => ['nullable', 'integer', Rule::exists('jabatans', 'id'), Rule::notIn([$jabatan->id])],
+        ], ['pengganti_id.not_in' => 'Jabatan pengganti tidak boleh jabatan yang sama.']);
+
+        $dipakai = $jabatan->jumlahDipakai();
+        $pengganti = $request->filled('pengganti_id') ? Jabatan::find($request->integer('pengganti_id')) : null;
+
+        // Jabatan yang masih dipakai wajib diberi pengganti, supaya data pegawai tidak memakai jabatan yang sudah tidak ada.
+        if ($dipakai > 0 && ! $pengganti) {
+            return back()->with('error', "Jabatan {$jabatan->nama} masih dipakai di {$dipakai} data. Pilih jabatan pengganti untuk memindahkan data tersebut.");
         }
 
-        $jabatan->delete();
+        $dipindah = $jabatan->hapusDanGanti($pengganti);
 
-        return back()->with('success', "Jabatan {$jabatan->nama} dihapus.");
+        return back()->with('success', "Jabatan {$jabatan->nama} dihapus."
+            . ($pengganti ? " {$dipindah} data dipindahkan ke {$pengganti->nama}." : ''));
     }
 
     private function validasiNama(Request $request, ?int $abaikanId = null): string

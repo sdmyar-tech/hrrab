@@ -66,15 +66,22 @@
                                                     data-url="{{ route('admin.jabatan.update', $j) }}" data-nama="{{ $j->nama }}">
                                                     <i class="bi bi-pencil"></i> Ubah
                                                 </button>
-                                                <form action="{{ route('admin.jabatan.destroy', $j) }}" method="POST" class="d-inline"
-                                                    data-confirm="Hapus jabatan {{ $j->nama }}?">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-danger btn-sm" @disabled($dipakai[$j->nama] ?? 0)
-                                                        title="{{ ($dipakai[$j->nama] ?? 0) ? 'Masih dipakai' : 'Hapus' }}">
+                                                @if ($dipakai[$j->nama] ?? 0)
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" title="Hapus (pilih pengganti)"
+                                                        data-bs-toggle="modal" data-bs-target="#modalHapusJabatan"
+                                                        data-url="{{ route('admin.jabatan.destroy', $j) }}" data-id="{{ $j->id }}" data-nama="{{ $j->nama }}" data-dipakai="{{ $dipakai[$j->nama] }}">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
-                                                </form>
+                                                @else
+                                                    <form action="{{ route('admin.jabatan.destroy', $j) }}" method="POST" class="d-inline"
+                                                        data-confirm="Hapus jabatan {{ $j->nama }}?">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Hapus">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
@@ -111,7 +118,48 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalHapusJabatan" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" class="modal-content">
+            @csrf
+            @method('DELETE')
+            <div class="modal-header">
+                <h5 class="modal-title">Hapus Jabatan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Jabatan <strong data-nama></strong> masih dipakai di <strong data-dipakai></strong> data
+                    (pegawai, penugasan, lowongan, formasi, atau lamaran).</p>
+                <label class="form-label small mb-1">Pindahkan data tersebut ke jabatan</label>
+                <select name="pengganti_id" class="form-select" required>
+                    <option value="">-- Pilih jabatan pengganti --</option>
+                    @foreach ($semuaJabatan as $opsi)
+                        <option value="{{ $opsi->id }}">{{ $opsi->nama }}</option>
+                    @endforeach
+                </select>
+                <p class="small text-muted mt-2 mb-0">Setelah dipindahkan, jabatan ini dihapus dari daftar.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Pindahkan & Hapus</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
+    document.getElementById('modalHapusJabatan').addEventListener('show.bs.modal', function (e) {
+        const tombol = e.relatedTarget;
+        const form = this.querySelector('form');
+        const pilihan = form.querySelector('[name=pengganti_id]');
+        form.action = tombol.dataset.url;
+        this.querySelector('[data-nama]').textContent = tombol.dataset.nama;
+        this.querySelector('[data-dipakai]').textContent = tombol.dataset.dipakai;
+        pilihan.value = '';
+        // Jabatan yang sedang dihapus tidak boleh dipilih sebagai pengganti.
+        Array.prototype.forEach.call(pilihan.options, function (o) { o.hidden = o.value === tombol.dataset.id; });
+    });
+
     document.getElementById('modalUbahJabatan').addEventListener('show.bs.modal', function (e) {
         const tombol = e.relatedTarget;
         const form = this.querySelector('form');

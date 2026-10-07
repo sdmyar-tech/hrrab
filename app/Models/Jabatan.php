@@ -51,13 +51,29 @@ class Jabatan extends Model
 
         DB::transaction(function () use ($lama, $baru) {
             $this->update(['nama' => $baru]);
-
-            DB::table('kepegawaians')->where('jabatan', $lama)->update(['jabatan' => $baru]);
-            DB::table('kepegawaians')->where('jabatan_tambahan', $lama)->update(['jabatan_tambahan' => $baru]);
-            DB::table('penugasans')->where('jabatan', $lama)->update(['jabatan' => $baru]);
-            DB::table('lowongans')->where('jabatan', $lama)->update(['jabatan' => $baru]);
-            DB::table('pengajuan_formasis')->where('jabatan', $lama)->update(['jabatan' => $baru]);
-            DB::table('lamarans')->where('jabatan_tujuan', $lama)->update(['jabatan_tujuan' => $baru]);
+            self::pindahkanPemakai($lama, $baru);
         });
+    }
+
+    /** Hapus jabatan; data yang masih memakainya dipindahkan ke $pengganti lebih dulu. */
+    public function hapusDanGanti(?Jabatan $pengganti): int
+    {
+        return DB::transaction(function () use ($pengganti) {
+            $jumlah = $pengganti ? self::pindahkanPemakai($this->nama, $pengganti->nama) : 0;
+            $this->delete();
+
+            return $jumlah;
+        });
+    }
+
+    /** Ganti semua pemakaian jabatan $lama menjadi $baru di seluruh tabel; mengembalikan jumlah baris yang berubah. */
+    private static function pindahkanPemakai(string $lama, string $baru): int
+    {
+        return DB::table('kepegawaians')->where('jabatan', $lama)->update(['jabatan' => $baru])
+            + DB::table('kepegawaians')->where('jabatan_tambahan', $lama)->update(['jabatan_tambahan' => $baru])
+            + DB::table('penugasans')->where('jabatan', $lama)->update(['jabatan' => $baru])
+            + DB::table('lowongans')->where('jabatan', $lama)->update(['jabatan' => $baru])
+            + DB::table('pengajuan_formasis')->where('jabatan', $lama)->update(['jabatan' => $baru])
+            + DB::table('lamarans')->where('jabatan_tujuan', $lama)->update(['jabatan_tujuan' => $baru]);
     }
 }
