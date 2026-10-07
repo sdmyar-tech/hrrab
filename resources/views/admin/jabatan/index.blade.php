@@ -13,7 +13,7 @@
                 </div>
             </div>
             <div class="heading-actions">
-                @include('partials.tombol-ekspor', ['route' => 'admin.jabatan.export', 'ukuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.jabatan.export', 'eksporUkuran' => ''])
             </div>
         </div>
 

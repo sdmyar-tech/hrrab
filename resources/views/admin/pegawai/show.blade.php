@@ -266,7 +266,7 @@
                         <a href="{{ route('admin.pegawai.index') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
-                        @include('partials.tombol-ekspor', ['route' => 'admin.pegawai.export-detail', 'param' => ['pegawai' => $pegawai->id]])
+                        @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pegawai.export-detail', 'eksporParam' => ['pegawai' => $pegawai->id]])
                         @can('kelola-pegawai')
                             <a href="{{ route('admin.pegawai.edit', $pegawai) }}" class="btn btn-primary btn-sm">
                                 <i class="bi bi-pencil-square"></i> Edit Data
@@ -285,7 +285,7 @@
                     'dokumen' => ['bi-folder2-open', 'Dokumen'],
                 ] as $key => [$icon, $label])
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link {{ $loop->first ? 'active' : '' }}" id="tab-{{ $key }}-btn" data-bs-toggle="tab"
+                        <button type="button" class="nav-link {{ $loop->first ? 'active' : '' }}" id="tab-{{ $key }}-btn" data-bs-toggle="tab"
                             data-bs-target="#tab-{{ $key }}" type="button" role="tab" aria-controls="tab-{{ $key }}"
                             aria-selected="{{ $loop->first ? 'true' : 'false' }}">
                             <i class="bi {{ $icon }}"></i> {{ $label }}

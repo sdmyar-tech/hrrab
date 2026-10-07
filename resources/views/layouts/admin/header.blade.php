@@ -17,7 +17,7 @@
     </div>
     <div class="heading-actions">
         @if (request()->routeIs('admin.pegawai.index'))
-            @include('partials.tombol-ekspor', ['route' => 'admin.pegawai.export'])
+            @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pegawai.export'])
             @can('kelola-pegawai')
                 <a href="{{ route('admin.pegawai.create') }}" class="btn btn-primary btn-sm">
                     <i class="bi bi-person-plus" aria-hidden="true"></i> Tambah Pegawai

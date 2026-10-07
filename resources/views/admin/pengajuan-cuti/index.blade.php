@@ -62,7 +62,7 @@
                         </div>
                     @endif
                     <div class="col-auto ms-auto text-end">
-                        @include('partials.tombol-ekspor', ['route' => 'admin.pengajuan-cuti.export'])
+                        @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pengajuan-cuti.export'])
                     </div>
                 </div>
             </form>

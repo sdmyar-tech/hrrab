@@ -697,7 +697,7 @@
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1">Tanggal Efektif</label>
                                         @if ($adminBebas)<input type="date" name="tanggal_masuk" id="rekrut-tanggal-masuk" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>@else<input type="date" id="rekrut-tanggal-masuk" class="form-control form-control-sm bg-light" value="{{ $onboardingLulus?->tanggal_mulai?->format('Y-m-d') }}" readonly>@endif
-                                        <div class="form-text" style="font-size:.72rem;">Otomatis: hari pertama onboarding</div>
+                                        <div class="form-text" style="font-size:.72rem;">{{ $adminBebas ? 'Diisi manual (mode Admin)' : 'Otomatis: hari pertama onboarding' }}</div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1">Status Kerja</label>
@@ -715,7 +715,7 @@
                                 <div class="col-md-4">
                                     <label class="form-label small mb-1">Tanggal Masuk</label>
                                     @if ($adminBebas)<input type="date" name="tanggal_masuk" id="rekrut-tanggal-masuk" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>@else<input type="date" id="rekrut-tanggal-masuk" class="form-control form-control-sm bg-light" value="{{ $onboardingLulus?->tanggal_mulai?->format('Y-m-d') }}" readonly>@endif
-                                    <div class="form-text" style="font-size:.72rem;">Otomatis: hari pertama onboarding</div>
+                                    <div class="form-text" style="font-size:.72rem;">{{ $adminBebas ? 'Diisi manual (mode Admin)' : 'Otomatis: hari pertama onboarding' }}</div>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small mb-1">Status Kerja</label>

@@ -13,7 +13,7 @@
                 </div>
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
-                @include('partials.tombol-ekspor', ['route' => 'admin.pengajuan-formasi.export', 'ukuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pengajuan-formasi.export', 'eksporUkuran' => ''])
                 @if ($canSubmit)
                     <a href="{{ route('admin.pengajuan-formasi.create') }}" class="btn btn-primary">
                         <i class="bi bi-plus-lg me-1"></i> Ajukan Formasi

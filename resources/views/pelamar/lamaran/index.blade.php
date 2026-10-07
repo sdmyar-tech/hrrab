@@ -12,7 +12,7 @@
                 </div>
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
-                @include('partials.tombol-ekspor', ['route' => 'pelamar.lamaran.export', 'label' => 'Ekspor Lamaran & Jadwal', 'ukuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'pelamar.lamaran.export', 'eksporTeks' => 'Ekspor Lamaran & Jadwal', 'eksporUkuran' => ''])
                 <a href="{{ route('lowongan.index') }}" class="btn btn-primary">
                     <i class="bi bi-briefcase me-1"></i> Cari Lowongan
                 </a>

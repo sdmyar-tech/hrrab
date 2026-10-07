@@ -13,7 +13,7 @@
                 </div>
             </div>
             <div class="heading-actions">
-                @include('partials.tombol-ekspor', ['route' => 'interview.saya.export', 'label' => 'Ekspor Jadwal', 'ukuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'interview.saya.export', 'eksporTeks' => 'Ekspor Jadwal', 'eksporUkuran' => ''])
             </div>
         </div>
 

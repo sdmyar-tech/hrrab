@@ -13,7 +13,7 @@
                 </div>
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
-                @include('partials.tombol-ekspor', ['route' => 'admin.lowongan.export', 'ukuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.lowongan.export', 'eksporUkuran' => ''])
                 <a href="{{ route('admin.lowongan.create') }}" class="btn btn-primary">
                     <i class="bi bi-plus-lg me-1"></i> Buat Lowongan
                 </a>
