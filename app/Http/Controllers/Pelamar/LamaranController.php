@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Pelamar;
 use App\Http\Controllers\Controller;
 use App\Models\Lamaran;
 use App\Models\Lowongan;
+use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -16,11 +17,20 @@ class LamaranController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        $lamarans = $user->dataPelamar
-            ? $user->dataPelamar->lamarans()->with('lowongan')->latest()->get()
-            : collect();
+        $urut = ['urutOpsi' => [], 'urutAktif' => null];
+        $lamarans = collect();
 
-        return view('pelamar.lamaran.index', compact('lamarans'));
+        if ($user->dataPelamar) {
+            $query = $user->dataPelamar->lamarans()->with('lowongan');
+            $urut = Urutan::terapkan($query, [
+                ...Urutan::tanggal('dikirim', 'Dikirim', 'lamarans.created_at'),
+                ...Urutan::tanggal('diperbarui', 'Diperbarui', 'lamarans.updated_at'),
+                ...Urutan::abjad('posisi', 'Posisi', 'coalesce(lamarans.jabatan_tujuan, (select judul from lowongans where lowongans.id = lamarans.lowongan_id))'),
+            ]);
+            $lamarans = $query->get();
+        }
+
+        return view('pelamar.lamaran.index', compact('lamarans') + $urut);
     }
 
     public function apply(Lowongan $lowongan): RedirectResponse

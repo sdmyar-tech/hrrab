@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use App\Support\ExcelExporter;
+use App\Support\Urutan;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PengumumanController extends Controller
@@ -25,14 +26,21 @@ class PengumumanController extends Controller
             ->when(! $arsip, fn ($q) => $q->berlaku())
             ->when($arsip, fn ($q) => $q->whereNotNull('tampil_sampai')->whereDate('tampil_sampai', '<', now()))
             ->when($kategori, fn ($q) => $q->where('kategori', $kategori))
-            ->withExists(['pembaca as sudah_dibaca' => fn ($q) => $q->where('users.id', $user->id)])
-            ->orderByDesc('penting')->latest();
+            ->withExists(['pembaca as sudah_dibaca' => fn ($q) => $q->where('users.id', $user->id)]);
 
+        $urut = Urutan::terapkan($query, [
+            // Bawaan: yang disematkan penting tetap di atas, lalu terbaru.
+            'penting' => ['Penting dulu, terbaru', fn ($q, $arah) => $q->orderByDesc('pengumumans.penting')->orderBy('pengumumans.created_at', $arah), 'desc'],
+            ...Urutan::tanggal('dibuat', 'Diterbitkan', 'pengumumans.created_at'),
+            ...Urutan::tanggal('acara', 'Tanggal acara', 'pengumumans.tanggal'),
+            ...Urutan::abjad('judul', 'Judul', 'pengumumans.judul'),
+        ]);
         $pengumumans = $query->paginate(12)->withQueryString();
 
         $this->tandaiDibaca($user, $pengumumans->getCollection()->where('sudah_dibaca', false)->pluck('id')->all());
 
         return view('pengumuman.index', [
+            ...$urut,
             'layout' => $user->panelLayout(),
             'pengumumans' => $pengumumans,
             'kategori' => $kategori,

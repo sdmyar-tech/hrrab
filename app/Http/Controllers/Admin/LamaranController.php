@@ -17,6 +17,7 @@ use App\Support\OnboardingFlow;
 use App\Support\PenugasanService;
 use App\Support\ExcelExporter;
 use App\Support\RekrutmenAccess;
+use App\Support\Urutan;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,11 +36,23 @@ class LamaranController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        $lamarans = $this->filteredQuery($request, $user)->latest()->paginate(15)->withQueryString();
+        $query = $this->filteredQuery($request, $user);
+        // Nama kandidat: pelamar umum (data_pelamars) atau kandidat internal (data_pegawais).
+        $namaKandidat = 'coalesce((select nama_lengkap from data_pelamars where data_pelamars.id = lamarans.data_pelamar_id), '
+            . Urutan::namaPegawai('lamarans') . ')';
+        $urut = Urutan::terapkan($query, [
+            ...Urutan::tanggal('masuk', 'Lamaran masuk', 'lamarans.created_at'),
+            ...Urutan::tanggal('diperbarui', 'Diperbarui', 'lamarans.updated_at'),
+            ...Urutan::abjad('nama', 'Nama', $namaKandidat),
+            ...Urutan::abjad('jabatan', 'Jabatan', 'lamarans.jabatan_tujuan'),
+            ...Urutan::abjad('unit', 'Unit', 'lamarans.unit_kerja_tujuan'),
+        ]);
+        $lamarans = $query->paginate(15)->withQueryString();
 
         return view('admin.lamaran.index', [
             'lamarans' => $lamarans,
             'canReview' => RekrutmenAccess::canReview($user),
+            ...$urut,
         ]);
     }
 

@@ -21,13 +21,14 @@
         </div>
 
         <div class="d-flex flex-wrap gap-2 mb-3">
-            <a href="{{ route('pengumuman.index', ['arsip' => $arsip ?: null]) }}" class="btn btn-sm {{ ! $kategori ? 'btn-primary' : 'btn-outline-secondary' }}">Semua</a>
+            <a href="{{ route('pengumuman.index', ['arsip' => $arsip ?: null, 'urut' => request('urut')]) }}" class="btn btn-sm {{ ! $kategori ? 'btn-primary' : 'btn-outline-secondary' }}">Semua</a>
             @foreach (\App\Models\Pengumuman::KATEGORI as $key => $k)
-                <a href="{{ route('pengumuman.index', ['kategori' => $key, 'arsip' => $arsip ?: null]) }}" class="btn btn-sm {{ $kategori === $key ? 'btn-primary' : 'btn-outline-secondary' }}">
+                <a href="{{ route('pengumuman.index', ['kategori' => $key, 'arsip' => $arsip ?: null, 'urut' => request('urut')]) }}" class="btn btn-sm {{ $kategori === $key ? 'btn-primary' : 'btn-outline-secondary' }}">
                     <i class="bi {{ $k['ikon'] }} me-1"></i>{{ $k['label'] }}
                 </a>
             @endforeach
-            <a href="{{ route('pengumuman.index', ['kategori' => $kategori, 'arsip' => $arsip ? null : 1]) }}" class="btn btn-sm btn-outline-secondary ms-auto">
+            <div class="ms-auto">@include('partials.urut')</div>
+            <a href="{{ route('pengumuman.index', ['kategori' => $kategori, 'arsip' => $arsip ? null : 1, 'urut' => request('urut')]) }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi {{ $arsip ? 'bi-arrow-left' : 'bi-archive' }} me-1"></i>{{ $arsip ? 'Kembali ke yang berlaku' : 'Arsip' }}
             </a>
         </div>

@@ -47,6 +47,7 @@
                             value="{{ request('tanggal_sampai') }}" title="Tanggal sampai"
                             onchange="this.form.submit()">
                     </div>
+                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterLemburForm'])</div>
                     @if (request()->hasAny(['q', 'status', 'tanggal_dari', 'tanggal_sampai']))
                         <div class="col-md-1">
                             <a href="{{ route('admin.pengajuan-lembur.index') }}" class="btn btn-outline-secondary btn-sm" title="Reset filter">

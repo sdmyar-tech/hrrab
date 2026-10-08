@@ -41,6 +41,7 @@
                             <option value="dibatalkan" {{ request('status') == 'dibatalkan' ? 'selected' : '' }}>Dibatalkan</option>
                         </select>
                     </div>
+                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterFormasiForm'])</div>
                 </div>
             </form>
 

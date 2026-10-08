@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Notifications\Pemberitahuan;
 use App\Support\KelengkapanData;
 use App\Support\Notifikasi;
+use App\Support\Urutan;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -29,9 +30,15 @@ class NotifikasiController extends Controller
         $user = $this->user();
         $belum = $request->query('tab') === 'belum';
 
-        $notifikasi = ($belum ? $user->unreadNotifications() : $user->notifications())->paginate(15)->withQueryString();
+        $query = $belum ? $user->unreadNotifications() : $user->notifications();
+        $urut = Urutan::terapkan($query, [
+            ...Urutan::tanggal('waktu', 'Waktu', 'notifications.created_at'),
+            ...Urutan::abjad('judul', 'Judul', "json_unquote(json_extract(notifications.data, '$.judul'))"),
+        ]);
+        $notifikasi = $query->paginate(15)->withQueryString();
 
         return view('notifikasi.index', [
+            ...$urut,
             'layout' => $user->panelLayout(),
             'notifikasi' => $notifikasi,
             'belum' => $belum,

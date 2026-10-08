@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DataPegawai;
 use App\Models\User;
 use App\Support\PenugasanService;
+use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,9 +23,18 @@ class UserController extends Controller
 
     public function index(Request $request): View
     {
+        $query = $this->filteredQuery($request);
+        $urut = Urutan::terapkan($query, [
+            ...Urutan::tanggal('dibuat', 'Dibuat', 'users.created_at'),
+            ...Urutan::abjad('nama', 'Nama', 'users.name'),
+            ...Urutan::abjad('email', 'Email', 'users.email'),
+            ...Urutan::tanggal('diperbarui', 'Diperbarui', 'users.updated_at'),
+        ]);
+
         return view('admin.users.index', [
-            'users' => $this->filteredQuery($request)->latest()->paginate(15)->withQueryString(),
+            'users' => $query->paginate(15)->withQueryString(),
             'roles' => self::ROLES,
+            ...$urut,
         ]);
     }
 

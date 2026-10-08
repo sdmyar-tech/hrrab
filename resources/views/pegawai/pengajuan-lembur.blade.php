@@ -98,7 +98,10 @@
                 <div class="panel p-4">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                         <h2 class="h6 fw-bold mb-0">Riwayat Pengajuan</h2>
-                        @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.pengajuan-lembur.export'])
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            @if ($urutOpsi) @include('partials.urut') @endif
+                            @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.pengajuan-lembur.export'])
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table align-middle mb-0">

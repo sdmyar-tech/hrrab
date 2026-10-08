@@ -50,6 +50,7 @@
                             <option value="internal" {{ request('jalur') == 'internal' ? 'selected' : '' }}>Jalur Langsung</option>
                         </select>
                     </div>
+                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterLamaranForm'])</div>
                 </div>
             </form>
 

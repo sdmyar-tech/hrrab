@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\ExcelExporter;
 use App\Support\PengajuanWorkflow;
 use App\Support\PenugasanService;
+use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,11 +34,20 @@ class PegawaiController extends Controller
     {
         $query = $this->filteredQuery($request);
 
-        $pegawais = $query->latest()->paginate(15)->withQueryString();
+        $kepeg = fn (string $kolom) => "(select {$kolom} from kepegawaians where kepegawaians.data_pegawai_id = data_pegawais.id limit 1)";
+        $urut = Urutan::terapkan($query, [
+            ...Urutan::tanggal('dibuat', 'Ditambahkan', 'data_pegawais.created_at'),
+            ...Urutan::abjad('nama', 'Nama', 'data_pegawais.nama_lengkap'),
+            ...Urutan::tanggal('masuk', 'Tanggal masuk', $kepeg('tanggal_masuk')),
+            ...Urutan::abjad('jabatan', 'Jabatan', $kepeg('jabatan')),
+            ...Urutan::abjad('unit', 'Unit', $kepeg('unit_kerja')),
+            ...Urutan::tanggal('diperbarui', 'Diperbarui', 'data_pegawais.updated_at'),
+        ]);
+        $pegawais = $query->paginate(15)->withQueryString();
 
         $unitKerjaOptions = config('kepegawaian.unit_kerja');
 
-        return view('admin.pegawai.index', compact('pegawais', 'unitKerjaOptions'));
+        return view('admin.pegawai.index', compact('pegawais', 'unitKerjaOptions') + $urut);
     }
 
     public function export(Request $request): BinaryFileResponse

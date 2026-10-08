@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Lowongan;
 use App\Support\RekrutmenAccess;
+use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,9 +23,16 @@ class LowonganController extends Controller
 
         Lowongan::tutupYangKedaluwarsa();
 
-        $lowongans = $this->filteredQuery($request, $user)->latest()->paginate(15)->withQueryString();
+        $query = $this->filteredQuery($request, $user);
+        $urut = Urutan::terapkan($query, [
+            ...Urutan::tanggal('dibuat', 'Dibuat', 'lowongans.created_at'),
+            ...Urutan::tanggal('tutup', 'Tanggal tutup', 'lowongans.tanggal_tutup'),
+            ...Urutan::abjad('judul', 'Judul', 'lowongans.judul'),
+            ...Urutan::abjad('unit', 'Unit', 'lowongans.unit_kerja'),
+        ]);
+        $lowongans = $query->paginate(15)->withQueryString();
 
-        return view('admin.lowongan.index', compact('lowongans'));
+        return view('admin.lowongan.index', compact('lowongans') + $urut);
     }
 
     public function export(Request $request): BinaryFileResponse

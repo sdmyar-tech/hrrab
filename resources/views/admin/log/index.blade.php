@@ -30,7 +30,7 @@
         </div>
 
         <section class="panel p-0 overflow-hidden">
-            <form method="GET" action="{{ route('admin.log.index') }}" class="log-filter">
+            <form method="GET" action="{{ route('admin.log.index') }}" class="log-filter" id="filterLogForm">
                 <div class="input-group log-cari">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
                     <input type="search" name="q" class="form-control" placeholder="Cari nama pengguna atau deskripsi…" value="{{ request('q') }}">
@@ -61,6 +61,7 @@
                 </select>
                 <input type="date" name="dari" class="form-control" value="{{ request('dari') }}" title="Dari tanggal" onchange="this.form.submit()">
                 <input type="date" name="sampai" class="form-control" value="{{ request('sampai') }}" title="Sampai tanggal" onchange="this.form.submit()">
+                @include('partials.urut', ['urutForm' => 'filterLogForm'])
                 <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i>Terapkan</button>
                 @if (request()->hasAny(['q', 'modul', 'aksi', 'role', 'status', 'dari', 'sampai']))
                     <a href="{{ route('admin.log.index') }}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i>Reset</a>

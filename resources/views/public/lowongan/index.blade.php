@@ -32,7 +32,7 @@
 </section>
 
 <div class="container pb-4">
-    <form action="{{ route('lowongan.index') }}" method="GET" class="search-card mb-4">
+    <form action="{{ route('lowongan.index') }}" method="GET" id="filterLowonganPublik" class="search-card mb-4">
         <div class="row g-2">
             <div class="col-md-6">
                 <div class="input-group">
@@ -63,9 +63,12 @@
                 Lowongan Terbaru
             @endif
         </h2>
-        @if (request()->hasAny(['q', 'unit_kerja']))
-            <a href="{{ route('lowongan.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg me-1"></i> Reset filter</a>
-        @endif
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            @include('partials.urut', ['urutForm' => 'filterLowonganPublik'])
+            @if (request()->hasAny(['q', 'unit_kerja']))
+                <a href="{{ route('lowongan.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg me-1"></i> Reset filter</a>
+            @endif
+        </div>
     </div>
 
     <div class="row g-4">

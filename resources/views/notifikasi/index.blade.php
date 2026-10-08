@@ -25,11 +25,14 @@
             </div>
         </div>
 
-        <ul class="nav nav-pills mb-3">
-            <li class="nav-item"><a class="nav-link {{ $belum ? '' : 'active' }}" href="{{ route('notifikasi.index') }}">Semua</a></li>
-            <li class="nav-item"><a class="nav-link {{ $belum ? 'active' : '' }}" href="{{ route('notifikasi.index', ['tab' => 'belum']) }}">Belum dibaca
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <ul class="nav nav-pills">
+            <li class="nav-item"><a class="nav-link {{ $belum ? '' : 'active' }}" href="{{ route('notifikasi.index', ['urut' => request('urut')]) }}">Semua</a></li>
+            <li class="nav-item"><a class="nav-link {{ $belum ? 'active' : '' }}" href="{{ route('notifikasi.index', ['tab' => 'belum', 'urut' => request('urut')]) }}">Belum dibaca
                 @if ($jumlahBelum)<span class="badge text-bg-danger ms-1">{{ $jumlahBelum }}</span>@endif</a></li>
         </ul>
+        @include('partials.urut')
+        </div>
 
         <section class="panel p-0">
             <div class="list-group list-group-flush">

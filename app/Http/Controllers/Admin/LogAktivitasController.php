@@ -7,6 +7,7 @@ use App\Models\LogAktivitas;
 use App\Models\User;
 use App\Support\ArsipLog;
 use App\Support\ExcelExporter;
+use App\Support\Urutan;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -16,9 +17,16 @@ class LogAktivitasController extends Controller
     public function index(Request $request): View
     {
         $hariIni = LogAktivitas::whereDate('created_at', now()->toDateString());
+        $query = $this->filteredQuery($request);
+        $urut = Urutan::terapkan($query, [
+            ...Urutan::tanggal('waktu', 'Waktu', 'log_aktivitas.created_at'),
+            ...Urutan::abjad('pengguna', 'Pengguna', 'log_aktivitas.nama_pengguna'),
+            ...Urutan::abjad('modul', 'Modul', 'log_aktivitas.modul'),
+        ]);
 
         return view('admin.log.index', [
-            'logs' => $this->filteredQuery($request)->latest('created_at')->latest('id')->paginate(30)->withQueryString(),
+            ...$urut,
+            'logs' => $query->paginate(30)->withQueryString(),
             'modulOpsi' => LogAktivitas::query()->distinct()->orderBy('modul')->pluck('modul'),
             'retensi' => ArsipLog::retensi(),
             'arsip' => ArsipLog::daftarArsip(),

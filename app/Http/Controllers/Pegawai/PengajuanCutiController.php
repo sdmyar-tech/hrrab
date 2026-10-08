@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Pegawai;
 use App\Http\Controllers\Controller;
 use App\Models\PengajuanCuti;
 use App\Support\PengajuanWorkflow;
+use App\Support\Urutan;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,11 +29,19 @@ class PengajuanCutiController extends Controller
 
         $sisaCuti = PengajuanCuti::sisaCutiTahunan($pegawai);
 
-        $riwayat = $pegawai
-            ? $pegawai->pengajuanCutis()->latest('tanggal_mulai')->latest('id')->get()
-            : collect();
+        $urut = ['urutOpsi' => [], 'urutAktif' => null];
+        $riwayat = collect();
+        if ($pegawai) {
+            $query = $pegawai->pengajuanCutis();
+            $urut = Urutan::terapkan($query, [
+                ...Urutan::tanggal('tgl', 'Tanggal cuti', 'pengajuan_cutis.tanggal_mulai'),
+                ...Urutan::tanggal('diajukan', 'Diajukan', 'pengajuan_cutis.created_at'),
+            ]);
+            $riwayat = $query->get();
+        }
 
         return view('pegawai.pengajuan-cuti', [
+            ...$urut,
             'pegawai' => $pegawai,
             'kepegawaian' => $kepegawaian,
             'eligible' => (bool) $masaKerjaCukup,

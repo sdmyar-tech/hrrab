@@ -54,6 +54,7 @@
                             value="{{ request('tanggal_sampai') }}" title="Tanggal mulai sampai"
                             onchange="this.form.submit()">
                     </div>
+                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterCutiForm'])</div>
                     @if (request()->hasAny(['q', 'jenis_cuti', 'status', 'tanggal_dari', 'tanggal_sampai']))
                         <div class="col-md-1">
                             <a href="{{ route('admin.pengajuan-cuti.index') }}" class="btn btn-outline-secondary btn-sm" title="Reset filter">

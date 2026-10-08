@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PengajuanLembur;
 use App\Support\ExcelExporter;
 use App\Support\PengajuanWorkflow;
+use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,10 +19,16 @@ class PengajuanLemburController extends Controller
 {
     public function index(Request $request): View
     {
-        $pengajuanLemburs = $this->filteredQuery($request)->paginate(15)->withQueryString();
+        $query = $this->filteredQuery($request);
+        $urut = Urutan::terapkan($query, [
+            ...Urutan::tanggal('tgl', 'Tanggal lembur', 'pengajuan_lemburs.tanggal'),
+            ...Urutan::tanggal('diajukan', 'Diajukan', 'pengajuan_lemburs.created_at'),
+            ...Urutan::abjad('nama', 'Nama', Urutan::namaPegawai('pengajuan_lemburs')),
+        ]);
+        $pengajuanLemburs = $query->paginate(15)->withQueryString();
         $bidangTabs = PengajuanWorkflow::gmTabCounts(PengajuanLembur::class, Auth::user());
 
-        return view('admin.pengajuan-lembur.index', compact('pengajuanLemburs', 'bidangTabs'));
+        return view('admin.pengajuan-lembur.index', compact('pengajuanLemburs', 'bidangTabs') + $urut);
     }
 
     public function show(PengajuanLembur $pengajuanLembur): View

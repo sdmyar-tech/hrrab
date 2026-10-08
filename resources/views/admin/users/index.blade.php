@@ -40,6 +40,7 @@
                     <div class="col-md-1">
                         <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-search"></i></button>
                     </div>
+                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterUserForm'])</div>
                     @if (request()->hasAny(['q', 'role']))
                         <div class="col-md-1">
                             <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary btn-sm" title="Reset filter">

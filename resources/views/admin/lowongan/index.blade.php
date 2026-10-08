@@ -38,6 +38,7 @@
                             <option value="ditutup" {{ request('status') == 'ditutup' ? 'selected' : '' }}>Ditutup</option>
                         </select>
                     </div>
+                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterLowonganForm'])</div>
                 </div>
             </form>
 

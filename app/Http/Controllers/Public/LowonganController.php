@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Models\Lamaran;
 use App\Models\Lowongan;
+use App\Support\Urutan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -32,9 +33,16 @@ class LowonganController extends Controller
 
         $unitKerjaOptions = Lowongan::terbuka()->distinct()->orderBy('unit_kerja')->pluck('unit_kerja');
 
+        $urut = Urutan::terapkan($query, [
+            ...Urutan::tanggal('terbit', 'Dipublikasikan', 'lowongans.dipublikasikan_pada'),
+            // "Segera tutup" = tanggal tutup paling dekat di atas.
+            'tutup' => ['Segera ditutup', 'lowongans.tanggal_tutup', 'asc'],
+            ...Urutan::abjad('judul', 'Judul', 'lowongans.judul'),
+            ...Urutan::abjad('unit', 'Unit', 'lowongans.unit_kerja'),
+        ]);
         $lowongans = $query->paginate(12)->withQueryString();
 
-        return view('public.lowongan.index', compact('lowongans', 'unitKerjaOptions'));
+        return view('public.lowongan.index', compact('lowongans', 'unitKerjaOptions') + $urut);
     }
 
     public function show(Lowongan $lowongan): View

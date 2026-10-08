@@ -46,9 +46,9 @@
         </div>
 
         <section class="panel">
-            <form action="{{ route('admin.penugasan.index') }}" method="GET" class="panel-filter px-3 pt-3 pb-2">
+            <form action="{{ route('admin.penugasan.index') }}" method="GET" id="filterPenugasanForm" class="panel-filter px-3 pt-3 pb-2">
                 <div class="row g-2 align-items-center">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <input type="search" name="q" class="form-control form-control-sm" placeholder="Cari nama, NIP, atau unit..." value="{{ request('q') }}">
                     </div>
                     <div class="col-6 col-md-3">
@@ -66,6 +66,7 @@
                             <option value="selesai" @selected(request('status') === 'selesai')>Selesai</option>
                         </select>
                     </div>
+                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterPenugasanForm'])</div>
                 </div>
             </form>
 

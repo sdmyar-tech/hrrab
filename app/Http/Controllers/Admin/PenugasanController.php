@@ -9,6 +9,7 @@ use App\Models\PengajuanLembur;
 use App\Models\Penugasan;
 use App\Support\Notifikasi;
 use App\Support\PenugasanService;
+use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,9 +26,16 @@ class PenugasanController extends Controller
     public function index(Request $request): View
     {
         $hariIni = now()->toDateString();
-        $query = $this->filteredQuery($request)->latest('updated_at')->latest('id');
+        $query = $this->filteredQuery($request);
+        $urut = Urutan::terapkan($query, [
+            ...Urutan::tanggal('diperbarui', 'Diperbarui', 'penugasans.updated_at'),
+            ...Urutan::tanggal('mulai', 'Tanggal mulai', 'penugasans.tanggal_mulai'),
+            ...Urutan::abjad('nama', 'Nama', Urutan::namaPegawai('penugasans')),
+            ...Urutan::abjad('unit', 'Unit', 'penugasans.unit_kerja'),
+        ]);
 
         return view('admin.penugasan.index', [
+            ...$urut,
             'penugasans' => $query->paginate(20)->withQueryString(),
             'unitsTanpaKepala' => PenugasanService::unitsTanpaKepala(),
             'jumlahRangkapAktif' => Penugasan::aktif()->where('is_utama', false)->count(),

@@ -20,7 +20,7 @@
                 <form action="{{ route('admin.pegawai.index') }}" method="GET" id="filterPegawaiForm"
                     class="panel-filter px-3 pt-3 pb-2">
                     <div class="row g-2 align-items-center">
-                        <div class="col-md-5">
+                        <div class="col-md-4">
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
                                 <input type="search" name="q" id="searchInput" class="form-control border-start-0"
@@ -38,7 +38,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <select name="status_rekrutmen" class="form-select form-select-sm"
                                 onchange="document.getElementById('filterPegawaiForm').submit()">
                                 <option value="">Semua Status</option>
@@ -46,7 +46,8 @@
                                 <option value="Tidak Aktif" {{ request('status_rekrutmen') == 'Tidak Aktif' ? 'selected' : '' }}>Tidak Aktif</option>
                             </select>
                         </div>
-                        <div class="col-md-1 text-end">
+                        <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterPegawaiForm'])</div>
+                        <div class="col-auto text-end">
                             @if (request()->hasAny(['q', 'unit_kerja', 'status_rekrutmen']))
                                 <a href="{{ route('admin.pegawai.index') }}" class="btn btn-outline-secondary btn-sm"
                                     title="Reset filter">

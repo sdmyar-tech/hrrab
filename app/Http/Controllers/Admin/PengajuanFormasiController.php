@@ -7,6 +7,7 @@ use App\Models\Lowongan;
 use App\Models\PengajuanFormasi;
 use App\Support\ExcelExporter;
 use App\Support\RekrutmenAccess;
+use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,12 +23,20 @@ class PengajuanFormasiController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        $pengajuanFormasis = $this->filteredQuery($request, $user)->latest()->paginate(15)->withQueryString();
+        $query = $this->filteredQuery($request, $user);
+        $urut = Urutan::terapkan($query, [
+            ...Urutan::tanggal('diajukan', 'Diajukan', 'pengajuan_formasis.created_at'),
+            ...Urutan::tanggal('target', 'Target waktu', 'pengajuan_formasis.target_waktu'),
+            ...Urutan::abjad('jabatan', 'Jabatan', 'pengajuan_formasis.jabatan'),
+            ...Urutan::abjad('unit', 'Unit', 'pengajuan_formasis.unit_kerja'),
+        ]);
+        $pengajuanFormasis = $query->paginate(15)->withQueryString();
 
         return view('admin.pengajuan-formasi.index', [
             'pengajuanFormasis' => $pengajuanFormasis,
             'canReview' => RekrutmenAccess::canReview($user),
             'canSubmit' => RekrutmenAccess::bisaAjukanFormasi($user),
+            ...$urut,
         ]);
     }
 

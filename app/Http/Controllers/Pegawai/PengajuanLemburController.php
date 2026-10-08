@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Pegawai;
 use App\Http\Controllers\Controller;
 use App\Models\PengajuanLembur;
 use App\Support\PengajuanWorkflow;
+use App\Support\Urutan;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,13 +22,20 @@ class PengajuanLemburController extends Controller
         $user = Auth::user();
         $pegawai = $user->dataPegawai;
 
-        $pengajuanLemburs = $pegawai
-            ? $pegawai->pengajuanLemburs()->latest('tanggal')->latest('id')->get()
-            : collect();
+        $urut = ['urutOpsi' => [], 'urutAktif' => null];
+        $pengajuanLemburs = collect();
+        if ($pegawai) {
+            $query = $pegawai->pengajuanLemburs();
+            $urut = Urutan::terapkan($query, [
+                ...Urutan::tanggal('tgl', 'Tanggal lembur', 'pengajuan_lemburs.tanggal'),
+                ...Urutan::tanggal('diajukan', 'Diajukan', 'pengajuan_lemburs.created_at'),
+            ]);
+            $pengajuanLemburs = $query->get();
+        }
 
         $unitOptions = $user->unitsLembur();
 
-        return view('pegawai.pengajuan-lembur', compact('pengajuanLemburs', 'unitOptions'));
+        return view('pegawai.pengajuan-lembur', compact('pengajuanLemburs', 'unitOptions') + $urut);
     }
 
     public function store(Request $request): RedirectResponse

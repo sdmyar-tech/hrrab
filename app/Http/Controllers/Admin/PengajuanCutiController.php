@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PengajuanCuti;
 use App\Support\ExcelExporter;
 use App\Support\PengajuanWorkflow;
+use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,10 +19,16 @@ class PengajuanCutiController extends Controller
 {
     public function index(Request $request): View
     {
-        $pengajuanCutis = $this->filteredQuery($request)->paginate(15)->withQueryString();
+        $query = $this->filteredQuery($request);
+        $urut = Urutan::terapkan($query, [
+            ...Urutan::tanggal('tgl', 'Tanggal cuti', 'pengajuan_cutis.tanggal_mulai'),
+            ...Urutan::tanggal('diajukan', 'Diajukan', 'pengajuan_cutis.created_at'),
+            ...Urutan::abjad('nama', 'Nama', Urutan::namaPegawai('pengajuan_cutis')),
+        ]);
+        $pengajuanCutis = $query->paginate(15)->withQueryString();
         $bidangTabs = PengajuanWorkflow::gmTabCounts(PengajuanCuti::class, Auth::user());
 
-        return view('admin.pengajuan-cuti.index', compact('pengajuanCutis', 'bidangTabs'));
+        return view('admin.pengajuan-cuti.index', compact('pengajuanCutis', 'bidangTabs') + $urut);
     }
 
     public function show(PengajuanCuti $pengajuanCuti): View
