@@ -322,8 +322,18 @@
         jenisRadios.forEach(function (radio) {
             radio.addEventListener('change', toggleJenis);
         });
-        kategoriSelect.addEventListener('change', updateKategori);
+        // Tanggal selesai mengikuti tanggal mulai: tidak boleh lebih awal, dan langsung terisi (cuti minimal 1 hari).
+        function sinkronSelesai() {
+            if (!tanggalMulai.value) return;
+            tanggalSelesai.min = tanggalMulai.value;
+            if (!tanggalSelesai.value || tanggalSelesai.value < tanggalMulai.value) {
+                tanggalSelesai.value = tanggalMulai.value;
+            }
+        }
+
+        kategoriSelect.addEventListener('change', function () { updateKategori(); sinkronSelesai(); updateLamaCuti(); });
         tanggalMulai.addEventListener('change', function () {
+            sinkronSelesai();
             if (!document.getElementById('jenisBesar').checked) { updateLamaCuti(); return; }
             const opsi = kategoriSelect.options[kategoriSelect.selectedIndex];
             const durasi = opsi ? parseInt(opsi.getAttribute('data-durasi'), 10) : NaN;
@@ -332,9 +342,11 @@
             }
             updateLamaCuti();
         });
-        tanggalSelesai.addEventListener('change', updateLamaCuti);
+        tanggalSelesai.addEventListener('change', function () { sinkronSelesai(); updateLamaCuti(); });
+        jenisRadios.forEach(function (radio) { radio.addEventListener('change', function () { sinkronSelesai(); updateLamaCuti(); }); });
 
         toggleJenis();
+        sinkronSelesai();
         updateLamaCuti();
     });
 </script>
