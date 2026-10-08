@@ -30,3 +30,10 @@ Artisan::command('rekrutmen:pengingat', function () {
 })->purpose('Ingatkan konfirmasi onboarding/interview/kontrak yang tanggalnya sudah sampai atau lewat');
 
 Schedule::command('rekrutmen:pengingat')->weekdays()->at('07:30');
+
+Artisan::command('log:bersihkan {--hari=365}', function () {
+    $jumlah = App\Models\LogAktivitas::where('created_at', '<', now()->subDays((int) $this->option('hari')))->delete();
+    $this->info("{$jumlah} log aktivitas lama dihapus.");
+})->purpose('Hapus log aktivitas yang lebih tua dari N hari (default 1 tahun)');
+
+Schedule::command('log:bersihkan')->monthlyOn(1, '01:00');

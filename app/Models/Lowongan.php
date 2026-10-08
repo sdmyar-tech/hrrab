@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Lowongan extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Models\Concerns\DicatatLog;
 
     protected $table = 'lowongans';
 

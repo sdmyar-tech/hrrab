@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Schema;
 /** Master daftar jabatan: sumber semua dropdown & validasi jabatan. */
 class Jabatan extends Model
 {
+    use \App\Models\Concerns\DicatatLog;
+
     private const CACHE_KEY = 'master.jabatan';
 
     protected $fillable = ['nama'];

@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Pengumuman extends Model
 {
+    use \App\Models\Concerns\DicatatLog;
+
     protected $table = 'pengumumans';
 
     public const KATEGORI = [

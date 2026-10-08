@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InterviewJadwal extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Models\Concerns\DicatatLog;
 
     protected static function booted(): void
     {

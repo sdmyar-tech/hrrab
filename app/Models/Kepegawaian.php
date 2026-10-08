@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Kepegawaian extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Models\Concerns\DicatatLog;
 
     protected $table = 'kepegawaians';
 

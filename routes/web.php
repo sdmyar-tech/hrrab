@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\JabatanController as AdminJabatanController;
 use App\Http\Controllers\Admin\KandidatInternalController;
 use App\Http\Controllers\Admin\LamaranController as AdminLamaranController;
+use App\Http\Controllers\Admin\LogAktivitasController as AdminLogAktivitasController;
 use App\Http\Controllers\Admin\LowonganController as AdminLowonganController;
 use App\Http\Controllers\Admin\PegawaiController as AdminPegawaiController;
 use App\Http\Controllers\Admin\PengajuanCutiController as AdminPengajuanCutiController;
@@ -81,6 +82,11 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::get('/{user}/edit', [AdminUserController::class, 'edit'])->name('edit');
             Route::put('/{user}', [AdminUserController::class, 'update'])->name('update');
             Route::delete('/{user}', [AdminUserController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::prefix('log-aktivitas')->name('log.')->middleware('can:kelola-sistem')->group(function () {
+            Route::get('/', [AdminLogAktivitasController::class, 'index'])->name('index');
+            Route::get('/export', [AdminLogAktivitasController::class, 'export'])->name('export');
         });
 
         Route::prefix('jabatan')->name('jabatan.')->middleware('can:kelola-sistem')->group(function () {

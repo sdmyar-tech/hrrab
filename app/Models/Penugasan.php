@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Penugasan extends Model
 {
+    use \App\Models\Concerns\DicatatLog;
+
     public const PERAN_ANGGOTA = 'anggota';
     public const PERAN_KEPALA = 'kepala';
 

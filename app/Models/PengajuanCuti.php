@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PengajuanCuti extends Model
 {
-    use HasFactory, SnapshotUnitKerja;
+    use HasFactory, SnapshotUnitKerja, \App\Models\Concerns\DicatatLog;
 
     protected $table = 'pengajuan_cutis';
 

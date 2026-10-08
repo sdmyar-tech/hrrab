@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DataPegawai extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Models\Concerns\DicatatLog;
 
     protected $table = 'data_pegawais';
 

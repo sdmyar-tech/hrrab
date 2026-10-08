@@ -32,6 +32,7 @@
         ['bagian' => 'Sistem', 'item' => [
             ['Kelola Akun', 'bi-person-lock', 'admin.users.index', 'admin.users.*', $u->can('kelola-sistem'), null],
             ['Master Jabatan', 'bi-diagram-3', 'admin.jabatan.index', 'admin.jabatan.*', $u->can('kelola-sistem'), null],
+            ['Log Aktivitas', 'bi-journal-text', 'admin.log.index', 'admin.log.*', $u->can('kelola-sistem'), null],
         ]],
     ];
 @endphp

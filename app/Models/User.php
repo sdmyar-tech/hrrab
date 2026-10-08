@@ -8,7 +8,7 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, \App\Models\Concerns\DicatatLog;
 
     public const ROLE_PEMBINA = 'pembina';
     public const ROLE_GM = 'gm';

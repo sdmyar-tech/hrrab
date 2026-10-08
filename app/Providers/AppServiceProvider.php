@@ -4,7 +4,12 @@ namespace App\Providers;
 
 use App\Models\Pengumuman;
 use App\Models\User;
+use App\Support\PencatatLog;
 use App\Support\SidebarHitung;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
@@ -25,6 +30,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Log aktivitas: login, logout, dan percobaan login gagal (akun selain superadmin).
+        Event::listen(Login::class, fn (Login $e) => $e->user instanceof User
+            && PencatatLog::tulis($e->user, 'login', 'Akun', 'Login ke sistem' . (request()->routeIs('google.*') ? ' (Google)' : '')));
+        Event::listen(Logout::class, fn (Logout $e) => $e->user instanceof User
+            && PencatatLog::tulis($e->user, 'logout', 'Akun', 'Logout dari sistem'));
+        Event::listen(Failed::class, fn (Failed $e) => $e->user instanceof User
+            && PencatatLog::tulis($e->user, 'login', 'Akun', 'Percobaan login gagal (password salah)', 'gagal'));
+
         $abilities = array_unique([
             ...array_merge(...array_values(User::ABILITIES)),
             User::ABILITY_AJUKAN_CUTI,
