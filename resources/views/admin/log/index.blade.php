@@ -136,6 +136,38 @@
                 <div class="px-3 py-2 border-top">{{ $logs->links('pagination::bootstrap-5') }}</div>
             @endif
         </section>
+
+        @php
+            $lamaSimpan = fn (int $hari) => $hari % 365 === 0 ? ($hari / 365) . ' tahun' : $hari . ' hari';
+        @endphp
+        <section class="panel mt-3">
+            <h2 class="h6 fw-bold mb-1"><i class="bi bi-archive me-1"></i>Masa Simpan & Arsip</h2>
+            <p class="small text-muted mb-3">Log yang lewat masa simpan otomatis diarsipkan ke file Excel di server (tidak bisa diakses publik), lalu dihapus dari daftar di atas. Berjalan setiap tanggal 1.</p>
+            <div class="row g-3">
+                <div class="col-lg-5">
+                    <ul class="list-group">
+                        @foreach (\App\Support\ArsipLog::KATEGORI as $kunci => [$labelKategori])
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ $labelKategori }}</span>
+                                <span class="badge text-bg-light border">{{ $lamaSimpan($retensi[$kunci]) }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+                <div class="col-lg-7">
+                    @forelse ($arsip as $file)
+                        <a href="{{ route('admin.log.arsip', $file['nama']) }}" class="log-arsip">
+                            <i class="bi bi-file-earmark-excel text-success"></i>
+                            <span class="flex-grow-1 text-truncate">{{ $file['nama'] }}</span>
+                            <span class="small text-muted text-nowrap">{{ \Carbon\Carbon::createFromTimestamp($file['waktu'])->translatedFormat('d M Y') }} · {{ number_format($file['ukuran'] / 1024, 0, ',', '.') }} KB</span>
+                            <i class="bi bi-download"></i>
+                        </a>
+                    @empty
+                        <div class="text-muted small border rounded p-3 text-center">Belum ada arsip. File pertama muncul setelah ada log yang melewati masa simpan.</div>
+                    @endforelse
+                </div>
+            </div>
+        </section>
     </div>
 </main>
 
@@ -170,6 +202,9 @@
     .log-tabel td.lama { color: #b42318; text-decoration: line-through; text-decoration-color: rgba(180, 35, 24, .4); }
     .log-tabel td.baru { color: #146c43; font-weight: 600; }
     .log-tabel td.panah { width: 1%; color: var(--admin-muted); }
+    .log-arsip { display: flex; align-items: center; gap: .6rem; padding: .55rem .75rem; border: 1px solid var(--admin-border); border-radius: .6rem; margin-bottom: .4rem;
+        color: var(--admin-text) !important; text-decoration: none; }
+    .log-arsip:hover { background: var(--hr-primary-soft); border-color: #e4b0b1; }
     @media (max-width: 575.98px) {
         .log-filter .form-select, .log-filter input[type=date], .log-filter .btn { flex: 1 1 calc(50% - .5rem); }
         .log-jam { width: 36px; }

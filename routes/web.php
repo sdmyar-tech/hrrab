@@ -87,6 +87,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         Route::prefix('log-aktivitas')->name('log.')->middleware('can:kelola-sistem')->group(function () {
             Route::get('/', [AdminLogAktivitasController::class, 'index'])->name('index');
             Route::get('/export', [AdminLogAktivitasController::class, 'export'])->name('export');
+            Route::get('/arsip/{nama}', [AdminLogAktivitasController::class, 'unduhArsip'])->name('arsip')->where('nama', '[A-Za-z0-9\-\.]+');
         });
 
         Route::prefix('jabatan')->name('jabatan.')->middleware('can:kelola-sistem')->group(function () {

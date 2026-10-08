@@ -19,4 +19,11 @@ return [
     // Tanggal libur (format Y-m-d) yang tidak dihitung sebagai hari kerja.
     'hari_libur' => $liburTetap,
 
+    // Masa simpan log aktivitas (hari). Lewat masa ini log diarsipkan ke Excel di storage lalu dihapus dari database.
+    'retensi_log' => [
+        'akses' => 365,   // login, logout, login gagal
+        'ekspor' => 730,  // ekspor data
+        'data' => 1825,   // tambah, ubah, hapus, setujui, tolak, kirim, dll.
+    ],
+
 ];

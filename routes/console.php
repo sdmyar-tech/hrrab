@@ -31,9 +31,10 @@ Artisan::command('rekrutmen:pengingat', function () {
 
 Schedule::command('rekrutmen:pengingat')->weekdays()->at('07:30');
 
-Artisan::command('log:bersihkan {--hari=365}', function () {
-    $jumlah = App\Models\LogAktivitas::where('created_at', '<', now()->subDays((int) $this->option('hari')))->delete();
-    $this->info("{$jumlah} log aktivitas lama dihapus.");
-})->purpose('Hapus log aktivitas yang lebih tua dari N hari (default 1 tahun)');
+Artisan::command('log:bersihkan', function () {
+    foreach (App\Support\ArsipLog::jalankan() as $kategori => $hasil) {
+        $this->info("{$kategori}: {$hasil['jumlah']} log diarsipkan & dihapus" . ($hasil['file'] ? " -> storage/app/arsip-log/{$hasil['file']}" : ''));
+    }
+})->purpose('Arsipkan ke Excel lalu hapus log aktivitas yang lewat masa simpan (lihat config/hrrab.php retensi_log)');
 
 Schedule::command('log:bersihkan')->monthlyOn(1, '01:00');

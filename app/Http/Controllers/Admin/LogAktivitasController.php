@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LogAktivitas;
 use App\Models\User;
+use App\Support\ArsipLog;
 use App\Support\ExcelExporter;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -19,6 +20,8 @@ class LogAktivitasController extends Controller
         return view('admin.log.index', [
             'logs' => $this->filteredQuery($request)->latest('created_at')->latest('id')->paginate(30)->withQueryString(),
             'modulOpsi' => LogAktivitas::query()->distinct()->orderBy('modul')->pluck('modul'),
+            'retensi' => ArsipLog::retensi(),
+            'arsip' => ArsipLog::daftarArsip(),
             'ringkas' => [
                 'hari_ini' => (clone $hariIni)->count(),
                 'pengguna_hari_ini' => (clone $hariIni)->distinct('user_id')->count('user_id'),
@@ -26,6 +29,14 @@ class LogAktivitasController extends Controller
                 'login_hari_ini' => (clone $hariIni)->where('aksi', 'login')->where('status', 'berhasil')->count(),
             ],
         ]);
+    }
+
+    public function unduhArsip(string $nama): BinaryFileResponse
+    {
+        $path = ArsipLog::pathArsip($nama);
+        abort_unless($path, 404);
+
+        return response()->download($path, $nama);
     }
 
     public function export(Request $request): BinaryFileResponse
