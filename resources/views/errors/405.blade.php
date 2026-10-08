@@ -1,0 +1,5 @@
+@extends('errors.layout')
+@section('kode', '405')
+@section('ikon', 'bi-signpost-split')
+@section('judul', 'Cara membuka halaman tidak sesuai')
+@section('pesan', 'Halaman ini tidak bisa dibuka langsung dari alamat browser. Kembali ke halaman sebelumnya lalu gunakan tombol yang tersedia.')

@@ -33,6 +33,13 @@ Route::get('/', function () {
     return redirect()->route('lowongan.index');
 });
 
+// Tujuan tombol "Beranda" di halaman error: dashboard sesuai role bila login, selain itu halaman lowongan.
+Route::get('/beranda', function () {
+    $user = auth()->user();
+
+    return redirect()->route($user ? $user->dashboardRoute() : 'lowongan.index');
+})->name('beranda');
+
 Route::get('/' . config('hrrab.staff_login_path'), [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/' . config('hrrab.staff_login_path'), [LoginController::class, 'login'])->name('login.submit')->middleware('throttle:6,1');
 
