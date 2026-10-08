@@ -584,7 +584,7 @@
                     <div class="panel p-4 mb-3">
                         <h2 class="h6 fw-bold mb-1">Jadwal Tanda Tangan Kontrak</h2>
                         @if ($tanggalKontrakMinimal)
-                            <p class="text-muted small mb-3">Paling cepat {{ $tanggalKontrakMinimal->translatedFormat('d M Y') }} (sehari setelah onboarding selesai).</p>
+                            <p class="text-muted small mb-3">Paling cepat {{ $tanggalKontrakMinimal->translatedFormat('d M Y') }} (boleh di hari terakhir onboarding).</p>
                         @endif
 
                         @forelse ($lamaran->kontrakJadwals as $jadwal)

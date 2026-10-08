@@ -535,16 +535,17 @@ class LamaranController extends Controller
 
     private function validasiKontrak(Request $request, ?ScreeningOnboarding $onboarding): array
     {
-        // Admin bebas memilih tanggal; selain admin minimal sehari setelah onboarding selesai.
+        // Admin bebas memilih tanggal; selain admin minimal di hari terakhir onboarding.
         $minimal = $onboarding && ! $this->adminBebas() ? OnboardingFlow::tanggalKontrakMinimal($onboarding) : null;
 
         return $request->validate([
             'tanggal' => ['required', 'date', ...($minimal ? ['after_or_equal:' . $minimal->toDateString()] : []), ...$this->aturanTanggal(false)],
-            'waktu' => ['nullable', 'date_format:H:i'],
+            // Kontrak kini bisa di hari yang sama: jam yang sudah lewat ditolak.
+            'waktu' => ['nullable', 'date_format:H:i', $this->aturanJamBelumLewat()],
             'lokasi' => ['nullable', 'string', 'max:255'],
             'catatan' => ['nullable', 'string', 'max:1000'],
         ], [
-            'tanggal.after_or_equal' => 'Tanggal kontrak paling cepat ' . $minimal?->translatedFormat('d M Y') . ' (sehari setelah onboarding selesai).',
+            'tanggal.after_or_equal' => 'Tanggal kontrak paling cepat ' . $minimal?->translatedFormat('d M Y') . ' (hari terakhir onboarding).',
         ]);
     }
 

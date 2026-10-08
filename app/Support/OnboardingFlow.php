@@ -32,10 +32,13 @@ class OnboardingFlow
         return Kalender::hariKerjaKe($mulai, $durasiHari);
     }
 
-    /** Tanggal kontrak paling awal: hari kerja pertama setelah onboarding selesai, dan tidak di masa lalu. */
+    /**
+     * Tanggal kontrak paling awal: hari terakhir onboarding (boleh di hari yang sama),
+     * tidak di masa lalu, dan jatuh di hari kerja.
+     */
     public static function tanggalKontrakMinimal(ScreeningOnboarding $screening): Carbon
     {
-        return Kalender::hariKerjaTerdekat(Kalender::hariKerjaSetelah($screening->tanggal_selesai)->max(now()->startOfDay()));
+        return Kalender::hariKerjaTerdekat($screening->tanggal_selesai->copy()->startOfDay()->max(now()->startOfDay()));
     }
 
     /** Hasil Lulus baru boleh dikonfirmasi mulai hari terakhir onboarding (Tidak Lulus boleh kapan saja). */
@@ -105,7 +108,7 @@ class OnboardingFlow
                 || $lamaran->kontrakJadwals()->create([
                     'tanggal' => $tanggal,
                     'lokasi' => $screening->lokasi,
-                    'catatan' => 'Dijadwalkan otomatis sehari setelah onboarding selesai.',
+                    'catatan' => 'Dijadwalkan otomatis (paling cepat hari terakhir onboarding).',
                     'status' => KontrakJadwal::STATUS_TERJADWAL,
                     'dijadwalkan_oleh' => $oleh->id,
                 ]);
