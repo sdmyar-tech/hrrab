@@ -66,13 +66,38 @@
     .dash-mini-stat.besar .n { font-size: 1.6rem; }
     .dash-mini-stat.besar .l { font-size: .8rem; }
 
-    /* Tabel ringkasan padat: header satu baris, angka rata kanan & sejajar. */
-    .tabel-ringkas thead th { white-space: nowrap !important; vertical-align: bottom; font-size: .7rem; }
-    .tabel-ringkas thead tr.grup th { border-bottom: 0; padding-bottom: 0; }
-    .tabel-ringkas thead tr.grup th.grup-label { text-align: center; color: var(--viz-muted); }
-    .tabel-ringkas thead tr.grup th.grup-label span { display: block; border-bottom: 1px solid var(--viz-track); padding-bottom: .2rem; }
-    .tabel-ringkas td.angka { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-    .tabel-ringkas .nol { color: var(--viz-netral); }
+    /* Ringkasan per Unit: grid kartu (responsif tanpa scroll horizontal). */
+    .unit-alat { flex: 0 1 420px; align-items: center; align-content: flex-start; }
+    /* Di HP header panel menumpuk vertikal: alat cari jangan ikut "melar" tingginya. */
+    @media (max-width: 767.98px) { .unit-alat { flex: none; width: 100%; } }
+    .unit-alat input { flex: 1 1 150px; min-width: 0; }
+    .unit-alat select { flex: 0 1 170px; width: auto; }
+    .unit-sw { width: 9px; height: 9px; border-radius: 2px; display: inline-block; flex: none; }
+    .unit-kartu {
+        display: flex; flex-direction: column; gap: .55rem; height: 100%;
+        padding: .85rem .95rem; border: 1px solid var(--viz-track); border-radius: .8rem;
+        background: var(--viz-surface); color: var(--viz-text) !important; text-decoration: none !important;
+        transition: border-color .15s, box-shadow .15s, transform .15s;
+    }
+    .unit-kartu:hover, .unit-kartu:focus-visible { border-color: rgba(136, 15, 18, .45); box-shadow: 0 6px 18px rgba(15, 23, 42, .08); transform: translateY(-1px); }
+    .unit-nama { font-weight: 700; font-size: .9rem; color: #880f12; line-height: 1.25; overflow-wrap: anywhere; }
+    html[data-theme="dark"] .unit-nama { color: #f08a8c; }
+    .unit-jumlah { flex: none; font-size: .75rem; color: var(--viz-muted); white-space: nowrap; }
+    .unit-jumlah strong { font-size: 1.05rem; color: var(--viz-text); font-variant-numeric: tabular-nums; }
+    .unit-kepala { display: flex; align-items: center; gap: .4rem; min-width: 0; font-size: .8rem; color: var(--viz-muted); }
+    .unit-kepala.kosong { color: #dc3545; font-weight: 600; }
+    .unit-rincian { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .7rem; font-size: .74rem; color: var(--viz-muted); font-variant-numeric: tabular-nums; }
+    .unit-rincian > span { display: inline-flex; align-items: center; gap: .3rem; white-space: nowrap; }
+    .unit-chip-wrap { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: auto; padding-top: .55rem; border-top: 1px dashed var(--viz-track); }
+    .unit-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 600; line-height: 1.4; }
+    .unit-chip.is-danger { background: rgba(220, 53, 69, .1); color: #b42318; }
+    .unit-chip.is-warning { background: rgba(217, 119, 6, .12); color: #a15c00; }
+    .unit-chip.is-info { background: rgba(42, 120, 214, .1); color: #1f5fae; }
+    .unit-chip.is-netral { background: var(--viz-track); color: var(--viz-muted); }
+    .unit-chip.is-aman { background: transparent; color: var(--viz-muted); font-weight: 500; padding-inline: 0; }
+    html[data-theme="dark"] .unit-chip.is-danger { color: #f19a9a; }
+    html[data-theme="dark"] .unit-chip.is-warning { color: #f0b85a; }
+    html[data-theme="dark"] .unit-chip.is-info { color: #8fbaf0; }
 </style>
 <script>
     // Tandai area gulir yang masih punya isi di bawah (untuk efek pudar).

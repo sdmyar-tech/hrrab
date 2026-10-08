@@ -245,79 +245,78 @@
         @endif
 
         @if (! $unitDipilih && $ringkasanUnit->isNotEmpty())
-            <section class="panel mt-3">
-                <div class="panel-header flex-wrap gap-2">
+            <section class="panel mt-3" id="ringkasan-unit">
+                <div class="panel-header flex-wrap gap-2 align-items-start">
                     <div>
                         <h2 class="h5 mb-1 section-title"><i class="bi bi-diagram-3" aria-hidden="true"></i><span>Ringkasan per Unit</span></h2>
-                        <p class="text-muted mb-0">Klik nama unit untuk membuka dashboard unit itu. Pegawai rangkap dihitung di setiap unitnya.</p>
+                        <p class="text-muted mb-0">{{ $ringkasanUnit->count() }} unit &middot; klik kartu untuk membuka dashboard unit. Pegawai rangkap dihitung di setiap unitnya.</p>
                     </div>
-                    <div class="d-flex flex-wrap gap-3 small text-muted viz">
-                        @foreach (['Tetap', 'Kontrak', 'Harian Lepas'] as $s)
-                            <span class="d-inline-flex align-items-center gap-1"><span style="width:10px;height:10px;border-radius:2px;background:var(--viz-{{ $paletStatus[$s] }});display:inline-block;"></span>{{ $s }}</span>
-                        @endforeach
+                    <div class="d-flex flex-wrap gap-2 unit-alat">
+                        <input type="search" class="form-control form-control-sm" placeholder="Cari unit / kepala..." data-unit-cari aria-label="Cari unit">
+                        <select class="form-select form-select-sm" data-unit-urut aria-label="Urutkan unit">
+                            <option value="asli">Urutan default</option>
+                            <option value="nama">Nama A–Z</option>
+                            <option value="jumlah">Pegawai terbanyak</option>
+                            <option value="perhatian">Perlu perhatian</option>
+                        </select>
                     </div>
                 </div>
-                @php
-                    // Nilai nol ditampilkan seragam (tanda pisah pudar) agar angka penting menonjol.
-                    $nol = '<span class="nol">–</span>';
-                @endphp
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0 small tabel-ringkas">
-                        <thead>
-                            <tr class="grup">
-                                <th colspan="2"></th>
-                                <th colspan="3" class="grup-label"><span>Pegawai</span></th>
-                                <th></th>
-                                @if ($bisaLaporan)
-                                    <th colspan="2" class="grup-label"><span>Cuti</span></th>
-                                    <th colspan="2"></th>
-                                @endif
-                            </tr>
-                            <tr>
-                                <th>Unit</th>
-                                <th>Kepala</th>
-                                <th class="text-end">Jumlah</th>
-                                <th class="text-end" title="Laki-laki / Perempuan">L / P</th>
-                                <th style="min-width:110px;">Status Kerja</th>
-                                <th class="text-end" title="Kontrak berakhir dalam 60 hari">Kontrak ≤60h</th>
-                                @if ($bisaLaporan)
-                                    <th class="text-end" title="Pegawai yang cuti hari ini">Hari ini</th>
-                                    <th class="text-end" title="Hari cuti disetujui bulan ini">Bln ini</th>
-                                    <th class="text-end" title="Jam lembur disetujui bulan ini">Lembur</th>
-                                    <th class="text-end" title="Pengajuan cuti/lembur yang menunggu persetujuan">Menunggu</th>
-                                @endif
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($ringkasanUnit as $r)
-                                <tr>
-                                    <td class="fw-semibold text-nowrap"><a href="{{ route('admin.dashboard', ['unit' => $r['unit']]) }}" class="dash-link">{{ $r['unit'] }}</a></td>
-                                    <td class="text-truncate" style="max-width:180px;" title="{{ $r['kepala'] }}">
-                                        @if ($r['kepala'])
-                                            {{ $r['kepala'] }}
-                                        @else
-                                            <span class="text-danger text-nowrap"><i class="bi bi-exclamation-circle me-1"></i>Belum ada</span>
-                                        @endif
-                                    </td>
-                                    <td class="angka fw-semibold">{{ $r['jumlah'] }}</td>
-                                    <td class="angka text-muted">{{ $r['laki'] }} / {{ $r['perempuan'] }}</td>
-                                    <td>@include('partials.viz.komposisi', ['items' => $r['status'], 'palet' => $paletStatus, 'kecil' => true, 'tanpaLegenda' => true])</td>
-                                    <td class="angka">
-                                        @if ($r['kontrak_habis'])<span class="badge rounded-pill text-bg-danger">{{ $r['kontrak_habis'] }}</span>@else{!! $nol !!}@endif
-                                    </td>
-                                    @if ($bisaLaporan)
-                                        <td class="angka">{!! $r['cuti_hari_ini'] ?: $nol !!}</td>
-                                        <td class="angka">{!! $r['cuti_bulan_ini'] ? e($r['cuti_bulan_ini']) . ' hr' : $nol !!}</td>
-                                        <td class="angka">{!! $r['lembur_bulan_ini'] ? e($jam($r['lembur_bulan_ini'])) . ' jam' : $nol !!}</td>
-                                        <td class="angka">
-                                            @if ($r['pending'])<span class="badge rounded-pill text-bg-warning">{{ $r['pending'] }}</span>@else{!! $nol !!}@endif
-                                        </td>
-                                    @endif
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+
+                <div class="d-flex flex-wrap gap-3 small text-muted viz mb-3">
+                    @foreach (['Tetap', 'Kontrak', 'Harian Lepas'] as $s)
+                        <span class="d-inline-flex align-items-center gap-1"><span class="unit-sw" style="background:var(--viz-{{ $paletStatus[$s] }});"></span>{{ $s }}</span>
+                    @endforeach
                 </div>
+
+                <div class="row g-3" data-unit-grid>
+                    @foreach ($ringkasanUnit as $r)
+                        @php
+                            // Skor "perlu perhatian" untuk pengurutan: unit tanpa kepala, kontrak hampir habis, pengajuan menunggu.
+                            $perhatian = ($r['kepala'] ? 0 : 3) + $r['kontrak_habis'] * 2 + ($bisaLaporan ? $r['pending'] : 0);
+                            $status = collect($r['status'])->filter(fn ($s) => $s['jumlah'] > 0);
+                            $chip = array_filter([
+                                $r['kontrak_habis'] ? ['danger', 'bi-hourglass-split', $r['kontrak_habis'] . ' kontrak ≤ 60 hari'] : null,
+                                $bisaLaporan && $r['pending'] ? ['warning', 'bi-inbox', $r['pending'] . ' menunggu persetujuan'] : null,
+                                $bisaLaporan && $r['cuti_hari_ini'] ? ['info', 'bi-calendar-x', $r['cuti_hari_ini'] . ' cuti hari ini'] : null,
+                                $bisaLaporan && $r['cuti_bulan_ini'] ? ['netral', 'bi-calendar2-check', $r['cuti_bulan_ini'] . ' hr cuti bln ini'] : null,
+                                $bisaLaporan && $r['lembur_bulan_ini'] ? ['netral', 'bi-clock-history', $jam($r['lembur_bulan_ini']) . ' jam lembur bln ini'] : null,
+                            ]);
+                        @endphp
+                        <div class="col-12 col-sm-6 col-xl-4 col-xxl-3" data-unit-kartu data-urut-asli="{{ $loop->index }}"
+                            data-nama="{{ strtolower($r['unit']) }}" data-cari="{{ strtolower($r['unit'] . ' ' . $r['kepala']) }}"
+                            data-jumlah="{{ $r['jumlah'] }}" data-perhatian="{{ $perhatian }}">
+                            <a href="{{ route('admin.dashboard', ['unit' => $r['unit']]) }}" class="unit-kartu viz">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <span class="unit-nama">{{ $r['unit'] }}</span>
+                                    <span class="unit-jumlah"><strong>{{ $r['jumlah'] }}</strong> org</span>
+                                </div>
+
+                                <div class="unit-kepala {{ $r['kepala'] ? '' : 'kosong' }}" title="{{ $r['kepala'] ? 'Kepala: ' . $r['kepala'] : 'Unit belum punya kepala' }}">
+                                    <i class="bi {{ $r['kepala'] ? 'bi-person-badge' : 'bi-exclamation-circle' }}" aria-hidden="true"></i>
+                                    <span class="text-truncate">{{ $r['kepala'] ?: 'Belum ada kepala' }}</span>
+                                </div>
+
+                                @include('partials.viz.komposisi', ['items' => $r['status'], 'palet' => $paletStatus, 'kecil' => true, 'tanpaLegenda' => true])
+
+                                <div class="unit-rincian">
+                                    @foreach ($status as $s)
+                                        <span><span class="unit-sw" style="background:var(--viz-{{ $paletStatus[$s['label']] ?? 'netral' }});"></span>{{ $s['jumlah'] }} {{ $s['label'] === 'Harian Lepas' ? 'harian' : strtolower($s['label']) }}</span>
+                                    @endforeach
+                                    <span class="ms-auto" title="Laki-laki / Perempuan"><i class="bi bi-gender-male"></i>{{ $r['laki'] }} <i class="bi bi-gender-female ms-1"></i>{{ $r['perempuan'] }}</span>
+                                </div>
+
+                                <div class="unit-chip-wrap">
+                                    @forelse ($chip as [$warna, $ikon, $teks])
+                                        <span class="unit-chip is-{{ $warna }}"><i class="bi {{ $ikon }}" aria-hidden="true"></i>{{ $teks }}</span>
+                                    @empty
+                                        <span class="unit-chip is-aman"><i class="bi bi-check2" aria-hidden="true"></i>Tidak ada yang perlu ditindak</span>
+                                    @endforelse
+                                </div>
+                            </a>
+                        </div>
+                    @endforeach
+                </div>
+                <p class="text-muted small text-center py-3 mb-0" data-unit-kosong hidden>Tidak ada unit yang cocok.</p>
             </section>
         @endif
 
@@ -426,5 +425,37 @@
             });
         });
     });
+
+    // Ringkasan per Unit: cari & urutkan kartu di sisi klien.
+    (function () {
+        const grid = document.querySelector('[data-unit-grid]');
+        if (!grid) return;
+        const kartu = Array.from(grid.querySelectorAll('[data-unit-kartu]'));
+        const cari = document.querySelector('[data-unit-cari]');
+        const urut = document.querySelector('[data-unit-urut]');
+        const kosong = document.querySelector('[data-unit-kosong]');
+
+        const pembanding = {
+            asli: (a, b) => a.dataset.urutAsli - b.dataset.urutAsli,
+            nama: (a, b) => a.dataset.nama.localeCompare(b.dataset.nama, 'id'),
+            jumlah: (a, b) => b.dataset.jumlah - a.dataset.jumlah,
+            // Skor sama → yang anggotanya lebih banyak didahulukan.
+            perhatian: (a, b) => (b.dataset.perhatian - a.dataset.perhatian) || (b.dataset.jumlah - a.dataset.jumlah),
+        };
+
+        function terapkan() {
+            const kata = cari.value.trim().toLowerCase();
+            let tampil = 0;
+            kartu.sort(pembanding[urut.value] || pembanding.asli).forEach(function (k) {
+                k.hidden = kata !== '' && !k.dataset.cari.includes(kata);
+                if (!k.hidden) tampil++;
+                grid.appendChild(k);
+            });
+            kosong.hidden = tampil > 0;
+        }
+
+        cari.addEventListener('input', terapkan);
+        urut.addEventListener('change', terapkan);
+    })();
 </script>
 @endsection
