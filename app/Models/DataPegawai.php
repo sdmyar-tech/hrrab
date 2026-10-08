@@ -37,7 +37,20 @@ class DataPegawai extends Model
     protected $casts = [
         'tanggal_lahir' => 'date',
         'jumlah_tanggungan' => 'integer',
+        'ikut_absensi' => 'boolean',
     ];
+
+    // finger_id & ikut_absensi sengaja tidak di illable: hanya diubah lewat modul Absensi (SDM/Admin).
+
+    public function jadwalKerja(): HasOne
+    {
+        return $this->hasOne(JadwalKerjaPegawai::class);
+    }
+
+    public function absensis(): HasMany
+    {
+        return $this->hasMany(Absensi::class);
+    }
 
     public function kepegawaian(): HasOne
     {

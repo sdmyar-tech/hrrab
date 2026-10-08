@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Controllers\AbsensiSayaController;
+use App\Http\Controllers\Admin\AbsensiController as AdminAbsensiController;
+use App\Http\Controllers\Admin\AbsensiImportController as AdminAbsensiImportController;
+use App\Http\Controllers\Admin\AbsensiPengaturanController as AdminAbsensiPengaturanController;
+use App\Http\Controllers\Admin\IzinAbsensiController as AdminIzinAbsensiController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\JabatanController as AdminJabatanController;
 use App\Http\Controllers\Admin\KandidatInternalController;
@@ -77,6 +82,30 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         });
         Route::get('/pegawai/{pegawai}', [AdminPegawaiController::class, 'show'])->name('pegawai.show')->middleware('can:lihat-tabel-karyawan');
         Route::get('/pegawai/{pegawai}/export', [AdminPegawaiController::class, 'exportDetail'])->name('pegawai.export-detail')->middleware('can:lihat-tabel-karyawan');
+
+        // Absensi (mesin fingerprint): lihat = Kepala Bagian (unitnya) & pengelola; kelola = Kepala SDM, Admin, staf SDM.
+        Route::prefix('absensi')->name('absensi.')->group(function () {
+            Route::middleware('can:lihat-absensi')->group(function () {
+                Route::get('/', [AdminAbsensiController::class, 'harian'])->name('harian');
+                Route::get('/rekap', [AdminAbsensiController::class, 'rekap'])->name('rekap');
+                Route::get('/rekap/export', [AdminAbsensiController::class, 'rekapExport'])->name('rekap.export');
+                Route::get('/pegawai/{pegawai}', [AdminAbsensiController::class, 'pegawai'])->name('pegawai');
+            });
+            Route::middleware('can:kelola-absensi')->group(function () {
+                Route::post('/pegawai/{pegawai}/koreksi', [AdminAbsensiController::class, 'koreksi'])->name('koreksi');
+                Route::get('/import', [AdminAbsensiImportController::class, 'index'])->name('import');
+                Route::post('/import/pratinjau', [AdminAbsensiImportController::class, 'pratinjau'])->name('import.pratinjau');
+                Route::post('/import/simpan', [AdminAbsensiImportController::class, 'simpan'])->name('import.simpan');
+                Route::get('/pengaturan', [AdminAbsensiPengaturanController::class, 'index'])->name('pengaturan');
+                Route::post('/pengaturan/massal', [AdminAbsensiPengaturanController::class, 'massal'])->name('pengaturan.massal');
+                Route::put('/pengaturan/pegawai/{pegawai}', [AdminAbsensiPengaturanController::class, 'updatePegawai'])->name('pengaturan.pegawai');
+                Route::post('/pengaturan/petakan', [AdminAbsensiPengaturanController::class, 'petakan'])->name('pengaturan.petakan');
+                Route::post('/pengaturan/aktifkan-daftar', [AdminAbsensiPengaturanController::class, 'aktifkanDaftar'])->name('pengaturan.aktifkan-daftar');
+                Route::get('/izin', [AdminIzinAbsensiController::class, 'index'])->name('izin');
+                Route::post('/izin', [AdminIzinAbsensiController::class, 'store'])->name('izin.store');
+                Route::delete('/izin/{izin}', [AdminIzinAbsensiController::class, 'destroy'])->name('izin.destroy');
+            });
+        });
     });
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
@@ -220,6 +249,7 @@ Route::prefix('pelamar')->name('pelamar.')->middleware('pelamar')->group(functio
         Route::post('/lamaran/{lamaran}/tolak', [PelamarLamaranController::class, 'tolak'])->name('lamaran.tolak');
     });
 
+    Route::get('/absensi-saya', [AbsensiSayaController::class, 'index'])->name('absensi.saya')->middleware('internal');
     Route::get('/interview-saya', [InterviewJadwalController::class, 'milikSaya'])->name('interview.saya');
     Route::get('/interview-saya/export', [EksporController::class, 'jadwalInterviewSaya'])->name('interview.saya.export');
     Route::get('/pegawai/pengajuan-cuti/export', [EksporController::class, 'riwayatCuti'])->name('pegawai.pengajuan-cuti.export');

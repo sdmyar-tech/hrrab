@@ -26,4 +26,13 @@ return [
         'data' => 1825,   // tambah, ubah, hapus, setujui, tolak, kirim, dll.
     ],
 
+    // Absensi (mesin fingerprint, import file flashdisk).
+    'absensi' => [
+        'toleransi_menit' => 15,      // batas On Time bawaan (bisa diubah per pegawai)
+        'izin_telat_menit' => 60,     // bawaan izin telat (hujan, dll.), bisa diubah saat membuat izin
+        'izin_pulang_menit' => 60,    // bawaan izin pulang cepat
+        'min_selisih_keluar' => 60,   // scan keluar < N menit setelah masuk = dianggap tidak scan pulang
+        'periode_mulai' => 21,        // pilihan cepat rekap "periode gaji" 21 s/d 20
+    ],
+
 ];

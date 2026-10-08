@@ -38,6 +38,9 @@ class User extends Authenticatable
     public const ABILITY_KELOLA_PENGUMUMAN = 'kelola-pengumuman';
     public const ABILITY_KIRIM_NOTIFIKASI = 'kirim-notifikasi';
 
+    public const ABILITY_KELOLA_ABSENSI = 'kelola-absensi'; // import, koreksi, pengaturan absensi
+    public const ABILITY_LIHAT_ABSENSI = 'lihat-absensi';   // melihat absensi (Kepala Bagian: unitnya saja)
+
     public const ABILITY_AJUKAN_CUTI = 'ajukan-cuti';
     public const ABILITY_AJUKAN_LEMBUR = 'ajukan-lembur';
 
@@ -63,6 +66,7 @@ class User extends Authenticatable
             self::ABILITY_MENGAJUKAN,
             self::ABILITY_KELOLA_PENGUMUMAN,
             self::ABILITY_KIRIM_NOTIFIKASI,
+            self::ABILITY_LIHAT_ABSENSI,
         ],
         self::ROLE_KEPALA_SDM => [
             self::ABILITY_LIHAT_DASHBOARD,
@@ -74,6 +78,8 @@ class User extends Authenticatable
             self::ABILITY_KELOLA_PENGUMUMAN,
             self::ABILITY_KIRIM_NOTIFIKASI,
             self::ABILITY_KELOLA_PEGAWAI,
+            self::ABILITY_KELOLA_ABSENSI,
+            self::ABILITY_LIHAT_ABSENSI,
         ],
         self::ROLE_STAFF => [
             self::ABILITY_LIHAT_DASHBOARD,
@@ -88,6 +94,8 @@ class User extends Authenticatable
             self::ABILITY_KELOLA_PENGUMUMAN,
             self::ABILITY_KIRIM_NOTIFIKASI,
             self::ABILITY_KELOLA_PEGAWAI,
+            self::ABILITY_KELOLA_ABSENSI,
+            self::ABILITY_LIHAT_ABSENSI,
         ],
     ];
 
@@ -125,6 +133,9 @@ public function hasAbility(string $ability): bool
             self::ABILITY_AJUKAN_LEMBUR => $this->hasAbility(self::ABILITY_MENGAJUKAN) && $this->unitsLembur() !== [],
             self::ABILITY_KELOLA_PEGAWAI => $this->punyaDiMatriks($ability) || ($this->isStaff() && in_array('SDM', $this->unitsAktif(), true)),
             self::ABILITY_LIHAT_TABEL_KARYAWAN => $this->punyaDiMatriks($ability) || $this->hasAbility(self::ABILITY_KELOLA_PEGAWAI),
+            // Staf unit SDM ikut mengelola absensi (sama seperti kelola pegawai).
+            self::ABILITY_KELOLA_ABSENSI => $this->punyaDiMatriks($ability) || ($this->isStaff() && in_array('SDM', $this->unitsAktif(), true)),
+            self::ABILITY_LIHAT_ABSENSI => $this->punyaDiMatriks($ability) || $this->hasAbility(self::ABILITY_KELOLA_ABSENSI),
             self::ABILITY_MENGAJUKAN, self::ABILITY_APPROVE, self::ABILITY_LIHAT_LAPORAN => $this->punyaDiMatriks($ability)
                 && ! $this->diUnitTanpaPengajuan(),
             default => $this->punyaDiMatriks($ability),
