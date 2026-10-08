@@ -333,6 +333,46 @@ body.sidebar-mini .sidebar-nav .nav-badge {
 .sidebar-nav .nav-icon { border-radius: .45rem; }
 .sidebar-nav .nav-ext { margin-left: auto; font-size: .7rem; opacity: .6; }
 .sidebar-nav .nav-section { margin: .9rem .7rem .2rem; font-size: .66rem; letter-spacing: .08em; }
+/* Dropdown submenu: tinggi dianimasikan via grid-template-rows (0fr → 1fr). */
+.sidebar-nav .nav-grup-toggle {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+}
+/* Setelah diklik mouse, tombol tidak tetap tersorot (fokus keyboard tetap terlihat). */
+.sidebar-nav .nav-grup-toggle:focus:not(:focus-visible):not(:hover) { background: transparent; transform: none; }
+.sidebar-nav .nav-grup-toggle .nav-chevron { margin-left: auto; font-size: .72rem; opacity: .55; transition: transform .2s ease; }
+.sidebar-nav .nav-grup-toggle .nav-badge-grup { margin-left: auto; }
+.sidebar-nav .nav-grup-toggle .nav-badge-grup + .nav-chevron { margin-left: .4rem; }
+.sidebar-nav .nav-grup.terbuka > .nav-grup-toggle .nav-chevron { transform: rotate(180deg); }
+.sidebar-nav .nav-grup.terbuka > .nav-grup-toggle .nav-badge-grup { display: none; }
+.sidebar-nav .nav-grup.terbuka > .nav-grup-toggle .nav-chevron { margin-left: auto; }
+.sidebar-nav .nav-grup.berisi-aktif > .nav-grup-toggle { color: var(--hr-primary-dark); }
+.sidebar-nav .nav-grup.berisi-aktif > .nav-grup-toggle .nav-icon { color: var(--hr-primary); }
+.sidebar-nav .nav-sub { display: grid; grid-template-rows: 0fr; }
+.nav-grup-siap .sidebar-nav .nav-sub { transition: grid-template-rows .22s ease; }
+.sidebar-nav .nav-grup.terbuka > .nav-sub { grid-template-rows: 1fr; }
+.sidebar-nav .nav-sub-isi {
+    min-height: 0;
+    overflow: hidden;
+    display: grid;
+    gap: .12rem;
+    margin-left: 1.25rem;
+    padding-left: .5rem;
+    border-left: 1px solid var(--admin-border);
+}
+.sidebar-nav .nav-grup.terbuka > .nav-sub .nav-sub-isi { padding-block: .15rem .3rem; }
+.sidebar-nav .nav-sub .nav-link { min-height: 34px; font-size: .86rem; font-weight: 500; }
+.sidebar-nav .nav-sub .nav-icon { width: 22px; height: 22px; font-size: .85rem; }
+/* Link tersembunyi di grup tertutup tidak bisa difokus dengan Tab. */
+.sidebar-nav .nav-grup:not(.terbuka) > .nav-sub { visibility: hidden; }
+.nav-grup-siap .sidebar-nav .nav-grup:not(.terbuka) > .nav-sub { transition: grid-template-rows .22s ease, visibility 0s .22s; }
+/* Sidebar ringkas (ikon saja): semua submenu tampil sebagai ikon, tombol grup disembunyikan. */
+body.sidebar-mini .sidebar-nav .nav-grup-toggle { display: none; }
+body.sidebar-mini .sidebar-nav .nav-sub { grid-template-rows: 1fr; visibility: visible; }
+body.sidebar-mini .sidebar-nav .nav-sub-isi { margin-left: 0; padding-left: 0; border-left: 0; }
+html[data-theme="dark"] .sidebar-nav .nav-grup.berisi-aktif > .nav-grup-toggle { color: #fff; }
 html[data-theme="dark"] .sidebar-nav .nav-link.active { background: rgba(183, 23, 25, .18); color: #fff; }
 html[data-theme="dark"] .sidebar-nav .nav-link:hover:not(.active) { background: rgba(255, 255, 255, .05); }
 

@@ -64,7 +64,7 @@
     var themeIcons = document.querySelectorAll("[data-theme-icon]");
     var closeButtons = document.querySelectorAll("[data-sidebar-close]");
     // Hanya link tujuan yang menutup sidebar (mobile); menu induk pembuka submenu (data-bs-toggle) tidak.
-    var sidebarLinks = document.querySelectorAll(".sidebar-nav .nav-link:not([data-bs-toggle])");
+    var sidebarLinks = document.querySelectorAll(".sidebar-nav a.nav-link");
     var mediaQuery = window.matchMedia(desktopMedia);
     var storageAvailable = canUseStorage();
 
@@ -216,6 +216,56 @@
       });
     }
 
+    // Dropdown submenu sidebar. Grup yang berisi halaman aktif selalu terbuka;
+    // grup lain mengikuti pilihan terakhir pengguna (disimpan di localStorage).
+    function initNavGrup() {
+      var grupStorageKey = "hrrab.navGrupTerbuka";
+      var grupList = document.querySelectorAll("[data-nav-grup]");
+      var tersimpan = [];
+
+      try {
+        tersimpan = JSON.parse(window.localStorage.getItem(grupStorageKey) || "[]");
+      } catch (error) {
+        tersimpan = [];
+      }
+
+      function simpan() {
+        var terbuka = Array.prototype.filter.call(grupList, function (g) {
+          return g.classList.contains("terbuka");
+        }).map(function (g) {
+          return g.getAttribute("data-nav-grup");
+        });
+
+        try {
+          window.localStorage.setItem(grupStorageKey, JSON.stringify(terbuka));
+        } catch (error) {
+          // Penyimpanan tidak tersedia (mode privat): abaikan.
+        }
+      }
+
+      function atur(grup, buka) {
+        grup.classList.toggle("terbuka", buka);
+        grup.querySelector(".nav-grup-toggle").setAttribute("aria-expanded", String(buka));
+      }
+
+      Array.prototype.forEach.call(grupList, function (grup) {
+        if (tersimpan.indexOf(grup.getAttribute("data-nav-grup")) !== -1) {
+          atur(grup, true);
+        }
+
+        grup.querySelector(".nav-grup-toggle").addEventListener("click", function () {
+          atur(grup, !grup.classList.contains("terbuka"));
+          simpan();
+        });
+      });
+
+      // Animasi baru diaktifkan setelah status awal terpasang agar tidak "berkedip" saat halaman dimuat.
+      window.requestAnimationFrame(function () {
+        document.documentElement.classList.add("nav-grup-siap");
+      });
+    }
+
+    initNavGrup();
     initValidation();
     initLokasiMaps();
     initTableDropdowns();

@@ -55,8 +55,35 @@
     .dash-hero { background: linear-gradient(135deg, rgba(136, 15, 18, .08), rgba(42, 120, 214, .06)); border-radius: 1rem; }
     .dash-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--viz-track); flex: none; display: inline-flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 600; color: var(--viz-muted); }
     .dash-scroll { max-height: 420px; overflow-y: auto; }
+    /* Isi masih bisa digulir: baris terbawah memudar agar tidak terlihat "terpotong". */
+    .dash-scroll.ada-lanjutan { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); }
     .dash-mini-stat { border: 1px solid var(--viz-track); border-radius: .6rem; padding: .55rem .7rem; }
     .dash-mini-stat .n { font-size: 1.15rem; font-weight: 700; line-height: 1.1; }
     .dash-mini-stat .l { font-size: .72rem; color: var(--viz-muted); }
+    a.dash-mini-stat { display: flex; flex-direction: column; justify-content: center; height: 100%; color: inherit; text-decoration: none; transition: border-color .15s, background-color .15s; }
+    a.dash-mini-stat:hover { border-color: #880f12; background: rgba(136, 15, 18, .04); }
+    .dash-mini-stat.besar { padding: .9rem .75rem; }
+    .dash-mini-stat.besar .n { font-size: 1.6rem; }
+    .dash-mini-stat.besar .l { font-size: .8rem; }
+
+    /* Tabel ringkasan padat: header satu baris, angka rata kanan & sejajar. */
+    .tabel-ringkas thead th { white-space: nowrap !important; vertical-align: bottom; font-size: .7rem; }
+    .tabel-ringkas thead tr.grup th { border-bottom: 0; padding-bottom: 0; }
+    .tabel-ringkas thead tr.grup th.grup-label { text-align: center; color: var(--viz-muted); }
+    .tabel-ringkas thead tr.grup th.grup-label span { display: block; border-bottom: 1px solid var(--viz-track); padding-bottom: .2rem; }
+    .tabel-ringkas td.angka { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .tabel-ringkas .nol { color: var(--viz-netral); }
 </style>
+<script>
+    // Tandai area gulir yang masih punya isi di bawah (untuk efek pudar).
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.dash-scroll').forEach(function (el) {
+            const cek = function () { el.classList.toggle('ada-lanjutan', el.scrollTop + el.clientHeight < el.scrollHeight - 4); };
+            el.addEventListener('scroll', cek, { passive: true });
+            window.addEventListener('resize', cek);
+            new MutationObserver(cek).observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'style'] });
+            cek();
+        });
+    });
+</script>
 @endonce

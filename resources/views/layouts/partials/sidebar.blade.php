@@ -17,30 +17,43 @@
 
     <nav class="sidebar-nav">
         @foreach ($menu as $grup)
-            @php $tampil = array_filter($grup['item'], fn ($i) => $i[4]); @endphp
+            @php
+                $tampil = array_values(array_filter($grup['item'], fn ($i) => $i[4]));
+                // Bagian bernama dengan ≥ 2 menu → dropdown; menu tunggal cukup tampil sebagai link biasa.
+                $dropdown = $grup['bagian'] && count($tampil) > 1;
+            @endphp
             @continue(! $tampil)
-            @if ($grup['bagian'])
-                <div class="nav-section">{{ $grup['bagian'] }}</div>
-            @endif
-            @foreach ($tampil as $item)
+
+            @if ($dropdown)
                 @php
-                    [$teks, $ikonMenu, $tujuan, $pola, , $jumlah] = $item;
-                    $peringatan = $item[6] ?? false;
-                    $eksternal = $item[7] ?? false;
-                    $aktif = ! $eksternal && request()->routeIs($pola);
+                    $kunci = \Illuminate\Support\Str::slug($grup['bagian']);
+                    $grupAktif = collect($tampil)->contains(fn ($i) => ! ($i[7] ?? false) && request()->routeIs($i[3]));
+                    $totalBadge = collect($tampil)->sum(fn ($i) => (int) $i[5]);
+                    $adaPeringatan = collect($tampil)->contains(fn ($i) => $i[5] && ($i[6] ?? false));
                 @endphp
-                <a class="nav-link {{ $aktif ? 'active' : '' }}" href="{{ route($tujuan) }}" title="{{ $teks }}"
-                    @if ($aktif) aria-current="page" @endif>
-                    <span class="nav-icon"><i class="bi {{ $ikonMenu }}" aria-hidden="true"></i></span>
-                    <span class="nav-text">{{ $teks }}</span>
-                    @if ($eksternal)
-                        <i class="bi bi-box-arrow-up-right nav-ext" aria-hidden="true"></i>
-                    @endif
-                    @if ($jumlah)
-                        <span class="nav-badge {{ $peringatan ? 'is-warning' : '' }}" aria-label="{{ $jumlah }} perlu perhatian">{{ $jumlah > 99 ? '99+' : $jumlah }}</span>
-                    @endif
-                </a>
-            @endforeach
+                <div class="nav-grup {{ $grupAktif ? 'terbuka berisi-aktif' : '' }}" data-nav-grup="{{ $kunci }}">
+                    <button type="button" class="nav-link nav-grup-toggle" aria-expanded="{{ $grupAktif ? 'true' : 'false' }}"
+                        aria-controls="navsub-{{ $kunci }}" title="{{ $grup['bagian'] }}">
+                        <span class="nav-icon"><i class="bi {{ $grup['ikon'] ?? 'bi-folder2' }}" aria-hidden="true"></i></span>
+                        <span class="nav-text">{{ $grup['bagian'] }}</span>
+                        @if ($totalBadge)
+                            <span class="nav-badge nav-badge-grup {{ $adaPeringatan ? 'is-warning' : '' }}" aria-label="{{ $totalBadge }} perlu perhatian">{{ $totalBadge > 99 ? '99+' : $totalBadge }}</span>
+                        @endif
+                        <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
+                    </button>
+                    <div class="nav-sub" id="navsub-{{ $kunci }}">
+                        <div class="nav-sub-isi">
+                            @foreach ($tampil as $item)
+                                @include('layouts.partials.sidebar-link', ['item' => $item])
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @else
+                @foreach ($tampil as $item)
+                    @include('layouts.partials.sidebar-link', ['item' => $item])
+                @endforeach
+            @endif
         @endforeach
     </nav>
 

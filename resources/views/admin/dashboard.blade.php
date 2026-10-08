@@ -257,21 +257,34 @@
                         @endforeach
                     </div>
                 </div>
+                @php
+                    // Nilai nol ditampilkan seragam (tanda pisah pudar) agar angka penting menonjol.
+                    $nol = '<span class="nol">–</span>';
+                @endphp
                 <div class="table-responsive">
-                    <table class="table align-middle mb-0 small">
+                    <table class="table table-sm align-middle mb-0 small tabel-ringkas">
                         <thead>
+                            <tr class="grup">
+                                <th colspan="2"></th>
+                                <th colspan="3" class="grup-label"><span>Pegawai</span></th>
+                                <th></th>
+                                @if ($bisaLaporan)
+                                    <th colspan="2" class="grup-label"><span>Cuti</span></th>
+                                    <th colspan="2"></th>
+                                @endif
+                            </tr>
                             <tr>
                                 <th>Unit</th>
                                 <th>Kepala</th>
-                                <th class="text-end">Anggota</th>
-                                <th class="text-end">L / P</th>
-                                <th style="min-width:140px;">Status Kerja</th>
-                                <th class="text-end" title="Kontrak berakhir ≤ 60 hari">Kontrak ≤60h</th>
+                                <th class="text-end">Jumlah</th>
+                                <th class="text-end" title="Laki-laki / Perempuan">L / P</th>
+                                <th style="min-width:110px;">Status Kerja</th>
+                                <th class="text-end" title="Kontrak berakhir dalam 60 hari">Kontrak ≤60h</th>
                                 @if ($bisaLaporan)
-                                    <th class="text-end">Cuti Hari Ini</th>
-                                    <th class="text-end" title="Hari cuti disetujui bulan ini">Cuti Bln Ini</th>
-                                    <th class="text-end" title="Jam lembur disetujui bulan ini">Lembur Bln Ini</th>
-                                    <th class="text-end" title="Pengajuan cuti/lembur menunggu">Pending</th>
+                                    <th class="text-end" title="Pegawai yang cuti hari ini">Hari ini</th>
+                                    <th class="text-end" title="Hari cuti disetujui bulan ini">Bln ini</th>
+                                    <th class="text-end" title="Jam lembur disetujui bulan ini">Lembur</th>
+                                    <th class="text-end" title="Pengajuan cuti/lembur yang menunggu persetujuan">Menunggu</th>
                                 @endif
                             </tr>
                         </thead>
@@ -279,25 +292,25 @@
                             @foreach ($ringkasanUnit as $r)
                                 <tr>
                                     <td class="fw-semibold text-nowrap"><a href="{{ route('admin.dashboard', ['unit' => $r['unit']]) }}" class="dash-link">{{ $r['unit'] }}</a></td>
-                                    <td class="text-truncate" style="max-width:190px;" title="{{ $r['kepala'] }}">
+                                    <td class="text-truncate" style="max-width:180px;" title="{{ $r['kepala'] }}">
                                         @if ($r['kepala'])
                                             {{ $r['kepala'] }}
                                         @else
-                                            <span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Belum ada</span>
+                                            <span class="text-danger text-nowrap"><i class="bi bi-exclamation-circle me-1"></i>Belum ada</span>
                                         @endif
                                     </td>
-                                    <td class="text-end fw-semibold">{{ $r['jumlah'] }}</td>
-                                    <td class="text-end text-muted text-nowrap">{{ $r['laki'] }} / {{ $r['perempuan'] }}</td>
+                                    <td class="angka fw-semibold">{{ $r['jumlah'] }}</td>
+                                    <td class="angka text-muted">{{ $r['laki'] }} / {{ $r['perempuan'] }}</td>
                                     <td>@include('partials.viz.komposisi', ['items' => $r['status'], 'palet' => $paletStatus, 'kecil' => true, 'tanpaLegenda' => true])</td>
-                                    <td class="text-end">
-                                        @if ($r['kontrak_habis'])<span class="badge text-bg-danger">{{ $r['kontrak_habis'] }}</span>@else<span class="text-muted">0</span>@endif
+                                    <td class="angka">
+                                        @if ($r['kontrak_habis'])<span class="badge rounded-pill text-bg-danger">{{ $r['kontrak_habis'] }}</span>@else{!! $nol !!}@endif
                                     </td>
                                     @if ($bisaLaporan)
-                                        <td class="text-end">{{ $r['cuti_hari_ini'] ?: '–' }}</td>
-                                        <td class="text-end">{{ $r['cuti_bulan_ini'] ? $r['cuti_bulan_ini'] . ' hr' : '–' }}</td>
-                                        <td class="text-end">{{ $r['lembur_bulan_ini'] ? $jam($r['lembur_bulan_ini']) . ' jam' : '–' }}</td>
-                                        <td class="text-end">
-                                            @if ($r['pending'])<span class="badge text-bg-warning">{{ $r['pending'] }}</span>@else–@endif
+                                        <td class="angka">{!! $r['cuti_hari_ini'] ?: $nol !!}</td>
+                                        <td class="angka">{!! $r['cuti_bulan_ini'] ? e($r['cuti_bulan_ini']) . ' hr' : $nol !!}</td>
+                                        <td class="angka">{!! $r['lembur_bulan_ini'] ? e($jam($r['lembur_bulan_ini'])) . ' jam' : $nol !!}</td>
+                                        <td class="angka">
+                                            @if ($r['pending'])<span class="badge rounded-pill text-bg-warning">{{ $r['pending'] }}</span>@else{!! $nol !!}@endif
                                         </td>
                                     @endif
                                 </tr>
@@ -312,18 +325,19 @@
             <section class="row g-3 mt-1">
                 @if ($pipeline)
                     <div class="col-12 {{ $akunPerRole ? 'col-xl-6' : '' }}">
-                        <div class="panel h-100">
+                        <div class="panel h-100 d-flex flex-column">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h2 class="h6 fw-bold mb-0"><i class="bi bi-funnel me-1"></i>Rekrutmen Berjalan</h2>
                                 <a href="{{ route('admin.lamaran.index') }}" class="small dash-link">Lihat lamaran</a>
                             </div>
-                            <div class="row g-2 text-center">
+                            {{-- Berdampingan dengan "Akun per Role": grid 2x2 yang mengisi tinggi card agar keduanya sejajar. --}}
+                            <div class="row g-2 text-center flex-grow-1 align-content-stretch">
                                 @foreach ($pipeline as $p)
-                                    <div class="col-6 col-md-3">
-                                        <div class="dash-mini-stat viz">
-                                            <div class="n">{{ $p['jumlah'] }}</div>
+                                    <div class="{{ $akunPerRole ? 'col-6' : 'col-6 col-md-3' }}">
+                                        <a href="{{ route('admin.lamaran.index') }}" class="dash-mini-stat besar viz">
+                                            <div class="n {{ $p['jumlah'] ? '' : 'text-muted' }}">{{ $p['jumlah'] }}</div>
                                             <div class="l">{{ $p['label'] }}</div>
-                                        </div>
+                                        </a>
                                     </div>
                                 @endforeach
                             </div>
@@ -363,9 +377,9 @@
         @endif
 
         <section class="mt-3">
-            <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-2">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                 <h2 class="h5 mb-0 section-title"><i class="bi bi-pie-chart" aria-hidden="true"></i><span>Komposisi Pegawai Aktif</span></h2>
-                <span class="small text-muted">{{ $labelLingkup }}</span>
+                <span class="badge rounded-pill text-bg-light border fw-normal"><i class="bi bi-funnel me-1"></i>{{ $labelLingkup }}</span>
             </div>
             <div class="row g-3">
                 <div class="col-12 col-md-6 col-xl-4">
