@@ -14,7 +14,9 @@
             </div>
         </div>
 
-        <section class="panel p-4" style="max-width:640px;">
+        <div class="row g-3 align-items-start">
+        <div class="col-lg-7 col-xl-8">
+        <section class="panel p-4">
             <form action="{{ route('admin.pengajuan-formasi.store') }}" method="POST">
                 @csrf
 
@@ -75,6 +77,22 @@
                 </div>
             </form>
         </section>
+        </div>
+
+        <div class="col-lg-5 col-xl-4">
+            <section class="panel">
+                <h2 class="h6 fw-bold mb-3"><i class="bi bi-signpost-split"></i>Alur Pengajuan</h2>
+                <ol class="alur-langkah">
+                    <li><strong>Diajukan</strong><span>Anda mengisi kebutuhan pegawai beserta alasannya.</span></li>
+                    <li><strong>Direview</strong><span>{{ auth()->user()->isKepalaSdm() ? 'GM' : 'Kepala SDM atau GM' }} memeriksa pengajuan. Unit SMK direview Pembina.</span></li>
+                    <li><strong>Lowongan terbit</strong><span>Bila disetujui, lowongan otomatis tampil di halaman publik dan pelamar bisa mulai melamar.</span></li>
+                </ol>
+                <div class="alert alert-light border small mb-0">
+                    <i class="bi bi-lightbulb me-1"></i>Tulis kualifikasi sejelas mungkin (pendidikan, pengalaman, keahlian) agar kandidat yang melamar lebih sesuai.
+                </div>
+            </section>
+        </div>
+        </div>
     </div>
 </main>
 @endsection

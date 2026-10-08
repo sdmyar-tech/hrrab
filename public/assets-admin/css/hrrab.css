@@ -160,7 +160,6 @@ body.sidebar-mini .sidebar-nav .nav-badge {
     .table { width: 100%; }
     .table thead th { white-space: normal; }
     .table tbody td { min-width: 0; overflow-wrap: anywhere; }
-    .table tbody td.text-nowrap { white-space: normal !important; }
     .table tbody td .btn,
     .table tbody td .badge { overflow-wrap: normal; white-space: nowrap; }
     .table tbody td.text-end { white-space: normal; }
@@ -432,4 +431,118 @@ body.sidebar-mini .sidebar-nav .nav-link.active { box-shadow: none; }
     table.table-mobile-cards td[colspan]::before { display: none; }
     .navbar-actions { gap: .4rem; }
     .profile-button { padding-inline: .35rem; }
+}
+/* ---------- Kartu (panel) ---------- */
+/* Judul kartu kecil: ikon dalam "chip" agar seragam dengan judul seksi. */
+.panel h2.h6.fw-bold, .panel h3.h6.fw-bold {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    font-size: .95rem;
+    line-height: 1.3;
+}
+.panel h2.h6.fw-bold > i.bi:first-child, .panel h3.h6.fw-bold > i.bi:first-child {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    margin: 0 !important;
+    display: inline-grid;
+    place-items: center;
+    border-radius: .5rem;
+    background: var(--hr-primary-soft);
+    color: var(--hr-primary);
+    font-size: .9rem;
+}
+.panel h2.h6.fw-bold + p.small, .panel h2.h6.fw-bold + .small { margin-top: -.15rem; }
+.panel .section-title i { border-radius: .55rem; }
+
+/* Keadaan kosong: ikon + teks di tengah sisa ruang kartu. */
+.kosong-state {
+    flex: 1 1 auto;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    padding: 1rem .5rem;
+    text-align: center;
+    color: var(--admin-muted);
+    font-size: .85rem;
+}
+.kosong-state > i { font-size: 1.6rem; opacity: .55; }
+.panel.h-100:has(.kosong-state) { display: flex; flex-direction: column; }
+.panel.h-100:has(.kosong-state) > :has(> .kosong-state) { flex: 1 1 auto; display: flex; flex-direction: column; }
+
+/* Kartu angka: keterangan boleh 2 baris (tidak terpotong "…"), label sejajar. */
+.metric-card { display: flex; flex-direction: column; }
+.metric-meta { margin-top: auto; padding-top: .9rem; }
+.metric-meta .text-truncate { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
+.metric-label { line-height: 1.3; }
+
+/* Daftar ringkas di dalam kartu (kontrak, cuti, pegawai baru). */
+.panel .dash-scroll { scrollbar-width: thin; }
+/* Kotak data baca-saja (detail pegawai, data saya, profil). */
+.pd-section-title {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0 0 .9rem;
+    font-size: .95rem;
+    font-weight: 800;
+    color: var(--admin-text);
+}
+.pd-section-title i { color: var(--admin-primary); }
+
+.pd-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: .75rem;
+}
+.pd-item {
+    min-width: 0;
+    padding: .6rem .85rem;
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    background: var(--admin-surface-soft);
+    transition: border-color .16s ease;
+}
+.pd-item:hover { border-color: #d38f91; }
+.pd-item-wide { grid-column: 1 / -1; }
+.pd-label { display: block; margin-bottom: .15rem; color: var(--admin-muted); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.pd-value { color: var(--admin-text); font-weight: 600; overflow-wrap: anywhere; }
+.pd-value.is-empty { color: var(--admin-muted); font-weight: 500; }
+
+
+/* Kartu dokumen (pratinjau file). Yang kosong dibuat ringkas satu baris. */
+.dok-kartu { height: 100%; display: flex; flex-direction: column; padding: .85rem 1rem; border: 1px solid var(--admin-border); border-radius: .75rem; background: var(--admin-surface-soft); }
+.dok-kartu > .d-flex:first-child { margin-bottom: .5rem !important; }
+.dok-kartu.kosong { border-style: dashed; }
+.dok-kartu.kosong > .d-flex:first-child { margin-bottom: .25rem !important; }
+.dok-kosong { display: flex; align-items: center; gap: .5rem; color: var(--admin-muted); font-size: .82rem; }
+.dok-kosong > i { font-size: 1.1rem; opacity: .7; }
+
+/* Kartu identitas di atas halaman data diri / profil. */
+.profil-kepala { display: flex; align-items: center; gap: 1.1rem; }
+.profil-foto { width: 76px; height: 76px; flex: none; border-radius: 50%; object-fit: cover; border: 3px solid var(--hr-primary-soft); }
+.min-w-0 { min-width: 0; }
+@media (max-width: 575.98px) {
+    .profil-kepala { flex-direction: column; text-align: center; }
+    .profil-kepala .d-flex { justify-content: center; }
+}
+/* Daftar langkah bernomor (panduan alur di samping form). */
+.alur-langkah { list-style: none; counter-reset: langkah; padding: 0; margin: 0 0 1rem; }
+.alur-langkah li { counter-increment: langkah; position: relative; padding: 0 0 1rem 2.6rem; }
+.alur-langkah li::before { content: counter(langkah); position: absolute; left: 0; top: 0; width: 1.8rem; height: 1.8rem; display: grid; place-items: center;
+    border-radius: 50%; background: var(--hr-primary-soft); color: var(--hr-primary); font-weight: 700; font-size: .8rem; }
+.alur-langkah li:not(:last-child)::after { content: ""; position: absolute; left: .87rem; top: 1.9rem; bottom: .2rem; width: 2px; background: var(--admin-border); }
+.alur-langkah strong { display: block; font-size: .9rem; }
+.alur-langkah span { display: block; color: var(--admin-muted); font-size: .82rem; line-height: 1.45; }
+/* Kartu angka di HP: dua per baris, lebih ringkas. */
+@media (max-width: 575.98px) {
+    .metric-card { padding: .85rem .9rem; }
+    .metric-card .metric-icon { width: 32px; height: 32px; font-size: .85rem; }
+    .metric-card .metric-label { font-size: .66rem; letter-spacing: .02em; }
+    .metric-card .metric-value { font-size: 1.55rem; margin-top: .6rem; }
+    .metric-card .metric-meta { font-size: .74rem; padding-top: .55rem; }
 }

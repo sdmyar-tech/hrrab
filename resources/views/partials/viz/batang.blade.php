@@ -11,6 +11,6 @@
             <span class="num">{{ $i['jumlah'] }}</span>
         </div>
     @empty
-        <p class="viz-empty mb-0">Belum ada data.</p>
+        @include('partials.kosong', ['teks' => 'Belum ada data.', 'ikonKosong' => 'bi-bar-chart'])
     @endforelse
 </div>

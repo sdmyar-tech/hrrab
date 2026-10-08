@@ -5,10 +5,10 @@
     $iAkhir = count($items) - 1;
     $format = fn ($n) => rtrim(rtrim(number_format($n, 1, ',', '.'), '0'), ',');
 @endphp
+@if ($nilai->sum() == 0)
+    @include('partials.kosong', ['teks' => 'Belum ada ' . strtolower($judulGrafik) . ' yang disetujui dalam 6 bulan terakhir.', 'ikonKosong' => 'bi-bar-chart'])
+@else
 <div class="viz">
-    @if ($nilai->sum() == 0)
-        <p class="viz-empty mb-2">Belum ada {{ strtolower($judulGrafik) }} yang disetujui dalam 6 bulan terakhir.</p>
-    @endif
     <div class="viz-cols" aria-hidden="true">
         @foreach ($items as $k => $i)
             <div class="viz-col" tabindex="0">
@@ -32,3 +32,4 @@
         @endforeach
     </table>
 </div>
+@endif

@@ -44,7 +44,7 @@
 
         <section class="row g-3" aria-label="Ringkasan">
             @foreach ($kartu as $k)
-                <div class="col-12 col-sm-6 col-xl-3">
+                <div class="col-6 col-xl-3">
                     <article class="metric-card metric-{{ $k['warna'] }} h-100 position-relative">
                         <div class="metric-top">
                             <span class="metric-label">{{ $k['label'] }}</span>
@@ -111,7 +111,7 @@
                                     </div>
                                 </div>
                             @empty
-                                <p class="text-muted small mb-0">Tidak ada agenda dalam 14 hari ke depan.</p>
+                                @include('partials.kosong', ['teks' => 'Tidak ada agenda dalam 14 hari ke depan.', 'ikonKosong' => 'bi-calendar-check'])
                             @endforelse
                         </div>
                     </div>
@@ -136,7 +136,7 @@
                                 <span class="badge {{ $sisa <= 14 ? 'text-bg-danger' : 'text-bg-warning' }} text-nowrap">{{ $sisa }} hari</span>
                             </div>
                         @empty
-                            <p class="text-muted small mb-0">Tidak ada kontrak yang berakhir dalam 60 hari.</p>
+                            @include('partials.kosong', ['teks' => 'Tidak ada kontrak yang berakhir dalam 60 hari.', 'ikonKosong' => 'bi-hourglass'])
                         @endforelse
                     </div>
                 </div>
@@ -145,7 +145,7 @@
                 <div class="panel h-100">
                     <h2 class="h6 fw-bold mb-3"><i class="bi bi-calendar-x me-1"></i>Sedang Cuti Hari Ini</h2>
                     @if (! $bisaLaporan)
-                        <p class="text-muted small mb-0">Cuti unit ini diurus secara internal (tidak lewat sistem).</p>
+                        @include('partials.kosong', ['teks' => 'Cuti unit ini diurus secara internal (tidak lewat sistem).', 'ikonKosong' => 'bi-info-circle'])
                     @else
                         @forelse ($cutiHariIni as $c)
                             <div class="d-flex justify-content-between small mb-2 gap-2">
@@ -154,7 +154,7 @@
                                 <span class="text-muted text-nowrap">s/d {{ $c->tanggal_selesai->translatedFormat('d M') }}</span>
                             </div>
                         @empty
-                            <p class="text-muted small mb-0">Tidak ada yang cuti hari ini.</p>
+                            @include('partials.kosong', ['teks' => 'Tidak ada yang cuti hari ini.', 'ikonKosong' => 'bi-calendar-x'])
                         @endforelse
                     @endif
                 </div>
@@ -169,7 +169,7 @@
                             <span class="text-muted text-nowrap">{{ $p->kepegawaian->tanggal_masuk->translatedFormat('d M') }}</span>
                         </div>
                     @empty
-                        <p class="text-muted small mb-0">Belum ada pegawai baru.</p>
+                        @include('partials.kosong', ['teks' => 'Belum ada pegawai baru dalam 90 hari.', 'ikonKosong' => 'bi-person-plus'])
                     @endforelse
                 </div>
             </div>
@@ -287,7 +287,7 @@
                                         @endif
                                     </td>
                                     <td class="text-end fw-semibold">{{ $r['jumlah'] }}</td>
-                                    <td class="text-end text-muted">{{ $r['laki'] }} / {{ $r['perempuan'] }}</td>
+                                    <td class="text-end text-muted text-nowrap">{{ $r['laki'] }} / {{ $r['perempuan'] }}</td>
                                     <td>@include('partials.viz.komposisi', ['items' => $r['status'], 'palet' => $paletStatus, 'kecil' => true, 'tanpaLegenda' => true])</td>
                                     <td class="text-end">
                                         @if ($r['kontrak_habis'])<span class="badge text-bg-danger">{{ $r['kontrak_habis'] }}</span>@else<span class="text-muted">0</span>@endif

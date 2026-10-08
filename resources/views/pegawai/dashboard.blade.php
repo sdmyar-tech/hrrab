@@ -69,7 +69,7 @@
         @endforeach
 
         <div class="row g-3">
-            <div class="col-md-6 col-xl-3">
+            <div class="col-6 col-xl-3">
                 <a href="{{ route($isIncomplete ? 'pegawai.pengkinian-data' : 'pegawai.data-pegawai') }}" class="text-reset text-decoration-none">
                     <div class="metric-card metric-primary h-100">
                         <div class="metric-top">
@@ -85,7 +85,7 @@
             </div>
 
             @if ($bisaCuti)
-                <div class="col-md-6 col-xl-3">
+                <div class="col-6 col-xl-3">
                     <a href="{{ route('pegawai.pengajuan-cuti') }}" class="text-reset text-decoration-none">
                         <div class="metric-card metric-success h-100">
                             <div class="metric-top">
@@ -104,7 +104,7 @@
             @endif
 
             @if ($bisaLembur)
-                <div class="col-md-6 col-xl-3">
+                <div class="col-6 col-xl-3">
                     <a href="{{ route('pegawai.pengajuan-lembur') }}" class="text-reset text-decoration-none">
                         <div class="metric-card metric-prpl h-100">
                             <div class="metric-top">
@@ -118,7 +118,7 @@
                 </div>
             @endif
 
-            <div class="col-md-6 col-xl-3">
+            <div class="col-6 col-xl-3">
                 <div class="metric-card metric-warning h-100">
                     <div class="metric-top">
                         <span class="metric-label">Pengajuan Menunggu</span>

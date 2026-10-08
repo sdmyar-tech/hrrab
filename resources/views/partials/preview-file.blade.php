@@ -6,7 +6,7 @@
     $isPdf   = $ext === 'pdf';
 @endphp
 
-<div class="border rounded p-3 h-100 bg-light-subtle d-flex flex-column">
+<div class="dok-kartu {{ $url ? '' : 'kosong' }}">
     <div class="d-flex justify-content-between align-items-center mb-2">
         <small class="text-muted fw-semibold">{{ $label }}</small>
         @if ($url)
@@ -28,9 +28,12 @@
     </div>
 
     @if (!$url)
-        <div class="text-center text-muted py-4">
-            <i class="bi bi-file-earmark-x fs-2 d-block mb-2"></i>
-            <small>Belum ada file</small>
+        <div class="dok-kosong">
+            <i class="bi bi-file-earmark-x" aria-hidden="true"></i>
+            <span>Belum diunggah</span>
+            @isset($tautanUnggah)
+                <a href="{{ $tautanUnggah }}" class="ms-auto small">Unggah</a>
+            @endisset
         </div>
     @elseif ($isImage)
         <div class="text-center">

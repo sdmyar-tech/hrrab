@@ -9,68 +9,34 @@
                 <div>
                     <p class="eyebrow mb-1">Sistem</p>
                     <h1 class="h3 mb-1">Tambah User</h1>
+                    <p class="text-muted mb-0">Buat akun login baru. Isi NIP yang sama dengan Data Pegawai agar akun tertaut.</p>
                 </div>
+            </div>
+            <div class="heading-actions">
+                <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i>Kembali</a>
             </div>
         </div>
 
-        <section class="panel p-4" style="max-width:640px;">
-            <form action="{{ route('admin.users.store') }}" method="POST" data-confirm="Tambah akun user baru ini?">
-                @csrf
+        <form action="{{ route('admin.users.store') }}" method="POST" data-confirm="Tambah akun user baru ini?">
+            @csrf
 
-                <div class="mb-3">
-                    <label class="form-label">Nama Lengkap</label>
-                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
-                        value="{{ old('name') }}" required>
-                    @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <div class="row g-3 align-items-start">
+                <div class="col-lg-5">
+                    <section class="panel">
+                        <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-lock"></i>Data Akun</h2>
+                        @include('admin.users._akun', ['akun' => null, 'wajibPassword' => true])
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-save"></i>Simpan</button>
+                            <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">Batal</a>
+                        </div>
+                    </section>
                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
-                        value="{{ old('email') }}" required>
-                    @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                <div class="col-lg-7">
+                    @include('admin.users._divisi', ['selectedDivisi' => old('divisi', []), 'selectedKepalaUnit' => old('kepala_unit')])
                 </div>
-
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Password</label>
-                        <input type="password" name="password" class="form-control @error('password') is-invalid @enderror" required>
-                        @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Konfirmasi Password</label>
-                        <input type="password" name="password_confirmation" class="form-control">
-                    </div>
-                </div>
-
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Role</label>
-                        <select name="role" class="form-select @error('role') is-invalid @enderror" required>
-                            <option value="">-- Pilih Role --</option>
-                            @foreach ($roles as $role)
-                                <option value="{{ $role }}" {{ old('role') == $role ? 'selected' : '' }}>
-                                    {{ App\Models\User::roleLabelFor($role) }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('role')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">NIP <span class="text-muted">(opsional)</span></label>
-                        <input type="text" name="nip" class="form-control @error('nip') is-invalid @enderror" value="{{ old('nip') }}">
-                        @error('nip')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                </div>
-
-                @include('admin.users._divisi', ['selectedDivisi' => old('divisi', []), 'selectedKepalaUnit' => old('kepala_unit')])
-
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-save me-1"></i> Simpan
-                </button>
-                <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">Kembali</a>
-            </form>
-        </section>
+            </div>
+        </form>
     </div>
 </main>
 @endsection

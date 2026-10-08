@@ -28,9 +28,9 @@
                 <div class="alert alert-danger small"><ul class="mb-0 ps-3">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
             @endif
 
-            <div class="row g-3">
+            <div class="row g-3 align-items-start">
                 <div class="col-12 col-lg-8">
-                    <section class="panel p-4 h-100">
+                    <section class="panel p-4">
                         <h2 class="h6 fw-bold mb-3">Isi Pengumuman</h2>
                         <div class="mb-3">
                             <label class="form-label" for="judul">Judul</label>

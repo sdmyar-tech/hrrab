@@ -8,7 +8,7 @@
 @endphp
 <div class="viz">
     @if ($total === 0)
-        <p class="viz-empty mb-0">Belum ada data.</p>
+        @include('partials.kosong', ['teks' => 'Belum ada data.', 'ikonKosong' => 'bi-pie-chart'])
     @else
         <div class="viz-stack {{ ($kecil ?? false) ? 'viz-stack-sm' : '' }}" role="img"
             aria-label="{{ collect($items)->map(fn ($i) => $i['label'] . ' ' . $i['jumlah'])->implode(', ') }}">

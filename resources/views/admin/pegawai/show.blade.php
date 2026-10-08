@@ -118,36 +118,6 @@
             box-shadow: 0 6px 14px rgba(136, 15, 18, .22);
         }
 
-        .pd-section-title {
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-            margin: 0 0 .9rem;
-            font-size: .95rem;
-            font-weight: 800;
-            color: var(--admin-text);
-        }
-        .pd-section-title i { color: var(--admin-primary); }
-
-        .pd-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: .75rem;
-        }
-        .pd-item {
-            min-width: 0;
-            padding: .8rem 1rem;
-            border: 1px solid var(--admin-border);
-            border-radius: 10px;
-            background: var(--admin-surface-soft);
-            transition: border-color .16s ease;
-        }
-        .pd-item:hover { border-color: #d38f91; }
-        .pd-item-wide { grid-column: 1 / -1; }
-        .pd-label { display: block; margin-bottom: .2rem; color: var(--admin-muted); font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
-        .pd-value { color: var(--admin-text); font-weight: 600; overflow-wrap: anywhere; }
-        .pd-value.is-empty { color: var(--admin-muted); font-weight: 500; }
-
         .pd-flow-card {
             height: 100%;
             padding: 1rem;
