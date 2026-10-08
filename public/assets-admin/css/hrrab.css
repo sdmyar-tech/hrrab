@@ -145,8 +145,10 @@ html[data-theme="dark"] .btn-outline-primary { --bs-btn-border-color: #c9474a; }
 body.sidebar-mini .sidebar-nav .nav-section { display: none; }
 body.sidebar-mini .sidebar-nav .nav-badge {
     position: absolute;
-    top: 6px;
-    right: 14px;
+    top: 4px;
+    right: calc(50% - 18px); /* menempel di pojok kanan atas ikon */
+    border: 2px solid var(--admin-surface);
+    box-sizing: content-box;
     min-width: 10px;
     width: 10px;
     height: 10px;
@@ -333,46 +335,142 @@ body.sidebar-mini .sidebar-nav .nav-badge {
 .sidebar-nav .nav-icon { border-radius: .45rem; }
 .sidebar-nav .nav-ext { margin-left: auto; font-size: .7rem; opacity: .6; }
 .sidebar-nav .nav-section { margin: .9rem .7rem .2rem; font-size: .66rem; letter-spacing: .08em; }
-/* Dropdown submenu: tinggi dianimasikan via grid-template-rows (0fr → 1fr). */
-.sidebar-nav .nav-grup-toggle {
-    width: 100%;
-    border: 0;
-    background: transparent;
-    text-align: left;
-}
-/* Setelah diklik mouse, tombol tidak tetap tersorot (fokus keyboard tetap terlihat). */
+/* =========================================================
+   Sidebar: menu induk vs submenu (dropdown) + mode ringkas
+   ========================================================= */
+/* Teks menu boleh terpotong (…) supaya badge tidak terdorong keluar sidebar. */
+.sidebar-nav .nav-text { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-nav .nav-badge { flex: none; }
+
+/* Tombol grup = menu induk: tampil sama seperti link utama. */
+.sidebar-nav .nav-grup-toggle { width: 100%; border: 0; background: transparent; text-align: left; }
 .sidebar-nav .nav-grup-toggle:focus:not(:focus-visible):not(:hover) { background: transparent; transform: none; }
-.sidebar-nav .nav-grup-toggle .nav-chevron { margin-left: auto; font-size: .72rem; opacity: .55; transition: transform .2s ease; }
-.sidebar-nav .nav-grup-toggle .nav-badge-grup { margin-left: auto; }
-.sidebar-nav .nav-grup-toggle .nav-badge-grup + .nav-chevron { margin-left: .4rem; }
+.sidebar-nav .nav-chevron { display: inline-block; flex: none; margin-left: .25rem; font-size: .7rem; opacity: .5; transition: transform .2s ease; }
 .sidebar-nav .nav-grup.terbuka > .nav-grup-toggle .nav-chevron { transform: rotate(180deg); }
 .sidebar-nav .nav-grup.terbuka > .nav-grup-toggle .nav-badge-grup { display: none; }
-.sidebar-nav .nav-grup.terbuka > .nav-grup-toggle .nav-chevron { margin-left: auto; }
 .sidebar-nav .nav-grup.berisi-aktif > .nav-grup-toggle { color: var(--hr-primary-dark); }
-.sidebar-nav .nav-grup.berisi-aktif > .nav-grup-toggle .nav-icon { color: var(--hr-primary); }
+.sidebar-nav .nav-grup.berisi-aktif > .nav-grup-toggle .nav-icon { background: var(--hr-primary-soft); color: var(--hr-primary); }
+
+/* Buka/tutup dianimasikan lewat grid-template-rows (0fr → 1fr). */
 .sidebar-nav .nav-sub { display: grid; grid-template-rows: 0fr; }
-.nav-grup-siap .sidebar-nav .nav-sub { transition: grid-template-rows .22s ease; }
 .sidebar-nav .nav-grup.terbuka > .nav-sub { grid-template-rows: 1fr; }
+.sidebar-nav .nav-grup:not(.terbuka) > .nav-sub { visibility: hidden; } /* link tersembunyi tidak bisa di-Tab */
+.nav-grup-siap .sidebar-nav .nav-sub { transition: grid-template-rows .22s ease; }
+.nav-grup-siap .sidebar-nav .nav-grup:not(.terbuka) > .nav-sub { transition: grid-template-rows .22s ease, visibility 0s .22s; }
 .sidebar-nav .nav-sub-isi {
     min-height: 0;
     overflow: hidden;
     display: grid;
-    gap: .12rem;
-    margin-left: 1.25rem;
-    padding-left: .5rem;
-    border-left: 1px solid var(--admin-border);
+    gap: 1px;
+    margin-left: 1.45rem;          /* garis pandu tepat di tengah ikon induk */
+    padding-left: .55rem;
+    border-left: 1.5px solid var(--admin-border);
 }
-.sidebar-nav .nav-grup.terbuka > .nav-sub .nav-sub-isi { padding-block: .15rem .3rem; }
-.sidebar-nav .nav-sub .nav-link { min-height: 34px; font-size: .86rem; font-weight: 500; }
-.sidebar-nav .nav-sub .nav-icon { width: 22px; height: 22px; font-size: .85rem; }
-/* Link tersembunyi di grup tertutup tidak bisa difokus dengan Tab. */
-.sidebar-nav .nav-grup:not(.terbuka) > .nav-sub { visibility: hidden; }
-.nav-grup-siap .sidebar-nav .nav-grup:not(.terbuka) > .nav-sub { transition: grid-template-rows .22s ease, visibility 0s .22s; }
-/* Sidebar ringkas (ikon saja): semua submenu tampil sebagai ikon, tombol grup disembunyikan. */
-body.sidebar-mini .sidebar-nav .nav-grup-toggle { display: none; }
-body.sidebar-mini .sidebar-nav .nav-sub { grid-template-rows: 1fr; visibility: visible; }
-body.sidebar-mini .sidebar-nav .nav-sub-isi { margin-left: 0; padding-left: 0; border-left: 0; }
+.sidebar-nav .nav-grup.terbuka > .nav-sub .nav-sub-isi { padding-block: .1rem .35rem; }
+.sidebar-nav .nav-sub-judul { display: none; }
+
+/* Submenu: lebih kecil, tanpa kotak ikon, warna redup — jelas berbeda dari menu induk. */
+.sidebar-nav .nav-sub .nav-link {
+    min-height: 32px;
+    padding: .3rem .6rem;
+    gap: .5rem;
+    font-size: .84rem;
+    font-weight: 500;
+    color: var(--admin-muted);
+    border-radius: .5rem;
+}
+.sidebar-nav .nav-sub .nav-icon { width: 18px; height: 18px; font-size: .82rem; background: transparent; color: inherit; opacity: .8; }
+.sidebar-nav .nav-sub .nav-link:hover:not(.active) { color: var(--admin-text); }
+.sidebar-nav .nav-sub .nav-link.active {
+    background: var(--hr-primary-soft);
+    color: var(--hr-primary-dark);
+    font-weight: 600;
+    box-shadow: none;
+}
+.sidebar-nav .nav-sub .nav-link.active .nav-icon { background: transparent; color: var(--hr-primary); opacity: 1; }
+/* Penanda aktif menempel di garis pandu. */
+.sidebar-nav .nav-sub .nav-link.active::before {
+    content: "";
+    position: absolute;
+    left: calc(-.55rem - 1.5px);
+    top: 6px;
+    bottom: 6px;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--hr-primary);
+}
+.sidebar-nav .nav-sub .nav-badge { min-width: 20px; height: 18px; line-height: 18px; font-size: .66rem; }
+
 html[data-theme="dark"] .sidebar-nav .nav-grup.berisi-aktif > .nav-grup-toggle { color: #fff; }
+html[data-theme="dark"] .sidebar-nav .nav-sub-isi { border-left-color: rgba(255, 255, 255, .1); }
+html[data-theme="dark"] .sidebar-nav .nav-sub .nav-link:hover:not(.active) { color: #fff; }
+html[data-theme="dark"] .sidebar-nav .nav-sub .nav-link.active { background: rgba(183, 23, 25, .18); color: #fff; }
+
+/* ---------- Mode ringkas (desktop, ikon saja) ----------
+   Grup tampil sebagai satu ikon; submenu muncul sebagai panel melayang (flyout) di kanan saat disorot/diklik. */
+@media (min-width: 992px) {
+    body.sidebar-mini .admin-sidebar { transform: none; } /* agar flyout (position: fixed) tidak terpotong */
+    body.sidebar-mini .sidebar-nav .nav-chevron { display: none; }
+    body.sidebar-mini .sidebar-nav .nav-grup.berisi-aktif > .nav-grup-toggle .nav-icon { background: var(--hr-primary); color: #fff; }
+    body.sidebar-mini .sidebar-nav .nav-grup.terbuka > .nav-grup-toggle .nav-badge-grup { display: block; }
+
+    body.sidebar-mini .sidebar-nav .nav-sub {
+        position: fixed;
+        z-index: 1060;
+        left: calc(var(--sidebar-mini-width) - 10px);
+        top: var(--flyout-top, 80px);
+        display: block;
+        min-width: 230px;
+        padding-left: 14px;            /* jembatan transparan agar kursor tidak "jatuh" saat pindah ke panel */
+        visibility: hidden;
+        opacity: 0;
+        transform: translateX(-4px);
+        transition: opacity .12s ease, transform .12s ease, visibility 0s .12s;
+    }
+    body.sidebar-mini .sidebar-nav .nav-grup:hover > .nav-sub,
+    body.sidebar-mini .sidebar-nav .nav-grup:focus-within > .nav-sub,
+    body.sidebar-mini .sidebar-nav .nav-grup.flyout-terbuka > .nav-sub {
+        visibility: visible;
+        opacity: 1;
+        transform: none;
+        transition: opacity .12s ease, transform .12s ease;
+    }
+    body.sidebar-mini .sidebar-nav .nav-sub-isi {
+        margin: 0;
+        padding: .45rem;
+        border: 1px solid var(--admin-border);
+        border-radius: .75rem;
+        background: var(--admin-surface);
+        box-shadow: 0 12px 32px rgba(15, 23, 42, .16);
+    }
+    body.sidebar-mini .sidebar-nav .nav-sub-judul {
+        display: block;
+        padding: .3rem .6rem .45rem;
+        margin-bottom: .2rem;
+        border-bottom: 1px solid var(--admin-border);
+        font-size: .68rem;
+        font-weight: 800;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: var(--admin-muted);
+    }
+    /* Di dalam flyout, link tampil lengkap (bukan ikon saja). */
+    body.sidebar-mini .sidebar-nav .nav-sub .nav-link { justify-content: flex-start; width: auto; padding: .35rem .6rem; gap: .5rem; }
+    body.sidebar-mini .sidebar-nav .nav-sub .nav-text { display: block !important; width: auto; opacity: 1; overflow: visible; }
+    body.sidebar-mini .sidebar-nav .nav-sub .nav-link.active::before { display: none; }
+    body.sidebar-mini .sidebar-nav .nav-sub .nav-badge {
+        position: static;
+        width: auto;
+        min-width: 20px;
+        height: 18px;
+        padding: 0 6px;
+        font-size: .66rem;
+        line-height: 18px;
+        border: 0;
+        box-sizing: border-box;
+    }
+    html[data-theme="dark"] body.sidebar-mini .sidebar-nav .nav-sub-isi { background: var(--admin-sidebar, #111827); border-color: rgba(255, 255, 255, .1); }
+}
 html[data-theme="dark"] .sidebar-nav .nav-link.active { background: rgba(183, 23, 25, .18); color: #fff; }
 html[data-theme="dark"] .sidebar-nav .nav-link:hover:not(.active) { background: rgba(255, 255, 255, .05); }
 

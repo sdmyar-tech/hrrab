@@ -253,10 +253,47 @@
           atur(grup, true);
         }
 
-        grup.querySelector(".nav-grup-toggle").addEventListener("click", function () {
+        var toggle = grup.querySelector(".nav-grup-toggle");
+        var panel = grup.querySelector(".nav-sub");
+
+        // Mode ringkas: hitung posisi flyout sejajar ikon grup, tetap di dalam layar.
+        function posisikanFlyout() {
+          if (!body.classList.contains("sidebar-mini")) {
+            return;
+          }
+          var kotak = toggle.getBoundingClientRect();
+          var tinggi = panel.offsetHeight || 0;
+          var atas = Math.max(8, Math.min(kotak.top - 6, window.innerHeight - tinggi - 8));
+          grup.style.setProperty("--flyout-top", atas + "px");
+        }
+
+        grup.addEventListener("mouseenter", posisikanFlyout);
+        grup.addEventListener("focusin", posisikanFlyout);
+
+        toggle.addEventListener("click", function () {
+          if (body.classList.contains("sidebar-mini") && isDesktop()) {
+            // Mode ringkas (dukungan layar sentuh): klik membuka/menutup flyout, bukan dropdown.
+            var buka = !grup.classList.contains("flyout-terbuka");
+            Array.prototype.forEach.call(grupList, function (g) { g.classList.remove("flyout-terbuka"); });
+            grup.classList.toggle("flyout-terbuka", buka);
+            posisikanFlyout();
+            return;
+          }
           atur(grup, !grup.classList.contains("terbuka"));
           simpan();
         });
+      });
+
+      // Klik di luar / tekan Esc menutup flyout yang dibuka lewat klik.
+      document.addEventListener("click", function (event) {
+        if (!event.target.closest("[data-nav-grup]")) {
+          Array.prototype.forEach.call(grupList, function (g) { g.classList.remove("flyout-terbuka"); });
+        }
+      });
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          Array.prototype.forEach.call(grupList, function (g) { g.classList.remove("flyout-terbuka"); });
+        }
       });
 
       // Animasi baru diaktifkan setelah status awal terpasang agar tidak "berkedip" saat halaman dimuat.

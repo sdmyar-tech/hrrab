@@ -43,6 +43,7 @@
                     </button>
                     <div class="nav-sub" id="navsub-{{ $kunci }}">
                         <div class="nav-sub-isi">
+                            <div class="nav-sub-judul" aria-hidden="true">{{ $grup['bagian'] }}</div>
                             @foreach ($tampil as $item)
                                 @include('layouts.partials.sidebar-link', ['item' => $item])
                             @endforeach
