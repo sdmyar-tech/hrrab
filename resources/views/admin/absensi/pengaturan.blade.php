@@ -56,13 +56,13 @@
             </div>
 
             @if ($tab === 'pegawai')
-                <form method="GET" class="panel-filter px-3 pt-3 pb-2">
+                <form method="GET" class="panel-filter px-3 pt-3 pb-2" id="filterPengaturan">
                     <input type="hidden" name="tab" value="pegawai">
                     <div class="row g-2 align-items-center">
                         <div class="col-md-4">
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                                <input type="search" name="q" class="form-control border-start-0" placeholder="Cari nama, NIP, atau ID mesin..." value="{{ request('q') }}">
+                                <input type="search" name="q" class="form-control border-start-0" placeholder="Cari nama, NIP, ID mesin, unit..." value="{{ request('q') }}">
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
@@ -78,6 +78,7 @@
                                 <option value="tidak" @selected(request('ikut') === 'tidak')>Yang tidak ikut</option>
                             </select>
                         </div>
+                        <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterPengaturan'])</div>
                         @if (array_filter($filterAktif))
                             <div class="col-auto"><a href="{{ $urlTab('pegawai') }}" class="btn btn-sm btn-link text-secondary"><i class="bi bi-x-circle me-1"></i>Hapus filter</a></div>
                         @endif

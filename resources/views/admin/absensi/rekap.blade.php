@@ -19,11 +19,15 @@
                 </div>
             </div>
             <div class="heading-actions">
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.absensi.rekap.export', 'eksporParam' => request()->only(['dari', 'sampai', 'unit', 'q']) + ['dari' => $dari->toDateString(), 'sampai' => $sampai->toDateString()], 'eksporUkuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.absensi.rekap.export', 'eksporParam' => request()->only(['unit', 'q', 'urut']) + ['dari' => $dari->toDateString(), 'sampai' => $sampai->toDateString()], 'eksporUkuran' => ''])
             </div>
         </div>
 
         @include('admin.absensi._nav')
+
+        @foreach ($pesanRentang as $p)
+            <div class="alert alert-warning small py-2 d-flex gap-2 align-items-center"><i class="bi bi-exclamation-triangle-fill"></i><span>{{ $p }}</span></div>
+        @endforeach
 
         <div class="row g-2 g-md-3 mb-3">
             @foreach ([
@@ -42,19 +46,19 @@
         </div>
 
         <section class="panel">
-            <form method="GET" class="panel-filter px-3 pt-3 pb-2">
+            <form method="GET" class="panel-filter px-3 pt-3 pb-2" id="filterRekap">
                 <div class="row g-2 align-items-end">
                     <div class="col-6 col-md-2">
                         <label class="form-label small mb-1" for="dari">Dari</label>
-                        <input type="date" name="dari" id="dari" class="form-control form-control-sm" value="{{ $dari->toDateString() }}">
+                        <input type="date" name="dari" id="dari" class="form-control form-control-sm" value="{{ $dari->toDateString() }}" max="{{ now()->toDateString() }}">
                     </div>
                     <div class="col-6 col-md-2">
                         <label class="form-label small mb-1" for="sampai">Sampai</label>
-                        <input type="date" name="sampai" id="sampai" class="form-control form-control-sm" value="{{ $sampai->toDateString() }}">
+                        <input type="date" name="sampai" id="sampai" class="form-control form-control-sm" value="{{ $sampai->toDateString() }}" max="{{ now()->toDateString() }}">
                     </div>
                     @if (count($unitOpsi) > 1)
                         <div class="col-6 col-md-2">
-                            <select name="unit" class="form-select form-select-sm" aria-label="Unit">
+                            <select name="unit" class="form-select form-select-sm" aria-label="Unit" onchange="this.form.submit()">
                                 <option value="">Semua unit</option>
                                 @foreach ($unitOpsi as $u)
                                     <option value="{{ $u }}" @selected(request('unit') === $u)>{{ $u }}</option>
@@ -63,8 +67,9 @@
                         </div>
                     @endif
                     <div class="col-6 col-md-2">
-                        <input type="search" name="q" class="form-control form-control-sm" placeholder="Cari nama / NIP..." value="{{ request('q') }}">
+                        <input type="search" name="q" class="form-control form-control-sm" placeholder="Cari nama, NIP, unit..." value="{{ request('q') }}">
                     </div>
+                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterRekap'])</div>
                     <div class="col-md-auto">
                         <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Tampilkan</button>
                     </div>
@@ -72,7 +77,7 @@
                 <div class="d-flex flex-wrap gap-1 mt-2">
                     <span class="small text-muted me-1 align-self-center">Cepat:</span>
                     @foreach ($preset as $label => [$pDari, $pSampai])
-                        <a href="{{ route('admin.absensi.rekap', ['dari' => $pDari->toDateString(), 'sampai' => $pSampai->toDateString()] + request()->only(['unit', 'q'])) }}"
+                        <a href="{{ route('admin.absensi.rekap', ['dari' => $pDari->toDateString(), 'sampai' => $pSampai->toDateString()] + request()->only(['unit', 'q', 'urut'])) }}"
                             class="abs-chip text-decoration-none {{ $dari->isSameDay($pDari) && $sampai->isSameDay($pSampai) ? 'aktif' : '' }}">{{ $label }}</a>
                     @endforeach
                 </div>

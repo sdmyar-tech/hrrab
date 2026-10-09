@@ -13,7 +13,7 @@
     ];
     $statusAktif = request('status');
     $urlTanggal = fn ($t) => route('admin.absensi.harian', ['tanggal' => $t] + request()->except(['tanggal', 'page']));
-    $urlStatus = fn ($s) => route('admin.absensi.harian', ['tanggal' => $tanggal->toDateString(), 'status' => $statusAktif === $s ? null : $s] + request()->only(['unit', 'q']));
+    $urlStatus = fn ($s) => route('admin.absensi.harian', ['tanggal' => $tanggal->toDateString(), 'status' => $statusAktif === $s ? null : $s] + request()->only(['unit', 'q', 'urut']));
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
@@ -41,7 +41,7 @@
 
         {{-- Pilih tanggal --}}
         <form method="GET" class="panel p-2 p-md-3 mb-3 d-flex flex-wrap align-items-center gap-2" id="formTanggal">
-            @foreach (request()->only(['unit', 'q', 'status']) as $k => $v)<input type="hidden" name="{{ $k }}" value="{{ $v }}">@endforeach
+            @foreach (request()->only(['unit', 'q', 'status', 'urut']) as $k => $v)<input type="hidden" name="{{ $k }}" value="{{ $v }}">@endforeach
             <div class="d-flex align-items-center gap-1">
                 <a href="{{ $urlTanggal($tanggal->copy()->subDay()->toDateString()) }}" class="btn btn-light" title="Hari sebelumnya" aria-label="Hari sebelumnya"><i class="bi bi-chevron-left"></i></a>
                 <label class="position-relative">
@@ -64,7 +64,11 @@
             </div>
         </form>
 
-        @if ($tanggalOtomatis)
+        @if ($pesanTanggal)
+            <div class="alert alert-warning small py-2 d-flex gap-2 align-items-center">
+                <i class="bi bi-exclamation-triangle-fill"></i><span>{{ $pesanTanggal }}</span>
+            </div>
+        @elseif ($tanggalOtomatis)
             <div class="alert alert-info small py-2 d-flex gap-2 align-items-center">
                 <i class="bi bi-info-circle-fill"></i>
                 <span>Data mesin untuk hari ini belum diimport, jadi yang ditampilkan adalah data terakhir: <strong>{{ $tanggal->translatedFormat('d F Y') }}</strong>.</span>
@@ -90,14 +94,14 @@
         </div>
 
         <section class="panel">
-            <form method="GET" class="panel-filter px-3 pt-3 pb-2">
+            <form method="GET" class="panel-filter px-3 pt-3 pb-2" id="filterHarian">
                 <input type="hidden" name="tanggal" value="{{ $tanggal->toDateString() }}">
                 @if ($statusAktif)<input type="hidden" name="status" value="{{ $statusAktif }}">@endif
                 <div class="row g-2 align-items-center">
                     <div class="col-md-5">
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="search" name="q" class="form-control border-start-0" placeholder="Cari nama, NIP, atau ID mesin..." value="{{ request('q') }}">
+                            <input type="search" name="q" class="form-control border-start-0" placeholder="Cari nama, NIP, ID mesin, unit, atau jabatan..." value="{{ request('q') }}">
                         </div>
                     </div>
                     @if (count($unitOpsi) > 1)
@@ -108,6 +112,7 @@
                             </select>
                         </div>
                     @endif
+                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterHarian'])</div>
                     @if ($statusAktif || request()->filled('q') || request()->filled('unit'))
                         <div class="col-auto">
                             <a href="{{ route('admin.absensi.harian', ['tanggal' => $tanggal->toDateString()]) }}" class="btn btn-sm btn-link text-secondary"><i class="bi bi-x-circle me-1"></i>Hapus filter</a>

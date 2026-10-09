@@ -8,6 +8,7 @@ use App\Models\DataPegawai;
 use App\Models\User;
 use App\Support\Absensi\AksesAbsensi;
 use App\Support\Absensi\PenilaianAbsensi;
+use App\Support\Absensi\TanggalAbsensi;
 use App\Support\ExcelExporter;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -42,12 +43,40 @@ class AbsensiController extends Controller
         return $h['tanpa_scan_pulang'] || $h['lembur_status'] === 'belum' || ($h['pulang_cepat_menit'] > 0 && ! $h['pulang_cepat_izin']);
     }
 
+    /** Pilihan urutan halaman Harian. */
+    public const URUT_HARIAN = [
+        'nama' => 'Nama A–Z',
+        'masuk_awal' => 'Masuk paling pagi',
+        'masuk_akhir' => 'Masuk paling siang',
+        'telat' => 'Telat paling lama',
+        'unit' => 'Unit A–Z',
+    ];
+
+    /** Pilihan urutan halaman Rekap (juga dipakai ekspor). */
+    public const URUT_REKAP = [
+        'nama' => 'Nama A–Z',
+        'unit' => 'Unit A–Z',
+        'telat' => 'Telat terbanyak',
+        'telat_menit' => 'Menit telat terbanyak',
+        'alpa' => 'Alpa terbanyak',
+        'hadir_sedikit' => 'Hadir paling sedikit',
+        'tanpa_scan' => 'Tidak scan pulang terbanyak',
+        'lembur' => 'Lembur terbanyak',
+    ];
+
     /** Absensi semua pegawai pada satu tanggal. */
     public function harian(Request $request): View
     {
         $user = $this->user();
         $dataTerakhir = Absensi::whereNotNull('finger_id')->max('tanggal');
-        $pilihan = $this->tanggal($request->query('tanggal'));
+        $diminta = $request->query('tanggal');
+        $pilihan = TanggalAbsensi::tanggal($diminta);
+        $pesanTanggal = null;
+        if (filled($diminta) && ! $pilihan) {
+            $pesanTanggal = 'Tanggal yang dimasukkan tidak valid, jadi ditampilkan tanggal bawaan.';
+        } elseif ($pilihan?->gt(now()->startOfDay())) {
+            [$pilihan, $pesanTanggal] = [now()->startOfDay(), 'Absensi tanggal mendatang belum ada, jadi ditampilkan hari ini.'];
+        }
         // Tanpa tanggal: tampilkan hari ini, atau tanggal data mesin terakhir bila hari ini belum diimport.
         $tanggal = $pilihan ?? ($dataTerakhir && $dataTerakhir < now()->toDateString() ? Carbon::parse($dataTerakhir) : now()->startOfDay());
         $pegawais = $this->pegawaiTerfilter($request, $user)->get();
@@ -60,13 +89,18 @@ class AbsensiController extends Controller
         if ($status && isset($kelompok[$status])) {
             $baris = $baris->filter(fn ($b) => $kelompok[$status]($b['h']));
         }
+        $urut = array_key_exists((string) $request->query('urut'), self::URUT_HARIAN) ? $request->query('urut') : 'nama';
+        $baris = self::urutkanHarian($baris, $urut);
 
         $bisaKelola = AksesAbsensi::bisaKelola($user);
 
         return view('admin.absensi.harian', [
             'layout' => $user->panelLayout(),
             'tanggal' => $tanggal,
-            'tanggalOtomatis' => ! $pilihan && ! $tanggal->isToday(),
+            'tanggalOtomatis' => ! $pilihan && ! $pesanTanggal && ! $tanggal->isToday(),
+            'pesanTanggal' => $pesanTanggal,
+            'urutOpsi' => self::URUT_HARIAN,
+            'urutAktif' => $urut,
             'baris' => $baris->values(),
             'hitung' => $hitung,
             'jumlahPegawai' => $pegawais->count(),
@@ -81,17 +115,19 @@ class AbsensiController extends Controller
     public function rekap(Request $request): View
     {
         $user = $this->user();
-        [$dari, $sampai] = $this->rentang($request);
-        $pegawais = $this->pegawaiTerfilter($request, $user)->get();
-        $nilai = PenilaianAbsensi::rentang($pegawais, $dari, $sampai);
+        [$dari, $sampai, $pesanRentang] = $this->rentang($request);
+        [$baris, $urut] = $this->barisRekap($request, $user, $dari, $sampai);
 
         return view('admin.absensi.rekap', [
             'layout' => $user->panelLayout(),
             'dari' => $dari,
             'sampai' => $sampai,
-            'baris' => $pegawais->map(fn (DataPegawai $p) => ['pegawai' => $p, 'r' => PenilaianAbsensi::rekap($nilai[$p->id] ?? [])]),
+            'pesanRentang' => $pesanRentang,
+            'baris' => $baris,
             'unitOpsi' => $this->unitOpsi($user),
             'preset' => $this->presetPeriode(),
+            'urutOpsi' => self::URUT_REKAP,
+            'urutAktif' => $urut,
         ]);
     }
 
@@ -99,12 +135,12 @@ class AbsensiController extends Controller
     {
         $user = $this->user();
         [$dari, $sampai] = $this->rentang($request);
-        $pegawais = $this->pegawaiTerfilter($request, $user)->get();
-        $nilai = PenilaianAbsensi::rentang($pegawais, $dari, $sampai);
+        [$barisRekap, , $nilai] = $this->barisRekap($request, $user, $dari, $sampai);
+        $pegawais = $barisRekap->pluck('pegawai'); // urutan ekspor = urutan yang dipilih di layar
         $d = fn (int $m) => $m ? round($m / 60, 2) : 0;
 
-        $rekap = $pegawais->map(function (DataPegawai $p) use ($nilai, $d) {
-            $r = PenilaianAbsensi::rekap($nilai[$p->id] ?? []);
+        $rekap = $barisRekap->map(function (array $b) use ($d) {
+            [$p, $r] = [$b['pegawai'], $b['r']];
 
             return [
                 $p->nama_lengkap, $p->nip, $p->finger_id, $p->kepegawaian?->unit_kerja, $p->jadwalKerja?->ringkas() ?? 'Belum diatur',
@@ -147,7 +183,7 @@ class AbsensiController extends Controller
         $pegawai->load(['kepegawaian', 'jadwalKerja']);
         abort_unless(AksesAbsensi::bolehLihatPegawai($user, $pegawai), 403, 'Pegawai ini di luar unit Anda.');
 
-        [$dari, $sampai] = $this->rentang($request);
+        [$dari, $sampai, $pesanRentang] = $this->rentang($request);
         $hari = PenilaianAbsensi::rentang(collect([$pegawai]), $dari, $sampai)[$pegawai->id] ?? [];
 
         return view('admin.absensi.pegawai', [
@@ -158,6 +194,7 @@ class AbsensiController extends Controller
             'hari' => array_reverse($hari),
             'rekap' => PenilaianAbsensi::rekap($hari),
             'preset' => $this->presetPeriode(),
+            'pesanRentang' => $pesanRentang,
             'bisaKelola' => AksesAbsensi::bisaKelola($user),
         ]);
     }
@@ -238,33 +275,78 @@ class AbsensiController extends Controller
             ->when($request->filled('unit'), fn ($q) => $q->whereHas('kepegawaian', fn ($k) => $k->where('unit_kerja', $request->query('unit'))))
             ->when($request->filled('q'), function ($q) use ($request) {
                 $kata = '%' . $request->query('q') . '%';
-                $q->where(fn ($w) => $w->where('nama_lengkap', 'like', $kata)->orWhere('nip', 'like', $kata)->orWhere('finger_id', $request->query('q')));
+                $q->where(fn ($w) => $w->where('nama_lengkap', 'like', $kata)->orWhere('nip', 'like', $kata)->orWhere('finger_id', $request->query('q'))
+                    ->orWhereHas('kepegawaian', fn ($k) => $k->where('unit_kerja', 'like', $kata)->orWhere('jabatan', 'like', $kata)));
             })
             ->orderBy('nama_lengkap');
     }
 
-    /** @return array{0: Carbon, 1: Carbon} */
+    /** @return array{0: Carbon, 1: Carbon, 2: list<string>} rentang aman + pesan penyesuaian */
     private function rentang(Request $request): array
     {
-        $dari = $this->tanggal($request->query('dari')) ?? now()->startOfMonth();
-        $sampai = $this->tanggal($request->query('sampai')) ?? now()->startOfDay();
-        if ($sampai->lt($dari)) {
-            [$dari, $sampai] = [$sampai, $dari];
-        }
-        if ($dari->diffInDays($sampai) > 92) {
-            $dari = $sampai->copy()->subDays(92); // batasi ±3 bulan agar halaman tetap ringan
-        }
-
-        return [$dari, $sampai];
+        return TanggalAbsensi::rentang($request->query('dari'), $request->query('sampai'));
     }
 
-    private function tanggal(?string $nilai): ?Carbon
+    /**
+     * Baris rekap per pegawai yang sudah difilter & diurutkan.
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: string, 2: array}
+     */
+    private function barisRekap(Request $request, User $user, Carbon $dari, Carbon $sampai): array
     {
-        try {
-            return $nilai ? Carbon::createFromFormat('Y-m-d', $nilai)->startOfDay() : null;
-        } catch (\Throwable) {
-            return null;
-        }
+        $pegawais = $this->pegawaiTerfilter($request, $user)->get();
+        $nilai = PenilaianAbsensi::rentang($pegawais, $dari, $sampai);
+        $baris = $pegawais->map(fn (DataPegawai $p) => ['pegawai' => $p, 'r' => PenilaianAbsensi::rekap($nilai[$p->id] ?? [])]);
+        $urut = array_key_exists((string) $request->query('urut'), self::URUT_REKAP) ? $request->query('urut') : 'nama';
+
+        // Angka terbesar di atas; bila sama, urut nama agar stabil.
+        $angka = ['telat' => 'telat', 'telat_menit' => 'telat_menit', 'alpa' => 'alpa', 'tanpa_scan' => 'tanpa_scan_pulang', 'lembur' => 'lembur_menit'];
+        $baris = match (true) {
+            isset($angka[$urut]) => self::urutBanyak($baris, [[fn ($b) => $b['r'][$angka[$urut]], 'desc'], [fn ($b) => $b['pegawai']->nama_lengkap, 'asc']]),
+            $urut === 'hadir_sedikit' => self::urutBanyak($baris, [[fn ($b) => $b['r']['hadir_total'], 'asc'], [fn ($b) => $b['pegawai']->nama_lengkap, 'asc']]),
+            $urut === 'unit' => self::urutBanyak($baris, [[fn ($b) => (string) $b['pegawai']->kepegawaian?->unit_kerja, 'asc'], [fn ($b) => $b['pegawai']->nama_lengkap, 'asc']]),
+            default => $baris,
+        };
+
+        return [$baris->values(), $urut, $nilai];
+    }
+
+    /**
+     * Urutkan dengan beberapa kunci: [[fn ($baris) => nilai, 'asc'|'desc'], ...]. Urutan stabil.
+     * (Collection::sortBy([...]) milik Laravel memperlakukan closure sebagai pembanding 2 argumen, jadi tidak dipakai.)
+     */
+    private static function urutBanyak(\Illuminate\Support\Collection $baris, array $kunci): \Illuminate\Support\Collection
+    {
+        $daftar = $baris->values()->all();
+        $indeks = array_keys($daftar);
+        usort($indeks, function ($i, $j) use ($daftar, $kunci) {
+            foreach ($kunci as [$ambil, $arah]) {
+                [$a, $b] = [$ambil($daftar[$i]), $ambil($daftar[$j])];
+                $c = is_string($a) && is_string($b) ? strcasecmp($a, $b) : ($a <=> $b);
+                if ($c !== 0) {
+                    return $arah === 'desc' ? -$c : $c;
+                }
+            }
+
+            return $i <=> $j;
+        });
+
+        return collect(array_map(fn ($i) => $daftar[$i], $indeks));
+    }
+
+    /** Urutkan baris Harian. Pegawai tanpa scan selalu di bawah untuk urutan berdasarkan jam. */
+    private static function urutkanHarian(\Illuminate\Support\Collection $baris, string $urut): \Illuminate\Support\Collection
+    {
+        $menit = fn ($b) => PenilaianAbsensi::menit($b['h']['masuk']);
+        $nama = [fn ($b) => $b['pegawai']->nama_lengkap, 'asc'];
+
+        return match ($urut) {
+            'masuk_awal' => self::urutBanyak($baris, [[fn ($b) => $menit($b) === null ? 1 : 0, 'asc'], [fn ($b) => $menit($b) ?? 0, 'asc'], $nama]),
+            'masuk_akhir' => self::urutBanyak($baris, [[fn ($b) => $menit($b) === null ? 1 : 0, 'asc'], [fn ($b) => $menit($b) ?? 0, 'desc'], $nama]),
+            'telat' => self::urutBanyak($baris, [[fn ($b) => in_array($b['h']['status'], ['telat', 'telat_izin'], true) ? $b['h']['telat_menit'] : -1, 'desc'], $nama]),
+            'unit' => self::urutBanyak($baris, [[fn ($b) => (string) $b['pegawai']->kepegawaian?->unit_kerja, 'asc'], $nama]),
+            default => $baris,
+        };
     }
 
     /** Pilihan cepat periode: bulan ini, bulan lalu, periode gaji (21–20) berjalan & sebelumnya. */
@@ -273,11 +355,14 @@ class AbsensiController extends Controller
         $awal = (int) config('hrrab.absensi.periode_mulai', 21);
         $mulaiGaji = now()->day >= $awal ? now()->setDay($awal) : now()->subMonthNoOverflow()->setDay($awal);
 
+        $hariIni = now()->startOfDay();
+        $batas = fn (Carbon $c) => $c->copy()->startOfDay()->min($hariIni); // periode berjalan: sampai hari ini saja
+
         return [
-            'Bulan ini' => [now()->startOfMonth(), now()],
+            'Bulan ini' => [now()->startOfMonth(), $hariIni->copy()],
             'Bulan lalu' => [now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()],
-            "Periode {$awal}–" . ($awal - 1) . ' berjalan' => [$mulaiGaji->copy(), $mulaiGaji->copy()->addMonthNoOverflow()->subDay()],
-            "Periode {$awal}–" . ($awal - 1) . ' lalu' => [$mulaiGaji->copy()->subMonthNoOverflow(), $mulaiGaji->copy()->subDay()],
+            "Periode {$awal}–" . ($awal - 1) . ' berjalan' => [$mulaiGaji->copy()->startOfDay(), $batas($mulaiGaji->copy()->addMonthNoOverflow()->subDay())],
+            "Periode {$awal}–" . ($awal - 1) . ' lalu' => [$mulaiGaji->copy()->subMonthNoOverflow()->startOfDay(), $mulaiGaji->copy()->subDay()->startOfDay()],
         ];
     }
 

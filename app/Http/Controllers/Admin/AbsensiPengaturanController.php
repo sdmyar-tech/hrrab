@@ -22,6 +22,13 @@ class AbsensiPengaturanController extends Controller
     public function index(Request $request): View
     {
         $query = $this->filter($request);
+        $daftar = (clone $query)->with(['kepegawaian', 'jadwalKerja']);
+        $urut = \App\Support\Urutan::terapkan($daftar, [
+            'ikut' => ['Yang diabsen dulu', fn ($q, $arah) => $q->orderByDesc('data_pegawais.ikut_absensi')->orderBy('data_pegawais.nama_lengkap'), 'asc'],
+            ...\App\Support\Urutan::abjad('nama', 'Nama', 'data_pegawais.nama_lengkap'),
+            'unit' => ['Unit A–Z', fn ($q, $arah) => $q->orderByRaw('(select unit_kerja from kepegawaians where kepegawaians.data_pegawai_id = data_pegawais.id limit 1) asc')->orderBy('data_pegawais.nama_lengkap'), 'asc'],
+            'finger' => ['ID mesin terkecil', fn ($q, $arah) => $q->orderByRaw('data_pegawais.finger_id is null')->orderByRaw('cast(data_pegawais.finger_id as unsigned) asc'), 'asc'],
+        ]);
         $tanpaFinger = AksesAbsensi::aktif(DataPegawai::whereNull('finger_id'))->with('kepegawaian:id,data_pegawai_id,unit_kerja')
             ->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip', 'ikut_absensi']);
         $belumDipetakan = Absensi::whereNull('data_pegawai_id')->whereNotNull('finger_id')
@@ -32,7 +39,8 @@ class AbsensiPengaturanController extends Controller
         return view('admin.absensi.pengaturan', [
             'layout' => $request->user()->panelLayout(),
             'tab' => in_array($request->query('tab'), ['pegawai', 'pemetaan'], true) ? $request->query('tab') : 'pegawai',
-            'pegawais' => (clone $query)->with(['kepegawaian', 'jadwalKerja'])->orderByDesc('ikut_absensi')->orderBy('nama_lengkap')->paginate(25)->withQueryString(),
+            'pegawais' => $daftar->paginate(25)->withQueryString(),
+            ...$urut,
             'jumlahFilter' => (clone $query)->count(),
             'unitOpsi' => DB::table('kepegawaians')->whereNotNull('unit_kerja')->distinct()->orderBy('unit_kerja')->pluck('unit_kerja'),
             'statistik' => [
@@ -217,7 +225,8 @@ class AbsensiPengaturanController extends Controller
             ->when($request->filled('unit'), fn ($q) => $q->whereHas('kepegawaian', fn ($k) => $k->where('unit_kerja', $request->input('unit'))))
             ->when($request->filled('q'), function ($q) use ($request) {
                 $kata = '%' . $request->input('q') . '%';
-                $q->where(fn ($w) => $w->where('nama_lengkap', 'like', $kata)->orWhere('nip', 'like', $kata)->orWhere('finger_id', $request->input('q')));
+                $q->where(fn ($w) => $w->where('nama_lengkap', 'like', $kata)->orWhere('nip', 'like', $kata)->orWhere('finger_id', $request->input('q'))
+                    ->orWhereHas('kepegawaian', fn ($k) => $k->where('unit_kerja', 'like', $kata)->orWhere('jabatan', 'like', $kata)));
             })
             // Default: pegawai aktif saja (pegawai keluar tidak perlu diatur absensinya).
             ->when($request->input('status') !== 'semua', fn ($q) => AksesAbsensi::aktif($q));

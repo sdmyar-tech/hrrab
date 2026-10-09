@@ -18,14 +18,11 @@ class IzinAbsensiController extends Controller
 {
     public function index(Request $request): View
     {
-        try {
-            $bulan = Carbon::createFromFormat('!Y-m-d', $request->query('bulan', now()->format('Y-m')) . '-01');
-        } catch (\Throwable) {
-            $bulan = now()->startOfMonth();
-        }
+        // Bulan tidak valid (mis. 2026-00 / 2026-13) → bulan ini, bukan meloncat ke tahun lain.
+        $bulan = \App\Support\Absensi\TanggalAbsensi::bulan($request->query('bulan')) ?? now()->startOfMonth();
 
         // Dibuka dari halaman Harian: tanggal izin otomatis = tanggal yang sedang dilihat.
-        $tanggalAwal = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $request->query('tanggal')) ? $request->query('tanggal') : now()->toDateString();
+        $tanggalAwal = \App\Support\Absensi\TanggalAbsensi::tanggal($request->query('tanggal'))?->toDateString() ?? now()->toDateString();
 
         return view('admin.absensi.izin', [
             'layout' => $request->user()->panelLayout(),

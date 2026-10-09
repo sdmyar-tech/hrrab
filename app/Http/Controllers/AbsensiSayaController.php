@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\Absensi\PenilaianAbsensi;
+use App\Support\Absensi\TanggalAbsensi;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,9 +19,9 @@ class AbsensiSayaController extends Controller
         $pegawai = $user->dataPegawai;
         abort_unless($pegawai, 404);
 
-        try {
-            $bulan = Carbon::createFromFormat('!Y-m-d', $request->query('bulan', now()->format('Y-m')) . '-01');
-        } catch (\Throwable) {
+        // Bulan tidak valid atau di masa depan → bulan ini.
+        $bulan = TanggalAbsensi::bulan($request->query('bulan')) ?? now()->startOfMonth();
+        if ($bulan->gt(now())) {
             $bulan = now()->startOfMonth();
         }
         // Satu bulan penuh (tanggal mendatang otomatis berstatus "belum ada data") agar kalender lengkap.
