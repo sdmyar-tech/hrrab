@@ -1,6 +1,7 @@
 @php
     $u = Auth::user();
     $penyetuju = $u->can('approve');
+    $ik = \App\Support\Absensi\TampilanAbsensi::IKON;
     $menu = [
         ['bagian' => null, 'item' => [
             ['Dashboard', 'bi-speedometer2', 'admin.dashboard', 'admin.dashboard', true, null],
@@ -19,13 +20,13 @@
             ['Data Pegawai', 'bi-people', 'admin.pegawai.index', 'admin.pegawai.*', $u->can('lihat-tabel-karyawan'), null],
             ['Mutasi & Rangkap', 'bi-arrow-left-right', 'admin.penugasan.index', 'admin.penugasan.*', $u->can('kelola-penugasan'), null],
         ]],
-        ['bagian' => 'Absensi', 'ikon' => 'bi-fingerprint', 'item' => [
-            ['Absensi Harian', 'bi-calendar-day', 'admin.absensi.harian', ['admin.absensi.harian', 'admin.absensi.pegawai'], $u->can('lihat-absensi'), null],
-            ['Rekap Absensi', 'bi-table', 'admin.absensi.rekap', 'admin.absensi.rekap*', $u->can('lihat-absensi'), null],
-            ['Import Data Mesin', 'bi-upload', 'admin.absensi.import', 'admin.absensi.import*', $u->can('kelola-absensi'), null],
-            ['Izin Telat / Pulang', 'bi-cloud-drizzle', 'admin.absensi.izin', 'admin.absensi.izin*', $u->can('kelola-absensi'), null],
-            ['Pengaturan Absensi', 'bi-sliders', 'admin.absensi.pengaturan', 'admin.absensi.pengaturan*', $u->can('kelola-absensi'), null],
-            ['Absensi Saya', 'bi-person-badge', 'absensi.saya', 'absensi.saya', (bool) $u->dataPegawai?->ikut_absensi, null],
+        // Izin telat/pulang cepat diakses dari tab modul & tombol di halaman Harian (menu tetap ringkas).
+        ['bagian' => 'Absensi', 'ikon' => $ik['modul'], 'item' => [
+            ['Absensi Harian', $ik['harian'], 'admin.absensi.harian', ['admin.absensi.harian', 'admin.absensi.pegawai', 'admin.absensi.izin*'], $u->can('lihat-absensi'), null],
+            ['Rekap Absensi', $ik['rekap'], 'admin.absensi.rekap', 'admin.absensi.rekap*', $u->can('lihat-absensi'), null],
+            ['Import Data Mesin', $ik['import'], 'admin.absensi.import', 'admin.absensi.import*', $u->can('kelola-absensi'), null],
+            ['Pengaturan Absensi', $ik['pengaturan'], 'admin.absensi.pengaturan', 'admin.absensi.pengaturan*', $u->can('kelola-absensi'), null],
+            ['Absensi Saya', $ik['saya'], 'absensi.saya', 'absensi.saya', (bool) $u->dataPegawai?->ikut_absensi, null],
         ]],
         ['bagian' => 'Rekrutmen', 'ikon' => 'bi-person-plus', 'item' => [
             ['Pengajuan Formasi', 'bi-person-plus', 'admin.pengajuan-formasi.index', 'admin.pengajuan-formasi.*', true, $hitung['formasi'] ?? null],

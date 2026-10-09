@@ -20,32 +20,60 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AbsensiController extends Controller
 {
+    /** Kelompok filter di halaman Harian (kartu angka di atas tabel). */
+    private const KELOMPOK_HARIAN = [
+        'on_time' => [self::class, 'kOnTime'],
+        'telat' => [self::class, 'kTelat'],
+        'telat_izin' => [self::class, 'kTelatIzin'],
+        'alpa' => [self::class, 'kAlpa'],
+        'cuti_izin' => [self::class, 'kCutiIzin'],
+        'perlu_cek' => [self::class, 'kPerluCek'],
+    ];
+
+    public static function kOnTime(array $h): bool { return $h['status'] === 'on_time' || $h['status'] === 'hadir'; }
+    public static function kTelat(array $h): bool { return $h['status'] === 'telat'; }
+    public static function kTelatIzin(array $h): bool { return $h['status'] === 'telat_izin'; }
+    public static function kAlpa(array $h): bool { return $h['status'] === 'alpa'; }
+    public static function kCutiIzin(array $h): bool { return in_array($h['status'], ['cuti', 'izin', 'sakit', 'dinas_luar'], true); }
+
+    /** Perlu ditindak SDM: tidak scan pulang, lembur belum terverifikasi, pulang cepat tanpa izin. */
+    public static function kPerluCek(array $h): bool
+    {
+        return $h['tanpa_scan_pulang'] || $h['lembur_status'] === 'belum' || ($h['pulang_cepat_menit'] > 0 && ! $h['pulang_cepat_izin']);
+    }
+
     /** Absensi semua pegawai pada satu tanggal. */
     public function harian(Request $request): View
     {
         $user = $this->user();
-        $tanggal = $this->tanggal($request->query('tanggal')) ?? now()->startOfDay();
+        $dataTerakhir = Absensi::whereNotNull('finger_id')->max('tanggal');
+        $pilihan = $this->tanggal($request->query('tanggal'));
+        // Tanpa tanggal: tampilkan hari ini, atau tanggal data mesin terakhir bila hari ini belum diimport.
+        $tanggal = $pilihan ?? ($dataTerakhir && $dataTerakhir < now()->toDateString() ? Carbon::parse($dataTerakhir) : now()->startOfDay());
         $pegawais = $this->pegawaiTerfilter($request, $user)->get();
         $nilai = PenilaianAbsensi::rentang($pegawais, $tanggal, $tanggal);
 
         $baris = $pegawais->map(fn (DataPegawai $p) => ['pegawai' => $p, 'h' => $nilai[$p->id][$tanggal->toDateString()]]);
-        $hitung = $baris->countBy(fn ($b) => $b['h']['status']);
+        $kelompok = self::KELOMPOK_HARIAN;
+        $hitung = collect($kelompok)->map(fn ($cocok) => $baris->filter(fn ($b) => $cocok($b['h']))->count());
         $status = $request->query('status');
-        if ($status === 'perlu_cek') {
-            $baris = $baris->filter(fn ($b) => $b['h']['tanpa_scan_pulang'] || $b['h']['lembur_status'] === 'belum' || $b['h']['status'] === 'alpa');
-        } elseif ($status && isset(PenilaianAbsensi::STATUS[$status])) {
-            $baris = $baris->filter(fn ($b) => $b['h']['status'] === $status);
+        if ($status && isset($kelompok[$status])) {
+            $baris = $baris->filter(fn ($b) => $kelompok[$status]($b['h']));
         }
+
+        $bisaKelola = AksesAbsensi::bisaKelola($user);
 
         return view('admin.absensi.harian', [
             'layout' => $user->panelLayout(),
             'tanggal' => $tanggal,
+            'tanggalOtomatis' => ! $pilihan && ! $tanggal->isToday(),
             'baris' => $baris->values(),
             'hitung' => $hitung,
             'jumlahPegawai' => $pegawais->count(),
             'unitOpsi' => $this->unitOpsi($user),
-            'bisaKelola' => AksesAbsensi::bisaKelola($user),
-            'dataTerakhir' => Absensi::max('tanggal'),
+            'bisaKelola' => $bisaKelola,
+            'dataTerakhir' => $dataTerakhir,
+            'setup' => $bisaKelola ? \App\Support\Absensi\TampilanAbsensi::langkahSetup() : null,
         ]);
     }
 

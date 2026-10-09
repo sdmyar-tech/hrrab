@@ -5,16 +5,17 @@
     $durasi = fn ($m) => \App\Support\Absensi\PenilaianAbsensi::durasi($m);
     $angka = fn ($n, $kelas = '') => $n ? '<span class="' . $kelas . '">' . $n . '</span>' : '<span class="absensi-nol">–</span>';
     $total = collect($baris)->pluck('r');
+    $ik = \App\Support\Absensi\TampilanAbsensi::IKON;
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
         <div class="page-heading">
             <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-table"></i></span>
+                <span class="page-icon"><i class="bi {{ $ik['rekap'] }}"></i></span>
                 <div>
                     <p class="eyebrow mb-1">Absensi</p>
                     <h1 class="h3 mb-1">Rekap Absensi</h1>
-                    <p class="text-muted mb-0">{{ $dari->translatedFormat('d M Y') }} – {{ $sampai->translatedFormat('d M Y') }} &middot; {{ count($baris) }} pegawai</p>
+                    <p class="text-muted mb-0">Ringkasan kehadiran per pegawai · {{ $dari->translatedFormat('d M Y') }} – {{ $sampai->translatedFormat('d M Y') }}</p>
                 </div>
             </div>
             <div class="heading-actions">
@@ -29,11 +30,11 @@
                 ['Hadir', $total->sum('hadir_total'), 'bi-person-check', 'success'],
                 ['Telat', $total->sum('telat'), 'bi-alarm', 'danger'],
                 ['Alpa', $total->sum('alpa'), 'bi-x-octagon', 'dark'],
-                ['Lembur terverifikasi', $durasi($total->sum('lembur_menit')), 'bi-clock-history', 'primary'],
+                ['Lembur terverifikasi', $durasi($total->sum('lembur_menit')), $ik['lembur'], 'purple'],
             ] as [$label, $nilai, $ikon, $warna])
                 <div class="col-6 col-md-3">
                     <div class="panel p-3 h-100 d-flex align-items-center gap-3">
-                        <span class="absensi-kartu-ikon text-{{ $warna }}"><i class="bi {{ $ikon }}"></i></span>
+                        <span class="absensi-kartu-ikon {{ $warna }}"><i class="bi {{ $ikon }}"></i></span>
                         <span><span class="h5 mb-0 d-block">{{ $nilai }}</span><small class="text-muted">{{ $label }}</small></span>
                     </div>
                 </div>
@@ -68,10 +69,11 @@
                         <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Tampilkan</button>
                     </div>
                 </div>
-                <div class="d-flex flex-wrap gap-2 mt-2">
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    <span class="small text-muted me-1 align-self-center">Cepat:</span>
                     @foreach ($preset as $label => [$pDari, $pSampai])
                         <a href="{{ route('admin.absensi.rekap', ['dari' => $pDari->toDateString(), 'sampai' => $pSampai->toDateString()] + request()->only(['unit', 'q'])) }}"
-                            class="btn btn-sm {{ $dari->isSameDay($pDari) && $sampai->isSameDay($pSampai) ? 'btn-primary' : 'btn-outline-secondary' }}">{{ $label }}</a>
+                            class="abs-chip text-decoration-none {{ $dari->isSameDay($pDari) && $sampai->isSameDay($pSampai) ? 'aktif' : '' }}">{{ $label }}</a>
                     @endforeach
                 </div>
             </form>
@@ -122,7 +124,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="11">@include('partials.kosong', ['teks' => 'Belum ada pegawai yang ikut absensi.', 'ikonKosong' => 'bi-table'])</td></tr>
+                            <tr><td colspan="11">@include('partials.kosong', ['teks' => 'Belum ada pegawai yang ikut absensi.', 'ikonKosong' => $ik['rekap']])</td></tr>
                         @endforelse
                     </tbody>
                 </table>

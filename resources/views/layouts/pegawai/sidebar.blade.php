@@ -1,5 +1,6 @@
 @php
     $u = Auth::user();
+    $ik = \App\Support\Absensi\TampilanAbsensi::IKON;
     $menu = [
         ['bagian' => null, 'item' => [
             ['Dashboard', 'bi-speedometer2', 'pegawai.dashboard', 'pegawai.dashboard', true, null],
@@ -11,13 +12,13 @@
         ['bagian' => 'Data Saya', 'ikon' => 'bi-person-vcard', 'item' => [
             ['Data Pegawai', 'bi-person-vcard', 'pegawai.data-pegawai', 'pegawai.data-pegawai', true, null],
             ['Pengkinian Data', 'bi-pencil-square', 'pegawai.pengkinian-data', 'pegawai.pengkinian-data', true, $hitung['data_kurang'] ?? null, true],
-            ['Absensi Saya', 'bi-fingerprint', 'absensi.saya', 'absensi.saya', (bool) $u?->dataPegawai?->ikut_absensi, null],
+            ['Absensi Saya', $ik['saya'], 'absensi.saya', 'absensi.saya', (bool) $u?->dataPegawai?->ikut_absensi, null],
         ]],
         ['bagian' => 'Tugas SDM', 'item' => [
             ['Kelola Data Pegawai', 'bi-people', 'admin.pegawai.index', 'admin.pegawai.*', $u?->can('kelola-pegawai'), null],
-            ['Absensi Pegawai', 'bi-calendar-day', 'admin.absensi.harian', ['admin.absensi.harian', 'admin.absensi.pegawai', 'admin.absensi.rekap*', 'admin.absensi.izin*'], $u?->can('kelola-absensi'), null],
-            ['Import Absensi', 'bi-upload', 'admin.absensi.import', 'admin.absensi.import*', $u?->can('kelola-absensi'), null],
-            ['Pengaturan Absensi', 'bi-sliders', 'admin.absensi.pengaturan', 'admin.absensi.pengaturan*', $u?->can('kelola-absensi'), null],
+            ['Absensi Pegawai', $ik['harian'], 'admin.absensi.harian', ['admin.absensi.harian', 'admin.absensi.pegawai', 'admin.absensi.rekap*', 'admin.absensi.izin*'], $u?->can('kelola-absensi'), null],
+            ['Import Data Mesin', $ik['import'], 'admin.absensi.import', 'admin.absensi.import*', $u?->can('kelola-absensi'), null],
+            ['Pengaturan Absensi', $ik['pengaturan'], 'admin.absensi.pengaturan', 'admin.absensi.pengaturan*', $u?->can('kelola-absensi'), null],
         ]],
         ['bagian' => 'Informasi', 'ikon' => 'bi-info-circle', 'item' => [
             ['Pengumuman', 'bi-megaphone', 'pengumuman.index', 'pengumuman.*', true, $hitung['pengumuman'] ?? null],

@@ -23,9 +23,9 @@ class AbsensiSayaController extends Controller
         } catch (\Throwable) {
             $bulan = now()->startOfMonth();
         }
-        $sampai = $bulan->copy()->endOfMonth()->min(now()->startOfDay());
-        $hari = $pegawai->ikut_absensi && $sampai->gte($bulan)
-            ? PenilaianAbsensi::rentang(collect([$pegawai]), $bulan, $sampai)[$pegawai->id] ?? []
+        // Satu bulan penuh (tanggal mendatang otomatis berstatus "belum ada data") agar kalender lengkap.
+        $hari = $pegawai->ikut_absensi && $bulan->lte(now())
+            ? PenilaianAbsensi::rentang(collect([$pegawai]), $bulan, $bulan->copy()->endOfMonth())[$pegawai->id] ?? []
             : [];
 
         return view('absensi-saya', [

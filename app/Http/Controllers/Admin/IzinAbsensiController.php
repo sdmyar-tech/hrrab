@@ -24,9 +24,13 @@ class IzinAbsensiController extends Controller
             $bulan = now()->startOfMonth();
         }
 
+        // Dibuka dari halaman Harian: tanggal izin otomatis = tanggal yang sedang dilihat.
+        $tanggalAwal = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $request->query('tanggal')) ? $request->query('tanggal') : now()->toDateString();
+
         return view('admin.absensi.izin', [
             'layout' => $request->user()->panelLayout(),
             'bulan' => $bulan,
+            'tanggalAwal' => $tanggalAwal,
             'izins' => IzinAbsensi::with(['dataPegawai', 'pembuat'])
                 ->whereBetween('tanggal', [$bulan->toDateString(), $bulan->copy()->endOfMonth()->toDateString()])
                 ->orderByDesc('tanggal')->orderByDesc('id')->get(),

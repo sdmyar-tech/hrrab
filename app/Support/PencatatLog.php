@@ -83,6 +83,7 @@ class PencatatLog
         'admin.absensi.koreksi' => ['ubah', 'Absensi', 'Mengoreksi absensi'],
         'admin.absensi.rekap.export' => ['ekspor', 'Absensi', 'Mengekspor rekap absensi'],
         'admin.absensi.pengaturan.pegawai' => ['ubah', 'Absensi', 'Mengubah pengaturan absensi pegawai'],
+        'admin.absensi.pengaturan.ikut' => ['ubah', 'Absensi', 'Mengubah status ikut absensi pegawai'],
         'admin.absensi.pengaturan.massal' => ['ubah', 'Absensi', 'Mengatur absensi pegawai secara massal'],
         'admin.absensi.pengaturan.petakan' => ['ubah', 'Absensi', 'Memetakan ID mesin ke pegawai'],
         'admin.absensi.pengaturan.aktifkan-daftar' => ['ubah', 'Absensi', 'Mengaktifkan absensi dari daftar'],

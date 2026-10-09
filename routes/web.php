@@ -99,6 +99,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
                 Route::get('/pengaturan', [AdminAbsensiPengaturanController::class, 'index'])->name('pengaturan');
                 Route::post('/pengaturan/massal', [AdminAbsensiPengaturanController::class, 'massal'])->name('pengaturan.massal');
                 Route::put('/pengaturan/pegawai/{pegawai}', [AdminAbsensiPengaturanController::class, 'updatePegawai'])->name('pengaturan.pegawai');
+                Route::post('/pengaturan/pegawai/{pegawai}/ikut', [AdminAbsensiPengaturanController::class, 'ikut'])->name('pengaturan.ikut');
                 Route::post('/pengaturan/petakan', [AdminAbsensiPengaturanController::class, 'petakan'])->name('pengaturan.petakan');
                 Route::post('/pengaturan/aktifkan-daftar', [AdminAbsensiPengaturanController::class, 'aktifkanDaftar'])->name('pengaturan.aktifkan-daftar');
                 Route::get('/izin', [AdminIzinAbsensiController::class, 'index'])->name('izin');

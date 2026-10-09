@@ -83,11 +83,15 @@ class AbsensiImportController extends Controller
         Storage::disk('local')->delete($info['path']);
         session()->forget("absensi_import.{$token}");
 
-        return redirect()->route('admin.absensi.import')->with('success', sprintf(
-            'Import selesai: %d hari baru, %d diperbarui, %d dilewati (periode %s – %s).',
-            $import->jumlah_baru, $import->jumlah_diperbarui, $import->jumlah_dilewati,
-            $import->periode_dari?->translatedFormat('d M Y'), $import->periode_sampai?->translatedFormat('d M Y'),
-        ));
+        // Langkah 3 "Selesai": ringkasan + tombol lanjutan ditampilkan di halaman import.
+        return redirect()->route('admin.absensi.import')->with('hasil_import', [
+            'baru' => $import->jumlah_baru,
+            'diperbarui' => $import->jumlah_diperbarui,
+            'dilewati' => $import->jumlah_dilewati,
+            'dari' => $import->periode_dari?->toDateString(),
+            'sampai' => $import->periode_sampai?->toDateString(),
+            'belum_dipetakan' => count($import->ringkasan['belum_dipetakan'] ?? []),
+        ]);
     }
 
     /** File pratinjau yang tidak jadi disimpan dihapus setelah 1 hari. */

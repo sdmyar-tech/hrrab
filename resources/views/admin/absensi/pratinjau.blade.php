@@ -1,96 +1,90 @@
 @extends($layout)
 
 @section('content')
-@php $tgl = fn ($t) => $t ? \Carbon\Carbon::parse($t)->translatedFormat('d M Y') : '–'; @endphp
+@php
+    $ik = \App\Support\Absensi\TampilanAbsensi::IKON;
+    $tgl = fn ($t) => $t ? \Carbon\Carbon::parse($t)->translatedFormat('d M Y') : '–';
+    $akanDisimpan = $r['baru'] + $r['diperbarui'];
+    $peringatan = count($r['belum_dipetakan']) + count($r['tidak_valid']) + count($r['tidak_ikut']);
+@endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
         <div class="page-heading">
             <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-clipboard-check"></i></span>
+                <span class="page-icon"><i class="bi {{ $ik['import'] }}"></i></span>
                 <div>
-                    <p class="eyebrow mb-1">Import Absensi</p>
+                    <p class="eyebrow mb-1">Import Data Mesin</p>
                     <h1 class="h3 mb-1">Cek Data Sebelum Disimpan</h1>
-                    <p class="text-muted mb-0 text-break">{{ $namaFile }} &middot; {{ $r['format'] }} &middot; periode {{ $tgl($r['periode_dari']) }} – {{ $tgl($r['periode_sampai']) }}</p>
+                    <p class="text-muted mb-0 text-break"><i class="bi bi-file-earmark-spreadsheet me-1"></i>{{ $namaFile }}</p>
                 </div>
             </div>
         </div>
 
-        <div class="row g-2 g-md-3 mb-3">
-            @foreach ([
-                ['Hari baru', $r['baru'], 'bi-plus-circle', 'success'],
-                ['Diperbarui', $r['diperbarui'], 'bi-arrow-repeat', 'primary'],
-                ['Sudah ada (sama)', $r['sama'], 'bi-check2-all', 'secondary'],
-                ['Dikoreksi SDM (tidak ditimpa)', $r['dikoreksi'], 'bi-shield-check', 'warning'],
-            ] as [$label, $nilai, $ikon, $warna])
-                <div class="col-6 col-md-3">
-                    <div class="panel p-3 h-100 d-flex align-items-center gap-3">
-                        <span class="absensi-kartu-ikon text-{{ $warna }}"><i class="bi {{ $ikon }}"></i></span>
-                        <span><span class="h4 mb-0 d-block">{{ $nilai }}</span><small class="text-muted">{{ $label }}</small></span>
-                    </div>
-                </div>
-            @endforeach
-        </div>
+        @include('admin.absensi._nav')
 
         <div class="row g-3 align-items-start">
-            <div class="col-12 col-xl-5">
-                <section class="panel p-4">
-                    <h2 class="h6 fw-bold mb-3">Ringkasan</h2>
-                    <ul class="list-unstyled small mb-3 d-grid gap-2">
-                        <li><i class="bi bi-people text-success me-2"></i><strong>{{ $r['pegawai_dinilai'] }}</strong> pegawai ikut absensi akan dinilai</li>
-                        <li><i class="bi bi-calendar3 me-2"></i>{{ $r['total'] }} hari ber-scan &middot; {{ $r['kosong'] }} baris tanpa scan (dinilai sistem: libur/cuti/alpa)</li>
-                        @if ($r['tidak_ikut'])<li><i class="bi bi-person-dash text-secondary me-2"></i>{{ count($r['tidak_ikut']) }} ID milik pegawai yang <strong>tidak ikut absensi</strong> — disimpan, tidak dinilai</li>@endif
-                        @if ($r['belum_dipetakan'])<li><i class="bi bi-question-circle text-warning me-2"></i>{{ count($r['belum_dipetakan']) }} ID <strong>belum dipetakan</strong> ke pegawai — disimpan, bisa dipetakan nanti</li>@endif
-                        @if ($r['tidak_valid'])<li><i class="bi bi-x-circle text-danger me-2"></i>{{ count($r['tidak_valid']) }} baris rusak/tidak valid dilewati</li>@endif
+            <div class="col-12 col-xl-7">
+                <section class="panel p-3 p-md-4">
+                    @include('admin.absensi._tahap-import', ['tahap' => 2])
+
+                    @if ($akanDisimpan)
+                        <div class="d-flex gap-3 align-items-start mb-3">
+                            <span class="absensi-kartu-ikon success"><i class="bi bi-clipboard-check"></i></span>
+                            <div>
+                                <h2 class="h5 fw-bold mb-1">Siap disimpan: {{ $akanDisimpan }} hari absensi</h2>
+                                <p class="text-muted mb-0">Periode <strong>{{ $tgl($r['periode_dari']) }} – {{ $tgl($r['periode_sampai']) }}</strong> · {{ $r['pegawai_dinilai'] }} pegawai akan dinilai otomatis.</p>
+                            </div>
+                        </div>
+                    @else
+                        <div class="d-flex gap-3 align-items-start mb-3">
+                            <span class="absensi-kartu-ikon secondary"><i class="bi bi-check2-all"></i></span>
+                            <div>
+                                <h2 class="h5 fw-bold mb-1">Tidak ada data baru</h2>
+                                <p class="text-muted mb-0">Semua data di file ini sudah tersimpan sebelumnya.</p>
+                            </div>
+                        </div>
+                    @endif
+
+                    <ul class="list-unstyled small d-grid gap-2 mb-4">
+                        <li><i class="bi bi-plus-circle text-success me-2"></i><strong>{{ $r['baru'] }}</strong> hari baru</li>
+                        @if ($r['diperbarui'])<li><i class="bi bi-arrow-repeat text-primary me-2"></i><strong>{{ $r['diperbarui'] }}</strong> hari diperbarui (jam di mesin berubah)</li>@endif
+                        @if ($r['sama'])<li><i class="bi bi-check2-all text-muted me-2"></i>{{ $r['sama'] }} hari sudah ada & sama — dilewati</li>@endif
+                        @if ($r['dikoreksi'])<li><i class="bi bi-shield-check text-warning me-2"></i>{{ $r['dikoreksi'] }} hari sudah dikoreksi SDM — tidak ditimpa</li>@endif
                     </ul>
 
-                    <form action="{{ route('admin.absensi.import.simpan') }}" method="POST" class="d-flex gap-2">
+                    <form action="{{ route('admin.absensi.import.simpan') }}" method="POST" class="d-flex flex-wrap gap-2">
                         @csrf
                         <input type="hidden" name="token" value="{{ $token }}">
-                        <a href="{{ route('admin.absensi.import') }}" class="btn btn-outline-secondary flex-fill">Batal</a>
-                        <button type="submit" class="btn btn-primary flex-fill" @disabled($r['baru'] + $r['diperbarui'] === 0)>
-                            <i class="bi bi-save me-1"></i> Simpan {{ $r['baru'] + $r['diperbarui'] }} hari
+                        <a href="{{ route('admin.absensi.import') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Ganti file</a>
+                        <button type="submit" class="btn btn-primary flex-grow-1" @disabled(! $akanDisimpan)>
+                            <i class="bi bi-save me-1"></i> Simpan {{ $akanDisimpan }} hari
                         </button>
                     </form>
-                    @if ($r['baru'] + $r['diperbarui'] === 0)
-                        <p class="small text-muted mt-2 mb-0">Semua data di file ini sudah tersimpan sebelumnya.</p>
-                    @endif
                 </section>
             </div>
 
-            <div class="col-12 col-xl-7 d-grid gap-3">
+            <div class="col-12 col-xl-5 d-grid gap-3">
+                @if (! $peringatan)
+                    <section class="panel p-3 p-md-4">
+                        <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Semua ID di file sudah dikenali dan tidak ada baris bermasalah.</p>
+                    </section>
+                @endif
+
                 @if ($r['belum_dipetakan'])
                     <section class="panel">
                         <div class="panel-header">
                             <div>
-                                <h2 class="h6 fw-bold mb-1"><i class="bi bi-question-circle text-warning me-1"></i>ID Belum Dipetakan</h2>
-                                <p class="small text-muted mb-0">Setelah disimpan, hubungkan ID ini ke pegawai di <strong>Pengaturan → ID belum dipetakan</strong>.</p>
+                                <h2 class="h6 fw-bold mb-1"><i class="bi bi-question-circle text-warning me-1"></i>{{ count($r['belum_dipetakan']) }} ID belum dikenali</h2>
+                                <p class="small text-muted mb-0">Tetap disimpan. Setelah import, hubungkan ke pegawainya agar ikut dinilai.</p>
                             </div>
                         </div>
-                        <div class="table-responsive dash-scroll" style="max-height:300px;">
-                            <table class="table table-sm align-middle mb-0">
-                                <thead><tr><th>ID Mesin</th><th>Nama di mesin</th><th class="text-end">Hari</th></tr></thead>
-                                <tbody>
-                                    @foreach ($r['belum_dipetakan'] as $b)
-                                        <tr><td class="fw-semibold">{{ $b['finger_id'] }}</td><td>{{ $b['nama'] ?? '–' }}</td><td class="text-end">{{ $b['hari'] }}</td></tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                @endif
-
-                @if ($r['tidak_valid'])
-                    <section class="panel">
-                        <div class="panel-header"><h2 class="h6 fw-bold mb-0"><i class="bi bi-x-circle text-danger me-1"></i>Baris Dilewati</h2></div>
-                        <div class="table-responsive dash-scroll" style="max-height:240px;">
-                            <table class="table table-sm align-middle mb-0">
-                                <thead><tr><th>Baris</th><th>Alasan</th><th>Isi</th></tr></thead>
-                                <tbody>
-                                    @foreach ($r['tidak_valid'] as $t)
-                                        <tr><td>{{ $t['baris'] }}</td><td>{{ $t['alasan'] }}</td><td class="small text-muted text-break">{{ $t['isi'] }}</td></tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                        <div class="list-group list-group-flush dash-scroll" style="max-height:260px;">
+                            @foreach ($r['belum_dipetakan'] as $b)
+                                <div class="list-group-item d-flex justify-content-between small">
+                                    <span><span class="badge text-bg-light border me-1">ID {{ $b['finger_id'] }}</span>{{ $b['nama'] ?? 'tanpa nama' }}</span>
+                                    <span class="text-muted">{{ $b['hari'] }} hari</span>
+                                </div>
+                            @endforeach
                         </div>
                     </section>
                 @endif
@@ -99,19 +93,30 @@
                     <section class="panel">
                         <div class="panel-header">
                             <div>
-                                <h2 class="h6 fw-bold mb-1"><i class="bi bi-person-dash me-1"></i>Pegawai Tidak Ikut Absensi</h2>
-                                <p class="small text-muted mb-0">Ada di file, tetapi tidak dicentang ikut absensi. Ubah di Pengaturan bila perlu dinilai.</p>
+                                <h2 class="h6 fw-bold mb-1"><i class="bi bi-person-dash me-1"></i>{{ count($r['tidak_ikut']) }} pegawai tidak ikut absensi</h2>
+                                <p class="small text-muted mb-0">Datanya disimpan, tetapi tidak dinilai. Ubah di Pengaturan bila perlu.</p>
                             </div>
                         </div>
-                        <div class="table-responsive dash-scroll" style="max-height:240px;">
-                            <table class="table table-sm align-middle mb-0">
-                                <thead><tr><th>ID</th><th>Pegawai</th><th class="text-end">Hari</th></tr></thead>
-                                <tbody>
-                                    @foreach ($r['tidak_ikut'] as $b)
-                                        <tr><td>{{ $b['finger_id'] }}</td><td>{{ $b['nama'] }}</td><td class="text-end">{{ $b['hari'] }}</td></tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                        <div class="list-group list-group-flush dash-scroll" style="max-height:200px;">
+                            @foreach ($r['tidak_ikut'] as $b)
+                                <div class="list-group-item d-flex justify-content-between small"><span>{{ $b['nama'] }}</span><span class="text-muted">ID {{ $b['finger_id'] }}</span></div>
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
+
+                @if ($r['tidak_valid'])
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2 class="h6 fw-bold mb-1"><i class="bi bi-x-circle text-danger me-1"></i>{{ count($r['tidak_valid']) }} baris rusak dilewati</h2>
+                                <p class="small text-muted mb-0">Biasanya data sampah dari mesin (ID minus / nama aneh). Aman diabaikan.</p>
+                            </div>
+                        </div>
+                        <div class="list-group list-group-flush dash-scroll" style="max-height:200px;">
+                            @foreach ($r['tidak_valid'] as $t)
+                                <div class="list-group-item small"><span class="text-muted">Baris {{ $t['baris'] }}:</span> {{ $t['alasan'] }} <span class="text-muted text-break">({{ $t['isi'] }})</span></div>
+                            @endforeach
                         </div>
                     </section>
                 @endif
@@ -119,6 +124,5 @@
         </div>
     </div>
 </main>
-@include('admin.absensi._gaya')
 @include('partials.viz.style')
 @endsection

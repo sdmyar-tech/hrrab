@@ -22,9 +22,16 @@ class AbsensiPengaturanController extends Controller
     public function index(Request $request): View
     {
         $query = $this->filter($request);
+        $tanpaFinger = AksesAbsensi::aktif(DataPegawai::whereNull('finger_id'))->with('kepegawaian:id,data_pegawai_id,unit_kerja')
+            ->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip', 'ikut_absensi']);
+        $belumDipetakan = Absensi::whereNull('data_pegawai_id')->whereNotNull('finger_id')
+            ->selectRaw('finger_id, max(nama_mesin) as nama_mesin, count(*) as hari, max(tanggal) as terakhir')
+            ->groupBy('finger_id')->orderByRaw('cast(finger_id as unsigned)')->get()
+            ->each(fn ($b) => $b->saran = self::saranPegawai($b->nama_mesin, $tanpaFinger));
 
         return view('admin.absensi.pengaturan', [
             'layout' => $request->user()->panelLayout(),
+            'tab' => in_array($request->query('tab'), ['pegawai', 'pemetaan', 'daftar'], true) ? $request->query('tab') : 'pegawai',
             'pegawais' => (clone $query)->with(['kepegawaian', 'jadwalKerja'])->orderByDesc('ikut_absensi')->orderBy('nama_lengkap')->paginate(25)->withQueryString(),
             'jumlahFilter' => (clone $query)->count(),
             'unitOpsi' => DB::table('kepegawaians')->whereNotNull('unit_kerja')->distinct()->orderBy('unit_kerja')->pluck('unit_kerja'),
@@ -33,15 +40,39 @@ class AbsensiPengaturanController extends Controller
                 'tanpa_finger' => AksesAbsensi::aktif(DataPegawai::where('ikut_absensi', true)->whereNull('finger_id'))->count(),
                 'tanpa_jadwal' => AksesAbsensi::aktif(DataPegawai::where('ikut_absensi', true)->doesntHave('jadwalKerja'))->count(),
             ],
-            'belumDipetakan' => Absensi::whereNull('data_pegawai_id')->whereNotNull('finger_id')
-                ->selectRaw('finger_id, max(nama_mesin) as nama_mesin, count(*) as hari, max(tanggal) as terakhir')
-                ->groupBy('finger_id')->orderByRaw('cast(finger_id as unsigned)')->get(),
-            'pegawaiTanpaFinger' => DataPegawai::whereNull('finger_id')->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip', 'ikut_absensi']),
+            'belumDipetakan' => $belumDipetakan,
+            'pegawaiTanpaFinger' => $tanpaFinger,
             'bawaan' => [
                 'toleransi' => (int) config('hrrab.absensi.toleransi_menit', 15),
                 'hari_kerja' => config('hrrab.hari_kerja', [1, 2, 3, 4, 5]),
             ],
         ]);
+    }
+
+    /**
+     * Tebak pegawai dari nama di mesin (nama di mesin sering disingkat, mis. "Devy Putri" → "Devy Putri Syahriani Lubis").
+     * Hanya disarankan bila cukup yakin; SDM tetap memilih/menyetujui.
+     */
+    private static function saranPegawai(?string $namaMesin, \Illuminate\Support\Collection $kandidat): ?int
+    {
+        $bersih = fn ($s) => trim(preg_replace('/\s+/', ' ', preg_replace('/[^\p{L}\s]/u', ' ', mb_strtolower(preg_replace('/,.*$/', '', (string) $s)))));
+        $mesin = $bersih($namaMesin);
+        if (mb_strlen($mesin) < 3) {
+            return null;
+        }
+
+        $terbaik = null;
+        $skorTerbaik = 0;
+        foreach ($kandidat as $p) {
+            $nama = $bersih($p->nama_lengkap);
+            // Awalan cocok (nama mesin terpotong) dianggap sangat mirip.
+            $skor = str_starts_with($nama, $mesin) || str_starts_with($mesin, $nama) ? 95 : (similar_text($mesin, $nama, $persen) ? $persen : 0);
+            if ($skor > $skorTerbaik) {
+                [$terbaik, $skorTerbaik] = [$p->id, $skor];
+            }
+        }
+
+        return $skorTerbaik >= 80 ? $terbaik : null;
     }
 
     /** Ubah satu pegawai: finger ID, ikut absensi, dan jadwal kerjanya. */
@@ -66,6 +97,15 @@ class AbsensiPengaturanController extends Controller
 
         return back()->with('success', 'Pengaturan absensi ' . $pegawai->nama_lengkap . ' disimpan.'
             . ($terhubung ? " {$terhubung} hari data mesin ikut terhubung." : ''));
+    }
+
+    /** Saklar cepat ikut / tidak ikut absensi untuk satu pegawai. */
+    public function ikut(Request $request, DataPegawai $pegawai): RedirectResponse
+    {
+        $ikut = $request->boolean('ikut');
+        $pegawai->forceFill(['ikut_absensi' => $ikut])->save();
+
+        return back()->with('success', $pegawai->nama_lengkap . ($ikut ? ' sekarang ikut absensi.' : ' tidak lagi ikut absensi.'));
     }
 
     /** Aksi massal untuk pegawai terpilih atau semua hasil filter. */
