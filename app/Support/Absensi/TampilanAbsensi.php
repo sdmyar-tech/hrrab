@@ -58,7 +58,7 @@ class TampilanAbsensi
                 'judul' => 'Pilih pegawai yang diabsen',
                 'teks' => $jumlahIkut ? "{$jumlahIkut} pegawai ikut absensi." : 'Belum ada pegawai yang dicentang ikut absensi.',
                 'selesai' => $jumlahIkut > 0,
-                'url' => route('admin.absensi.pengaturan', ['tab' => 'daftar']),
+                'url' => route('admin.absensi.pengaturan', ['tempel' => 1]),
                 'tombol' => 'Pilih pegawai',
             ],
             [

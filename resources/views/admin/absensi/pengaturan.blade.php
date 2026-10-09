@@ -52,7 +52,6 @@
                     <li class="nav-item"><a class="nav-link {{ $tab === 'pegawai' ? 'active' : '' }}" href="{{ $urlTab('pegawai') }}"><i class="bi bi-people me-1"></i>Pegawai & Jam Kerja</a></li>
                     <li class="nav-item"><a class="nav-link {{ $tab === 'pemetaan' ? 'active' : '' }}" href="{{ $urlTab('pemetaan') }}">
                         <i class="bi bi-link-45deg me-1"></i>Hubungkan ID Mesin @if ($belumDipetakan->count())<span class="badge rounded-pill text-bg-warning ms-1">{{ $belumDipetakan->count() }}</span>@endif</a></li>
-                    <li class="nav-item"><a class="nav-link {{ $tab === 'daftar' ? 'active' : '' }}" href="{{ $urlTab('daftar') }}"><i class="bi bi-list-check me-1"></i>Pilih dari Daftar</a></li>
                 </ul>
             </div>
 
@@ -91,8 +90,11 @@
 
                 <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2 border-bottom">
                     <span class="small text-muted">{{ $jumlahFilter }} pegawai · centang beberapa untuk mengubah sekaligus</span>
+                    <button type="button" class="btn btn-sm btn-light ms-auto" data-bs-toggle="modal" data-bs-target="#modalDaftar" title="Centang banyak pegawai sekaligus dari daftar NIP/nama (Excel)">
+                        <i class="bi bi-clipboard-plus me-1"></i>Tempel daftar
+                    </button>
                     @if ($jumlahFilter)
-                        <button type="button" class="btn btn-sm btn-outline-primary ms-auto" data-massal="jadwal" data-sasaran="filter">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-massal="jadwal" data-sasaran="filter">
                             <i class="bi bi-clock me-1"></i>Atur jam kerja semua ({{ $jumlahFilter }})
                         </button>
                     @endif
@@ -225,38 +227,36 @@
                     @endforelse
                 </div>
 
-            @else
-                <div class="p-3 p-md-4">
-                    <div class="row g-3">
-                        <div class="col-lg-7">
-                            <form action="{{ route('admin.absensi.pengaturan.aktifkan-daftar') }}" method="POST">
-                                @csrf
-                                <label class="form-label fw-semibold" for="daftar">Tempel daftar pegawai yang diabsen</label>
-                                <textarea name="daftar" id="daftar" rows="10" class="form-control mb-2" required
-                                    placeholder="2020220197001  Elyanora, A.md&#10;2020220419002  Neneng Sumarni&#10;Tamin"></textarea>
-                                <button type="submit" class="btn btn-primary"><i class="bi bi-check2-square me-1"></i> Centang yang cocok</button>
-                            </form>
-                        </div>
-                        <div class="col-lg-5">
-                            <div class="bg-body-tertiary rounded-3 p-3 small">
-                                <p class="fw-semibold mb-2"><i class="bi bi-lightbulb me-1"></i>Cara pakai</p>
-                                <ol class="ps-3 mb-2 text-muted">
-                                    <li>Salin kolom NIP & nama dari Excel daftar absensi SDM.</li>
-                                    <li>Tempel di kotak ini — satu pegawai per baris.</li>
-                                    <li>Klik <strong>Centang yang cocok</strong>.</li>
-                                </ol>
-                                <p class="text-muted mb-0">Dicocokkan lewat NIP dulu, lalu nama (gelar diabaikan). Nama yang tidak ketemu akan ditampilkan agar bisa dicentang manual. Pegawai yang sudah dicentang tidak berubah.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             @endif
         </section>
     </div>
 </main>
 
-{{-- Modal: ubah satu pegawai --}}
-<div class="modal fade" id="modalPegawai" tabindex="-1" aria-labelledby="modalPegawaiJudul" aria-hidden="true">
+{{-- Modal: centang "ikut absensi" dari daftar tempel (dipakai saat persiapan awal) --}}
+<div class="modal fade" id="modalDaftar" tabindex="-1" aria-labelledby="modalDaftarJudul" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <form action="{{ route('admin.absensi.pengaturan.aktifkan-daftar') }}" method="POST" class="modal-content">
+            @csrf
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title h5 mb-0" id="modalDaftarJudul">Tempel Daftar Pegawai</h2>
+                    <small class="text-muted">Centang "ikut absensi" untuk banyak pegawai sekaligus.</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-2">Salin kolom NIP & nama dari Excel, tempel di bawah (satu pegawai per baris). Dicocokkan lewat NIP, lalu nama. Nama yang tidak ketemu akan ditampilkan.</p>
+                <textarea name="daftar" rows="10" class="form-control" required placeholder="2020220197001  Elyanora, A.md&#10;2020220419002  Neneng Sumarni&#10;Tamin"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check2-square me-1"></i>Centang yang cocok</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Modal: ubah satu pegawai --}}<div class="modal fade" id="modalPegawai" tabindex="-1" aria-labelledby="modalPegawaiJudul" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <form method="POST" class="modal-content" id="formPegawai">
             @csrf
@@ -360,6 +360,11 @@
                 bootstrap.Modal.getOrCreateInstance(modalM).show();
             });
         });
+
+        // Dibuka dari panduan persiapan: langsung tampilkan modal tempel daftar.
+        if (new URLSearchParams(location.search).get('tempel') === '1') {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDaftar')).show();
+        }
 
         // ---- Modal satu pegawai ----
         const modalP = document.getElementById('modalPegawai');

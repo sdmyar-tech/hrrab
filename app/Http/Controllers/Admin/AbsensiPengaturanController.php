@@ -31,7 +31,7 @@ class AbsensiPengaturanController extends Controller
 
         return view('admin.absensi.pengaturan', [
             'layout' => $request->user()->panelLayout(),
-            'tab' => in_array($request->query('tab'), ['pegawai', 'pemetaan', 'daftar'], true) ? $request->query('tab') : 'pegawai',
+            'tab' => in_array($request->query('tab'), ['pegawai', 'pemetaan'], true) ? $request->query('tab') : 'pegawai',
             'pegawais' => (clone $query)->with(['kepegawaian', 'jadwalKerja'])->orderByDesc('ikut_absensi')->orderBy('nama_lengkap')->paginate(25)->withQueryString(),
             'jumlahFilter' => (clone $query)->count(),
             'unitOpsi' => DB::table('kepegawaians')->whereNotNull('unit_kerja')->distinct()->orderBy('unit_kerja')->pluck('unit_kerja'),

@@ -170,7 +170,7 @@
                                             <i class="bi bi-people d-block mb-2"></i>
                                             <p class="fw-semibold mb-1">Belum ada pegawai yang diabsen</p>
                                             <p class="text-muted small mb-3">Pilih pegawai yang ikut absensi terlebih dahulu.</p>
-                                            @if ($bisaKelola)<a href="{{ route('admin.absensi.pengaturan', ['tab' => 'daftar']) }}" class="btn btn-primary btn-sm">Pilih pegawai</a>@endif
+                                            @if ($bisaKelola)<a href="{{ route('admin.absensi.pengaturan', ['tempel' => 1]) }}" class="btn btn-primary btn-sm">Pilih pegawai</a>@endif
                                         </div>
                                     @else
                                         @include('partials.kosong', ['teks' => 'Tidak ada pegawai dengan keterangan ini.', 'ikonKosong' => 'bi-funnel'])
