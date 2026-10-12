@@ -1,4 +1,4 @@
-@if ($lowongan->bisaDibukaKembali())
+@if ($lowongan->bisaDibukaKembali() || ($lowongan->status === \App\Models\Lowongan::STATUS_DITUTUP && auth()->user()->isAdmin()))
     <form action="{{ route('admin.lowongan.reopen', $lowongan) }}" method="POST" class="form-reopen-lowongan">
         @csrf
         <input type="hidden" name="tanggal_tutup" value="">
@@ -20,6 +20,7 @@
                 btn.addEventListener('click', function () {
                     const form = btn.closest('form');
                     const today = new Date();
+                    const adminBebas = @json(auth()->user()->isAdmin()); // Admin boleh tanggal lampau
                     const toISO = function (d) {
                         return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
                     };
@@ -32,7 +33,7 @@
                         html: '<div class="small text-muted mb-2">' + btn.dataset.judul + '</div>Pilih tanggal tutup baru (hari terakhir menerima lamaran):',
                         input: 'date',
                         inputValue: toISO(defaultTutup),
-                        inputAttributes: { min: toISO(today) },
+                        inputAttributes: adminBebas ? {} : { min: toISO(today) },
                         showCancelButton: true,
                         confirmButtonText: 'Ya, Buka Kembali',
                         cancelButtonText: 'Batal',
@@ -42,7 +43,7 @@
                         preConfirm: function (value) {
                             if (!value) {
                                 Swal.showValidationMessage('Tanggal tutup baru wajib diisi.');
-                            } else if (value < toISO(today)) {
+                            } else if (!adminBebas && value < toISO(today)) {
                                 Swal.showValidationMessage('Tanggal tutup baru minimal hari ini.');
                             }
                             return value;

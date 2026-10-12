@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\AbsensiImportController as AdminAbsensiImportCont
 use App\Http\Controllers\Admin\AbsensiPengaturanController as AdminAbsensiPengaturanController;
 use App\Http\Controllers\Admin\IzinAbsensiController as AdminIzinAbsensiController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\EditorDataController as AdminEditorDataController;
 use App\Http\Controllers\Admin\JabatanController as AdminJabatanController;
 use App\Http\Controllers\Admin\KandidatInternalController;
 use App\Http\Controllers\Admin\LamaranController as AdminLamaranController;
@@ -129,6 +130,15 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::get('/', [AdminLogAktivitasController::class, 'index'])->name('index');
             Route::get('/export', [AdminLogAktivitasController::class, 'export'])->name('export');
             Route::get('/arsip/{nama}', [AdminLogAktivitasController::class, 'unduhArsip'])->name('arsip')->where('nama', '[A-Za-z0-9\-\.]+');
+        });
+
+        // Editor Data: Admin bisa mengubah/menghapus data apa pun langsung (tercatat di log).
+        Route::prefix('data')->name('data.')->middleware('can:kelola-sistem')->group(function () {
+            Route::get('/', [AdminEditorDataController::class, 'index'])->name('index');
+            Route::get('/{entitas}', [AdminEditorDataController::class, 'daftar'])->name('daftar')->where('entitas', '[a-z_]+');
+            Route::get('/{entitas}/{id}/edit', [AdminEditorDataController::class, 'edit'])->name('edit')->where('entitas', '[a-z_]+');
+            Route::put('/{entitas}/{id}', [AdminEditorDataController::class, 'update'])->name('update')->where('entitas', '[a-z_]+');
+            Route::delete('/{entitas}/{id}', [AdminEditorDataController::class, 'destroy'])->name('destroy')->where('entitas', '[a-z_]+');
         });
 
         Route::prefix('jabatan')->name('jabatan.')->middleware('can:kelola-sistem')->group(function () {

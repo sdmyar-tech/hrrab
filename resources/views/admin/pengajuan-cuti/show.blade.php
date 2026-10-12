@@ -16,8 +16,9 @@
                     <p class="text-muted mb-0">{{ $pengajuanCuti->dataPegawai?->nama_lengkap }}</p>
                 </div>
             </div>
-            <div class="heading-actions">
+            <div class="heading-actions d-flex flex-wrap gap-2 align-items-center">
                 <span class="badge fs-6 {{ $pengajuanCuti->badgeClass() }}">{{ $pengajuanCuti->statusLabel() }}</span>
+                @include('admin.editor-data._tombol', ['entitas' => 'cuti', 'id' => $pengajuanCuti->id, 'teks' => 'Ubah semua kolom', 'kembaliKe' => route('admin.pengajuan-cuti.index')])
             </div>
         </div>
 

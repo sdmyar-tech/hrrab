@@ -109,6 +109,7 @@
                                                 </button>
                                             </form>
                                             @if (auth()->user()->isAdmin())
+                                                @include('admin.editor-data._tombol', ['entitas' => 'formasi', 'id' => $item->id, 'teks' => '', 'hapus' => false])
                                                 <form action="{{ route('admin.pengajuan-formasi.destroy', $item) }}" method="POST"
                                                     data-confirm="Hapus permanen pengajuan formasi {{ $item->jabatan }}?">
                                                     @csrf

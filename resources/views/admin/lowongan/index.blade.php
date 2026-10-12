@@ -91,6 +91,7 @@
                                         @else
                                             @include('admin.lowongan._reopen-button', ['lowongan' => $item, 'small' => true])
                                         @endif
+                                        @include('admin.editor-data._tombol', ['entitas' => 'lowongan', 'id' => $item->id, 'teks' => ''])
                                     </div>
                                 </td>
                             </tr>

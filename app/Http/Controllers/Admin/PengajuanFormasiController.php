@@ -119,7 +119,7 @@ class PengajuanFormasiController extends Controller
             'jabatan' => ['required', 'string', Rule::in(\App\Models\Jabatan::daftar())],
             'jumlah_dibutuhkan' => ['required', 'integer', 'min:1', 'max:50'],
             'kualifikasi' => ['required', 'string', 'max:2000'],
-            'target_waktu' => ['nullable', 'date', 'after_or_equal:today'],
+            'target_waktu' => ['nullable', 'date', ...(Auth::user()->isAdmin() ? [] : ['after_or_equal:today'])],
             'alasan' => ['required', 'string', 'max:2000'],
         ], [
             'unit_kerja.required' => 'Pilih unit yang membutuhkan pegawai (Anda memimpin lebih dari satu unit).',
@@ -226,11 +226,11 @@ class PengajuanFormasiController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if ($pengajuanFormasi->diajukan_oleh !== $user->id) {
+        if ($pengajuanFormasi->diajukan_oleh !== $user->id && ! $user->isAdmin()) {
             abort(403, 'Anda hanya bisa membatalkan pengajuan formasi milik sendiri.');
         }
 
-        if (! $pengajuanFormasi->isPending()) {
+        if (! $pengajuanFormasi->isPending() && ! $user->isAdmin()) {
             return redirect()->back()->with('error', 'Pengajuan formasi ini sudah diproses dan tidak bisa dibatalkan.');
         }
 

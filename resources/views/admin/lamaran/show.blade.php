@@ -222,6 +222,9 @@
                                 @if ($jadwal->catatan_hasil)
                                     <br><span class="text-muted">Catatan hasil: {{ $jadwal->catatan_hasil }}</span>
                                 @endif
+                                @if (auth()->user()->isAdmin())
+                                    <div class="mt-2">@include('admin.editor-data._tombol', ['entitas' => 'interview', 'id' => $jadwal->id, 'teks' => 'Ubah apa saja (Admin)'])</div>
+                                @endif
 
                                 @if ($jadwal->isTerjadwal() && $lamaran->isProses())
                                     <div class="mt-2 d-flex flex-wrap gap-2 align-items-start">
@@ -383,7 +386,7 @@
                                                 </div>
                                                 <div class="col-md-6">
                                                     <label class="form-label small mb-1">Tanggal</label>
-                                                    <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ \App\Support\Kalender::hariKerjaTerdekat(now())->format('Y-m-d') }}" min="{{ now()->format('Y-m-d') }}" required>
+                                                    <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ \App\Support\Kalender::hariKerjaTerdekat(now())->format('Y-m-d') }}" @unless (auth()->user()->isAdmin()) min="{{ now()->format('Y-m-d') }}" @endunless required>
                                                 </div>
                                                 <div class="col-md-3">
                                                     <label class="form-label small mb-1">Jam Mulai</label>
@@ -550,7 +553,7 @@
                                                 <div class="col-md-7">
                                                     <label class="form-label small mb-1">Hari Pertama</label>
                                                     <input type="date" name="tanggal_mulai" id="onboarding-mulai" class="form-control form-control-sm"
-                                                        value="{{ \App\Support\Kalender::hariKerjaTerdekat(now())->format('Y-m-d') }}" min="{{ now()->format('Y-m-d') }}" required>
+                                                        value="{{ \App\Support\Kalender::hariKerjaTerdekat(now())->format('Y-m-d') }}" @unless (auth()->user()->isAdmin()) min="{{ now()->format('Y-m-d') }}" @endunless required>
                                                 </div>
                                                 <div class="col-md-5">
                                                     <label class="form-label small mb-1">Durasi (hari)</label>
@@ -615,7 +618,7 @@
                                             <div class="col-md-5">
                                                 <label class="form-label small mb-1">Tanggal</label>
                                                 <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ $jadwal->tanggal->format('Y-m-d') }}"
-                                                    min="{{ $tanggalKontrakMinimal->format('Y-m-d') }}" required>
+                                                    @unless (auth()->user()->isAdmin()) min="{{ $tanggalKontrakMinimal->format('Y-m-d') }}" @endunless required>
                                             </div>
                                             <div class="col-md-3">
                                                 <label class="form-label small mb-1">Jam</label>
@@ -649,7 +652,7 @@
                                 <div class="col-md-4">
                                     <label class="form-label small mb-1">Tanggal</label>
                                     <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ $tanggalKontrakMinimal->format('Y-m-d') }}"
-                                        min="{{ $tanggalKontrakMinimal->format('Y-m-d') }}" required>
+                                        @unless (auth()->user()->isAdmin()) min="{{ $tanggalKontrakMinimal->format('Y-m-d') }}" @endunless required>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label small mb-1">Jam</label>
@@ -821,6 +824,40 @@
                                 <button type="submit" class="btn btn-warning btn-sm"><i class="bi bi-save me-1"></i>Simpan Langsung</button>
                             </div>
                         </form>
+
+                        {{-- Semua data rekrutmen kandidat ini: bisa diubah/dihapus apa pun statusnya (selesai, dibatalkan, lewat tanggal). --}}
+                        <hr>
+                        <h3 class="h6 fw-bold mb-2"><i class="bi bi-database-gear me-1"></i>Semua Data Kandidat Ini</h3>
+                        <ul class="list-unstyled small mb-0 data-admin-lamaran">
+                            <li class="d-flex flex-wrap gap-2 align-items-center justify-content-between py-1 border-bottom">
+                                <span><strong>Lamaran</strong> #{{ $lamaran->id }} · {{ $lamaran->statusLabel() }}</span>
+                                @include('admin.editor-data._tombol', ['entitas' => 'lamaran', 'id' => $lamaran->id, 'teks' => 'Ubah', 'kembaliKe' => route('admin.lamaran.index')])
+                            </li>
+                            @foreach ($lamaran->interviewJadwals as $j)
+                                <li class="d-flex flex-wrap gap-2 align-items-center justify-content-between py-1 border-bottom">
+                                    <span>{{ $j->tahapLabel() }} · {{ $j->tanggal->format('d M Y') }} · {{ $j->statusLabel() }}@if ($j->hasil_status) · {{ $j->hasilLabel() }}@endif</span>
+                                    @include('admin.editor-data._tombol', ['entitas' => 'interview', 'id' => $j->id, 'teks' => 'Ubah'])
+                                </li>
+                            @endforeach
+                            @foreach ($lamaran->screeningOnboardings as $s)
+                                <li class="d-flex flex-wrap gap-2 align-items-center justify-content-between py-1 border-bottom">
+                                    <span>Onboarding · {{ $s->tanggal_mulai->format('d M') }}–{{ $s->tanggal_selesai->format('d M Y') }} · {{ $s->status }}@if ($s->hasil_status) · {{ $s->hasil_status }}@endif</span>
+                                    @include('admin.editor-data._tombol', ['entitas' => 'onboarding', 'id' => $s->id, 'teks' => 'Ubah'])
+                                </li>
+                            @endforeach
+                            @foreach ($lamaran->kontrakJadwals as $kj)
+                                <li class="d-flex flex-wrap gap-2 align-items-center justify-content-between py-1 border-bottom">
+                                    <span>Kontrak · {{ $kj->tanggal->format('d M Y') }}{{ $kj->waktu ? ', ' . substr($kj->waktu, 0, 5) : '' }} · {{ $kj->status }}</span>
+                                    @include('admin.editor-data._tombol', ['entitas' => 'kontrak', 'id' => $kj->id, 'teks' => 'Ubah'])
+                                </li>
+                            @endforeach
+                            @if ($lamaran->dataPelamar)
+                                <li class="d-flex flex-wrap gap-2 align-items-center justify-content-between py-1">
+                                    <span>Biodata pelamar · {{ $lamaran->dataPelamar->nama_lengkap }}</span>
+                                    @include('admin.editor-data._tombol', ['entitas' => 'pelamar', 'id' => $lamaran->dataPelamar->id, 'teks' => 'Ubah', 'hapus' => false])
+                                </li>
+                            @endif
+                        </ul>
                     </div>
                 @endif
             </div>

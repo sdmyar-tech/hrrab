@@ -163,7 +163,7 @@ class LowonganController extends Controller
             return redirect()->back()->with('error', 'Hanya lowongan berstatus Ditutup yang bisa dibuka kembali.');
         }
 
-        if ($lowongan->isKuotaPenuh()) {
+        if ($lowongan->isKuotaPenuh() && ! Auth::user()->isAdmin()) {
             return redirect()->back()->with('error', 'Kuota lowongan ini sudah terpenuhi, tidak bisa dibuka kembali.');
         }
 
@@ -172,7 +172,7 @@ class LowonganController extends Controller
         }
 
         $validated = $request->validate([
-            'tanggal_tutup' => ['required', 'date', 'after_or_equal:today'],
+            'tanggal_tutup' => ['required', 'date', ...(Auth::user()->isAdmin() ? [] : ['after_or_equal:today'])],
         ], [
             'tanggal_tutup.required' => 'Tanggal tutup baru wajib diisi.',
             'tanggal_tutup.after_or_equal' => 'Tanggal tutup baru minimal hari ini.',
@@ -225,7 +225,7 @@ class LowonganController extends Controller
         $sudahDitutup = $lowongan?->status === Lowongan::STATUS_DITUTUP;
 
         $tanggalTutupRules = ['nullable', 'date'];
-        if ($tanggalTutupBerubah && ! $sudahDitutup) {
+        if ($tanggalTutupBerubah && ! $sudahDitutup && ! Auth::user()->isAdmin()) {
             $tanggalTutupRules[] = 'after_or_equal:today';
         }
 

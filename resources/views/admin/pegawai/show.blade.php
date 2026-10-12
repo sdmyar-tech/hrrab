@@ -242,6 +242,22 @@
                                 <i class="bi bi-pencil-square"></i> Edit Data
                             </a>
                         @endcan
+                        @if (auth()->user()->isAdmin())
+                            {{-- Admin: buka data mentah pegawai ini di Editor Data (semua kolom, tanpa aturan). --}}
+                            <div class="dropdown">
+                                <button class="btn btn-outline-warning btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-shield-lock"></i> Data Mentah (Admin)
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="{{ route('admin.data.edit', ['pegawai', $pegawai->id, 'kembali' => request()->fullUrl()]) }}"><i class="bi bi-person me-2"></i>Data pribadi</a></li>
+                                    @foreach (['kepegawaian' => ['Kepegawaian', 'bi-person-badge'], 'penugasan' => ['Penugasan / mutasi', 'bi-arrow-left-right'], 'bpjs' => ['BPJS', 'bi-shield-plus'],
+                                        'kontak_darurat' => ['Kontak darurat', 'bi-telephone'], 'dokumen' => ['Dokumen', 'bi-folder2'], 'absensi' => ['Absensi', 'bi-fingerprint'],
+                                        'jadwal_kerja' => ['Jam kerja', 'bi-alarm'], 'cuti' => ['Cuti', 'bi-calendar2-check'], 'lembur' => ['Lembur', 'bi-clock-history']] as $ent => [$lbl, $ik])
+                                        <li><a class="dropdown-item" href="{{ route('admin.data.daftar', [$ent, 'q' => $pegawai->nama_lengkap]) }}"><i class="bi {{ $ik }} me-2"></i>{{ $lbl }}</a></li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </section>

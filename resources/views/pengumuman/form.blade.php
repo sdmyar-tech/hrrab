@@ -69,7 +69,7 @@
                         </div>
                         <div class="mb-3" data-jadwal="sekali">
                             <label class="form-label small" for="tanggal">Tanggal</label>
-                            <input type="date" name="tanggal" id="tanggal" class="form-control" min="{{ now()->format('Y-m-d') }}"
+                            <input type="date" name="tanggal" id="tanggal" class="form-control" @unless (auth()->user()->isAdmin()) min="{{ now()->format('Y-m-d') }}" @endunless
                                 value="{{ old('tanggal', $pengumuman->tanggal?->format('Y-m-d')) }}">
                         </div>
                         <div class="mb-3" data-jadwal="mingguan">
@@ -123,7 +123,7 @@
                         </div>
                         <div class="mt-3">
                             <label class="form-label small" for="tampil_sampai">Tampil sampai <span class="text-muted">(opsional)</span></label>
-                            <input type="date" name="tampil_sampai" id="tampil_sampai" class="form-control" min="{{ now()->format('Y-m-d') }}"
+                            <input type="date" name="tampil_sampai" id="tampil_sampai" class="form-control" @unless (auth()->user()->isAdmin()) min="{{ now()->format('Y-m-d') }}" @endunless
                                 value="{{ old('tampil_sampai', $pengumuman->tampil_sampai?->format('Y-m-d')) }}">
                             <div class="form-text">Kosong: acara sekali tampil sampai hari-H (info tanpa tanggal 14 hari); kegiatan rutin tampil terus.</div>
                         </div>

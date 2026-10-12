@@ -154,7 +154,8 @@ private function validasi(Request $request, User $user): array
             'isi' => ['required', 'string', 'max:3000'],
             'kategori' => ['required', Rule::in(array_keys(Pengumuman::KATEGORI))],
             'jadwal' => ['required', Rule::in([Pengumuman::JADWAL_SEKALI, Pengumuman::JADWAL_HARIAN, Pengumuman::JADWAL_MINGGUAN])],
-            'tanggal' => ['nullable', 'date', 'after_or_equal:today'],
+            // Admin boleh tanggal lampau (mis. mencatat/merapikan acara yang sudah lewat).
+            'tanggal' => ['nullable', 'date', ...($user->isAdmin() ? [] : ['after_or_equal:today'])],
             'hari' => ['required_if:jadwal,mingguan', 'nullable', 'integer', 'between:0,6'],
             'jam_mulai' => ['nullable', 'date_format:H:i'],
             'jam_selesai' => ['nullable', 'date_format:H:i', 'after:jam_mulai'],
@@ -162,7 +163,7 @@ private function validasi(Request $request, User $user): array
             'sasaran_unit' => [$user->isKepalaBagian() ? 'required' : 'nullable', 'array'],
             'sasaran_unit.*' => [Rule::in($pilihan)],
             'penting' => ['nullable', 'boolean'],
-            'tampil_sampai' => ['nullable', 'date', 'after_or_equal:today'],
+            'tampil_sampai' => ['nullable', 'date', ...($user->isAdmin() ? [] : ['after_or_equal:today'])],
         ], [
             'hari.required_if' => 'Pilih hari untuk kegiatan mingguan.',
             'jam_selesai.after' => 'Jam selesai harus setelah jam mulai.',
@@ -214,7 +215,7 @@ private function validasi(Request $request, User $user): array
 
         $v = $request->validate([
             'absen_buka' => ['required', 'date_format:Y-m-d\TH:i'],
-            'absen_tutup' => ['required', 'date_format:Y-m-d\TH:i', 'after:absen_buka', ...($tutupBerubah ? ['after:now'] : [])],
+            'absen_tutup' => ['required', 'date_format:Y-m-d\TH:i', 'after:absen_buka', ...($tutupBerubah && ! $user->isAdmin() ? ['after:now'] : [])],
             'absen_lat' => ['required', 'numeric', 'between:-90,90'],
             'absen_lng' => ['required', 'numeric', 'between:-180,180'],
             'absen_radius' => ['required', 'integer', 'between:' . AbsenAcara::RADIUS_MIN . ',' . AbsenAcara::RADIUS_MAKS],

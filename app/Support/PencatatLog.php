@@ -93,6 +93,8 @@ class PencatatLog
         'admin.users.update' => ['ubah', 'Akun', 'Mengubah akun'],
         'admin.users.destroy' => ['hapus', 'Akun', 'Menghapus akun'],
         'admin.users.export' => ['ekspor', 'Akun', 'Mengekspor akun'],
+        'admin.data.update' => ['ubah', 'Editor Data', 'Mengubah data langsung (Admin)'],
+        'admin.data.destroy' => ['hapus', 'Editor Data', 'Menghapus data langsung (Admin)'],
         'admin.jabatan.store' => ['tambah', 'Master Jabatan', 'Menambah jabatan'],
         'admin.jabatan.update' => ['ubah', 'Master Jabatan', 'Mengubah nama jabatan'],
         'admin.jabatan.destroy' => ['hapus', 'Master Jabatan', 'Menghapus jabatan'],

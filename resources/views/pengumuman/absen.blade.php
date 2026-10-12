@@ -121,6 +121,7 @@
                                     @else – @endif
                                 </td>
                                 <td class="text-end text-nowrap">
+                                    @include('admin.editor-data._tombol', ['entitas' => 'peserta_acara', 'id' => $p->id, 'teks' => '', 'hapus' => false])
                                     @if ($p->sudahAbsen())
                                         <form action="{{ route('pengumuman.absen.tandai', [$pengumuman, $p]) }}" method="POST" class="d-inline"
                                             data-confirm="Batalkan kehadiran {{ $nama($p) }}? Status kembali menjadi belum absen.">
