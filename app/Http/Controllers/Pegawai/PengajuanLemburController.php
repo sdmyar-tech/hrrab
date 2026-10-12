@@ -93,6 +93,6 @@ class PengajuanLemburController extends Controller
 
         return redirect()
             ->route('pegawai.pengajuan-lembur')
-            ->with('success', 'Pengajuan lembur berhasil dikirim. Menunggu persetujuan admin.');
+            ->with('success', 'Pengajuan lembur berhasil dikirim. Menunggu persetujuan ' . PengajuanWorkflow::levelLabel($pengajuan->current_level) . '.');
     }
 }

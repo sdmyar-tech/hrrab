@@ -112,13 +112,17 @@ class PengajuanFormasiController extends Controller
             abort(403, 'Hanya Kepala Bagian/Koordinator dan Kepala SDM yang dapat mengajukan permintaan kekurangan pegawai.');
         }
 
+        $unitBoleh = RekrutmenAccess::unitAjuanFormasi($user);
         $validated = $request->validate([
-            'unit_kerja' => ['nullable', 'string', Rule::in(RekrutmenAccess::unitAjuanFormasi($user))],
+            // Memimpin lebih dari satu unit → unit wajib dipilih (tidak ditebak diam-diam).
+            'unit_kerja' => [count($unitBoleh) > 1 ? 'required' : 'nullable', 'string', Rule::in($unitBoleh)],
             'jabatan' => ['required', 'string', Rule::in(\App\Models\Jabatan::daftar())],
             'jumlah_dibutuhkan' => ['required', 'integer', 'min:1', 'max:50'],
             'kualifikasi' => ['required', 'string', 'max:2000'],
             'target_waktu' => ['nullable', 'date', 'after_or_equal:today'],
             'alasan' => ['required', 'string', 'max:2000'],
+        ], [
+            'unit_kerja.required' => 'Pilih unit yang membutuhkan pegawai (Anda memimpin lebih dari satu unit).',
         ]);
 
         $formasi = $user->pengajuanFormasis()->create([

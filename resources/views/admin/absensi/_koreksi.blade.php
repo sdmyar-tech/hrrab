@@ -5,7 +5,7 @@
 @php $ikAbs = \App\Support\Absensi\TampilanAbsensi::IKON; @endphp
 <div class="modal fade" id="modalKoreksi" tabindex="-1" aria-labelledby="modalKoreksiJudul" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <form method="POST" class="modal-content" id="formKoreksi">
+        <form method="POST" class="modal-content" id="formKoreksi" novalidate>
             @csrf
             <input type="hidden" name="tanggal">
             <input type="hidden" name="aksi" value="simpan">
@@ -143,22 +143,26 @@
             });
         });
 
+        // Validasi di sini (form novalidate) agar pesannya jelas & seragam, bukan tooltip bawaan browser.
+        const tahan = function (e, judul, teks, fokus) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            Swal.fire({ icon: 'info', title: judul, text: teks || '', confirmButtonColor: '#880f12' }).then(() => fokus && fokus.focus());
+        };
         form.addEventListener('submit', function (e) {
+            if (form.aksi.value === 'reset') return;
             const mode = form.querySelector('[name="mode"]:checked')?.value;
             if (mode === 'jam') {
                 pilihStatus('');
-                if (!form.jam_masuk.value && !form.jam_keluar.value) {
-                    e.preventDefault();
-                    Swal.fire({ icon: 'info', title: 'Isi jam masuk atau pulang', confirmButtonColor: '#880f12' });
-                }
+                if (!form.jam_masuk.value && !form.jam_keluar.value) return tahan(e, 'Isi jam masuk atau pulang', '', form.jam_masuk);
+                if (form.jam_masuk.value && form.jam_keluar.value && form.jam_keluar.value <= form.jam_masuk.value) return tahan(e, 'Jam pulang harus setelah jam masuk', '', form.jam_keluar);
             } else if (mode === 'tidak_masuk' && !form.status_manual.value) {
-                e.preventDefault();
-                Swal.fire({ icon: 'info', title: 'Pilih keterangan', text: 'Izin, Sakit, Dinas Luar, atau Alpa.', confirmButtonColor: '#880f12' });
+                return tahan(e, 'Pilih keterangan', 'Izin, Sakit, Dinas Luar, atau Alpa.');
             } else if (mode === 'lembur' && !/^\d{1,2}:\d{2}$/.test(form.lembur_manual.value)) {
-                e.preventDefault();
-                Swal.fire({ icon: 'info', title: 'Isi lama lembur', text: 'Format jam:menit, mis. 02:00.', confirmButtonColor: '#880f12' });
+                return tahan(e, 'Isi lama lembur', 'Format jam:menit, mis. 02:00.', form.lembur_manual);
             }
-        });
+            if (!alasan.value.trim()) return tahan(e, 'Isi alasan koreksi', 'Klik salah satu alasan cepat, atau tulis sendiri.', alasan);
+        }, true);
 
         // "Batalkan koreksi" = kembali ke data mesin (tanpa wajib alasan).
         k('reset').addEventListener('click', function () {
@@ -173,5 +177,7 @@
             });
         });
         modal.addEventListener('hidden.bs.modal', () => { alasan.required = true; });
+        // Fokus selalu di dalam modal saat terbuka (Esc & Tab langsung berfungsi walau pop-up lain baru ditutup).
+        modal.addEventListener('shown.bs.modal', () => (form.querySelector('[name="mode"]:checked') || form.alasan).focus({ preventScroll: true }));
     });
 </script>

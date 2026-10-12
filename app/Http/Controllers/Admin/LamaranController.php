@@ -578,6 +578,21 @@ class LamaranController extends Controller
             return redirect()->back()->with('error', 'Rekrut hanya bisa dilakukan setelah onboarding dinyatakan Lulus oleh Kepala SDM & Kepala Bagian.');
         }
 
+        if (! $this->adminBebas()) {
+            // Rekrut = setelah tanda tangan kontrak: tidak boleh sebelum tanggal kontrak yang dijadwalkan.
+            $kontrak = $lamaran->kontrakJadwals()->where('status', KontrakJadwal::STATUS_TERJADWAL)->orderBy('tanggal')->first();
+            if ($kontrak && $kontrak->tanggal->gt(now()->startOfDay())) {
+                return redirect()->back()->with('error', 'Rekrut dilakukan setelah tanda tangan kontrak. Jadwal kontrak: '
+                    . $kontrak->tanggal->translatedFormat('l, d F Y') . '. Majukan jadwal kontrak bila perlu.');
+            }
+
+            // Kuota lowongan tidak boleh terlampaui.
+            if ($lamaran->lowongan?->isKuotaPenuh()) {
+                return redirect()->back()->with('error', 'Kuota lowongan sudah terpenuhi (' . $lamaran->lowongan->jumlah_terisi . '/' . $lamaran->lowongan->jumlah_dibutuhkan
+                    . '). Tambah jumlah kebutuhan pada lowongan terlebih dahulu, atau tolak kandidat ini.');
+            }
+        }
+
         // Tanggal masuk = hari pertama onboarding; Admin tanpa onboarding mengisi manual.
         if ($onboarding) {
             $request->merge(['tanggal_masuk' => $onboarding->tanggal_mulai->toDateString()]);
@@ -708,6 +723,8 @@ class LamaranController extends Controller
             'diputuskan_oleh' => Auth::id(),
             'diputuskan_pada' => now(),
         ]);
+        // Kontrak sudah ditandatangani: jadwal kontrak yang masih terjadwal ditandai selesai (tidak muncul lagi di agenda).
+        $lamaran->kontrakJadwals()->where('status', KontrakJadwal::STATUS_TERJADWAL)->update(['status' => KontrakJadwal::STATUS_SELESAI, 'updated_at' => now()]);
 
         if (! $lamaran->lowongan) {
             return;

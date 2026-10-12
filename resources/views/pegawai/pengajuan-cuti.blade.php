@@ -36,19 +36,20 @@
         </div>
 
         @if (! $eligible)
-            <div class="alert alert-warning">
-                <strong>Belum bisa mengajukan cuti.</strong> Pengajuan cuti hanya untuk pegawai dengan masa kerja lebih dari 1 tahun.
+            <div class="alert alert-info d-flex gap-2 align-items-start">
+                <i class="bi bi-info-circle-fill mt-1"></i>
+                <div><strong>Cuti tahunan belum tersedia</strong> karena masa kerja Anda belum 1 tahun.
+                    Anda tetap bisa mengajukan <strong>cuti alasan penting</strong> (menikah, duka, istri melahirkan, bencana, dll.).</div>
             </div>
         @endif
 
         <div class="row g-3">
-            @if ($eligible)
                 <div class="col-12 col-xl-6">
                     <div class="panel p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h2 class="h6 fw-bold mb-0">Keterangan Cuti</h2>
                             <div class="text-end">
-                                <span class="badge text-bg-info d-block mb-1">Sisa Cuti Tahunan: {{ $sisaCuti }} / {{ $annualQuota }} hari</span>
+                                @if ($eligible)<span class="badge text-bg-info d-block mb-1">Sisa Cuti Tahunan: {{ $sisaCuti }} / {{ $annualQuota }} hari</span>@endif
                                 <span class="badge text-bg-secondary">Pengajuan Tahun Ini: {{ $jumlahPengajuanTahunIni }} / {{ $maxPengajuanTahunan }} kali</span>
                             </div>
                         </div>
@@ -60,11 +61,11 @@
                                 <label class="form-label">Jenis Cuti</label>
                                 <div class="d-flex gap-3">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="jenis_cuti" id="jenisTahunan" value="tahunan" @checked(old('jenis_cuti', 'tahunan') === 'tahunan')>
-                                        <label class="form-check-label" for="jenisTahunan">Cuti Tahunan</label>
+                                        <input class="form-check-input" type="radio" name="jenis_cuti" id="jenisTahunan" value="tahunan" @checked($eligible && old('jenis_cuti', 'tahunan') === 'tahunan') @disabled(! $eligible)>
+                                        <label class="form-check-label" for="jenisTahunan">Cuti Tahunan @unless ($eligible)<small class="text-muted">(setelah 1 tahun)</small>@endunless</label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="jenis_cuti" id="jenisBesar" value="besar" @checked(old('jenis_cuti') === 'besar')>
+                                        <input class="form-check-input" type="radio" name="jenis_cuti" id="jenisBesar" value="besar" @checked(old('jenis_cuti') === 'besar' || ! $eligible)>
                                         <label class="form-check-label" for="jenisBesar">Cuti Besar</label>
                                     </div>
                                 </div>
@@ -75,7 +76,7 @@
                                 <select name="kategori_cuti_besar" id="kategori_cuti_besar" class="form-select @error('kategori_cuti_besar') is-invalid @enderror">
                                     <option value="">-- Pilih --</option>
                                     @foreach ($kategoriBesarOptions as $value => $label)
-                                        <option value="{{ $value }}" data-durasi="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_DURASI[$value] ?? '' }}" data-dadakan="{{ in_array($value, \App\Models\PengajuanCuti::KATEGORI_DADAKAN, true) ? 1 : 0 }}" {{ old('kategori_cuti_besar') == $value ? 'selected' : '' }}>{{ $label }}</option>
+                                        <option value="{{ $value }}" data-durasi="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_DURASI[$value] ?? '' }}" data-dadakan="{{ in_array($value, \App\Models\PengajuanCuti::KATEGORI_DADAKAN, true) ? 1 : 0 }}" {{ old('kategori_cuti_besar') == $value ? 'selected' : '' }} @disabled(! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true))>{{ $label }}{{ ! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true) ? ' (setelah 1 tahun)' : '' }}</option>
                                     @endforeach
                                 </select>
                                 <small id="durasiHint" class="text-muted d-block mt-1"></small>
@@ -144,9 +145,8 @@
                         </form>
                     </div>
                 </div>
-            @endif
 
-            <div class="col-12 {{ $eligible ? 'col-xl-6' : '' }}">
+            <div class="col-12 col-xl-6">
                 <div class="panel p-4">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                         <h2 class="h6 fw-bold mb-0">Riwayat Pengajuan Cuti</h2>
@@ -204,7 +204,6 @@
     </div>
 </div>
 
-@if ($eligible)
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const jenisRadios = document.querySelectorAll('input[name="jenis_cuti"]');
@@ -353,5 +352,4 @@
         updateLamaCuti();
     });
 </script>
-@endif
 @endsection

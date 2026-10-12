@@ -687,6 +687,26 @@
                                         </div>
                                     </div>
                                 @endif
+                                @php
+                                    // Sama dengan aturan server: rekrut setelah tanda tangan kontrak & kuota lowongan belum penuh (Admin bebas).
+                                    $kontrakBerikut = $lamaran->kontrakJadwals->where('status', \App\Models\KontrakJadwal::STATUS_TERJADWAL)->sortBy('tanggal')->first();
+                                    $tungguKontrak = ! auth()->user()->isAdmin() && $kontrakBerikut && $kontrakBerikut->tanggal->gt(now()->startOfDay());
+                                    $kuotaPenuh = ! auth()->user()->isAdmin() && $lamaran->lowongan?->isKuotaPenuh();
+                                @endphp
+                                @if ($onboardingLulus && $tungguKontrak)
+                                    <div class="col-12">
+                                        <div class="alert alert-info small py-2 mb-1">
+                                            <i class="bi bi-calendar-check me-1"></i>Rekrut bisa dilakukan mulai hari tanda tangan kontrak: <strong>{{ $kontrakBerikut->tanggal->translatedFormat('l, d F Y') }}</strong>.
+                                        </div>
+                                    </div>
+                                @endif
+                                @if ($kuotaPenuh)
+                                    <div class="col-12">
+                                        <div class="alert alert-warning small py-2 mb-1">
+                                            <i class="bi bi-people-fill me-1"></i>Kuota lowongan sudah terpenuhi ({{ $lamaran->lowongan->jumlah_terisi }}/{{ $lamaran->lowongan->jumlah_dibutuhkan }}). Tambah jumlah kebutuhan di lowongan, atau tolak kandidat ini.
+                                        </div>
+                                    </div>
+                                @endif
                                 @if ($lamaran->isKandidatPegawai())
                                     <div class="col-12">
                                         <div class="alert alert-info small py-2 mb-1">
@@ -742,7 +762,7 @@
                                     <input type="text" id="rekrut-tanggal-habis" class="form-control form-control-sm" disabled placeholder="Otomatis terkalkulasi">
                                 </div>
                                 <div class="col-12 d-flex gap-2 pt-3 mt-1 border-top">
-                                    <button type="submit" class="btn btn-success flex-fill" @disabled(! $onboardingLulus && ! $adminBebas)>
+                                    <button type="submit" class="btn btn-success flex-fill" @disabled((! $onboardingLulus && ! $adminBebas) || $tungguKontrak || $kuotaPenuh)>
                                         <i class="bi bi-check-circle me-1"></i> {{ $lamaran->isKandidatPegawai() ? 'Tetapkan ke Posisi Baru' : 'Rekrut Jadi Pegawai' }}
                                     </button>
                                     <button type="button" form="form-tolak-lamaran" class="btn btn-outline-danger flex-fill btn-reject-lamaran">

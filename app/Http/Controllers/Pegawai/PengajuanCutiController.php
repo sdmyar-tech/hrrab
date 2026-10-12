@@ -65,10 +65,18 @@ class PengajuanCutiController extends Controller
         $masaKerjaCukup = $kepegawaian?->tanggal_masuk
             && Carbon::parse($kepegawaian->tanggal_masuk)->diffInYears(now()) >= 1;
 
-        if (! $pegawai || ! $masaKerjaCukup) {
+        if (! $pegawai) {
+            return redirect()->route('pegawai.pengajuan-cuti')->with('error', 'Data pegawai Anda belum tersedia. Hubungi bagian SDM.');
+        }
+
+        // Masa kerja 1 tahun hanya syarat cuti tahunan (& izin studi). Cuti alasan penting (duka, menikah, melahirkan, ...) boleh kapan saja.
+        $perluMasaKerja = $request->input('jenis_cuti') === PengajuanCuti::JENIS_TAHUNAN
+            || in_array($request->input('kategori_cuti_besar'), PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true);
+        if ($perluMasaKerja && ! $masaKerjaCukup) {
             return redirect()
                 ->route('pegawai.pengajuan-cuti')
-                ->with('error', 'Anda belum bisa mengajukan cuti karena masa kerja belum genap 1 tahun.');
+                ->withInput()
+                ->with('error', 'Cuti tahunan/izin studi baru bisa diajukan setelah masa kerja 1 tahun. Cuti alasan penting (duka, menikah, melahirkan, dll.) tetap bisa diajukan.');
         }
 
         // Cuti mendadak (duka, melahirkan, bencana, panggilan) tidak terikat aturan H-7.
@@ -165,7 +173,7 @@ class PengajuanCutiController extends Controller
 
         return redirect()
             ->route('pegawai.pengajuan-cuti')
-            ->with('success', 'Pengajuan cuti berhasil dikirim. Menunggu persetujuan admin.');
+            ->with('success', 'Pengajuan cuti berhasil dikirim. Menunggu persetujuan ' . PengajuanWorkflow::levelLabel($pengajuan->current_level) . '.');
     }
 
     private function hitungHariKerja(Carbon $mulai, Carbon $selesai): int

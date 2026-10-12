@@ -52,6 +52,12 @@ class PengajuanCuti extends Model
         'izin_studi' => null,
     ];
 
+    /**
+     * Cuti besar = izin karena alasan penting (UU 13/2003 Pasal 93): TIDAK bergantung masa kerja.
+     * Pengecualian yang tetap butuh masa kerja minimal 1 tahun (sama seperti cuti tahunan, Pasal 79):
+     */
+    public const KATEGORI_PERLU_MASA_KERJA = ['izin_studi'];
+
     /** Cuti besar mendadak: bebas aturan H-7, boleh mulai di hari yang sama dengan pengajuan (tidak boleh tanggal lampau). */
     public const KATEGORI_DADAKAN = [
         'keluarga_inti_meninggal',
