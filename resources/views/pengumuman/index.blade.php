@@ -71,6 +71,10 @@
 
                         <p class="mb-3" style="white-space: pre-line;">{{ $p->isi }}</p>
 
+                        @if ($p->absen_aktif && ($p->peserta->isNotEmpty() || $bisaPantauAbsen))
+                            @include('pengumuman._kartu-absen', ['saya' => $p->peserta->first()])
+                        @endif
+
                         <div class="d-flex flex-wrap justify-content-between gap-2 small text-muted border-top pt-2">
                             <span><i class="bi bi-people me-1"></i>{{ $p->sasaranLabel() }}</span>
                             <span>{{ $p->pembuat?->name ?? 'Sistem' }} &middot; {{ $p->created_at->diffForHumans() }}</span>
@@ -92,4 +96,7 @@
         @endif
     </div>
 </div>
+@if ($pengumumans->getCollection()->contains(fn ($p) => $p->absen_aktif && $p->peserta->isNotEmpty()))
+    @include('pengumuman._modal-scan')
+@endif
 @endsection

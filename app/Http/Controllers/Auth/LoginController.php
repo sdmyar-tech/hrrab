@@ -69,6 +69,11 @@ class LoginController extends Controller
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
+        // Datang dari scan QR absen acara sebelum login → kembali ke halaman absen itu.
+        if (! $isGuest && ($tujuanAcara = $request->session()->pull('acara_tujuan'))) {
+            return redirect($tujuanAcara)->with('success', 'Selamat datang, ' . $user->name . '! Lanjutkan absen acara.');
+        }
+
         if ($user->isStaff()) {
             return redirect()
                 ->route('pegawai.dashboard')

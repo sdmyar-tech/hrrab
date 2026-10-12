@@ -19,7 +19,7 @@
             </div>
         </div>
 
-        <form action="{{ $baru ? route('pengumuman.store') : route('pengumuman.update', $pengumuman) }}" method="POST"
+        <form action="{{ $baru ? route('pengumuman.store') : route('pengumuman.update', $pengumuman) }}" method="POST" id="formPengumuman"
             data-confirm="{{ $baru ? 'Terbitkan pengumuman ini?' : 'Simpan perubahan pengumuman?' }}">
             @csrf
             @unless ($baru) @method('PUT') @endunless
@@ -52,6 +52,10 @@
                                 placeholder="Tuliskan informasi lengkap: tujuan, susunan acara, pakaian, dll.">{{ old('isi', $pengumuman->isi) }}</textarea>
                         </div>
                     </section>
+
+                    @if ($absen)
+                        @include('pengumuman._form-absen')
+                    @endif
                 </div>
 
                 <div class="col-12 col-lg-4 d-flex flex-column gap-3">

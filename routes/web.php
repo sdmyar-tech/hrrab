@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AbsenAcaraController;
 use App\Http\Controllers\AbsensiSayaController;
 use App\Http\Controllers\Admin\AbsensiController as AdminAbsensiController;
 use App\Http\Controllers\Admin\AbsensiImportController as AdminAbsensiImportController;
@@ -61,6 +62,9 @@ Route::middleware('bukan-pelamar')->group(function () {
 
 Route::get('/jadwal-interview/{token}', [JadwalKandidatController::class, 'show'])
     ->name('jadwal-kandidat.show')->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1');
+
+// Tujuan QR absen acara. Di luar grup auth agar tamu melihat pesan 'masuk dulu' (bukan 404).
+Route::get('/acara/{pengumuman}/absen', [AbsenAcaraController::class, 'scan'])->name('acara.absen')->middleware('throttle:30,1');
 
 Route::prefix('lowongan')->name('lowongan.')->group(function () {
     Route::get('/', [PublicLowonganController::class, 'index'])->name('index');
@@ -260,6 +264,14 @@ Route::prefix('pelamar')->name('pelamar.')->middleware('pelamar')->group(functio
     Route::middleware('internal')->group(function () {
         Route::get('/pengumuman', [PengumumanController::class, 'index'])->name('pengumuman.index');
         Route::post('/pengumuman/baca-semua', [PengumumanController::class, 'bacaSemua'])->name('pengumuman.baca-semua');
+
+        // Absen acara — hak akses (SDM/Admin/GM) dicek di controller.
+        Route::post('/acara/{pengumuman}/absen', [AbsenAcaraController::class, 'simpan'])->name('acara.absen.simpan')->middleware('throttle:10,1');
+        Route::get('/pengumuman/{pengumuman}/absen', [AbsenAcaraController::class, 'pantau'])->name('pengumuman.absen');
+        Route::get('/pengumuman/{pengumuman}/absen/qr', [AbsenAcaraController::class, 'qr'])->name('pengumuman.absen.qr');
+        Route::get('/pengumuman/{pengumuman}/absen/qr/token', [AbsenAcaraController::class, 'qrToken'])->name('pengumuman.absen.qr-token');
+        Route::post('/pengumuman/{pengumuman}/absen/ingatkan', [AbsenAcaraController::class, 'ingatkan'])->name('pengumuman.absen.ingatkan')->middleware('throttle:6,1');
+        Route::post('/pengumuman/{pengumuman}/absen/{peserta}', [AbsenAcaraController::class, 'tandai'])->name('pengumuman.absen.tandai');
         Route::middleware('can:kelola-pengumuman')->group(function () {
             Route::get('/pengumuman/create', [PengumumanController::class, 'create'])->name('pengumuman.create');
             Route::get('/pengumuman/export', [PengumumanController::class, 'export'])->name('pengumuman.export');
