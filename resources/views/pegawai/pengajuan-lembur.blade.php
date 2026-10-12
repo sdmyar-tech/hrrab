@@ -118,10 +118,10 @@
                                 @forelse ($pengajuanLemburs as $item)
                                     <tr>
                                         <td>
-                                            {{ optional($item->tanggal)->format('d M Y') }}
+                                            {{ optional($item->tanggal)->translatedFormat('d M Y') }}
                                             <small class="text-muted d-block">{{ $item->hari }}@if (count($unitOptions) > 1 && $item->unit_kerja) &middot; {{ $item->unit_kerja }}@endif</small>
                                         </td>
-                                        <td>{{ $item->jam_mulai }} - {{ $item->jam_selesai }}</td>
+                                        <td>{{ substr((string) $item->jam_mulai, 0, 5) }} - {{ substr((string) $item->jam_selesai, 0, 5) }}</td>
                                         <td>{{ $item->jumlah_jam }} jam</td>
                                         <td><span class="badge {{ $item->badgeClass() }}">{{ $item->statusLabel() }}</span></td>
                                         <td>{{ $item->catatan_admin ?? '-' }}</td>

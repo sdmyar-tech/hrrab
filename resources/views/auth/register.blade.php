@@ -10,7 +10,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: Arial, sans-serif;
+            font-family: var(--hr-font);
             padding: 2rem 1rem;
         }
 

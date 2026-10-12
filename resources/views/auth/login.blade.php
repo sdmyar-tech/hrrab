@@ -10,7 +10,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: Arial, sans-serif;
+            font-family: var(--hr-font);
         }
 
         .login-box {
@@ -115,6 +115,12 @@
             text-decoration: underline;
         }
 
+        .brand-logo { width: 64px; height: 64px; object-fit: contain; flex: none; }
+        .brand { padding-bottom: 1.25rem; border-bottom: 1px solid #f0e4e4; }
+        .login-judul { font-size: 1.25rem; font-weight: 700; margin: 0 0 .25rem; color: #1d2433; letter-spacing: -.01em; }
+        .login-sub { font-size: .875rem; color: #687083; margin-bottom: 1.25rem; }
+        .login-box .form-control { min-height: 46px; font-size: .9375rem; }
+
         .footer-links {
             margin-top: 1.2rem;
             display: flex;
@@ -132,12 +138,14 @@
 @section('content')
     <div class="login-box">
         <div class="brand">
-            <img class="w-50 h-20" src="{{ asset('assets-admin/images/png/logo_abd.png') }}" alt="logo">
+            <img class="brand-logo" src="{{ asset('assets-admin/images/png/logo_abd.png') }}" alt="Logo Yayasan Abdurrab">
             <div>
-                <p class="brand-title">Human Resource</p>
-                <p class="brand-sub">Management System</p>
+                <p class="brand-title">HRRAB</p>
+                <p class="brand-sub">Sistem Informasi SDM · Yayasan Abdurrab</p>
             </div>
         </div>
+        <h1 class="login-judul">Masuk ke akun Anda</h1>
+        <p class="login-sub">Gunakan email & password akun pegawai.</p>
 
         <form action="{{ route('login.submit') }}" method="POST" id="login-form">
             @csrf

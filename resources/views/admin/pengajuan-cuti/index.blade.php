@@ -94,7 +94,7 @@
                                         <small class="text-muted d-block">{{ $item->kategoriBesarLabel() }}</small>
                                     @endif
                                 </td>
-                                <td>{{ $item->tanggal_mulai->format('d M Y') }} - {{ $item->tanggal_selesai->format('d M Y') }}</td>
+                                <td>{{ $item->tanggal_mulai->translatedFormat('d M Y') }} - {{ $item->tanggal_selesai->translatedFormat('d M Y') }}</td>
                                 <td>{{ $item->lama_cuti }} hari</td>
                                 <td>{{ $item->pengganti_nama ?? '-' }}</td>
                                 <td>

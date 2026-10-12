@@ -337,6 +337,17 @@
             }
         }
     </style>
+    @include('layouts.partials.ui-css')
+    <style>
+        /* Halaman publik: latar & kartu mengikuti token ui.css. */
+        body { background: var(--admin-bg); }
+        .public-navbar { background: rgba(255, 255, 255, .92); backdrop-filter: saturate(160%) blur(12px); border-bottom-color: var(--admin-border); }
+        .job-card, .detail-card, .summary-card { border-color: var(--admin-border); border-radius: 14px; box-shadow: var(--admin-shadow); }
+        .job-card:hover { transform: translateY(-2px); box-shadow: var(--admin-shadow-lg); border-color: #e3c3c4; }
+        .search-card { border-radius: 14px; box-shadow: 0 16px 40px rgba(16, 24, 40, .12); }
+        .search-card .form-control, .search-card .form-select { border-color: #dcdfe5; }
+        .public-footer { background: #17181d; }
+    </style>
 
     @yield('styles')
 </head>

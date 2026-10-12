@@ -123,7 +123,7 @@
                                         {{ $item->unitKerjaTujuan() }}{{ $item->lowongan ? '' : ' · tanpa lowongan' }}
                                     </small>
                                 </td>
-                                <td>{{ optional($item->created_at)->format('d M Y') }}</td>
+                                <td>{{ optional($item->created_at)->translatedFormat('d M Y') }}</td>
                                 <td><span class="badge {{ $item->badgeClass() }}">{{ $item->statusLabel() }}</span></td>
                                 <td>{{ $item->isProses() ? $item->tahapLabel() : '-' }}</td>
                                 <td class="text-end">

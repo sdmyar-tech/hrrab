@@ -121,7 +121,7 @@
                                         <small class="text-muted">BPJS:
                                             {{ optional($pegawai->bpjs)->no_bpjs_kesehatan ?? '-' }}</small>
                                     </td>
-                                    <td>{{ optional(optional($pegawai->kepegawaian)->tanggal_masuk)->format('d M Y') ?? '-' }}</td>
+                                    <td>{{ optional(optional($pegawai->kepegawaian)->tanggal_masuk)->translatedFormat('d M Y') ?? '-' }}</td>
                                     <td class="text-end">
                                         <div class="dropdown">
                                             <button class="btn btn-light btn-sm dropdown-toggle" type="button"

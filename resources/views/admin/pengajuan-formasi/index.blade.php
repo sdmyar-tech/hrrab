@@ -63,7 +63,7 @@
                             <tr>
                                 <td>
                                     <span class="fw-semibold d-block">{{ $item->diajukanOleh?->name }}</span>
-                                    <small class="text-muted">{{ optional($item->created_at)->format('d M Y') }}</small>
+                                    <small class="text-muted">{{ optional($item->created_at)->translatedFormat('d M Y') }}</small>
                                 </td>
                                 <td>{{ $item->unit_kerja }}</td>
                                 <td>
@@ -71,7 +71,7 @@
                                     <button type="button" class="btn btn-link btn-sm p-0 ms-1 btn-detail-formasi"
                                         data-kualifikasi="{{ $item->kualifikasi }}"
                                         data-alasan="{{ $item->alasan }}"
-                                        data-target="{{ optional($item->target_waktu)->format('d M Y') ?? '-' }}"
+                                        data-target="{{ optional($item->target_waktu)->translatedFormat('d M Y') ?? '-' }}"
                                         title="Lihat detail">
                                         <i class="bi bi-info-circle"></i>
                                     </button>

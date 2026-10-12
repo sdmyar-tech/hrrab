@@ -49,7 +49,7 @@
                             @endif
                         </dd>
                         <dt class="col-5 text-muted">Tanggal</dt>
-                        <dd class="col-7">{{ $pengajuanCuti->tanggal_mulai->format('d M Y') }} &ndash; {{ $pengajuanCuti->tanggal_selesai->format('d M Y') }}</dd>
+                        <dd class="col-7">{{ $pengajuanCuti->tanggal_mulai->translatedFormat('d M Y') }} &ndash; {{ $pengajuanCuti->tanggal_selesai->translatedFormat('d M Y') }}</dd>
                         <dt class="col-5 text-muted">Lama Cuti</dt>
                         <dd class="col-7">{{ $pengajuanCuti->lama_cuti }} hari</dd>
                         <dt class="col-5 text-muted">Sisa Cuti Tahunan</dt>
@@ -61,7 +61,7 @@
                         <dt class="col-5 text-muted">Keterangan</dt>
                         <dd class="col-7">{{ $pengajuanCuti->keterangan ?? '-' }}</dd>
                         <dt class="col-5 text-muted">Tanggal Pengajuan</dt>
-                        <dd class="col-7">{{ optional($pengajuanCuti->created_at)->format('d M Y H:i') }}</dd>
+                        <dd class="col-7">{{ optional($pengajuanCuti->created_at)->translatedFormat('d M Y H:i') }}</dd>
                     </dl>
                 </div>
             </div>
@@ -76,7 +76,7 @@
                         <dd class="col-7">
                             @if ($pengajuanCuti->kepala_approved_by)
                                 {{ $pengajuanCuti->kepalaApprovedBy?->name }}
-                                <br><span class="text-muted">{{ optional($pengajuanCuti->kepala_approved_at)->format('d M Y H:i') }}</span>
+                                <br><span class="text-muted">{{ optional($pengajuanCuti->kepala_approved_at)->translatedFormat('d M Y H:i') }}</span>
                             @else
                                 <span class="text-muted">Belum</span>
                             @endif
@@ -88,7 +88,7 @@
                                 @if ($pengajuanCuti->gm_pengganti)
                                     <span class="badge text-bg-warning">GM pengganti</span>
                                 @endif
-                                <br><span class="text-muted">{{ optional($pengajuanCuti->gm_approved_at)->format('d M Y H:i') }}</span>
+                                <br><span class="text-muted">{{ optional($pengajuanCuti->gm_approved_at)->translatedFormat('d M Y H:i') }}</span>
                             @else
                                 <span class="text-muted">Belum</span>
                             @endif
@@ -97,7 +97,7 @@
                         <dd class="col-7">
                             @if ($pengajuanCuti->approved_by)
                                 {{ $pengajuanCuti->approvedBy?->name }}
-                                <br><span class="text-muted">{{ optional($pengajuanCuti->approved_at)->format('d M Y H:i') }}</span>
+                                <br><span class="text-muted">{{ optional($pengajuanCuti->approved_at)->translatedFormat('d M Y H:i') }}</span>
                             @else
                                 <span class="text-muted">Belum</span>
                             @endif

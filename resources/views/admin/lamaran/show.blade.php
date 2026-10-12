@@ -46,7 +46,7 @@
                                 <span class="text-muted d-block">{{ $lamaran->lowongan ? 'Lowongan: ' . $lamaran->lowongan->judul : 'Tanpa lowongan' }}</span>
                             </dd>
                             <dt class="col-5 text-muted">Ditambahkan</dt>
-                            <dd class="col-7">{{ $lamaran->diverifikasiOleh?->name ?? '-' }}, {{ optional($lamaran->created_at)->format('d M Y') }}</dd>
+                            <dd class="col-7">{{ $lamaran->diverifikasiOleh?->name ?? '-' }}, {{ optional($lamaran->created_at)->translatedFormat('d M Y') }}</dd>
                         </dl>
                     </div>
                 @endif
@@ -105,7 +105,7 @@
                         <dt class="col-5 text-muted">Email</dt><dd class="col-7">{{ $p?->email }}</dd>
                         <dt class="col-5 text-muted">NIK</dt><dd class="col-7">{{ $p?->nik ?? '-' }}</dd>
                         <dt class="col-5 text-muted">No. HP</dt><dd class="col-7">{{ $p?->no_hp }}</dd>
-                        <dt class="col-5 text-muted">TTL</dt><dd class="col-7">{{ $p?->tempat_lahir }}, {{ optional($p?->tanggal_lahir)->format('d M Y') }}</dd>
+                        <dt class="col-5 text-muted">TTL</dt><dd class="col-7">{{ $p?->tempat_lahir }}, {{ optional($p?->tanggal_lahir)->translatedFormat('d M Y') }}</dd>
                         <dt class="col-5 text-muted">Jenis Kelamin</dt><dd class="col-7">{{ $p?->jenis_kelamin }}</dd>
                         <dt class="col-5 text-muted">Pendidikan</dt><dd class="col-7">{{ $p?->pendidikan_terakhir }}</dd>
                         <dt class="col-5 text-muted">Alamat KTP</dt><dd class="col-7">{{ $p?->alamat_ktp }}</dd>
@@ -150,8 +150,8 @@
                         <div class="border rounded p-2 mb-2 small">
                             <strong>{{ $riwayat->posisi }}</strong> &mdash; {{ $riwayat->nama_perusahaan }}<br>
                             <span class="text-muted">
-                                {{ optional($riwayat->tanggal_mulai)->format('M Y') }} -
-                                {{ $riwayat->tanggal_selesai ? $riwayat->tanggal_selesai->format('M Y') : 'Sekarang' }}
+                                {{ optional($riwayat->tanggal_mulai)->translatedFormat('M Y') }} -
+                                {{ $riwayat->tanggal_selesai ? $riwayat->tanggal_selesai->translatedFormat('M Y') : 'Sekarang' }}
                             </span>
                             @if ($riwayat->deskripsi)
                                 <p class="mb-0 mt-1">{{ $riwayat->deskripsi }}</p>
@@ -214,7 +214,7 @@
                         @forelse ($lamaran->interviewJadwals as $jadwal)
                             <div class="border rounded p-2 mb-2 small {{ $jadwal->isTerjadwal() ? 'border-primary' : '' }}">
                                 <strong>{{ $jadwal->tahapLabel() }}</strong>
-                                &mdash; {{ $jadwal->tanggal->format('d M Y') }}, {{ substr($jadwal->waktu_mulai, 0, 5) }}
+                                &mdash; {{ $jadwal->tanggal->translatedFormat('d M Y') }}, {{ substr($jadwal->waktu_mulai, 0, 5) }}
                                 @if ($jadwal->lokasi) &middot; @include('partials.lokasi', ['lokasi' => $jadwal->lokasi, 'tanpaIkon' => true]) @endif
                                 <span class="badge text-bg-light border">{{ $jadwal->statusLabel() }}</span>
                                 <span class="badge {{ $jadwal->hasilBadgeClass() }}">
@@ -857,7 +857,7 @@
                         @if ($lamaran->catatan_admin)
                             <p class="mb-1"><strong>Catatan:</strong> {{ $lamaran->catatan_admin }}</p>
                         @endif
-                        <p class="text-muted small mb-0">Diputuskan: {{ optional($lamaran->diputuskan_pada)->format('d M Y H:i') }}</p>
+                        <p class="text-muted small mb-0">Diputuskan: {{ optional($lamaran->diputuskan_pada)->translatedFormat('d M Y H:i') }}</p>
                     </div>
                 @endif
 
@@ -903,19 +903,19 @@
                             </li>
                             @foreach ($lamaran->interviewJadwals as $j)
                                 <li class="d-flex flex-wrap gap-2 align-items-center justify-content-between py-1 border-bottom">
-                                    <span>{{ $j->tahapLabel() }} · {{ $j->tanggal->format('d M Y') }} · {{ $j->statusLabel() }}@if ($j->hasil_status) · {{ $j->hasilLabel() }}@endif</span>
+                                    <span>{{ $j->tahapLabel() }} · {{ $j->tanggal->translatedFormat('d M Y') }} · {{ $j->statusLabel() }}@if ($j->hasil_status) · {{ $j->hasilLabel() }}@endif</span>
                                     @include('admin.editor-data._tombol', ['entitas' => 'interview', 'id' => $j->id, 'teks' => 'Ubah'])
                                 </li>
                             @endforeach
                             @foreach ($lamaran->screeningOnboardings as $s)
                                 <li class="d-flex flex-wrap gap-2 align-items-center justify-content-between py-1 border-bottom">
-                                    <span>Onboarding · {{ $s->tanggal_mulai->format('d M') }}–{{ $s->tanggal_selesai->format('d M Y') }} · {{ $s->status }}@if ($s->hasil_status) · {{ $s->hasil_status }}@endif</span>
+                                    <span>Onboarding · {{ $s->tanggal_mulai->translatedFormat('d M') }}–{{ $s->tanggal_selesai->translatedFormat('d M Y') }} · {{ $s->status }}@if ($s->hasil_status) · {{ $s->hasil_status }}@endif</span>
                                     @include('admin.editor-data._tombol', ['entitas' => 'onboarding', 'id' => $s->id, 'teks' => 'Ubah'])
                                 </li>
                             @endforeach
                             @foreach ($lamaran->kontrakJadwals as $kj)
                                 <li class="d-flex flex-wrap gap-2 align-items-center justify-content-between py-1 border-bottom">
-                                    <span>Kontrak · {{ $kj->tanggal->format('d M Y') }}{{ $kj->waktu ? ', ' . substr($kj->waktu, 0, 5) : '' }} · {{ $kj->status }}</span>
+                                    <span>Kontrak · {{ $kj->tanggal->translatedFormat('d M Y') }}{{ $kj->waktu ? ', ' . substr($kj->waktu, 0, 5) : '' }} · {{ $kj->status }}</span>
                                     @include('admin.editor-data._tombol', ['entitas' => 'kontrak', 'id' => $kj->id, 'teks' => 'Ubah'])
                                 </li>
                             @endforeach

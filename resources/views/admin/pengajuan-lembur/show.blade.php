@@ -42,15 +42,15 @@
                     <h2 class="h6 fw-bold mb-3">Detail Pengajuan</h2>
                     <dl class="row mb-0 small">
                         <dt class="col-5 text-muted">Tanggal</dt>
-                        <dd class="col-7">{{ $pengajuanLembur->tanggal->format('d M Y') }} <span class="text-muted">({{ $pengajuanLembur->hari }})</span></dd>
+                        <dd class="col-7">{{ $pengajuanLembur->tanggal->translatedFormat('d M Y') }} <span class="text-muted">({{ $pengajuanLembur->hari }})</span></dd>
                         <dt class="col-5 text-muted">Jam</dt>
-                        <dd class="col-7">{{ $pengajuanLembur->jam_mulai }} &ndash; {{ $pengajuanLembur->jam_selesai }}</dd>
+                        <dd class="col-7">{{ substr((string) $pengajuanLembur->jam_mulai, 0, 5) }} &ndash; {{ substr((string) $pengajuanLembur->jam_selesai, 0, 5) }}</dd>
                         <dt class="col-5 text-muted">Jumlah Jam</dt>
                         <dd class="col-7">{{ $pengajuanLembur->jumlah_jam }} jam</dd>
                         <dt class="col-5 text-muted">Uraian Tugas</dt>
                         <dd class="col-7" style="white-space:pre-line;">{{ $pengajuanLembur->uraian_tugas }}</dd>
                         <dt class="col-5 text-muted">Tanggal Pengajuan</dt>
-                        <dd class="col-7">{{ optional($pengajuanLembur->created_at)->format('d M Y H:i') }}</dd>
+                        <dd class="col-7">{{ optional($pengajuanLembur->created_at)->translatedFormat('d M Y H:i') }}</dd>
                     </dl>
                 </div>
             </div>
@@ -65,7 +65,7 @@
                         <dd class="col-7">
                             @if ($pengajuanLembur->kepala_approved_by)
                                 {{ $pengajuanLembur->kepalaApprovedBy?->name }}
-                                <br><span class="text-muted">{{ optional($pengajuanLembur->kepala_approved_at)->format('d M Y H:i') }}</span>
+                                <br><span class="text-muted">{{ optional($pengajuanLembur->kepala_approved_at)->translatedFormat('d M Y H:i') }}</span>
                             @else
                                 <span class="text-muted">Belum</span>
                             @endif
@@ -77,7 +77,7 @@
                                 @if ($pengajuanLembur->gm_pengganti)
                                     <span class="badge text-bg-warning">GM pengganti</span>
                                 @endif
-                                <br><span class="text-muted">{{ optional($pengajuanLembur->gm_approved_at)->format('d M Y H:i') }}</span>
+                                <br><span class="text-muted">{{ optional($pengajuanLembur->gm_approved_at)->translatedFormat('d M Y H:i') }}</span>
                             @else
                                 <span class="text-muted">Belum</span>
                             @endif
@@ -86,7 +86,7 @@
                         <dd class="col-7">
                             @if ($pengajuanLembur->approved_by)
                                 {{ $pengajuanLembur->approvedBy?->name }}
-                                <br><span class="text-muted">{{ optional($pengajuanLembur->approved_at)->format('d M Y H:i') }}</span>
+                                <br><span class="text-muted">{{ optional($pengajuanLembur->approved_at)->translatedFormat('d M Y H:i') }}</span>
                             @else
                                 <span class="text-muted">Belum</span>
                             @endif
@@ -110,7 +110,7 @@
                                     data-confirm="true"
                                     data-icon="question"
                                     data-title="Setujui Pengajuan Lembur?"
-                                    data-text="Pengajuan lembur {{ $pengajuanLembur->dataPegawai?->nama_lengkap }} pada {{ optional($pengajuanLembur->tanggal)->format('d M Y') }} akan disetujui."
+                                    data-text="Pengajuan lembur {{ $pengajuanLembur->dataPegawai?->nama_lengkap }} pada {{ optional($pengajuanLembur->tanggal)->translatedFormat('d M Y') }} akan disetujui."
                                     data-confirm-text="Ya, Setujui"
                                     data-confirm-color="#198754"
                                     data-cancel-text="Batal">

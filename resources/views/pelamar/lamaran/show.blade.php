@@ -35,7 +35,7 @@
                             <dd class="col-7">{{ $lamaran->catatan_admin }}</dd>
                         @endif
                         <dt class="col-5 text-muted">Tanggal Melamar</dt>
-                        <dd class="col-7">{{ $lamaran->created_at->format('d M Y') }}</dd>
+                        <dd class="col-7">{{ $lamaran->created_at->translatedFormat('d M Y') }}</dd>
                     </dl>
                 </div>
 
@@ -88,7 +88,7 @@
                                     @elseif ($indexSekarang === 0)
                                         Menunggu diverifikasi Admin/SDM.
                                     @else
-                                        Terverifikasi{{ $lamaran->diverifikasi_pada ? ' pada ' . $lamaran->diverifikasi_pada->format('d M Y') : '' }}.
+                                        Terverifikasi{{ $lamaran->diverifikasi_pada ? ' pada ' . $lamaran->diverifikasi_pada->translatedFormat('d M Y') : '' }}.
                                     @endif
                                 </div>
                             </div>
@@ -107,7 +107,7 @@
                                     @foreach ($lamaran->interviewJadwals as $jadwal)
                                         <div class="border rounded p-2 mb-1 small">
                                             <strong>Interview {{ $jadwal->tahap_interview }}</strong>
-                                            &mdash; {{ $jadwal->tanggal->format('d M Y') }}, {{ $jadwal->waktu_mulai }}
+                                            &mdash; {{ $jadwal->tanggal->translatedFormat('d M Y') }}, {{ substr((string) $jadwal->waktu_mulai, 0, 5) }}
                                             @if ($jadwal->lokasi) &middot; @include('partials.lokasi', ['lokasi' => $jadwal->lokasi, 'tanpaIkon' => true]) @endif
                                             <br>
                                             <span class="badge text-bg-light border">{{ $jadwal->statusLabel() }}</span>
@@ -130,7 +130,7 @@
                                 @else
                                     @foreach ($lamaran->screeningOnboardings as $screening)
                                         <div class="border rounded p-2 mb-1 small">
-                                            {{ $screening->tanggal_mulai->format('d M Y') }} &ndash; {{ $screening->tanggal_selesai->format('d M Y') }}
+                                            {{ $screening->tanggal_mulai->translatedFormat('d M Y') }} &ndash; {{ $screening->tanggal_selesai->translatedFormat('d M Y') }}
                                             <br>
                                             <span class="badge text-bg-light border">{{ $screening->statusLabel() }}</span>
                                             <span class="badge {{ $screening->hasilBadgeClass() }}">{{ $screening->hasilLabel() }}</span>
@@ -150,7 +150,7 @@
                                 @else
                                     @foreach ($lamaran->kontrakJadwals as $jadwal)
                                         <div class="border rounded p-2 mb-1 small">
-                                            {{ $jadwal->tanggal->format('d M Y') }}
+                                            {{ $jadwal->tanggal->translatedFormat('d M Y') }}
                                             @if ($jadwal->waktu) , {{ $jadwal->waktu }} @endif
                                             @if ($jadwal->lokasi) &middot; @include('partials.lokasi', ['lokasi' => $jadwal->lokasi, 'tanpaIkon' => true]) @endif
                                             <span class="badge text-bg-light border">{{ $jadwal->statusLabel() }}</span>
@@ -167,9 +167,9 @@
                                 <strong>Keputusan Akhir</strong>
                                 <div class="text-muted small">
                                     @if ($lamaran->status === \App\Models\Lamaran::STATUS_DITERIMA)
-                                        Selamat! Anda direkrut{{ $lamaran->diputuskan_pada ? ' pada ' . $lamaran->diputuskan_pada->format('d M Y') : '' }}.
+                                        Selamat! Anda direkrut{{ $lamaran->diputuskan_pada ? ' pada ' . $lamaran->diputuskan_pada->translatedFormat('d M Y') : '' }}.
                                     @elseif ($lamaran->status === \App\Models\Lamaran::STATUS_DITOLAK)
-                                        Lamaran ditolak{{ $lamaran->diputuskan_pada ? ' pada ' . $lamaran->diputuskan_pada->format('d M Y') : '' }}.
+                                        Lamaran ditolak{{ $lamaran->diputuskan_pada ? ' pada ' . $lamaran->diputuskan_pada->translatedFormat('d M Y') : '' }}.
                                     @elseif ($lamaran->status === \App\Models\Lamaran::STATUS_DIBATALKAN)
                                         Anda membatalkan lamaran ini.
                                     @else

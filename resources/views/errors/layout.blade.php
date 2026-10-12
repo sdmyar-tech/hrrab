@@ -22,6 +22,7 @@
     </script>
     <link rel="icon" href="{{ asset('assets-admin/images/png/logo_abd.png') }}">
     <link rel="stylesheet" href="{{ asset('assets-admin/vendors/bootstrap-icons/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap">
     <style>
         :root {
             --merah: #880f12; --merah-tua: #5f0708; --merah-muda: #f9e5e6; --aksen: #880f12;
@@ -35,7 +36,7 @@
         html, body { height: 100%; margin: 0; }
         body {
             display: grid; place-items: center; padding: 24px 16px;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased;
             background: radial-gradient(circle at 20% 0%, rgba(136, 15, 18, .08), transparent 45%), var(--latar);
             color: var(--teks);
         }

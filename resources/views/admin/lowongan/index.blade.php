@@ -65,7 +65,7 @@
                                 <td>{{ $item->unit_kerja }}</td>
                                 <td>{{ $item->jumlah_terisi }}/{{ $item->jumlah_dibutuhkan }} orang</td>
                                 <td>{{ $item->lamarans_count }}</td>
-                                <td>{{ optional($item->tanggal_tutup)->format('d M Y') ?? '-' }}</td>
+                                <td>{{ optional($item->tanggal_tutup)->translatedFormat('d M Y') ?? '-' }}</td>
                                 <td><span class="badge {{ $item->status === 'dipublikasikan' ? 'text-bg-success' : ($item->status === 'ditutup' ? 'text-bg-secondary' : 'text-bg-warning') }}">{{ $item->statusLabel() }}</span></td>
                                 <td class="text-end">
                                     <div class="d-flex gap-1 justify-content-end">

@@ -39,7 +39,7 @@
                                 <td>{{ $jadwal->lamaran?->judulPosisi() }}</td>
                                 <td>
                                     {{ $jadwal->tahapLabel() }}<br>
-                                    <small class="text-muted">{{ $jadwal->tanggal->format('d M Y') }}, {{ substr($jadwal->waktu_mulai, 0, 5) }}</small>
+                                    <small class="text-muted">{{ $jadwal->tanggal->translatedFormat('d M Y') }}, {{ substr($jadwal->waktu_mulai, 0, 5) }}</small>
                                 </td>
                                 <td>@if ($jadwal->lokasi)@include('partials.lokasi', ['lokasi' => $jadwal->lokasi])@else - @endif</td>
                                 <td><span class="badge {{ $jadwal->status === 'dibatalkan' ? 'text-bg-danger' : ($jadwal->status === 'selesai' ? 'text-bg-secondary' : 'text-bg-info') }}">{{ $jadwal->statusLabel() }}</span></td>
