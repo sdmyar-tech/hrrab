@@ -28,7 +28,7 @@
         <div><strong class="fs-2 d-block" data-angka="belum">0</strong><span class="small opacity-75">belum</span></div>
         <div><strong class="fs-2 d-block" data-angka="total">0</strong><span class="small opacity-75">diundang</span></div>
     </div>
-    <p class="small opacity-75 mt-4 mb-0">Buka HRRAB → Pengumuman → <strong>Absen Sekarang</strong>, atau scan dengan kamera HP. Izinkan akses lokasi.</p>
+    <p class="small opacity-75 mt-4 mb-0">Buka HRRAB → Pengumuman → <strong>Absen Sekarang</strong>, atau scan dengan kamera HP.</p>
 </div>
 @endsection
 

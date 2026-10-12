@@ -20,8 +20,7 @@
                     <h1 class="h3 mb-1">{{ $pengumuman->judul }}</h1>
                     <p class="text-muted mb-0">
                         <span class="badge {{ $faseInfo[1] }} me-1">{{ $faseInfo[0] }}</span>
-                        {{ $pengumuman->absenJendelaLabel() }} · radius {{ $pengumuman->absen_radius }} m
-                        · <a href="https://www.google.com/maps?q={{ $pengumuman->absen_lat }},{{ $pengumuman->absen_lng }}" target="_blank" rel="noopener">lihat titik di peta</a>
+                        {{ $pengumuman->absenJendelaLabel() }}@if ($pengumuman->lokasi) · {{ $pengumuman->lokasi }}@endif
                     </p>
                 </div>
             </div>
@@ -35,7 +34,7 @@
                         <button type="submit" class="btn btn-outline-primary" @disabled($ringkas['belum'] === 0)><i class="bi bi-bell me-1"></i>Ingatkan yang belum</button>
                     </form>
                 @endif
-                <a href="{{ route('pengumuman.edit', $pengumuman) }}" class="btn btn-light" title="Ubah waktu, lokasi, atau peserta"><i class="bi bi-pencil me-1"></i>Ubah</a>
+                <a href="{{ route('pengumuman.edit', $pengumuman) }}" class="btn btn-light" title="Ubah waktu atau peserta"><i class="bi bi-pencil me-1"></i>Ubah</a>
             </div>
         </div>
 
@@ -44,7 +43,7 @@
                 ['Diundang', $ringkas['total'], 'bi-people', 'text-primary', null],
                 ['Sudah absen', $ringkas['sudah'], 'bi-check-circle', 'text-success', $persen . '%'],
                 ['Belum absen', $ringkas['belum'], 'bi-hourglass-split', 'text-secondary', $fase === 'tutup' ? 'kedaluwarsa' : null],
-                ['Ditolak: luar radius', $ringkas['radius'], 'bi-geo-alt', 'text-warning', 'percobaan terakhir'],
+                ['Ditandai manual', $ringkas['manual'], 'bi-person-check', 'text-primary', 'oleh panitia'],
             ] as [$label, $angka, $ikon, $warna, $ket])
                 <div class="col-6 col-xl-3">
                     <div class="panel p-3 h-100 d-flex align-items-center gap-3">
@@ -77,7 +76,7 @@
                     <input type="search" name="q" class="form-control" value="{{ request('q') }}" placeholder="Cari nama, unit, NIP…">
                 </div>
                 <select name="urut" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()" aria-label="Urutkan">
-                    @foreach (['status' => 'Perlu perhatian dulu', 'nama' => 'Nama A–Z', 'waktu' => 'Waktu absen', 'jarak' => 'Jarak terdekat'] as $k => $l)
+                    @foreach (['status' => 'Perlu perhatian dulu', 'nama' => 'Nama A–Z', 'waktu' => 'Waktu absen'] as $k => $l)
                         <option value="{{ $k }}" @selected($urut === $k)>{{ $l }}</option>
                     @endforeach
                 </select>
@@ -91,13 +90,12 @@
                             <th>Pegawai</th>
                             <th>Status</th>
                             <th>Waktu</th>
-                            <th>Jarak</th>
                             <th class="text-end">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($baris as $p)
-                            @php $st = $p->tampilan(); $gagal = $p->gagal_terakhir; @endphp
+                            @php $st = $p->tampilan(); @endphp
                             <tr>
                                 <td class="text-muted small">{{ $loop->iteration }}</td>
                                 <td>
@@ -108,18 +106,9 @@
                                     <span class="badge {{ $st['kelas'] }}"><i class="bi {{ $st['ikon'] }} me-1"></i>{{ $st['label'] }}</span>
                                     @if ($p->status === 'manual')
                                         <div class="small text-muted mt-1">{{ $p->catatan }} — {{ $p->penanda?->name }}</div>
-                                    @elseif (! $p->sudahAbsen() && $gagal)
-                                        <div class="small text-muted mt-1">Ditolak {{ \Carbon\Carbon::parse($gagal['waktu'])->format('H:i') }}: {{ $gagal['jarak'] }} m
-                                            @if (! empty($gagal['akurasi'])) (akurasi ±{{ $gagal['akurasi'] }} m)@endif</div>
                                     @endif
                                 </td>
                                 <td class="small">{{ $p->waktu_absen?->format('H:i') ?? '–' }}@if ($p->waktu_absen && ! $p->waktu_absen->isSameDay($pengumuman->absen_buka))<span class="text-muted d-block">{{ $p->waktu_absen->translatedFormat('d M') }}</span>@endif</td>
-                                <td class="small">
-                                    @if ($p->jarak !== null)
-                                        {{ $p->jarak }} m
-                                        @if ($p->akurasi)<span class="text-muted d-block">±{{ $p->akurasi }} m</span>@endif
-                                    @else – @endif
-                                </td>
                                 <td class="text-end text-nowrap">
                                     @include('admin.editor-data._tombol', ['entitas' => 'peserta_acara', 'id' => $p->id, 'teks' => '', 'hapus' => false])
                                     @if ($p->sudahAbsen())
@@ -137,7 +126,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="text-center text-muted py-5"><i class="bi bi-search d-block fs-3 mb-1"></i>Tidak ada peserta yang cocok.</td></tr>
+                            <tr><td colspan="5" class="text-center text-muted py-5"><i class="bi bi-search d-block fs-3 mb-1"></i>Tidak ada peserta yang cocok.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -157,7 +146,7 @@
         document.querySelectorAll('[data-tandai-hadir]').forEach((b) => b.addEventListener('click', function () {
             Swal.fire({
                 title: 'Tandai hadir manual?',
-                html: 'Untuk <strong></strong> — mis. hadir tetapi HP mati / GPS bermasalah.',
+                html: 'Untuk <strong></strong> — mis. hadir tetapi HP mati / tidak bisa scan.',
                 didOpen: (el) => { el.querySelector('strong').textContent = b.dataset.nama; },
                 input: 'text', inputLabel: 'Alasan', inputPlaceholder: 'mis. HP mati, terlihat hadir oleh panitia',
                 inputAttributes: { maxlength: 255 },

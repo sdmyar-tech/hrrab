@@ -123,7 +123,7 @@ class EditorData
             'peserta_acara' => ['grup' => 'Informasi', 'label' => 'Peserta Absen Acara', 'ikon' => 'bi-qr-code-scan', 'model' => Models\PengumumanPeserta::class,
                 'with' => ['pengumuman:id,judul', 'dataPegawai:id,nama_lengkap', 'user:id,name'],
                 'judul' => fn ($m) => ($m->dataPegawai?->nama_lengkap ?? $m->user?->name ?? '-') . ' — ' . ($m->pengumuman?->judul ?? '-'),
-                'kolom' => ['status', 'waktu_absen', 'jarak'], 'cari' => ['status', 'catatan'], 'relasi' => ['pengumuman' => 'judul', 'dataPegawai' => 'nama_lengkap'],
+                'kolom' => ['status', 'waktu_absen', 'catatan'], 'cari' => ['status', 'catatan'], 'relasi' => ['pengumuman' => 'judul', 'dataPegawai' => 'nama_lengkap'],
                 'tautan' => fn ($m) => self::rute('pengumuman.absen', $m->pengumuman_id)],
             'notifikasi' => ['grup' => 'Informasi', 'label' => 'Notifikasi Terkirim', 'ikon' => 'bi-bell', 'model' => DatabaseNotification::class, 'tambah' => false,
                 'with' => ['notifiable'], 'judul' => fn ($m) => ($m->data['judul'] ?? 'Notifikasi') . ' → ' . ($m->notifiable?->name ?? '-'),

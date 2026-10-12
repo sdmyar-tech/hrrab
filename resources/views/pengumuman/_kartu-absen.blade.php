@@ -4,7 +4,7 @@
     <span class="kartu-absen-ikon"><i class="bi bi-qr-code-scan"></i></span>
     <div class="small me-auto">
         <strong>Absen acara</strong>
-        <span class="d-block text-muted">{{ $p->absenJendelaLabel() }} · radius {{ $p->absen_radius }} m</span>
+        <span class="d-block text-muted">{{ $p->absenJendelaLabel() }} · scan QR di lokasi</span>
     </div>
 
     @if ($saya)

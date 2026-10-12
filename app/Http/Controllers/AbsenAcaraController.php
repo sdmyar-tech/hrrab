@@ -17,14 +17,14 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
-/** Absen acara: monitoring & QR (SDM/Admin/GM) serta scan + kirim lokasi (peserta). */
+/** Absen acara: monitoring & QR (SDM/Admin/GM) serta scan + konfirmasi hadir (peserta). */
 class AbsenAcaraController extends Controller
 {
     private const FILTER = [
         'semua' => 'Semua',
         'sudah' => 'Sudah absen',
         'belum' => 'Belum absen',
-        'radius' => 'Ditolak: di luar radius',
+        'manual' => 'Ditandai manual',
         'kedaluwarsa' => 'Kedaluwarsa',
     ];
 
@@ -56,46 +56,33 @@ class AbsenAcaraController extends Controller
         ['baris' => $baris, 'filter' => $filter] = $this->saring($request, $pengumuman);
         $r = AbsenAcara::ringkasan($pengumuman);
 
-        $peserta = $baris->values()->map(function (PengumumanPeserta $p, int $i) {
-            $gagal = $p->gagal_terakhir;
-
-            return [
-                $i + 1,
-                $this->nama($p),
-                $p->dataPegawai?->nip,
-                $this->unit($p),
-                $this->jabatan($p),
-                $p->tampilan()['label'],
-                $p->waktu_absen?->format('d-m-Y H:i'),
-                $p->jarak,
-                $p->akurasi,
-                match (true) {
-                    $p->status === PengumumanPeserta::STATUS_MANUAL => "Ditandai {$p->penanda?->name}: {$p->catatan}",
-                    ! $p->sudahAbsen() && $gagal => 'Ditolak ' . \Carbon\Carbon::parse($gagal['waktu'])->format('H:i') . ": {$gagal['jarak']} m dari lokasi"
-                        . (! empty($gagal['akurasi']) ? " (akurasi ±{$gagal['akurasi']} m)" : ''),
-                    default => null,
-                },
-                $p->diingatkan_pada?->format('d-m-Y H:i'),
-            ];
-        });
+        $peserta = $baris->values()->map(fn (PengumumanPeserta $p, int $i) => [
+            $i + 1,
+            $this->nama($p),
+            $p->dataPegawai?->nip,
+            $this->unit($p),
+            $this->jabatan($p),
+            $p->tampilan()['label'],
+            $p->waktu_absen?->format('d-m-Y H:i'),
+            $p->status === PengumumanPeserta::STATUS_MANUAL ? "Ditandai {$p->penanda?->name}: {$p->catatan}" : null,
+            $p->diingatkan_pada?->format('d-m-Y H:i'),
+        ]);
 
         $ringkasan = [
             ['Acara', $pengumuman->judul],
             ['Waktu absen', $pengumuman->absenJendelaLabel()],
-            ['Lokasi', $pengumuman->lokasi],
-            ['Titik (lat, lng)', "{$pengumuman->absen_lat}, {$pengumuman->absen_lng}"],
-            ['Radius (m)', $pengumuman->absen_radius],
+            ['Tempat', $pengumuman->lokasi],
             ['Diundang', $r['total']],
             ['Sudah absen', $r['sudah']],
+            ['  - di antaranya ditandai manual', $r['manual']],
             ['Belum absen', $r['belum']],
-            ['Ditolak di luar radius (belum hadir)', $r['radius']],
             ['Persentase hadir', $r['total'] ? round($r['sudah'] / $r['total'] * 100) . '%' : '-'],
             ['Filter ekspor', self::FILTER[$filter] . ($request->filled('q') ? ' · cari "' . $request->query('q') . '"' : '')],
             ['Diekspor', now()->format('d-m-Y H:i') . ' oleh ' . Auth::user()->name],
         ];
 
         return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('absen-acara-' . \Illuminate\Support\Str::slug($pengumuman->judul)), [
-            ['name' => 'Kehadiran', 'headers' => ['No', 'Nama', 'NIP', 'Unit', 'Jabatan', 'Status', 'Waktu Absen', 'Jarak (m)', 'Akurasi GPS (m)', 'Keterangan', 'Diingatkan'], 'rows' => $peserta],
+            ['name' => 'Kehadiran', 'headers' => ['No', 'Nama', 'NIP', 'Unit', 'Jabatan', 'Status', 'Waktu Absen', 'Keterangan', 'Diingatkan'], 'rows' => $peserta],
             ['name' => 'Ringkasan', 'headers' => ['Keterangan', 'Nilai'], 'rows' => $ringkasan],
         ]);
     }
@@ -122,7 +109,7 @@ class AbsenAcaraController extends Controller
         ]);
     }
 
-    /** Tandai hadir manual (mis. HP mati / GPS bermasalah) atau batalkan kehadiran. */
+    /** Tandai hadir manual (mis. HP mati / tidak bisa scan) atau batalkan kehadiran. */
     public function tandai(Request $request, Pengumuman $pengumuman, PengumumanPeserta $peserta): RedirectResponse
     {
         $user = $this->pengelola($pengumuman);
@@ -139,13 +126,12 @@ class AbsenAcaraController extends Controller
             }
             $peserta->update([
                 'status' => PengumumanPeserta::STATUS_MANUAL, 'waktu_absen' => now(), 'catatan' => $v['catatan'],
-                'ditandai_oleh' => $user->id, 'lat' => null, 'lng' => null, 'jarak' => null, 'akurasi' => null,
+                'ditandai_oleh' => $user->id,
             ]);
             $pesan = 'ditandai hadir';
         } else {
             $peserta->update([
                 'status' => PengumumanPeserta::STATUS_BELUM, 'waktu_absen' => null, 'catatan' => null, 'ditandai_oleh' => null,
-                'lat' => null, 'lng' => null, 'jarak' => null, 'akurasi' => null,
             ]);
             $pesan = 'dibatalkan kehadirannya';
         }
@@ -211,7 +197,7 @@ class AbsenAcaraController extends Controller
         $keadaan = $this->keadaan($request, $pengumuman, $user, null);
         $kembali = redirect()->route('acara.absen', $pengumuman);
 
-        if ($keadaan['kode'] !== 'lokasi') {
+        if ($keadaan['kode'] !== 'siap') {
             return $kembali->with('error', match ($keadaan['kode']) {
                 'sudah' => 'Anda sudah tercatat hadir.',
                 'tutup' => 'Waktu absen sudah ditutup.',
@@ -221,41 +207,18 @@ class AbsenAcaraController extends Controller
             });
         }
 
-        $v = $request->validate([
-            'lat' => ['required', 'numeric', 'between:-90,90'],
-            'lng' => ['required', 'numeric', 'between:-180,180'],
-            'akurasi' => ['nullable', 'numeric', 'min:0'],
-        ], ['lat.required' => 'Lokasi belum terbaca. Izinkan akses lokasi lalu coba lagi.']);
-
-        $peserta = $keadaan['peserta'];
-        $jarak = AbsenAcara::jarak((float) $v['lat'], (float) $v['lng'], $pengumuman->absen_lat, $pengumuman->absen_lng);
-        $akurasi = isset($v['akurasi']) ? (int) round((float) $v['akurasi']) : null;
-
-        if ($jarak > $pengumuman->absen_radius) {
-            $peserta->update(['gagal_terakhir' => ['alasan' => 'radius', 'jarak' => $jarak, 'akurasi' => $akurasi, 'waktu' => now()->toDateTimeString()]]);
-            $saran = $akurasi && $akurasi > $pengumuman->absen_radius
-                ? " Akurasi GPS HP Anda rendah (±{$akurasi} m): nyalakan GPS / mode akurasi tinggi, tunggu sebentar di area terbuka, lalu coba lagi."
-                : ' Pastikan Anda berada di lokasi acara, lalu coba lagi.';
-
-            return $kembali->with('error', "Absen ditolak: Anda berjarak {$this->meter($jarak)} dari lokasi acara (maksimal {$this->meter($pengumuman->absen_radius)}).{$saran}");
-        }
-
-        $peserta->update([
-            'status' => PengumumanPeserta::STATUS_HADIR, 'waktu_absen' => now(),
-            'lat' => round((float) $v['lat'], 7), 'lng' => round((float) $v['lng'], 7), 'jarak' => $jarak, 'akurasi' => $akurasi,
-            'gagal_terakhir' => null,
-        ]);
+        $keadaan['peserta']->update(['status' => PengumumanPeserta::STATUS_HADIR, 'waktu_absen' => now()]);
         $request->session()->forget("acara_scan.{$pengumuman->id}");
 
         return redirect()->to(route('pengumuman.index') . '#pengumuman-' . $pengumuman->id)
-            ->with('success', 'Absen berhasil pukul ' . now()->format('H:i') . " ({$this->meter($jarak)} dari lokasi acara).");
+            ->with('success', 'Absen berhasil pukul ' . now()->format('H:i') . '.');
     }
 
     // ================================================================ Bantuan
 
     /**
      * Keadaan absen pengguna untuk acara ini.
-     * Scan QR yang sah disimpan di sesi beberapa menit, jadi pegawai bisa mencoba kirim lokasi ulang tanpa scan lagi.
+     * Scan QR yang sah disimpan di sesi beberapa menit (cukup untuk login dulu lalu menekan konfirmasi).
      *
      * @return array{kode: string, peserta: ?PengumumanPeserta}
      */
@@ -274,7 +237,7 @@ class AbsenAcaraController extends Controller
             $peserta->sudahAbsen() => 'sudah',
             $pengumuman->absenFase() === Pengumuman::ABSEN_BELUM_BUKA => 'belum_buka',
             $pengumuman->absenFase() === Pengumuman::ABSEN_TUTUP => 'tutup',
-            $scanMasihBerlaku => 'lokasi',
+            $scanMasihBerlaku => 'siap',
             default => 'qr_kedaluwarsa',
         };
 
@@ -290,7 +253,7 @@ class AbsenAcaraController extends Controller
     {
         $filter = array_key_exists($request->query('status'), self::FILTER) ? $request->query('status') : 'semua';
         $cari = mb_strtolower(trim((string) $request->query('q')));
-        $urut = in_array($request->query('urut'), ['nama', 'waktu', 'status', 'jarak'], true) ? $request->query('urut') : 'status';
+        $urut = in_array($request->query('urut'), ['nama', 'waktu', 'status'], true) ? $request->query('urut') : 'status';
 
         $semua = $pengumuman->peserta()
             ->with(['user:id,name', 'dataPegawai:id,nama_lengkap,nip', 'dataPegawai.kepegawaian:id,data_pegawai_id,unit_kerja,jabatan', 'dataPegawai.penugasanAktif', 'penanda:id,name'])
@@ -301,12 +264,11 @@ class AbsenAcaraController extends Controller
             ->filter(fn (PengumumanPeserta $p) => $this->cocokFilter($p, $filter))
             ->filter(fn (PengumumanPeserta $p) => $cari === '' || str_contains(mb_strtolower($this->nama($p) . ' ' . $this->unit($p) . ' ' . $p->dataPegawai?->nip), $cari));
 
-        // Bawaan: yang perlu perhatian dulu (ditolak radius → belum → sudah), lalu nama.
-        $peringkat = ['radius' => 0, 'belum' => 1, 'kedaluwarsa' => 2, 'manual' => 3, 'valid' => 4];
+        // Bawaan: yang perlu perhatian dulu (belum → kedaluwarsa → sudah), lalu nama.
+        $peringkat = ['belum' => 0, 'kedaluwarsa' => 1, 'manual' => 2, 'valid' => 3];
         $baris = match ($urut) {
             'nama' => $baris->sortBy(fn ($p) => mb_strtolower($this->nama($p))),
             'waktu' => $baris->sortBy(fn ($p) => $p->waktu_absen?->getTimestamp() ?? PHP_INT_MAX),
-            'jarak' => $baris->sortBy(fn ($p) => $p->jarak ?? $p->gagal_terakhir['jarak'] ?? PHP_INT_MAX),
             default => $baris->sortBy(fn ($p) => sprintf('%d-%s', $peringkat[$p->tampilan()['kunci']] ?? 9, mb_strtolower($this->nama($p)))),
         };
 
@@ -318,7 +280,7 @@ class AbsenAcaraController extends Controller
         return match ($filter) {
             'sudah' => $p->sudahAbsen(),
             'belum' => ! $p->sudahAbsen(),
-            'radius', 'kedaluwarsa' => $p->tampilan()['kunci'] === $filter,
+            'manual', 'kedaluwarsa' => $p->tampilan()['kunci'] === $filter,
             default => true,
         };
     }
@@ -351,10 +313,5 @@ class AbsenAcaraController extends Controller
 
         return ($tugas && $tugas->isNotEmpty() ? $tugas->pluck('unit_kerja')->unique()->implode(', ') : null)
             ?? $p->dataPegawai?->kepegawaian?->unit_kerja ?? '-';
-    }
-
-    private function meter(int $m): string
-    {
-        return $m >= 1000 ? number_format($m / 1000, 1, ',', '.') . ' km' : "{$m} m";
     }
 }

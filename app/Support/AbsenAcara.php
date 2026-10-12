@@ -12,8 +12,8 @@ use Illuminate\Support\Str;
 
 /**
  * Absen acara lewat pengumuman.
- * Alur: panitia menampilkan QR (token berganti tiap 30 detik) → pegawai scan → browser mengirim lokasi GPS
- * → hadir bila token sah, jendela absen terbuka, dan jarak ≤ radius. Di luar radius ditolak.
+ * Alur: panitia menampilkan QR (token berganti tiap 30 detik) → pegawai scan → konfirmasi
+ * → hadir bila token sah dan jendela absen terbuka. Tidak ada pengecekan lokasi.
  */
 class AbsenAcara
 {
@@ -23,12 +23,8 @@ class AbsenAcara
     /** Token masih diterima sampai sekian langkah ke belakang (≈ 3 menit: cukup untuk login dulu). */
     public const TOLERANSI_LANGKAH = 6;
 
-    /** Setelah scan sah, pegawai punya waktu sekian menit untuk mengirim lokasi. */
+    /** Setelah scan sah, pegawai punya waktu sekian menit untuk menekan konfirmasi hadir. */
     public const MENIT_SCAN_BERLAKU = 5;
-
-    public const RADIUS_MIN = 20;
-    public const RADIUS_MAKS = 2000;
-    public const RADIUS_BAWAAN = 100;
 
     /** Hanya SDM (kepala SDM), Admin, dan GM yang boleh menetapkan & memantau absen acara. */
     public static function bolehKelola(User $user): bool
@@ -147,7 +143,7 @@ class AbsenAcara
         }
 
         return Notifikasi::kirim($users, "Absen acara: {$pengumuman->judul}",
-            "Anda diminta absen di lokasi acara. Waktu absen: {$pengumuman->absenJendelaLabel()}. Scan QR di lokasi lalu izinkan akses lokasi.",
+            "Anda diminta absen di lokasi acara. Waktu absen: {$pengumuman->absenJendelaLabel()}. Scan QR yang ditampilkan panitia di lokasi acara.",
             route('pengumuman.index') . '#pengumuman-' . $pengumuman->id, Pemberitahuan::JENIS_TUGAS, 'bi-qr-code-scan');
     }
 
@@ -199,31 +195,20 @@ class AbsenAcara
         return self::LANGKAH_QR - (now()->getTimestamp() % self::LANGKAH_QR);
     }
 
-    // ------------------------------------------------------------------ Lokasi
+    // ------------------------------------------------------------------ Ringkasan
 
-    /** Jarak dua titik (meter), rumus haversine. */
-    public static function jarak(float $lat1, float $lng1, float $lat2, float $lng2): int
-    {
-        $r = 6371000;
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLng = deg2rad($lng2 - $lng1);
-        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
-
-        return (int) round($r * 2 * atan2(sqrt($a), sqrt(1 - $a)));
-    }
-
-    /** @return array{total: int, sudah: int, belum: int, radius: int} */
+    /** @return array{total: int, sudah: int, belum: int, manual: int} */
     public static function ringkasan(Pengumuman $pengumuman): array
     {
-        $baris = $pengumuman->peserta()->get(['status', 'gagal_terakhir']);
-        $sudah = $baris->where('status', '!=', PengumumanPeserta::STATUS_BELUM)->count();
+        $hitung = $pengumuman->peserta()->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
+        $total = (int) $hitung->sum();
+        $belum = (int) ($hitung[PengumumanPeserta::STATUS_BELUM] ?? 0);
 
         return [
-            'total' => $baris->count(),
-            'sudah' => $sudah,
-            'belum' => $baris->count() - $sudah,
-            'radius' => $baris->where('status', PengumumanPeserta::STATUS_BELUM)
-                ->filter(fn ($p) => ($p->gagal_terakhir['alasan'] ?? null) === 'radius')->count(),
+            'total' => $total,
+            'sudah' => $total - $belum,
+            'belum' => $belum,
+            'manual' => (int) ($hitung[PengumumanPeserta::STATUS_MANUAL] ?? 0),
         ];
     }
 }

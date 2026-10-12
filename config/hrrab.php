@@ -35,9 +35,4 @@ return [
         'periode_mulai' => 21,        // pilihan cepat rekap "periode gaji" 21 s/d 20
     ],
 
-    // Absen acara (pengumuman): titik awal peta saat lokasi acara belum ditentukan [lat, lng].
-    'absen_acara' => [
-        'pusat_peta' => [0.5071, 101.4478], // Pekanbaru
-    ],
-
 ];

@@ -37,7 +37,7 @@ class Pengumuman extends Model
     protected $fillable = [
         'judul', 'isi', 'kategori', 'jadwal', 'tanggal', 'hari', 'jam_mulai', 'jam_selesai', 'lokasi',
         'sasaran_unit', 'penting', 'tampil_sampai', 'dibuat_oleh',
-        'absen_aktif', 'absen_buka', 'absen_tutup', 'absen_lat', 'absen_lng', 'absen_radius', 'absen_kriteria',
+        'absen_aktif', 'absen_buka', 'absen_tutup', 'absen_kriteria',
     ];
 
     /** Kunci QR tidak boleh ikut terserialisasi ke JSON/log. */
@@ -52,9 +52,6 @@ class Pengumuman extends Model
         'absen_aktif' => 'boolean',
         'absen_buka' => 'datetime',
         'absen_tutup' => 'datetime',
-        'absen_lat' => 'float',
-        'absen_lng' => 'float',
-        'absen_radius' => 'integer',
         'absen_kriteria' => 'array',
     ];
 

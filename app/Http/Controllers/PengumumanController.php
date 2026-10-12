@@ -216,9 +216,6 @@ private function validasi(Request $request, User $user): array
         $v = $request->validate([
             'absen_buka' => ['required', 'date_format:Y-m-d\TH:i'],
             'absen_tutup' => ['required', 'date_format:Y-m-d\TH:i', 'after:absen_buka', ...($tutupBerubah && ! $user->isAdmin() ? ['after:now'] : [])],
-            'absen_lat' => ['required', 'numeric', 'between:-90,90'],
-            'absen_lng' => ['required', 'numeric', 'between:-180,180'],
-            'absen_radius' => ['required', 'integer', 'between:' . AbsenAcara::RADIUS_MIN . ',' . AbsenAcara::RADIUS_MAKS],
             'absen_semua' => ['nullable', 'boolean'],
             'absen_unit' => ['nullable', 'array'],
             'absen_unit.*' => [Rule::in(array_keys($pilihan['unit']))],
@@ -230,9 +227,6 @@ private function validasi(Request $request, User $user): array
             'absen_buka.required' => 'Isi jam absen dibuka.',
             'absen_tutup.required' => 'Isi jam absen ditutup.',
             'absen_tutup.after' => 'Jam absen ditutup harus setelah jam dibuka dan belum lewat.',
-            'absen_lat.required' => 'Tentukan titik lokasi acara di peta.',
-            'absen_lng.required' => 'Tentukan titik lokasi acara di peta.',
-            'absen_radius.between' => 'Radius absen ' . AbsenAcara::RADIUS_MIN . '–' . AbsenAcara::RADIUS_MAKS . ' meter.',
             'absen_unit.*.in' => 'Unit peserta tidak valid.',
             'absen_jabatan.*.in' => 'Jabatan peserta tidak valid.',
             'absen_user.*.in' => 'Ada pegawai yang tidak bisa dipilih.',
@@ -258,9 +252,6 @@ private function validasi(Request $request, User $user): array
             'absen_aktif' => true,
             'absen_buka' => \Carbon\Carbon::createFromFormat('Y-m-d\TH:i', $v['absen_buka']),
             'absen_tutup' => $tutup,
-            'absen_lat' => round((float) $v['absen_lat'], 7),
-            'absen_lng' => round((float) $v['absen_lng'], 7),
-            'absen_radius' => (int) $v['absen_radius'],
             'absen_kriteria' => $kriteria,
         ];
     }
