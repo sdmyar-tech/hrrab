@@ -41,6 +41,7 @@
                         </button>
                     </form>
                     <p class="small text-muted text-center mt-2 mb-0" data-status-lokasi>Browser akan meminta izin lokasi — pilih <strong>Izinkan</strong>.</p>
+                    <button type="button" class="btn btn-link btn-sm w-100 mt-1" data-kirim-sekarang hidden>Kirim lokasi sekarang tanpa menunggu</button>
                 </section>
             @elseif ($info)
                 <section class="panel p-4 mt-3 text-center">
@@ -70,36 +71,54 @@
 @endif
 
 @if ($keadaan === 'lokasi')
+@include('pengumuman._ambil-lokasi')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('formAbsenAcara');
         const tombol = form.querySelector('[data-kirim-lokasi]');
-        const status = document.querySelector('[data-status-lokasi]');
         const label = tombol.querySelector('span');
+        const status = document.querySelector('[data-status-lokasi]');
+        const sekarang = document.querySelector('[data-kirim-sekarang]');
+        const radius = {{ (int) $pengumuman->absen_radius }};
+        // Cukup akurat bila ketidakpastian ≤ separuh radius (min 20 m, maks 50 m) — tidak perlu menunggu GPS sempurna.
+        const akurasiCukup = Math.max(20, Math.min(50, Math.round(radius / 2)));
+        let kendali = {};
 
-        function gagal(judul, teks) {
-            tombol.disabled = false; label.textContent = 'Coba Lagi';
-            status.textContent = teks;
-            Swal.fire({ icon: 'info', title: judul, text: teks, confirmButtonColor: '#880f12' });
+        function siap(teks) {
+            tombol.disabled = false; label.textContent = teks;
+            sekarang.hidden = true;
         }
 
         tombol.addEventListener('click', function () {
-            if (!navigator.geolocation) return gagal('Lokasi tidak didukung', 'Browser ini tidak bisa membaca lokasi. Coba Chrome atau Safari terbaru.');
-            if (!window.isSecureContext) return gagal('Koneksi tidak aman', 'Lokasi hanya bisa dibaca lewat alamat https.');
-            tombol.disabled = true; label.textContent = 'Membaca lokasi…';
-            status.textContent = 'Tunggu sebentar, sedang membaca GPS…';
-            navigator.geolocation.getCurrentPosition(function (pos) {
+            if (!window.isSecureContext) return Swal.fire({ icon: 'info', title: 'Koneksi tidak aman', text: 'Lokasi hanya bisa dibaca lewat alamat https.' });
+            tombol.disabled = true; label.textContent = 'Mencari lokasi…';
+            status.textContent = 'Membaca lokasi… biasanya beberapa detik. Di dalam ruangan GPS bisa lebih lama.';
+            kendali = {};
+
+            ambilLokasi({
+                akurasiCukup, maksDetik: 45, kendali,
+                onProgres: function (p) {
+                    label.textContent = 'Mencari lokasi… ' + p.detik + ' dtk';
+                    if (p.akurasi !== null) {
+                        status.textContent = 'Akurasi saat ini ±' + p.akurasi + ' m (menunggu ≤ ' + akurasiCukup + ' m).';
+                        // Sudah ada bacaan: beri pilihan kirim tanpa menunggu lebih lama.
+                        if (p.detik >= 5) sekarang.hidden = false;
+                    }
+                },
+            }).then(function (pos) {
                 form.lat.value = pos.coords.latitude;
                 form.lng.value = pos.coords.longitude;
                 form.akurasi.value = Math.round(pos.coords.accuracy || 0);
-                label.textContent = 'Mengirim…';
+                label.textContent = 'Mengirim…'; sekarang.hidden = true;
                 form.submit();
-            }, function (err) {
-                if (err.code === 1) return gagal('Izin lokasi ditolak', 'Izinkan akses lokasi: ketuk ikon gembok/ⓘ di samping alamat situs → Lokasi → Izinkan, lalu tekan Coba Lagi.');
-                if (err.code === 3) return gagal('GPS terlalu lama', 'Pindah ke area terbuka atau dekat jendela, pastikan GPS menyala, lalu coba lagi.');
-                gagal('Lokasi tidak tersedia', 'Nyalakan GPS / Lokasi di HP Anda, lalu coba lagi.');
-            }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+            }).catch(function (err) {
+                const p = panduanLokasi(err);
+                siap('Coba Lagi');
+                status.textContent = p.judul + '.';
+                Swal.fire({ icon: 'info', title: p.judul, text: p.teks, confirmButtonColor: '#880f12' });
+            });
         });
+        sekarang.addEventListener('click', () => kendali.sekarang && kendali.sekarang());
     });
 </script>
 @endif

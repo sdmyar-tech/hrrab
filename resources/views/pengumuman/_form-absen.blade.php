@@ -133,6 +133,7 @@
     .langkah-no { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: 50%; background: var(--bs-primary); color: #fff; font-size: .75rem; margin-right: .4rem; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+@include('pengumuman._ambil-lokasi')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const panel = document.getElementById('panelAbsen');
@@ -171,14 +172,18 @@
         }
 
         el('[data-lokasi-saya]').addEventListener('click', function () {
-            const tombol = this;
-            if (!navigator.geolocation) return Swal.fire({ icon: 'info', title: 'Browser tidak mendukung lokasi' });
+            const tombol = this, isiAwal = tombol.innerHTML;
             tombol.disabled = true;
-            navigator.geolocation.getCurrentPosition(
-                (pos) => { tombol.disabled = false; aturTitik(pos.coords.latitude, pos.coords.longitude, true); },
-                () => { tombol.disabled = false; Swal.fire({ icon: 'info', title: 'Lokasi tidak bisa dibaca', text: 'Izinkan akses lokasi di browser, atau klik titik di peta.' }); },
-                { enableHighAccuracy: true, timeout: 15000 }
-            );
+            ambilLokasi({
+                akurasiCukup: 25, maksDetik: 30,
+                onProgres: (p) => { tombol.textContent = 'Mencari lokasi… ' + (p.akurasi !== null ? '±' + p.akurasi + ' m' : p.detik + ' dtk'); },
+            }).then((pos) => {
+                aturTitik(pos.coords.latitude, pos.coords.longitude, true);
+                if (pos.coords.accuracy > 50) Swal.fire({ icon: 'info', title: 'Lokasi kurang akurat (±' + Math.round(pos.coords.accuracy) + ' m)', text: 'Geser penanda di peta ke titik acara yang tepat.' });
+            }).catch((err) => {
+                const p = panduanLokasi(err);
+                Swal.fire({ icon: 'info', title: p.judul, text: p.teks + ' Atau klik titik acara langsung di peta.' });
+            }).finally(() => { tombol.disabled = false; tombol.innerHTML = isiAwal; });
         });
         // Tempel "-0.47, 101.38" atau link Google Maps (…@-0.47,101.38,17z / ?q=-0.47,101.38).
         el('[data-koordinat]').addEventListener('change', function () {
