@@ -268,6 +268,7 @@ Route::prefix('pelamar')->name('pelamar.')->middleware('pelamar')->group(functio
         // Absen acara — hak akses (SDM/Admin/GM) dicek di controller.
         Route::post('/acara/{pengumuman}/absen', [AbsenAcaraController::class, 'simpan'])->name('acara.absen.simpan')->middleware('throttle:10,1');
         Route::get('/pengumuman/{pengumuman}/absen', [AbsenAcaraController::class, 'pantau'])->name('pengumuman.absen');
+        Route::get('/pengumuman/{pengumuman}/absen/export', [AbsenAcaraController::class, 'export'])->name('pengumuman.absen.export');
         Route::get('/pengumuman/{pengumuman}/absen/qr', [AbsenAcaraController::class, 'qr'])->name('pengumuman.absen.qr');
         Route::get('/pengumuman/{pengumuman}/absen/qr/token', [AbsenAcaraController::class, 'qrToken'])->name('pengumuman.absen.qr-token');
         Route::post('/pengumuman/{pengumuman}/absen/ingatkan', [AbsenAcaraController::class, 'ingatkan'])->name('pengumuman.absen.ingatkan')->middleware('throttle:6,1');

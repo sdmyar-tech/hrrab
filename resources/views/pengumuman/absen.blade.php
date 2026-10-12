@@ -26,6 +26,7 @@
                 </div>
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'pengumuman.absen.export', 'eksporParam' => ['pengumuman' => $pengumuman], 'eksporUkuran' => ''])
                 @if ($fase !== 'tutup')
                     <a href="{{ route('pengumuman.absen.qr', $pengumuman) }}" target="_blank" class="btn btn-primary"><i class="bi bi-qr-code me-1"></i>Tampilkan QR</a>
                     <form action="{{ route('pengumuman.absen.ingatkan', $pengumuman) }}" method="POST"

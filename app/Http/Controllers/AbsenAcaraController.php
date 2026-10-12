@@ -7,6 +7,7 @@ use App\Models\PengumumanPeserta;
 use App\Models\User;
 use App\Notifications\Pemberitahuan;
 use App\Support\AbsenAcara;
+use App\Support\ExcelExporter;
 use App\Support\Notifikasi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /** Absen acara: monitoring & QR (SDM/Admin/GM) serta scan + kirim lokasi (peserta). */
 class AbsenAcaraController extends Controller
@@ -31,41 +33,14 @@ class AbsenAcaraController extends Controller
     public function pantau(Request $request, Pengumuman $pengumuman): View
     {
         $user = $this->pengelola($pengumuman);
-        $filter = array_key_exists($request->query('status'), self::FILTER) ? $request->query('status') : 'semua';
-        $cari = mb_strtolower(trim((string) $request->query('q')));
-        $urut = in_array($request->query('urut'), ['nama', 'waktu', 'status', 'jarak'], true) ? $request->query('urut') : 'status';
-
-        $semua = $pengumuman->peserta()
-            ->with(['user:id,name', 'dataPegawai:id,nama_lengkap,nip', 'dataPegawai.kepegawaian:id,data_pegawai_id,unit_kerja,jabatan', 'dataPegawai.penugasanAktif', 'penanda:id,name'])
-            ->get()
-            ->each(fn (PengumumanPeserta $p) => $p->setRelation('pengumuman', $pengumuman));
-
-        $baris = $semua
-            ->filter(fn (PengumumanPeserta $p) => match ($filter) {
-                'sudah' => $p->sudahAbsen(),
-                'belum' => ! $p->sudahAbsen(),
-                'radius', 'kedaluwarsa' => $p->tampilan()['kunci'] === $filter,
-                default => true,
-            })
-            ->filter(fn (PengumumanPeserta $p) => $cari === '' || str_contains(mb_strtolower($this->nama($p) . ' ' . $this->unit($p) . ' ' . $p->dataPegawai?->nip), $cari));
-
-        // Bawaan: yang perlu perhatian dulu (ditolak radius → belum → sudah), lalu nama.
-        $peringkat = ['radius' => 0, 'belum' => 1, 'kedaluwarsa' => 2, 'manual' => 3, 'valid' => 4];
-        $baris = match ($urut) {
-            'nama' => $baris->sortBy(fn ($p) => mb_strtolower($this->nama($p))),
-            'waktu' => $baris->sortBy(fn ($p) => $p->waktu_absen?->getTimestamp() ?? PHP_INT_MAX),
-            'jarak' => $baris->sortBy(fn ($p) => $p->jarak ?? $p->gagal_terakhir['jarak'] ?? PHP_INT_MAX),
-            default => $baris->sortBy(fn ($p) => sprintf('%d-%s', $peringkat[$p->tampilan()['kunci']] ?? 9, mb_strtolower($this->nama($p)))),
-        };
+        ['semua' => $semua, 'baris' => $baris, 'filter' => $filter, 'urut' => $urut] = $this->saring($request, $pengumuman);
 
         return view('pengumuman.absen', [
             'layout' => $user->panelLayout(),
             'pengumuman' => $pengumuman,
-            'baris' => $baris->values(),
+            'baris' => $baris,
             'ringkas' => AbsenAcara::ringkasan($pengumuman),
-            'hitungFilter' => collect(self::FILTER)->map(fn ($l, $k) => $k === 'semua' ? $semua->count() : $semua->filter(fn ($p) => match ($k) {
-                'sudah' => $p->sudahAbsen(), 'belum' => ! $p->sudahAbsen(), default => $p->tampilan()['kunci'] === $k,
-            })->count()),
+            'hitungFilter' => collect(self::FILTER)->map(fn ($l, $k) => $semua->filter(fn ($p) => $this->cocokFilter($p, $k))->count()),
             'filterLabel' => self::FILTER,
             'filter' => $filter,
             'urut' => $urut,
@@ -74,6 +49,56 @@ class AbsenAcaraController extends Controller
         ]);
     }
 
+    /** Ekspor Excel daftar kehadiran sesuai filter/cari/urut yang sedang aktif + lembar ringkasan. */
+    public function export(Request $request, Pengumuman $pengumuman): BinaryFileResponse
+    {
+        $this->pengelola($pengumuman);
+        ['baris' => $baris, 'filter' => $filter] = $this->saring($request, $pengumuman);
+        $r = AbsenAcara::ringkasan($pengumuman);
+
+        $peserta = $baris->values()->map(function (PengumumanPeserta $p, int $i) {
+            $gagal = $p->gagal_terakhir;
+
+            return [
+                $i + 1,
+                $this->nama($p),
+                $p->dataPegawai?->nip,
+                $this->unit($p),
+                $this->jabatan($p),
+                $p->tampilan()['label'],
+                $p->waktu_absen?->format('d-m-Y H:i'),
+                $p->jarak,
+                $p->akurasi,
+                match (true) {
+                    $p->status === PengumumanPeserta::STATUS_MANUAL => "Ditandai {$p->penanda?->name}: {$p->catatan}",
+                    ! $p->sudahAbsen() && $gagal => 'Ditolak ' . \Carbon\Carbon::parse($gagal['waktu'])->format('H:i') . ": {$gagal['jarak']} m dari lokasi"
+                        . (! empty($gagal['akurasi']) ? " (akurasi ±{$gagal['akurasi']} m)" : ''),
+                    default => null,
+                },
+                $p->diingatkan_pada?->format('d-m-Y H:i'),
+            ];
+        });
+
+        $ringkasan = [
+            ['Acara', $pengumuman->judul],
+            ['Waktu absen', $pengumuman->absenJendelaLabel()],
+            ['Lokasi', $pengumuman->lokasi],
+            ['Titik (lat, lng)', "{$pengumuman->absen_lat}, {$pengumuman->absen_lng}"],
+            ['Radius (m)', $pengumuman->absen_radius],
+            ['Diundang', $r['total']],
+            ['Sudah absen', $r['sudah']],
+            ['Belum absen', $r['belum']],
+            ['Ditolak di luar radius (belum hadir)', $r['radius']],
+            ['Persentase hadir', $r['total'] ? round($r['sudah'] / $r['total'] * 100) . '%' : '-'],
+            ['Filter ekspor', self::FILTER[$filter] . ($request->filled('q') ? ' · cari "' . $request->query('q') . '"' : '')],
+            ['Diekspor', now()->format('d-m-Y H:i') . ' oleh ' . Auth::user()->name],
+        ];
+
+        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('absen-acara-' . \Illuminate\Support\Str::slug($pengumuman->judul)), [
+            ['name' => 'Kehadiran', 'headers' => ['No', 'Nama', 'NIP', 'Unit', 'Jabatan', 'Status', 'Waktu Absen', 'Jarak (m)', 'Akurasi GPS (m)', 'Keterangan', 'Diingatkan'], 'rows' => $peserta],
+            ['name' => 'Ringkasan', 'headers' => ['Keterangan', 'Nilai'], 'rows' => $ringkasan],
+        ]);
+    }
     /** Layar QR untuk ditampilkan panitia di lokasi (proyektor / HP / tablet). */
     public function qr(Pengumuman $pengumuman): View
     {
@@ -254,6 +279,56 @@ class AbsenAcaraController extends Controller
         };
 
         return ['kode' => $kode, 'peserta' => $peserta];
+    }
+
+    /**
+     * Peserta + filter status, pencarian, dan urutan (dipakai halaman monitoring & ekspor).
+     *
+     * @return array{semua: \Illuminate\Support\Collection, baris: \Illuminate\Support\Collection, filter: string, urut: string}
+     */
+    private function saring(Request $request, Pengumuman $pengumuman): array
+    {
+        $filter = array_key_exists($request->query('status'), self::FILTER) ? $request->query('status') : 'semua';
+        $cari = mb_strtolower(trim((string) $request->query('q')));
+        $urut = in_array($request->query('urut'), ['nama', 'waktu', 'status', 'jarak'], true) ? $request->query('urut') : 'status';
+
+        $semua = $pengumuman->peserta()
+            ->with(['user:id,name', 'dataPegawai:id,nama_lengkap,nip', 'dataPegawai.kepegawaian:id,data_pegawai_id,unit_kerja,jabatan', 'dataPegawai.penugasanAktif', 'penanda:id,name'])
+            ->get()
+            ->each(fn (PengumumanPeserta $p) => $p->setRelation('pengumuman', $pengumuman));
+
+        $baris = $semua
+            ->filter(fn (PengumumanPeserta $p) => $this->cocokFilter($p, $filter))
+            ->filter(fn (PengumumanPeserta $p) => $cari === '' || str_contains(mb_strtolower($this->nama($p) . ' ' . $this->unit($p) . ' ' . $p->dataPegawai?->nip), $cari));
+
+        // Bawaan: yang perlu perhatian dulu (ditolak radius → belum → sudah), lalu nama.
+        $peringkat = ['radius' => 0, 'belum' => 1, 'kedaluwarsa' => 2, 'manual' => 3, 'valid' => 4];
+        $baris = match ($urut) {
+            'nama' => $baris->sortBy(fn ($p) => mb_strtolower($this->nama($p))),
+            'waktu' => $baris->sortBy(fn ($p) => $p->waktu_absen?->getTimestamp() ?? PHP_INT_MAX),
+            'jarak' => $baris->sortBy(fn ($p) => $p->jarak ?? $p->gagal_terakhir['jarak'] ?? PHP_INT_MAX),
+            default => $baris->sortBy(fn ($p) => sprintf('%d-%s', $peringkat[$p->tampilan()['kunci']] ?? 9, mb_strtolower($this->nama($p)))),
+        };
+
+        return ['semua' => $semua, 'baris' => $baris->values(), 'filter' => $filter, 'urut' => $urut];
+    }
+
+    private function cocokFilter(PengumumanPeserta $p, string $filter): bool
+    {
+        return match ($filter) {
+            'sudah' => $p->sudahAbsen(),
+            'belum' => ! $p->sudahAbsen(),
+            'radius', 'kedaluwarsa' => $p->tampilan()['kunci'] === $filter,
+            default => true,
+        };
+    }
+
+    private function jabatan(PengumumanPeserta $p): string
+    {
+        $tugas = $p->dataPegawai?->penugasanAktif;
+
+        return ($tugas && $tugas->isNotEmpty() ? $tugas->pluck('jabatan')->filter()->unique()->implode(', ') : null)
+            ?: ($p->dataPegawai?->kepegawaian?->jabatan ?? '-');
     }
 
     private function pengelola(Pengumuman $pengumuman): User

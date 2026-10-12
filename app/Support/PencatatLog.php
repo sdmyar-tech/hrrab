@@ -102,6 +102,7 @@ class PencatatLog
         'pengumuman.destroy' => ['hapus', 'Pengumuman', 'Menghapus pengumuman'],
         'pengumuman.export' => ['ekspor', 'Pengumuman', 'Mengekspor pengumuman'],
         'pengumuman.absen.tandai' => ['ubah', 'Absen Acara', 'Menandai/membatalkan kehadiran acara'],
+        'pengumuman.absen.export' => ['ekspor', 'Absen Acara', 'Mengekspor kehadiran acara'],
         'pengumuman.absen.ingatkan' => ['kirim', 'Absen Acara', 'Mengirim pengingat absen acara'],
         'acara.absen.simpan' => ['tambah', 'Absen Acara', 'Absen acara (scan QR + lokasi)'],
         'notifikasi.kirim.store' => ['kirim', 'Notifikasi', 'Mengirim notifikasi'],

@@ -61,7 +61,8 @@ class PengumumanController extends Controller
         abort_unless($user->can(User::ABILITY_KELOLA_PENGUMUMAN), 403);
         $kategori = array_key_exists($request->query('kategori'), Pengumuman::KATEGORI) ? $request->query('kategori') : null;
 
-        $rows = Pengumuman::with('pembuat')->withCount('pembaca')->untuk($user)
+        $rows = Pengumuman::with('pembuat')->withCount(['pembaca', 'peserta as peserta_total',
+            'peserta as peserta_sudah' => fn ($q) => $q->where('status', '!=', PengumumanPeserta::STATUS_BELUM)])->untuk($user)
             ->when($kategori, fn ($q) => $q->where('kategori', $kategori))
             ->orderBy('id')->get()
             ->map(fn (Pengumuman $p) => [
@@ -74,12 +75,13 @@ class PengumumanController extends Controller
                 $p->penting ? 'Ya' : 'Tidak',
                 optional($p->tampil_sampai)->format('d-m-Y'),
                 $p->pembaca_count,
+                $p->absen_aktif ? "{$p->peserta_sudah}/{$p->peserta_total} hadir" : '-',
                 $p->pembuat?->name,
                 $p->isi,
             ]);
 
         return ExcelExporter::download(ExcelExporter::namaFile('pengumuman'), [
-            'Dibuat', 'Judul', 'Kategori', 'Jadwal', 'Lokasi', 'Sasaran', 'Penting', 'Tampil Sampai', 'Dibaca', 'Pembuat', 'Isi',
+            'Dibuat', 'Judul', 'Kategori', 'Jadwal', 'Lokasi', 'Sasaran', 'Penting', 'Tampil Sampai', 'Dibaca', 'Absen Acara', 'Pembuat', 'Isi',
         ], $rows, 'Pengumuman');
     }
 
