@@ -59,6 +59,70 @@ class EditorDataController extends Controller
         ]);
     }
 
+    /** Form tambah data baru (semua kolom, nilai awal = bawaan database). */
+    public function create(Request $request, string $entitas): View
+    {
+        $this->hanyaAdmin();
+        $k = EditorData::konfig($entitas);
+        abort_unless($k['tambah'] ?? true, 404, 'Data jenis ini dibuat lewat halamannya sendiri.');
+        $model = EditorData::model($k);
+
+        return view('admin.editor-data.edit', [
+            'entitas' => $entitas,
+            'k' => $k,
+            'model' => $model,
+            'kolom' => EditorData::kolom($model),
+            'dampak' => [],
+            'kembali' => EditorData::kembaliAman($request->query('kembali')),
+        ]);
+    }
+
+    public function store(Request $request, string $entitas): RedirectResponse
+    {
+        $this->hanyaAdmin();
+        $k = EditorData::konfig($entitas);
+        abort_unless($k['tambah'] ?? true, 404);
+        $model = EditorData::model($k);
+        $masukan = (array) $request->input('d', []);
+        $kosongkan = (array) $request->input('null', []);
+        $isi = [];
+        $galat = [];
+
+        foreach (EditorData::kolom($model) as $kol) {
+            $nama = $kol['nama'];
+            if ($kol['baca']) {
+                continue;
+            }
+            $v = isset($kosongkan[$nama]) ? null : trim((string) ($masukan[$nama] ?? ''));
+            if ($v === null || $v === '') {
+                if ($kol['wajib']) {
+                    $galat["d.{$nama}"] = "Kolom {$nama} wajib diisi.";
+                }
+                continue; // kosong: pakai bawaan database / NULL
+            }
+            try {
+                $isi[$nama] = $this->konversi($model, $kol, $v);
+            } catch (\InvalidArgumentException $e) {
+                $galat["d.{$nama}"] = $e->getMessage();
+            }
+        }
+
+        if ($galat) {
+            throw ValidationException::withMessages($galat);
+        }
+
+        try {
+            $model->forceFill($isi)->save();
+        } catch (QueryException $e) {
+            return back()->withInput()->with('error', 'Gagal disimpan: ' . $this->pesanDb($e));
+        }
+
+        $tujuan = EditorData::kembaliAman($request->input('kembali'));
+
+        return ($tujuan ? redirect($tujuan) : redirect()->route('admin.data.edit', [$entitas, $model->getKey()]))
+            ->with('success', "{$k['label']} baru #{$model->getKey()} dibuat.");
+    }
+
     public function update(Request $request, string $entitas, string $id): RedirectResponse
     {
         $this->hanyaAdmin();

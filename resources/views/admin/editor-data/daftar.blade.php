@@ -12,6 +12,11 @@
                     <p class="text-muted mb-0">{{ number_format($baris->total(), 0, ',', '.') }} data · terbaru di atas</p>
                 </div>
             </div>
+            @if ($k['tambah'] ?? true)
+                <div class="heading-actions">
+                    <a href="{{ route('admin.data.create', [$entitas, 'kembali' => request()->fullUrl()]) }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Data</a>
+                </div>
+            @endif
         </div>
 
         <section class="panel p-3 p-lg-4">

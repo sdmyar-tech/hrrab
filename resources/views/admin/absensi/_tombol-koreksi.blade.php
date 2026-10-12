@@ -19,7 +19,7 @@
         'surat' => $h['lembur_surat_menit'] ? 'Surat lembur ' . $durasiK($h['lembur_surat_menit']) : '',
     ];
 @endphp
-@if ($h['tanggal']->lte(now()))
+@if ($h['tanggal']->lte(now()) || auth()->user()->isAdmin())
     <button type="button" class="{{ $kelasTombol ?? 'btn btn-outline-secondary btn-sm' }}" data-koreksi='@json($dataKoreksi)'
         title="{{ $judulTombol ?? 'Koreksi absensi ' . $h['tanggal']->translatedFormat('d M') }}" aria-label="Koreksi absensi {{ $pegawai->nama_lengkap }} {{ $h['tanggal']->translatedFormat('d M') }}">
         @isset($isiTombol)

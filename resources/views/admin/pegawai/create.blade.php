@@ -521,4 +521,15 @@
                 @endif
             });
         </script>
-    @endsection
+    @if (auth()->user()->isAdmin())
+    <script>
+        // Admin boleh menyimpan data belum lengkap: hanya nama, jabatan, dan unit kerja yang tetap wajib (sama dengan aturan server).
+        document.addEventListener('DOMContentLoaded', function () {
+            const tetap = ['nama_lengkap', 'jabatan', 'unit_kerja'];
+            document.querySelectorAll('#wizardPegawaiForm [required]').forEach(function (el) {
+                if (!tetap.includes(el.name)) el.removeAttribute('required');
+            });
+        });
+    </script>
+@endif
+@endsection

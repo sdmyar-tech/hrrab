@@ -59,7 +59,10 @@ class KandidatInternalController extends Controller
 
         $lowongan = $validated['posisi'] === 'lowongan' ? Lowongan::find($validated['lowongan_id']) : null;
 
-        if ($lowongan?->isKuotaPenuh()) {
+        // Admin bebas dari batas kuota, lamaran ganda, dan jabatan sama.
+        $admin = (bool) \Illuminate\Support\Facades\Auth::user()?->isAdmin();
+
+        if ($lowongan?->isKuotaPenuh() && ! $admin) {
             return back()->withInput()->with('error', 'Kuota lowongan ini sudah terpenuhi.');
         }
 
@@ -149,7 +152,7 @@ class KandidatInternalController extends Controller
             return $pelamar;
         });
 
-        if (Lamaran::where('data_pelamar_id', $pelamar->id)->where('status', Lamaran::STATUS_PROSES)->exists()) {
+        if (Lamaran::where('data_pelamar_id', $pelamar->id)->where('status', Lamaran::STATUS_PROSES)->exists() && ! \Illuminate\Support\Facades\Auth::user()?->isAdmin()) {
             return back()->withInput()->with('error', "{$pelamar->nama_lengkap} masih punya lamaran yang sedang berjalan.");
         }
 
@@ -160,14 +163,14 @@ class KandidatInternalController extends Controller
     {
         $pegawai = DataPegawai::with('kepegawaian')->findOrFail($validated['data_pegawai_id']);
 
-        if (Lamaran::where('data_pegawai_id', $pegawai->id)->where('status', Lamaran::STATUS_PROSES)->exists()) {
+        if (Lamaran::where('data_pegawai_id', $pegawai->id)->where('status', Lamaran::STATUS_PROSES)->exists() && ! \Illuminate\Support\Facades\Auth::user()?->isAdmin()) {
             return back()->withInput()->with('error', "{$pegawai->nama_lengkap} masih punya proses seleksi yang sedang berjalan.");
         }
 
         $jabatan = $lowongan?->jabatan ?? $validated['jabatan_tujuan'] ?? null;
         $unit = $lowongan?->unit_kerja ?? $validated['unit_kerja_tujuan'] ?? null;
 
-        if ($pegawai->kepegawaian?->jabatan === $jabatan && $pegawai->kepegawaian?->unit_kerja === $unit) {
+        if ($pegawai->kepegawaian?->jabatan === $jabatan && $pegawai->kepegawaian?->unit_kerja === $unit && ! \Illuminate\Support\Facades\Auth::user()?->isAdmin()) {
             return back()->withInput()->with('error', "{$pegawai->nama_lengkap} sudah menjabat {$jabatan} di {$unit}.");
         }
 

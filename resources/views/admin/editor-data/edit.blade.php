@@ -3,7 +3,8 @@
 @section('content')
 @php
     use App\Support\EditorData;
-    $tautan = isset($k['tautan']) ? ($k['tautan'])($model) : null;
+    $baru = ! $model->exists;
+    $tautan = ! $baru && isset($k['tautan']) ? ($k['tautan'])($model) : null;
     $kembaliKe = $kembali ?? route('admin.data.daftar', $entitas);
 @endphp
 <div class="dashboard-content">
@@ -12,21 +13,23 @@
             <div class="page-heading-copy">
                 <span class="page-icon"><i class="bi {{ $k['ikon'] }}"></i></span>
                 <div class="min-w-0">
-                    <p class="eyebrow mb-1"><a href="{{ route('admin.data.daftar', $entitas) }}" class="text-reset text-decoration-none"><i class="bi bi-arrow-left me-1"></i>{{ $k['label'] }}</a> · ID {{ $model->getKey() }}</p>
-                    <h1 class="h4 mb-1">{{ ($k['judul'])($model) }}</h1>
-                    <p class="text-muted small mb-0">Dibuat {{ $model->created_at?->format('d-m-Y H:i') ?? '–' }} · diubah {{ $model->updated_at?->format('d-m-Y H:i') ?? '–' }}</p>
+                    <p class="eyebrow mb-1"><a href="{{ route('admin.data.daftar', $entitas) }}" class="text-reset text-decoration-none"><i class="bi bi-arrow-left me-1"></i>{{ $k['label'] }}</a> · {{ $baru ? 'Data baru' : 'ID ' . $model->getKey() }}</p>
+                    <h1 class="h4 mb-1">{{ $baru ? 'Tambah ' . $k['label'] : ($k['judul'])($model) }}</h1>
+                    <p class="text-muted small mb-0">{{ $baru ? 'Kolom yang dikosongkan memakai nilai bawaan database.' : 'Dibuat ' . ($model->created_at?->format('d-m-Y H:i') ?? '–') . ' · diubah ' . ($model->updated_at?->format('d-m-Y H:i') ?? '–') }}</p>
                 </div>
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
                 @if ($tautan)
                     <a href="{{ $tautan }}" class="btn btn-light"><i class="bi bi-box-arrow-up-right me-1"></i>Buka di halaman asal</a>
                 @endif
+                @unless ($baru)
                 <form action="{{ route('admin.data.destroy', [$entitas, $model->getKey()]) }}" method="POST"
                     data-confirm="Hapus permanen {{ $k['label'] }} #{{ $model->getKey() }}?{{ ($ikut = collect($dampak)->where('aturan', 'CASCADE')->sum('jumlah')) ? ' ' . $ikut . ' data terkait IKUT TERHAPUS.' : '' }} Tindakan ini tidak bisa dibatalkan.">
                     @csrf @method('DELETE')
                     <input type="hidden" name="kembali" value="{{ $kembali }}">
                     <button class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>Hapus</button>
                 </form>
+                @endunless
             </div>
         </div>
 
@@ -52,9 +55,9 @@
             <div class="alert alert-danger small"><ul class="mb-0 ps-3">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
         @endif
 
-        <form method="POST" action="{{ route('admin.data.update', [$entitas, $model->getKey()]) }}" id="formEditorData"
-            data-confirm="Simpan perubahan langsung ke {{ $k['label'] }} #{{ $model->getKey() }}?">
-            @csrf @method('PUT')
+        <form method="POST" action="{{ $baru ? route('admin.data.store', $entitas) : route('admin.data.update', [$entitas, $model->getKey()]) }}" id="formEditorData"
+            data-confirm="{{ $baru ? 'Simpan ' . $k['label'] . ' baru?' : 'Simpan perubahan langsung ke ' . $k['label'] . ' #' . $model->getKey() . '?' }}">
+            @csrf @unless ($baru) @method('PUT') @endunless
             <input type="hidden" name="kembali" value="{{ $kembali }}">
 
             <section class="panel p-3 p-lg-4">
@@ -66,6 +69,7 @@
                         $bisaNull = ! $kol['wajib'] && ! $kol['baca'];
                         $kosong = (bool) old("null.$n", false);
                     @endphp
+                    @continue($baru && $kol['baca'])
                     <div class="kolom-data row g-2 align-items-start" data-kolom>
                         <div class="col-md-4 col-xl-3">
                             <label class="form-label mb-0 fw-semibold" for="{{ $id }}">{{ $kol['label'] }}</label>
@@ -153,7 +157,7 @@
             <div class="aksi-lengket d-flex flex-wrap gap-2 justify-content-end mt-3">
                 <span class="me-auto small text-muted align-self-center" data-jumlah-ubah>Belum ada perubahan.</span>
                 <a href="{{ $kembaliKe }}" class="btn btn-light">Batal</a>
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i>Simpan Perubahan</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i>{{ $baru ? 'Simpan Data Baru' : 'Simpan Perubahan' }}</button>
             </div>
         </form>
     </div>

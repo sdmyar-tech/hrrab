@@ -17,8 +17,16 @@
                     </p>
                 </div>
             </div>
-            <div class="heading-actions">
+            <div class="heading-actions d-flex flex-wrap gap-2 align-items-center">
                 <span class="badge fs-6 {{ $lamaran->badgeClass() }}">{{ $lamaran->statusLabel() }}</span>
+                @if ($admin)
+                    <form action="{{ route('admin.data.destroy', ['lamaran', $lamaran->id]) }}" method="POST"
+                        data-confirm="Hapus permanen lamaran {{ $lamaran->namaKandidat() }} beserta semua interview, onboarding, dan kontraknya?">
+                        @csrf @method('DELETE')
+                        <input type="hidden" name="kembali" value="{{ route('admin.lamaran.index') }}">
+                        <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash me-1"></i>Hapus Lamaran</button>
+                    </form>
+                @endif
             </div>
         </div>
 
@@ -190,7 +198,7 @@
                     </div>
                 @endif
 
-                @if ($lamaran->isProses() || $lamaran->interviewJadwals->isNotEmpty())
+                @if ($lamaran->isProses() || $lamaran->interviewJadwals->isNotEmpty() || $admin)
                     <div class="panel p-4 mb-3">
                         <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                             <h2 class="h6 fw-bold mb-0">Interview</h2>
@@ -210,7 +218,7 @@
                                 @if ($jadwal->lokasi) &middot; @include('partials.lokasi', ['lokasi' => $jadwal->lokasi, 'tanpaIkon' => true]) @endif
                                 <span class="badge text-bg-light border">{{ $jadwal->statusLabel() }}</span>
                                 <span class="badge {{ $jadwal->hasilBadgeClass() }}">
-                                    @if ($jadwal->hasil_status)<i class="bi bi-lock-fill me-1" title="Hasil sudah final, tidak bisa diubah"></i>@endif{{ $jadwal->hasilLabel() }}
+                                    @if ($jadwal->hasil_status && ! $admin)<i class="bi bi-lock-fill me-1" title="Hasil sudah final, tidak bisa diubah"></i>@endif{{ $jadwal->hasilLabel() }}
                                 </span>
                                 <br>
                                 <span class="text-muted">Interviewer: {{ $jadwal->interviewer?->name ?? '-' }}
@@ -222,24 +230,21 @@
                                 @if ($jadwal->catatan_hasil)
                                     <br><span class="text-muted">Catatan hasil: {{ $jadwal->catatan_hasil }}</span>
                                 @endif
-                                @if (auth()->user()->isAdmin())
-                                    <div class="mt-2">@include('admin.editor-data._tombol', ['entitas' => 'interview', 'id' => $jadwal->id, 'teks' => 'Ubah apa saja (Admin)'])</div>
-                                @endif
 
-                                @if ($jadwal->isTerjadwal() && $lamaran->isProses())
+                                @if (($jadwal->isTerjadwal() && $lamaran->isProses()) || $admin)
                                     <div class="mt-2 d-flex flex-wrap gap-2 align-items-start">
                                         @if (\App\Support\InterviewFlow::bisaIsiHasil(auth()->user(), $jadwal))
                                             <form action="{{ route('admin.lamaran.interview.hasil', [$lamaran, $jadwal]) }}" method="POST" class="d-flex flex-wrap gap-1 align-items-center"
-                                                data-confirm="Simpan hasil {{ $jadwal->tahapLabel() }}? Hasil final tidak bisa diubah, dan Tidak Lulus langsung menolak lamaran.">
+                                                data-confirm="{{ $admin ? 'Simpan hasil ' . $jadwal->tahapLabel() . '? (Mode Admin: hasil bisa diubah lagi kapan saja. Tidak Lulus menolak lamaran; mengubah Tidak Lulus membuka lamaran kembali.)' : 'Simpan hasil ' . $jadwal->tahapLabel() . '? Hasil final tidak bisa diubah, dan Tidak Lulus langsung menolak lamaran.' }}">
                                                 @csrf
                                                 <select name="hasil_status" class="form-select form-select-sm" style="width:auto;" required>
                                                     <option value="">Isi Hasil...</option>
-                                                    <option value="lulus">Lulus</option>
-                                                    <option value="dipertimbangkan">Dipertimbangkan</option>
-                                                    <option value="tidak_lulus">Tidak Lulus</option>
+                                                    <option value="lulus" @selected($jadwal->hasil_status === 'lulus')>Lulus</option>
+                                                    <option value="dipertimbangkan" @selected($jadwal->hasil_status === 'dipertimbangkan')>Dipertimbangkan</option>
+                                                    <option value="tidak_lulus" @selected($jadwal->hasil_status === 'tidak_lulus')>Tidak Lulus</option>
                                                 </select>
-                                                <input type="text" name="catatan_hasil" class="form-control form-control-sm" placeholder="Catatan (opsional)" style="width:180px;">
-                                                <button type="submit" class="btn btn-outline-success btn-sm">Simpan Hasil</button>
+                                                <input type="text" name="catatan_hasil" class="form-control form-control-sm" placeholder="Catatan (opsional)" style="width:180px;" value="{{ $jadwal->catatan_hasil }}">
+                                                <button type="submit" class="btn btn-outline-success btn-sm">{{ $jadwal->hasil_status ? 'Ubah Hasil' : 'Simpan Hasil' }}</button>
                                             </form>
                                         @endif
 
@@ -250,11 +255,18 @@
                                             </button>
                                         @endif
 
-                                        @if ($canReview)
+                                        @if ($canReview && $jadwal->status !== \App\Models\InterviewJadwal::STATUS_DIBATALKAN)
                                             <form action="{{ route('admin.lamaran.interview.cancel', [$lamaran, $jadwal]) }}" method="POST" class="form-cancel-interview">
                                                 @csrf
                                                 <input type="hidden" name="catatan" value="">
                                                 <button type="button" class="btn btn-outline-danger btn-sm btn-cancel-interview">Batalkan</button>
+                                            </form>
+                                        @endif
+                                        @if ($admin)
+                                            <form action="{{ route('admin.lamaran.interview.destroy', [$lamaran, $jadwal]) }}" method="POST"
+                                                data-confirm="Hapus permanen {{ $jadwal->tahapLabel() }} ini?">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Hapus (Admin)"><i class="bi bi-trash"></i></button>
                                             </form>
                                         @endif
                                     </div>
@@ -283,8 +295,34 @@
                                                 <div class="col-md-6">
                                                     <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Catatan jadwal (opsional)" value="{{ $jadwal->catatan }}">
                                                 </div>
+                                                @if ($admin)
+                                                    <div class="col-md-5">
+                                                        <label class="form-label small mb-1">Interviewer</label>
+                                                        <select name="interviewer_id" class="form-select form-select-sm">
+                                                            @foreach ($opsiInterviewerAdmin as $opt)
+                                                                <option value="{{ $opt->id }}" @selected($opt->id === $jadwal->interviewer_id)>{{ $opt->name }} ({{ $opt->roleLabel() }})</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label small mb-1">Tahap</label>
+                                                        <select name="tahap_interview" class="form-select form-select-sm">
+                                                            @foreach ([1 => 'Interview 1', 2 => 'Interview 2', 3 => 'Lanjutan'] as $tv => $tl)
+                                                                <option value="{{ $tv }}" @selected($jadwal->tahap_interview === $tv)>{{ $tl }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label small mb-1">Status</label>
+                                                        <select name="status" class="form-select form-select-sm">
+                                                            @foreach (['terjadwal' => 'Terjadwal', 'selesai' => 'Selesai', 'dibatalkan' => 'Dibatalkan'] as $sv => $sl)
+                                                                <option value="{{ $sv }}" @selected($jadwal->status === $sv)>{{ $sl }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                @endif
                                                 <div class="col-12 d-flex justify-content-between align-items-center">
-                                                    <span class="text-muted" style="font-size:.75rem;">Interviewer tidak bisa diganti setelah dijadwalkan.</span>
+                                                    <span class="text-muted" style="font-size:.75rem;">{{ $admin ? 'Mode Admin: status Terjadwal mengosongkan hasil (interview diulang).' : 'Interviewer tidak bisa diganti setelah dijadwalkan.' }}</span>
                                                     <button type="submit" class="btn btn-primary btn-sm">Simpan Jadwal</button>
                                                 </div>
                                             </form>
@@ -342,14 +380,19 @@
                             </div>
                         @endif
 
-                        @if ($canReview && ($bisaTambahLanjutan || $bisaKonfirmasiInterview))
+                        @if ($canReview && ($bisaTambahLanjutan || $bisaKonfirmasiInterview || $admin))
                             <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
                                 @if ($bisaTambahLanjutan)
                                     <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalInterviewLanjutan">
                                         <i class="bi bi-plus-lg me-1"></i> Tambah Interview Lanjutan
                                     </button>
                                 @endif
-                                @if ($bisaKonfirmasiInterview)
+                                @if ($admin)
+                                    <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalInterviewAdmin">
+                                        <i class="bi bi-shield-lock me-1"></i> Tambah Interview (Admin)
+                                    </button>
+                                @endif
+                                @if ($bisaKonfirmasiInterview || ($admin && $lamaran->tahap !== \App\Models\Lamaran::TAHAP_SCREENING))
                                     <form action="{{ route('admin.lamaran.interview.selesai', $lamaran) }}" method="POST" class="ms-auto"
                                         data-confirm="Konfirmasi interview selesai ({{ $jumlahInterviewLulus }} interview lulus) dan lanjut ke onboarding? Interview lanjutan tidak bisa ditambah lagi.">
                                         @csrf
@@ -361,6 +404,10 @@
                                     <span class="text-muted small align-self-center ms-auto">Konfirmasi selesai tersedia setelah minimal {{ \App\Support\InterviewFlow::MIN_LULUS }} interview lulus.</span>
                                 @endif
                             </div>
+                        @endif
+
+                        @if ($admin)
+                            @include('admin.lamaran._modal-interview-admin')
                         @endif
 
                         @if ($canReview && $bisaTambahLanjutan)
@@ -415,9 +462,9 @@
                     </div>
                 @endif
 
-                @if ($lamaran->isProses())
+                @if ($lamaran->isProses() || $admin)
                     <div class="panel p-4 mb-3">
-                        @php $bisaMulaiOnboarding = $canReview && $lamaran->tahap === \App\Models\Lamaran::TAHAP_SCREENING && $lamaran->screeningOnboardings->where('status', \App\Models\ScreeningOnboarding::STATUS_BERJALAN)->isEmpty(); @endphp
+                        @php $bisaMulaiOnboarding = $canReview && ($admin || ($lamaran->tahap === \App\Models\Lamaran::TAHAP_SCREENING && $lamaran->screeningOnboardings->where('status', \App\Models\ScreeningOnboarding::STATUS_BERJALAN)->isEmpty())); @endphp
                         <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
                             <h2 class="h6 fw-bold mb-0">Screening / Onboarding</h2>
                             @if ($bisaMulaiOnboarding)
@@ -431,7 +478,7 @@
                             Setelah lulus, jadwal kontrak otomatis dibuat sehari setelah hari terakhir onboarding; tanggal masuk = hari pertama onboarding.
                         </p>
 
-                        @if ($lamaran->tahap === \App\Models\Lamaran::TAHAP_INTERVIEW)
+                        @if ($lamaran->tahap === \App\Models\Lamaran::TAHAP_INTERVIEW && ! $admin)
                             <p class="text-muted small mb-0"><i class="bi bi-hourglass-split me-1"></i>Tersedia setelah interview dikonfirmasi selesai.</p>
                         @endif
 
@@ -457,6 +504,9 @@
                                 @if ($screening->catatan)
                                     <br><span class="text-muted">Arahan: {{ $screening->catatan }}</span>
                                 @endif
+                                @if ($admin || ($canReview && $screening->status === \App\Models\ScreeningOnboarding::STATUS_BERJALAN))
+                                    @include('admin.lamaran._aksi-onboarding')
+                                @endif
 
                                 <div class="row g-2 mt-1">
                                     @foreach ($sisiKonfirmasi as $sisi => $k)
@@ -475,8 +525,8 @@
                                                     <span class="text-muted d-block">{{ $k['catatan'] }}</span>
                                                 @endif
                                                 @if (\App\Support\OnboardingFlow::bisaKonfirmasi(auth()->user(), $screening, $sisi))
-                                                    <button type="button" class="btn btn-success btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#modalKonfirmasi-{{ $screening->id }}-{{ $sisi }}">
-                                                        <i class="bi bi-clipboard-check me-1"></i> Proses Konfirmasi
+                                                    <button type="button" class="btn {{ $k['hasil'] ? 'btn-outline-success' : 'btn-success' }} btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#modalKonfirmasi-{{ $screening->id }}-{{ $sisi }}">
+                                                        <i class="bi bi-clipboard-check me-1"></i> {{ $k['hasil'] ? 'Ubah Konfirmasi' : 'Proses Konfirmasi' }}
                                                     </button>
                                                 @endif
                                             </div>
@@ -486,7 +536,7 @@
                                             <div class="modal fade" id="modalKonfirmasi-{{ $screening->id }}-{{ $sisi }}" tabindex="-1" aria-hidden="true">
                                                 <div class="modal-dialog modal-dialog-centered">
                                                     <form action="{{ route('admin.lamaran.screening.hasil', [$lamaran, $screening]) }}" method="POST" class="modal-content"
-                                                        data-confirm="Simpan konfirmasi onboarding? Hasil tidak bisa diubah.">
+                                                        data-confirm="{{ $admin ? 'Simpan konfirmasi onboarding? (Mode Admin: bisa diubah lagi kapan saja.)' : 'Simpan konfirmasi onboarding? Hasil tidak bisa diubah.' }}">
                                                         @csrf
                                                         <input type="hidden" name="sisi" value="{{ $sisi }}">
                                                         <div class="modal-header">
@@ -505,16 +555,16 @@
                                                             <label class="form-label small mb-1">Hasil</label>
                                                             <div class="d-flex gap-3 mb-3">
                                                                 <div class="form-check">
-                                                                    <input class="form-check-input" type="radio" name="hasil_status" value="lulus" id="hasil-{{ $screening->id }}-{{ $sisi }}-l" required @disabled($lulusTerkunci)>
+                                                                    <input class="form-check-input" type="radio" name="hasil_status" value="lulus" id="hasil-{{ $screening->id }}-{{ $sisi }}-l" required @disabled($lulusTerkunci) @checked($k['hasil'] === 'lulus')>
                                                                     <label class="form-check-label" for="hasil-{{ $screening->id }}-{{ $sisi }}-l">Lulus</label>
                                                                 </div>
                                                                 <div class="form-check">
-                                                                    <input class="form-check-input" type="radio" name="hasil_status" value="tidak_lulus" id="hasil-{{ $screening->id }}-{{ $sisi }}-t">
+                                                                    <input class="form-check-input" type="radio" name="hasil_status" value="tidak_lulus" id="hasil-{{ $screening->id }}-{{ $sisi }}-t" @checked($k['hasil'] === 'tidak_lulus')>
                                                                     <label class="form-check-label" for="hasil-{{ $screening->id }}-{{ $sisi }}-t">Tidak Lulus</label>
                                                                 </div>
                                                             </div>
                                                             <label class="form-label small mb-1">Catatan penilaian <span class="text-muted">(opsional)</span></label>
-                                                            <textarea name="catatan_hasil" rows="3" class="form-control form-control-sm" maxlength="1000"></textarea>
+                                                            <textarea name="catatan_hasil" rows="3" class="form-control form-control-sm" maxlength="1000">{{ $k['catatan'] }}</textarea>
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
@@ -558,7 +608,7 @@
                                                 <div class="col-md-5">
                                                     <label class="form-label small mb-1">Durasi (hari)</label>
                                                     <input type="number" name="durasi_hari" id="onboarding-durasi" class="form-control form-control-sm"
-                                                        value="{{ \App\Models\ScreeningOnboarding::DURASI_HARI }}" min="{{ \App\Support\OnboardingFlow::DURASI_MIN }}" max="{{ \App\Support\OnboardingFlow::DURASI_MAX }}" required>
+                                                        value="{{ \App\Models\ScreeningOnboarding::DURASI_HARI }}" min="{{ \App\Support\OnboardingFlow::DURASI_MIN }}" max="{{ $admin ? 365 : \App\Support\OnboardingFlow::DURASI_MAX }}" required>
                                                 </div>
                                                 <div class="col-12">
                                                     <div class="alert alert-info small py-2 mb-0" id="onboarding-ringkasan"></div>
@@ -599,17 +649,25 @@
                                         @if ($jadwal->lokasi) &middot; @include('partials.lokasi', ['lokasi' => $jadwal->lokasi, 'tanpaIkon' => true]) @endif
                                         <span class="badge text-bg-light border">{{ $jadwal->statusLabel() }}</span>
                                     </span>
-                                    @if ($canReview && $jadwal->status === \App\Models\KontrakJadwal::STATUS_TERJADWAL && $tanggalKontrakMinimal)
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#ubah-kontrak-{{ $jadwal->id }}">
-                                            <i class="bi bi-pencil me-1"></i> Ubah
-                                        </button>
-                                    @endif
+                                    <span class="d-flex gap-1">
+                                        @if ($admin || ($canReview && $jadwal->status === \App\Models\KontrakJadwal::STATUS_TERJADWAL && $tanggalKontrakMinimal))
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#ubah-kontrak-{{ $jadwal->id }}">
+                                                <i class="bi bi-pencil me-1"></i> Ubah
+                                            </button>
+                                        @endif
+                                        @if ($admin)
+                                            <form action="{{ route('admin.lamaran.kontrak.destroy', [$lamaran, $jadwal]) }}" method="POST" data-confirm="Hapus jadwal kontrak ini?">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Hapus (Admin)"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        @endif
+                                    </span>
                                 </div>
                                 @if ($jadwal->catatan)
                                     <span class="text-muted">{{ $jadwal->catatan }}</span>
                                 @endif
 
-                                @if ($canReview && $jadwal->status === \App\Models\KontrakJadwal::STATUS_TERJADWAL && $tanggalKontrakMinimal)
+                                @if ($admin || ($canReview && $jadwal->status === \App\Models\KontrakJadwal::STATUS_TERJADWAL && $tanggalKontrakMinimal))
                                     <div class="collapse mt-2" id="ubah-kontrak-{{ $jadwal->id }}">
                                         <form action="{{ route('admin.lamaran.kontrak.update', [$lamaran, $jadwal]) }}" method="POST" class="row g-2 bg-light rounded p-2"
                                             data-confirm="Simpan perubahan jadwal kontrak?">
@@ -628,6 +686,16 @@
                                                 <label class="form-label small mb-1">Lokasi</label>
                                                 <input type="text" name="lokasi" class="form-control form-control-sm" value="{{ $jadwal->lokasi }}">
                                             </div>
+                                            @if ($admin)
+                                                <div class="col-md-5">
+                                                    <label class="form-label small mb-1">Status</label>
+                                                    <select name="status" class="form-select form-select-sm">
+                                                        @foreach (['terjadwal' => 'Terjadwal', 'selesai' => 'Selesai', 'dibatalkan' => 'Dibatalkan'] as $sv => $sl)
+                                                            <option value="{{ $sv }}" @selected($jadwal->status === $sv)>{{ $sl }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            @endif
                                             <div class="col-12 d-flex justify-content-end">
                                                 <button type="submit" class="btn btn-primary btn-sm">Simpan Jadwal</button>
                                             </div>
@@ -645,13 +713,13 @@
                             </p>
                         @endforelse
 
-                        @if ($canReview && $onboardingLulus && $lamaran->tahap === \App\Models\Lamaran::TAHAP_KONTRAK
-                            && $lamaran->kontrakJadwals->where('status', \App\Models\KontrakJadwal::STATUS_TERJADWAL)->isEmpty())
+                        @if ($admin || ($canReview && $onboardingLulus && $lamaran->tahap === \App\Models\Lamaran::TAHAP_KONTRAK
+                            && $lamaran->kontrakJadwals->where('status', \App\Models\KontrakJadwal::STATUS_TERJADWAL)->isEmpty()))
                             <form action="{{ route('admin.lamaran.kontrak.store', $lamaran) }}" method="POST" class="row g-2 mt-2" data-confirm="Jadwalkan tanda tangan kontrak ini?">
                                 @csrf
                                 <div class="col-md-4">
                                     <label class="form-label small mb-1">Tanggal</label>
-                                    <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ $tanggalKontrakMinimal->format('Y-m-d') }}"
+                                    <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ ($tanggalKontrakMinimal ?? \App\Support\Kalender::hariKerjaTerdekat(now()))->format('Y-m-d') }}"
                                         @unless (auth()->user()->isAdmin()) min="{{ $tanggalKontrakMinimal->format('Y-m-d') }}" @endunless required>
                                 </div>
                                 <div class="col-md-3">
@@ -671,7 +739,7 @@
 
                     @if ($canReview)
                         <div class="panel p-4">
-                            <h2 class="h6 fw-bold mb-3">Keputusan Akhir</h2>
+                            <h2 class="h6 fw-bold mb-3">{{ $lamaran->isSelesai() ? 'Ubah Keputusan (Admin)' : 'Keputusan Akhir' }}</h2>
 
                             <form action="{{ route('admin.lamaran.rekrut', $lamaran) }}" method="POST" class="row g-2 mb-3" id="form-rekrut"
                                 data-confirm="{{ $lamaran->isKandidatPegawai() ? 'Tetapkan pegawai ini ke posisi baru?' : 'Rekrut pelamar ini menjadi pegawai?' }}">

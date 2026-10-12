@@ -47,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
         foreach ($abilities as $ability) {
             Gate::define($ability, fn (User $user) => $user->hasAbility($ability));
         }
+        // Menyetujui/menolak cuti & lembur: penyetuju sesuai tahap, atau Admin (boleh di tahap mana pun).
+        Gate::define('proses-pengajuan', fn (User $user) => $user->hasAbility(User::ABILITY_APPROVE) || $user->isAdmin());
 
         View::composer(['layouts.admin.sidebar', 'layouts.pegawai.sidebar'], function ($view) {
             $user = Auth::user();

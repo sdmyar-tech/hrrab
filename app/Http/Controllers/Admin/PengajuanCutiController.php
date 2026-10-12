@@ -129,7 +129,7 @@ class PengajuanCutiController extends Controller
                 'pengganti_nama.required' => 'Nama pengganti tugas wajib dipilih sebelum pengajuan diteruskan.',
             ]);
 
-            if (! $pengajuanCuti->substituteOptions()->contains($validated['pengganti_nama'])) {
+            if (! $pengajuanCuti->substituteOptions()->contains($validated['pengganti_nama']) && ! $approver->isAdmin()) {
                 return redirect()->back()->with('error', 'Nama pengganti harus berasal dari divisi yang sama dengan pemohon.');
             }
 

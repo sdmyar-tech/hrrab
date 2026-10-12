@@ -382,7 +382,7 @@ class PegawaiController extends Controller
 
     private function validateRequest(Request $request, ?int $ignoreId = null): array
     {
-        $validated = $request->validate([
+        $aturan = [
             'email' => [
                 'required', 'email', 'max:255',
                 Rule::unique('data_pegawais', 'email')->ignore($ignoreId),
@@ -430,7 +430,20 @@ class PegawaiController extends Controller
             'upload_ijazah_terakhir' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
             'upload_buku_tabungan' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
             'pas_foto' => ['nullable', 'file', 'mimes:jpg,jpeg,png', 'max:2048'],
-        ], [
+        ];
+
+        // Admin boleh menyimpan data yang belum lengkap (mis. data lama): hanya kolom yang wajib di database tetap wajib.
+        if (Auth::user()?->isAdmin()) {
+            $tetapWajib = ['nama_lengkap', 'jabatan', ...($ignoreId ? [] : ['unit_kerja'])];
+            foreach ($aturan as $kolom => $r) {
+                if (! in_array($kolom, $tetapWajib, true)) {
+                    $aturan[$kolom] = array_map(fn ($x) => $x === 'required' ? 'nullable' : $x, $r);
+                }
+            }
+            $aturan['tanggal_lahir'] = ['nullable', 'date'];
+        }
+
+        $validated = $request->validate($aturan, [
             'nik.size' => 'NIK harus terdiri dari 16 digit.',
             'tanggal_lahir.before' => 'Tanggal lahir tidak boleh lebih dari hari ini.',
             'tanggal_habis_kontrak.after_or_equal' => 'Tanggal habis kontrak tidak boleh sebelum tanggal masuk.',

@@ -93,6 +93,13 @@
                                 <div class="text-end small text-nowrap">
                                     <span class="badge text-bg-success">+{{ $r->jumlah_baru }}</span>
                                     @if ($r->jumlah_diperbarui)<span class="badge text-bg-primary">{{ $r->jumlah_diperbarui }} diperbarui</span>@endif
+                                    @if (auth()->user()->isAdmin())
+                                        <form action="{{ route('admin.absensi.import.hapus', $r) }}" method="POST" class="mt-1"
+                                            data-confirm="Batalkan import {{ $r->nama_file }}? Baris absensi dari file ini dihapus (yang sudah dikoreksi dipertahankan).">
+                                            @csrf @method('DELETE')
+                                            <button class="btn btn-link btn-sm text-danger p-0"><i class="bi bi-arrow-counterclockwise me-1"></i>Batalkan import</button>
+                                        </form>
+                                    @endif
                                 </div>
                             </div>
                         @empty

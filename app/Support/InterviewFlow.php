@@ -117,15 +117,26 @@ class InterviewFlow
         return $lamaran->interviewJadwals->contains(fn ($j) => $j->tahap_interview === $tahap && $j->hasil_status === InterviewJadwal::HASIL_LULUS);
     }
 
-    /** Jadwal (tanggal/jam/lokasi/catatan) boleh diubah selama interview belum selesai. */
+    /** Jadwal (tanggal/jam/lokasi/catatan) boleh diubah selama interview belum selesai. Admin: kapan saja. */
     public static function bisaUbahJadwal(User $user, InterviewJadwal $jadwal): bool
     {
-        return self::bisaIsiHasil($user, $jadwal);
+        return $user->isAdmin() || self::bisaIsiHasil($user, $jadwal);
+    }
+
+    /** Pilihan interviewer untuk Admin: semua akun internal (Admin bebas memilih siapa pun). */
+    public static function opsiInterviewerAdmin(): \Illuminate\Support\Collection
+    {
+        return User::whereIn('role', User::INTERNAL_ROLES)->orderBy('name')->get(['id', 'name', 'role']);
     }
 
     /** Yang boleh mengisi hasil: reviewer rekrutmen (Kepala SDM/GM) atau interviewer jadwal itu sendiri. */
     public static function bisaIsiHasil(User $user, InterviewJadwal $jadwal): bool
     {
+        // Admin boleh mengisi/mengubah hasil kapan saja, termasuk interview yang sudah selesai/dibatalkan.
+        if ($user->isAdmin()) {
+            return true;
+        }
+
         $kandidatSendiri = $user->data_pegawai_id && $user->data_pegawai_id === $jadwal->lamaran?->data_pegawai_id;
 
         return $jadwal->isTerjadwal()

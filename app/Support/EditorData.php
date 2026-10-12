@@ -125,12 +125,12 @@ class EditorData
                 'judul' => fn ($m) => ($m->dataPegawai?->nama_lengkap ?? $m->user?->name ?? '-') . ' — ' . ($m->pengumuman?->judul ?? '-'),
                 'kolom' => ['status', 'waktu_absen', 'jarak'], 'cari' => ['status', 'catatan'], 'relasi' => ['pengumuman' => 'judul', 'dataPegawai' => 'nama_lengkap'],
                 'tautan' => fn ($m) => self::rute('pengumuman.absen', $m->pengumuman_id)],
-            'notifikasi' => ['grup' => 'Informasi', 'label' => 'Notifikasi Terkirim', 'ikon' => 'bi-bell', 'model' => DatabaseNotification::class,
+            'notifikasi' => ['grup' => 'Informasi', 'label' => 'Notifikasi Terkirim', 'ikon' => 'bi-bell', 'model' => DatabaseNotification::class, 'tambah' => false,
                 'with' => ['notifiable'], 'judul' => fn ($m) => ($m->data['judul'] ?? 'Notifikasi') . ' → ' . ($m->notifiable?->name ?? '-'),
                 'kolom' => ['read_at', 'created_at'], 'cari' => ['data']],
 
             // ---------------- Sistem
-            'akun' => ['grup' => 'Sistem', 'label' => 'Akun Pengguna', 'ikon' => 'bi-person-lock', 'model' => Models\User::class,
+            'akun' => ['grup' => 'Sistem', 'label' => 'Akun Pengguna', 'ikon' => 'bi-person-lock', 'model' => Models\User::class, 'tambah' => false,
                 'judul' => fn ($m) => $m->name . ' <' . $m->email . '>', 'kolom' => ['role', 'nip'], 'cari' => ['name', 'email', 'nip', 'role'],
                 'tautan' => fn ($m) => self::rute('admin.users.edit', $m)],
             'jabatan' => ['grup' => 'Sistem', 'label' => 'Master Jabatan', 'ikon' => 'bi-diagram-3', 'model' => Models\Jabatan::class,
@@ -210,6 +210,7 @@ class EditorData
                     'wajib' => ! $c['nullable'] && $c['default'] === null && ! in_array($nama, self::KOLOM_BACA, true),
                     'baca' => in_array($nama, self::KOLOM_BACA, true) || ($nama === $model->getKeyName()),
                     'opsi' => $jenis === 'enum' ? self::nilaiEnum($c['type']) : null,
+                    'bawaan' => $c['default'] === null ? null : trim((string) $c['default'], "'"),
                     'saran' => $jenis === 'teks' && in_array($nama, self::KOLOM_SARAN, true) ? self::saran($model, $nama) : null,
                     'fk' => $fk,
                 ];
@@ -293,8 +294,9 @@ class EditorData
     /** Nilai kolom untuk ditampilkan di input form. */
     public static function nilaiInput(Model $model, array $k): string
     {
-        $mentah = $model->getRawOriginal($k['nama']);
-        if ($mentah === null) {
+        // Data baru: tampilkan nilai bawaan kolom (mis. penting = 0), bukan pilihan pertama dropdown.
+        $mentah = $model->exists ? $model->getRawOriginal($k['nama']) : ($k['bawaan'] ?? null);
+        if ($mentah === null || (! $model->exists && in_array(strtoupper((string) $mentah), ['CURRENT_TIMESTAMP', 'NULL'], true))) {
             return '';
         }
 

@@ -59,6 +59,11 @@ class OnboardingFlow
         $lamaran = $screening->lamaran;
         $kandidatSendiri = $user->data_pegawai_id && $user->data_pegawai_id === $lamaran?->data_pegawai_id;
 
+        // Admin boleh mengonfirmasi/mengubah hasil kedua sisi kapan saja (termasuk yang sudah selesai).
+        if ($user->isAdmin()) {
+            return $sisi === self::SISI_SDM || $sisi === self::SISI_KEPALA;
+        }
+
         if ($kandidatSendiri || $screening->status !== ScreeningOnboarding::STATUS_BERJALAN || ! $lamaran?->isProses()) {
             return false;
         }
@@ -95,6 +100,11 @@ class OnboardingFlow
             }
 
             if (! $lengkap) {
+                // Hasil diubah (Admin) sehingga belum lengkap lagi → onboarding kembali berjalan.
+                if ($screening->status !== ScreeningOnboarding::STATUS_BERJALAN) {
+                    $screening->update(['status' => ScreeningOnboarding::STATUS_BERJALAN, 'hasil_status' => null, 'catatan_hasil' => null]);
+                }
+
                 return 'Konfirmasi disimpan. Menunggu konfirmasi ' . ($screening->hasil_sdm === null ? 'Kepala SDM' : 'Kepala Bagian') . '.';
             }
 

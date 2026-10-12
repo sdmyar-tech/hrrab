@@ -28,7 +28,7 @@
                     . ($h['masuk'] ? '<span class="jam">' . e($h['masuk']) . '–' . e($h['keluar'] ?? '?') . '</span>' : '')
                     . '<span class="ket">' . e($h['status'] === 'belum' ? '' : $h['label']) . ($h['tanpa_scan_pulang'] ? ' · <b>!</b>' : '') . '</span>';
             @endphp
-            @if (($bisaKoreksi ?? false) && $t->lte(now()))
+            @if (($bisaKoreksi ?? false) && ($t->lte(now()) || auth()->user()->isAdmin()))
                 @include('admin.absensi._tombol-koreksi', [
                     'pegawai' => $pegawai, 'h' => $h, 'tombolKecil' => true, 'kelasTombol' => $kelas, 'isiTombol' => $isi, 'judulTombol' => $judulHari,
                 ])

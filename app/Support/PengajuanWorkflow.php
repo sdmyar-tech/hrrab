@@ -184,6 +184,11 @@ class PengajuanWorkflow
     /** Apakah $approver berwenang menyetujui/menolak pengajuan ini pada tahap saat ini. */
     public static function canAct(User $approver, PengajuanCuti|PengajuanLembur $pengajuan): bool
     {
+        // Admin boleh memproses pengajuan yang masih menunggu di tahap mana pun (bertindak sebagai penyetuju tahap itu).
+        if ($approver->isAdmin()) {
+            return $pengajuan->isPending() && (bool) $pengajuan->current_level;
+        }
+
         if (! $pengajuan->isPending() || ! $pengajuan->current_level || ! $approver->hasAbility(User::ABILITY_APPROVE)) {
             return false;
         }

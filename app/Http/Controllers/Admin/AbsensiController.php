@@ -206,7 +206,8 @@ class AbsensiController extends Controller
     public function koreksi(Request $request, DataPegawai $pegawai): RedirectResponse
     {
         $v = $request->validate([
-            'tanggal' => ['required', 'date', 'before_or_equal:today'],
+            // Admin boleh mengisi tanggal ke depan (mis. dinas luar/izin yang sudah diketahui).
+            'tanggal' => ['required', 'date', ...(\Illuminate\Support\Facades\Auth::user()->isAdmin() ? [] : ['before_or_equal:today'])],
             'aksi' => ['nullable', Rule::in(['simpan', 'reset'])],
             'jam_masuk' => ['nullable', 'date_format:H:i'],
             'jam_keluar' => ['nullable', 'date_format:H:i'],

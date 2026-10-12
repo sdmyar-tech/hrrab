@@ -101,6 +101,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
                 Route::get('/import', [AdminAbsensiImportController::class, 'index'])->name('import');
                 Route::post('/import/pratinjau', [AdminAbsensiImportController::class, 'pratinjau'])->name('import.pratinjau');
                 Route::post('/import/simpan', [AdminAbsensiImportController::class, 'simpan'])->name('import.simpan');
+                Route::delete('/import/{import}', [AdminAbsensiImportController::class, 'hapus'])->name('import.hapus');
                 Route::get('/pengaturan', [AdminAbsensiPengaturanController::class, 'index'])->name('pengaturan');
                 Route::post('/pengaturan/massal', [AdminAbsensiPengaturanController::class, 'massal'])->name('pengaturan.massal');
                 Route::put('/pengaturan/pegawai/{pegawai}', [AdminAbsensiPengaturanController::class, 'updatePegawai'])->name('pengaturan.pegawai');
@@ -136,6 +137,8 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         Route::prefix('data')->name('data.')->middleware('can:kelola-sistem')->group(function () {
             Route::get('/', [AdminEditorDataController::class, 'index'])->name('index');
             Route::get('/{entitas}', [AdminEditorDataController::class, 'daftar'])->name('daftar')->where('entitas', '[a-z_]+');
+            Route::get('/{entitas}/tambah', [AdminEditorDataController::class, 'create'])->name('create')->where('entitas', '[a-z_]+');
+            Route::post('/{entitas}', [AdminEditorDataController::class, 'store'])->name('store')->where('entitas', '[a-z_]+');
             Route::get('/{entitas}/{id}/edit', [AdminEditorDataController::class, 'edit'])->name('edit')->where('entitas', '[a-z_]+');
             Route::put('/{entitas}/{id}', [AdminEditorDataController::class, 'update'])->name('update')->where('entitas', '[a-z_]+');
             Route::delete('/{entitas}/{id}', [AdminEditorDataController::class, 'destroy'])->name('destroy')->where('entitas', '[a-z_]+');
@@ -166,8 +169,8 @@ Route::middleware('can:kelola-penugasan')->group(function () {
             Route::get('/', [AdminPengajuanLemburController::class, 'index'])->name('index');
             Route::get('/export', [AdminPengajuanLemburController::class, 'export'])->name('export');
             Route::get('/{pengajuanLembur}', [AdminPengajuanLemburController::class, 'show'])->name('show');
-            Route::post('/{pengajuanLembur}/approve', [AdminPengajuanLemburController::class, 'approve'])->name('approve')->middleware('can:approve');
-            Route::post('/{pengajuanLembur}/reject', [AdminPengajuanLemburController::class, 'reject'])->name('reject')->middleware('can:approve');
+            Route::post('/{pengajuanLembur}/approve', [AdminPengajuanLemburController::class, 'approve'])->name('approve')->middleware('can:proses-pengajuan');
+            Route::post('/{pengajuanLembur}/reject', [AdminPengajuanLemburController::class, 'reject'])->name('reject')->middleware('can:proses-pengajuan');
             Route::middleware('can:kelola-sistem')->group(function () {
                 Route::put('/{pengajuanLembur}/ubah-admin', [AdminPengajuanLemburController::class, 'ubahAdmin'])->name('ubah-admin');
                 Route::delete('/{pengajuanLembur}', [AdminPengajuanLemburController::class, 'destroy'])->name('destroy');
@@ -178,8 +181,8 @@ Route::middleware('can:kelola-penugasan')->group(function () {
             Route::get('/', [AdminPengajuanCutiController::class, 'index'])->name('index');
             Route::get('/export', [AdminPengajuanCutiController::class, 'export'])->name('export');
             Route::get('/{pengajuanCuti}', [AdminPengajuanCutiController::class, 'show'])->name('show');
-            Route::post('/{pengajuanCuti}/approve', [AdminPengajuanCutiController::class, 'approve'])->name('approve')->middleware('can:approve');
-            Route::post('/{pengajuanCuti}/reject', [AdminPengajuanCutiController::class, 'reject'])->name('reject')->middleware('can:approve');
+            Route::post('/{pengajuanCuti}/approve', [AdminPengajuanCutiController::class, 'approve'])->name('approve')->middleware('can:proses-pengajuan');
+            Route::post('/{pengajuanCuti}/reject', [AdminPengajuanCutiController::class, 'reject'])->name('reject')->middleware('can:proses-pengajuan');
             Route::middleware('can:kelola-sistem')->group(function () {
                 Route::put('/{pengajuanCuti}/ubah-admin', [AdminPengajuanCutiController::class, 'ubahAdmin'])->name('ubah-admin');
                 Route::delete('/{pengajuanCuti}', [AdminPengajuanCutiController::class, 'destroy'])->name('destroy');
@@ -224,11 +227,16 @@ Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function (
             Route::put('/{lamaran}/interview/{interview}', [AdminLamaranController::class, 'interviewUpdate'])->name('interview.update');
             Route::post('/{lamaran}/interview/{interview}/hasil', [AdminLamaranController::class, 'interviewHasil'])->name('interview.hasil');
             Route::post('/{lamaran}/interview/{interview}/cancel', [AdminLamaranController::class, 'interviewCancel'])->name('interview.cancel');
+            Route::delete('/{lamaran}/interview/{interview}', [AdminLamaranController::class, 'interviewDestroy'])->name('interview.destroy');
             Route::post('/{lamaran}/interview-selesai', [AdminLamaranController::class, 'interviewSelesai'])->name('interview.selesai');
             Route::post('/{lamaran}/screening', [AdminLamaranController::class, 'screeningStore'])->name('screening.store');
             Route::post('/{lamaran}/screening/{screening}/hasil', [AdminLamaranController::class, 'screeningHasil'])->name('screening.hasil');
+            Route::put('/{lamaran}/screening/{screening}', [AdminLamaranController::class, 'screeningUpdate'])->name('screening.update');
+            Route::post('/{lamaran}/screening/{screening}/cancel', [AdminLamaranController::class, 'screeningCancel'])->name('screening.cancel');
+            Route::delete('/{lamaran}/screening/{screening}', [AdminLamaranController::class, 'screeningDestroy'])->name('screening.destroy');
             Route::post('/{lamaran}/kontrak', [AdminLamaranController::class, 'kontrakStore'])->name('kontrak.store');
             Route::put('/{lamaran}/kontrak/{kontrak}', [AdminLamaranController::class, 'kontrakUpdate'])->name('kontrak.update');
+            Route::delete('/{lamaran}/kontrak/{kontrak}', [AdminLamaranController::class, 'kontrakDestroy'])->name('kontrak.destroy');
             Route::post('/{lamaran}/rekrut', [AdminLamaranController::class, 'rekrut'])->name('rekrut');
             Route::post('/{lamaran}/tolak', [AdminLamaranController::class, 'tolak'])->name('tolak');
             Route::put('/{lamaran}/ubah-admin', [AdminLamaranController::class, 'ubahAdmin'])->name('ubah-admin')->middleware('can:kelola-sistem');

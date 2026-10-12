@@ -179,6 +179,8 @@ class LamaranController extends Controller
             'kepalaTerkait' => OnboardingFlow::kepalaTerkait($lamaran),
             'onboardingLulus' => $onboardingLulus,
             'tanggalKontrakMinimal' => $onboardingLulus ? OnboardingFlow::tanggalKontrakMinimal($onboardingLulus) : null,
+            'admin' => $user->isAdmin(),
+            'opsiInterviewerAdmin' => $user->isAdmin() ? InterviewFlow::opsiInterviewerAdmin() : collect(),
         ]);
     }
 
@@ -232,6 +234,11 @@ class LamaranController extends Controller
     {
         $this->authorizeReview();
 
+        // Form "Tambah Interview (Admin)" mengirim tahap_interview; form biasa tetap mengikuti alur normal.
+        if ($this->adminBebas() && $request->has('tahap_interview')) {
+            return $this->interviewStoreAdmin($request, $lamaran);
+        }
+
         if ($lamaran->tahap !== Lamaran::TAHAP_INTERVIEW) {
             return redirect()->back()->with('error', 'Lamaran belum berada di tahap interview.');
         }
@@ -271,6 +278,42 @@ class LamaranController extends Controller
         return redirect()->back()->with('success', "Jadwal {$jadwal->tahapLabel()} berhasil dibuat dengan interviewer {$interviewer->name}.");
     }
 
+    /** Admin: tambah interview kapan saja, tahap & interviewer bebas (tanpa urutan tahap). */
+    private function interviewStoreAdmin(Request $request, Lamaran $lamaran): RedirectResponse
+    {
+        $v = $request->validate([
+            'tahap_interview' => ['required', Rule::in([InterviewJadwal::TAHAP_KEPALA_SDM, InterviewJadwal::TAHAP_KEPALA_BAGIAN, InterviewJadwal::TAHAP_LANJUTAN])],
+            'interviewer_id' => ['required', Rule::in(InterviewFlow::opsiInterviewerAdmin()->pluck('id'))],
+            'tanggal' => ['required', 'date'],
+            'waktu_mulai' => ['required', 'date_format:H:i'],
+            'waktu_selesai' => ['nullable', 'date_format:H:i', 'after:waktu_mulai'],
+            'lokasi' => ['nullable', 'string', 'max:255'],
+            'catatan' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'interviewer_id.required' => 'Pilih interviewer.',
+            'waktu_selesai.after' => 'Jam selesai harus setelah jam mulai.',
+        ]);
+
+        $interviewer = User::find($v['interviewer_id']);
+        $tahap = (int) $v['tahap_interview'];
+        unset($v['interviewer_id'], $v['tahap_interview']);
+        $jadwal = $this->buatJadwal($lamaran, $tahap, $interviewer, $v);
+
+        return redirect()->back()->with('success', "{$jadwal->tahapLabel()} dijadwalkan dengan {$interviewer->name} (Mode Admin).");
+    }
+
+    /** Admin: hapus jadwal interview (status apa pun). */
+    public function interviewDestroy(Lamaran $lamaran, InterviewJadwal $interview): RedirectResponse
+    {
+        abort_unless($this->adminBebas(), 403);
+        abort_if($interview->lamaran_id !== $lamaran->id, 404);
+
+        $label = $interview->tahapLabel();
+        $interview->delete();
+
+        return redirect()->back()->with('success', "Jadwal {$label} dihapus.");
+    }
+
     private function buatJadwal(Lamaran $lamaran, int $tahap, User $interviewer, array $jadwal): InterviewJadwal
     {
         return tap($lamaran->interviewJadwals()->create([
@@ -306,11 +349,21 @@ class LamaranController extends Controller
             'waktu_selesai' => ['nullable', 'date_format:H:i', 'after:waktu_mulai'],
             'lokasi' => ['nullable', 'string', 'max:255'],
             'catatan' => ['nullable', 'string', 'max:1000'],
+            // Khusus Admin: ganti interviewer, tahap, dan status (mis. buka lagi interview yang sudah selesai).
+            ...($this->adminBebas() ? [
+                'interviewer_id' => ['sometimes', Rule::in(InterviewFlow::opsiInterviewerAdmin()->pluck('id'))],
+                'tahap_interview' => ['sometimes', Rule::in([InterviewJadwal::TAHAP_KEPALA_SDM, InterviewJadwal::TAHAP_KEPALA_BAGIAN, InterviewJadwal::TAHAP_LANJUTAN])],
+                'status' => ['sometimes', Rule::in([InterviewJadwal::STATUS_TERJADWAL, InterviewJadwal::STATUS_SELESAI, InterviewJadwal::STATUS_DIBATALKAN])],
+            ] : []),
         ], [
             'waktu_selesai.after' => 'Jam selesai harus setelah jam mulai.',
             'tanggal.after_or_equal' => 'Tanggal interview tidak boleh di masa lalu.',
         ]);
 
+        // Kembali ke Terjadwal = hasil dikosongkan (interview diulang).
+        if (($validated['status'] ?? null) === InterviewJadwal::STATUS_TERJADWAL && $interview->status !== InterviewJadwal::STATUS_TERJADWAL) {
+            $validated += ['hasil_status' => null, 'catatan_hasil' => null, 'diisi_oleh' => null, 'diisi_pada' => null];
+        }
         $interview->update($validated);
 
         return redirect()->back()->with('success', "Jadwal {$interview->tahapLabel()} berhasil diperbarui.");
@@ -362,8 +415,17 @@ class LamaranController extends Controller
         }
 
         $tidakLulus = $validated['hasil_status'] === InterviewJadwal::HASIL_TIDAK_LULUS;
+        $hasilLama = $interview->hasil_status;
+        // Admin mengubah hasil Tidak Lulus → lamaran yang ditolak karena interview ini dibuka kembali.
+        $bukaLagi = $this->adminBebas() && $hasilLama === InterviewJadwal::HASIL_TIDAK_LULUS && ! $tidakLulus
+            && $lamaran->status === Lamaran::STATUS_DITOLAK && str_starts_with((string) $lamaran->catatan_admin, 'Tidak lulus ' . $interview->tahapLabel());
 
-        DB::transaction(function () use ($interview, $lamaran, $validated, $user, $tidakLulus) {
+        DB::transaction(function () use ($interview, $lamaran, $validated, $user, $tidakLulus, $bukaLagi) {
+            if ($bukaLagi) {
+                $lamaran->update(['status' => Lamaran::STATUS_PROSES, 'tahap' => Lamaran::TAHAP_INTERVIEW, 'keputusan' => null,
+                    'catatan_admin' => null, 'diputuskan_oleh' => null, 'diputuskan_pada' => null]);
+            }
+
             $interview->update([
                 ...$validated,
                 'status' => InterviewJadwal::STATUS_SELESAI,
@@ -388,6 +450,9 @@ class LamaranController extends Controller
 
         if ($tidakLulus) {
             return redirect()->back()->with('success', "Hasil {$interview->tahapLabel()}: Tidak Lulus. Lamaran otomatis ditolak.");
+        }
+        if ($bukaLagi) {
+            $lamaran->refresh();
         }
 
         if ($validated['hasil_status'] !== InterviewJadwal::HASIL_LULUS || $lamaran->tahap !== Lamaran::TAHAP_INTERVIEW) {
@@ -441,14 +506,14 @@ class LamaranController extends Controller
             return redirect()->back()->with('error', 'Lamaran belum berada di tahap screening/onboarding.');
         }
 
-        if ($lamaran->screeningOnboardings()->where('status', ScreeningOnboarding::STATUS_BERJALAN)->exists()) {
+        if ($lamaran->screeningOnboardings()->where('status', ScreeningOnboarding::STATUS_BERJALAN)->exists() && ! $this->adminBebas()) {
             return redirect()->back()->with('error', 'Masih ada masa onboarding yang berjalan.');
         }
 
         $validated = $request->validate([
             'pengawas_id' => ['required', 'exists:users,id'],
             'tanggal_mulai' => ['required', 'date', ...$this->aturanTanggal()],
-            'durasi_hari' => ['required', 'integer', 'min:' . OnboardingFlow::DURASI_MIN, 'max:' . OnboardingFlow::DURASI_MAX],
+            'durasi_hari' => ['required', 'integer', 'min:' . OnboardingFlow::DURASI_MIN, 'max:' . ($this->adminBebas() ? 365 : OnboardingFlow::DURASI_MAX)],
             'lokasi' => ['nullable', 'string', 'max:255'],
             'catatan' => ['nullable', 'string', 'max:1000'],
         ], [
@@ -512,7 +577,7 @@ class LamaranController extends Controller
             return redirect()->back()->with('error', 'Jadwal kontrak hanya bisa dibuat setelah onboarding dinyatakan Lulus.');
         }
 
-        if ($lamaran->kontrakJadwals()->where('status', KontrakJadwal::STATUS_TERJADWAL)->exists()) {
+        if ($lamaran->kontrakJadwals()->where('status', KontrakJadwal::STATUS_TERJADWAL)->exists() && ! $this->adminBebas()) {
             return redirect()->back()->with('error', 'Sudah ada jadwal kontrak. Ubah jadwal yang ada.');
         }
 
@@ -541,9 +606,69 @@ class LamaranController extends Controller
             return redirect()->back()->with('error', 'Jadwal kontrak ini tidak bisa diubah lagi.');
         }
 
-        $kontrak->update($this->validasiKontrak($request, $onboarding));
+        $data = $this->validasiKontrak($request, $onboarding);
+        if ($this->adminBebas() && $request->filled('status')) {
+            $data['status'] = $request->validate(['status' => [Rule::in([KontrakJadwal::STATUS_TERJADWAL, KontrakJadwal::STATUS_SELESAI, KontrakJadwal::STATUS_DIBATALKAN])]])['status'];
+        }
+        $kontrak->update($data);
 
         return redirect()->back()->with('success', 'Jadwal tanda tangan kontrak diperbarui.');
+    }
+
+    /** Admin: hapus jadwal kontrak. */
+    public function kontrakDestroy(Lamaran $lamaran, KontrakJadwal $kontrak): RedirectResponse
+    {
+        abort_unless($this->adminBebas(), 403);
+        abort_if($kontrak->lamaran_id !== $lamaran->id, 404);
+        $kontrak->delete();
+
+        return redirect()->back()->with('success', 'Jadwal kontrak dihapus.');
+    }
+
+    /** Admin: ubah onboarding apa pun (tanggal, durasi, pengawas, kepala, status, lokasi, arahan). */
+    public function screeningUpdate(Request $request, Lamaran $lamaran, ScreeningOnboarding $screening): RedirectResponse
+    {
+        abort_unless($this->adminBebas(), 403);
+        abort_if($screening->lamaran_id !== $lamaran->id, 404);
+
+        $v = $request->validate([
+            'pengawas_id' => ['required', 'exists:users,id'],
+            'kepala_id' => ['nullable', 'exists:users,id'],
+            'tanggal_mulai' => ['required', 'date'],
+            'durasi_hari' => ['required', 'integer', 'min:1', 'max:365'],
+            'status' => ['required', Rule::in([ScreeningOnboarding::STATUS_BERJALAN, ScreeningOnboarding::STATUS_SELESAI, ScreeningOnboarding::STATUS_DIBATALKAN])],
+            'lokasi' => ['nullable', 'string', 'max:255'],
+            'catatan' => ['nullable', 'string', 'max:1000'],
+        ]);
+        $mulai = Carbon::parse($v['tanggal_mulai']);
+        $screening->update([...$v, 'tanggal_mulai' => $mulai, 'tanggal_selesai' => OnboardingFlow::tanggalSelesai($mulai, (int) $v['durasi_hari'])]);
+
+        return redirect()->back()->with('success', 'Onboarding diperbarui: ' . $screening->tanggal_mulai->translatedFormat('d M') . ' – ' . $screening->tanggal_selesai->translatedFormat('d M Y') . '.');
+    }
+
+    /** Batalkan onboarding: Kepala SDM/GM saat berjalan; Admin kapan saja. */
+    public function screeningCancel(Request $request, Lamaran $lamaran, ScreeningOnboarding $screening): RedirectResponse
+    {
+        $this->authorizeReview();
+        abort_if($screening->lamaran_id !== $lamaran->id, 404);
+
+        if ($screening->status !== ScreeningOnboarding::STATUS_BERJALAN && ! $this->adminBebas()) {
+            return redirect()->back()->with('error', 'Hanya onboarding yang sedang berjalan yang bisa dibatalkan.');
+        }
+        $alasan = $request->validate(['catatan' => ['required', 'string', 'max:1000']], ['catatan.required' => 'Alasan pembatalan wajib diisi.'])['catatan'];
+        $screening->update(['status' => ScreeningOnboarding::STATUS_DIBATALKAN, 'catatan_hasil' => 'Dibatalkan: ' . $alasan]);
+
+        return redirect()->back()->with('success', 'Onboarding dibatalkan.');
+    }
+
+    /** Admin: hapus onboarding. */
+    public function screeningDestroy(Lamaran $lamaran, ScreeningOnboarding $screening): RedirectResponse
+    {
+        abort_unless($this->adminBebas(), 403);
+        abort_if($screening->lamaran_id !== $lamaran->id, 404);
+        $screening->delete();
+
+        return redirect()->back()->with('success', 'Data onboarding dihapus.');
     }
 
     private function validasiKontrak(Request $request, ?ScreeningOnboarding $onboarding): array

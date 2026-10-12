@@ -111,4 +111,25 @@ class AbsensiImportController extends Controller
 
         return $user;
     }
+
+    /**
+     * Admin: batalkan satu batch import — baris absensi dari file itu dihapus,
+     * kecuali yang sudah dikoreksi manual (dipertahankan, hanya dilepas dari batch).
+     */
+    public function hapus(\App\Models\AbsensiImport $import): RedirectResponse
+    {
+        abort_unless(\Illuminate\Support\Facades\Auth::user()?->isAdmin(), 403);
+
+        [$hapus, $simpan] = \Illuminate\Support\Facades\DB::transaction(function () use ($import) {
+            $baris = \App\Models\Absensi::where('absensi_import_id', $import->id);
+            $simpan = (clone $baris)->where('dikoreksi', true)->update(['absensi_import_id' => null]);
+            $hapus = (clone $baris)->delete();
+            $import->delete();
+
+            return [$hapus, $simpan];
+        });
+
+        return redirect()->route('admin.absensi.import')->with('success', "Import {$import->nama_file} dibatalkan: {$hapus} baris absensi dihapus"
+            . ($simpan ? ", {$simpan} baris yang sudah dikoreksi dipertahankan." : '.'));
+    }
 }

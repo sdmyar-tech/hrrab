@@ -49,7 +49,7 @@ class PenugasanService
         if ($lama && $efektif->lte($lama->tanggal_mulai)) {
             throw ValidationException::withMessages(['tanggal_efektif' => 'Tanggal efektif harus setelah ' . $lama->tanggal_mulai->format('d-m-Y') . ' (mulai penugasan sekarang).']);
         }
-        if ($lama && $lama->unit_kerja === $data['unit_kerja'] && $lama->jabatan === ($data['jabatan'] ?? $lama->jabatan) && $lama->peran === $data['peran']) {
+        if (! self::admin() && $lama && $lama->unit_kerja === $data['unit_kerja'] && $lama->jabatan === ($data['jabatan'] ?? $lama->jabatan) && $lama->peran === $data['peran']) {
             throw ValidationException::withMessages(['unit_kerja' => 'Unit, jabatan, dan peran sama dengan penugasan sekarang.']);
         }
 
@@ -134,7 +134,7 @@ class PenugasanService
     {
         $tanggal = Carbon::parse($tanggal)->startOfDay();
 
-        if ($penugasan->is_utama) {
+        if ($penugasan->is_utama && ! self::admin()) {
             throw ValidationException::withMessages(['tanggal_selesai' => 'Penugasan utama tidak bisa diakhiri. Gunakan Mutasi untuk memindahkan unit utama.']);
         }
         if ($tanggal->lt($penugasan->tanggal_mulai)) {
@@ -159,6 +159,12 @@ class PenugasanService
      *
      * @return list<string>
      */
+    /** Admin bebas dari aturan urutan penugasan (koreksi data). */
+    private static function admin(): bool
+    {
+        return (bool) \Illuminate\Support\Facades\Auth::user()?->isAdmin();
+    }
+
     public static function hapus(Penugasan $penugasan, bool $bebas = false): array
     {
         if ($penugasan->jenis === Penugasan::JENIS_AWAL && ! $bebas) {
@@ -167,7 +173,7 @@ class PenugasanService
 
         $pegawai = $penugasan->dataPegawai;
 
-        if ($penugasan->jenis === Penugasan::JENIS_AWAL && ! $pegawai->penugasans()->where('is_utama', true)->whereKeyNot($penugasan->id)->exists()) {
+        if (! $bebas && $penugasan->jenis === Penugasan::JENIS_AWAL && ! $pegawai->penugasans()->where('is_utama', true)->whereKeyNot($penugasan->id)->exists()) {
             throw ValidationException::withMessages(['penugasan' => 'Ini satu-satunya penempatan utama pegawai, tidak bisa dihapus. Ubah unitnya lewat Edit.']);
         }
 
