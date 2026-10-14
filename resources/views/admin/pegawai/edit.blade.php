@@ -242,6 +242,22 @@
                                         </select>
                                         <div class="invalid-feedback">Silakan pilih status rekrutmen.</div>
                                     </div>
+                                    <div class="col-md-4" data-tanggal-keluar>
+                                        <label class="form-label">Tanggal Keluar</label>
+                                        <input type="date" name="tanggal_keluar" max="{{ now()->format('Y-m-d') }}"
+                                            class="form-control @error('tanggal_keluar') is-invalid @enderror"
+                                            value="{{ old('tanggal_keluar', optional($pegawai->kepegawaian->tanggal_keluar ?? null)->format('Y-m-d')) }}">
+                                        @error('tanggal_keluar')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                        <small class="text-muted">Kosongkan = hari ini saat status diubah ke Tidak Aktif.</small>
+                                    </div>
+                                    <script>
+                                        // Tanggal keluar hanya relevan bila status Tidak Aktif.
+                                        document.addEventListener('DOMContentLoaded', function () {
+                                            const s = document.querySelector('select[name=status_rekrutmen]'), k = document.querySelector('[data-tanggal-keluar]');
+                                            const atur = () => { k.hidden = s.value !== 'Tidak Aktif'; };
+                                            s.addEventListener('change', atur); atur();
+                                        });
+                                    </script>
                                     <div class="col-md-4">
                                         <label class="form-label required">Status Kerja</label>
                                         <select name="status_kerja" class="form-select @error('status_kerja') is-invalid @enderror" required>

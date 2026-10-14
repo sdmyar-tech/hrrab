@@ -45,6 +45,8 @@ class DashboardData
             'tugas' => self::tugas($user, $approvalCuti, $approvalLembur),
             'agenda' => self::agenda($user),
             'ringkasanUnit' => self::ringkasanUnit($user, $aktif),
+            'ringkasanArea' => self::ringkasanArea($aktif),
+            'keluarMasuk' => self::keluarMasuk($lingkup),
             'komposisi' => self::komposisi($aktif),
             'tren' => $bisaLaporan ? self::tren($lingkup) : null,
             'kontrakHabis' => $kontrakHabis,
@@ -320,6 +322,62 @@ private static function ringkasanUnit(User $user, Collection $aktif): Collection
                 'pending' => (int) ($pending[$unit] ?? 0),
             ];
         });
+    }
+
+    /**
+     * Pegawai aktif per area kerja (kolom lokasi_kerja), terbanyak di atas.
+     *
+     * @return Collection<int, array{area: string, jumlah: int, status: array, laki: int, perempuan: int, unit: array<string, int>, kontrak_habis: int}>
+     */
+    private static function ringkasanArea(Collection $aktif): Collection
+    {
+        $batas = now()->addDays(60);
+
+        return $aktif->groupBy(fn ($p) => $p->kepegawaian?->lokasi_kerja ?: 'Belum diisi')
+            ->map(fn (Collection $anggota, string $area) => [
+                'area' => $area,
+                'jumlah' => $anggota->count(),
+                'status' => self::hitung($anggota->map(fn ($p) => $p->kepegawaian?->status_kerja ?: 'Belum diisi'), ['Tetap', 'Kontrak', 'Harian Lepas', 'Probation', 'Magang', 'Belum diisi']),
+                'laki' => $anggota->where('jenis_kelamin', 'Laki-laki')->count(),
+                'perempuan' => $anggota->where('jenis_kelamin', 'Perempuan')->count(),
+                // Unit yang bekerja di area ini (pegawai rangkap dihitung di setiap unitnya).
+                'unit' => $anggota->flatMap(fn ($p) => $p->penugasanAktif->pluck('unit_kerja'))->filter()->countBy()->sortDesc()->all(),
+                'kontrak_habis' => $anggota->filter(fn ($p) => ($h = $p->kepegawaian?->tanggal_habis_kontrak) && $h->isFuture() && $h->lte($batas))->count(),
+            ])
+            ->sortByDesc('jumlah')
+            ->values();
+    }
+
+    /**
+     * Pegawai masuk (tanggal_masuk) & keluar (tanggal_keluar) per bulan selama 12 bulan, plus daftar 30 hari terakhir.
+     *
+     * @return array{bulan: list<array{label: string, judul: string, masuk: int, keluar: int}>, masuk30: Collection, keluar30: Collection, tanpaTanggal: int}
+     */
+    private static function keluarMasuk(?array $lingkup): array
+    {
+        $bulan = collect(range(11, 0))->map(fn ($i) => now()->startOfMonth()->subMonths($i));
+        $dari = $bulan->first()->copy();
+        $dasar = fn () => \App\Models\Kepegawaian::query()->when($lingkup, fn ($q) => $q->whereIn('unit_kerja', $lingkup));
+        $perBulan = fn (string $kolom) => $dasar()->whereBetween($kolom, [$dari, now()->endOfDay()])
+            ->selectRaw("DATE_FORMAT({$kolom}, '%Y-%m') b, count(*) n")->groupBy('b')->pluck('n', 'b');
+        $masuk = $perBulan('tanggal_masuk');
+        $keluar = $perBulan('tanggal_keluar');
+        $sejak = now()->subDays(30)->startOfDay();
+        $daftar = fn (string $kolom) => $dasar()->with('dataPegawai:id,nama_lengkap,nip')
+            ->whereBetween($kolom, [$sejak, now()->endOfDay()])->orderByDesc($kolom)->get()
+            ->map(fn ($k) => ['id' => $k->data_pegawai_id, 'nama' => $k->dataPegawai?->nama_lengkap ?? '-', 'unit' => $k->unit_kerja, 'jabatan' => $k->jabatan, 'tanggal' => $k->{$kolom}]);
+
+        return [
+            'bulan' => $bulan->map(fn ($b) => [
+                'label' => $b->translatedFormat('M'),
+                'judul' => $b->translatedFormat('F Y'),
+                'masuk' => (int) ($masuk[$b->format('Y-m')] ?? 0),
+                'keluar' => (int) ($keluar[$b->format('Y-m')] ?? 0),
+            ])->all(),
+            'masuk30' => $daftar('tanggal_masuk'),
+            'keluar30' => $daftar('tanggal_keluar'),
+            'tanpaTanggal' => $dasar()->where('status_rekrutmen', 'Tidak Aktif')->whereNull('tanggal_keluar')->count(),
+        ];
     }
 
 private static function komposisi(Collection $aktif): array

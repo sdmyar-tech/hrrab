@@ -85,6 +85,13 @@ html[data-theme="dark"] .admin-navbar.bg-white { background-color: rgba(23, 29, 
 .admin-footer { font-size: .8125rem; }
 .admin-footer .container-fluid { max-width: 1480px; margin-inline: auto; }
 
+/* ---------- Sidebar: submenu lebih rapat ---------- */
+.sidebar-nav .nav-sub-isi { gap: 0; }
+.sidebar-nav .nav-grup.terbuka > .nav-sub .nav-sub-isi { padding-block: 0 .15rem; }
+.sidebar-nav .nav-sub .nav-link { min-height: 27px; padding: .14rem .55rem; font-size: .8125rem; line-height: 1.3; }
+.sidebar-nav .nav-sub .nav-link.active::before { top: 4px; bottom: 4px; }
+.sidebar-nav .nav-sub .nav-icon { width: 16px; height: 16px; font-size: .78rem; }
+
 /* ---------- Judul halaman ---------- */
 .page-heading { margin-bottom: 1.25rem; gap: .75rem 1rem; }
 .page-heading h1, .page-heading .h1, .page-heading .h3 {

@@ -429,6 +429,7 @@ class PegawaiController extends Controller
             'status_rekrutmen' => ['required', 'string', 'max:100'],
             'status_kerja' => ['required', Rule::in(['Tetap', 'Kontrak', 'Magang', 'Harian Lepas', 'Probation'])],
             'tanggal_habis_kontrak' => ['nullable', 'date', 'after_or_equal:tanggal_masuk'],
+            'tanggal_keluar' => ['nullable', 'date', 'after_or_equal:tanggal_masuk', 'before_or_equal:today'],
             'no_hp_kerabat' => ['required', 'string', 'max:20'],
             'nama_kerabat' => ['required', 'string', 'max:255'],
             'hubungan_kerabat' => ['required', 'string', 'max:100'],
@@ -458,6 +459,8 @@ class PegawaiController extends Controller
             'nik.size' => 'NIK harus terdiri dari 16 digit.',
             'tanggal_lahir.before' => 'Tanggal lahir tidak boleh lebih dari hari ini.',
             'tanggal_habis_kontrak.after_or_equal' => 'Tanggal habis kontrak tidak boleh sebelum tanggal masuk.',
+            'tanggal_keluar.after_or_equal' => 'Tanggal keluar tidak boleh sebelum tanggal masuk.',
+            'tanggal_keluar.before_or_equal' => 'Tanggal keluar tidak boleh di masa depan.',
         ]);
 
         return [
@@ -470,7 +473,7 @@ class PegawaiController extends Controller
             'kepegawaian' => collect($validated)->only([
                 'jabatan', 'jabatan_tambahan', 'unit_kerja', 'lokasi_kerja',
                 'tanggal_masuk', 'status_rekrutmen', 'status_kerja',
-                'tanggal_habis_kontrak',
+                'tanggal_habis_kontrak', 'tanggal_keluar',
             ])->toArray(),
             'kontak_darurat' => collect($validated)->only([
                 'no_hp_kerabat', 'nama_kerabat', 'hubungan_kerabat',

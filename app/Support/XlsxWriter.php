@@ -167,7 +167,9 @@ class XlsxWriter
         foreach ($nama as $i => $n) {
             $sheets .= '<sheet name="' . htmlspecialchars($n, ENT_XML1 | ENT_QUOTES, 'UTF-8') . '" sheetId="' . ($i + 1) . '" r:id="rId' . ($i + 1) . '"/>';
             // Nama tersembunyi _FilterDatabase membuat Excel mengenali rentang AutoFilter.
-            $filter .= '<definedName name="_xlnm._FilterDatabase" localSheetId="' . $i . '" hidden="1">\'' . str_replace("'", "''", $n) . '\'!' . self::absolut($rentang[$i] ?? 'A1:A1') . '</definedName>';
+            // Isi definedName juga teks XML: nama sheet seperti "Mutasi & Rangkap" wajib di-escape, kalau tidak file korup.
+            $rujukan = "'" . str_replace("'", "''", $n) . "'!" . self::absolut($rentang[$i] ?? 'A1:A1');
+            $filter .= '<definedName name="_xlnm._FilterDatabase" localSheetId="' . $i . '" hidden="1">' . htmlspecialchars($rujukan, ENT_XML1 | ENT_NOQUOTES, 'UTF-8') . '</definedName>';
         }
 
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'

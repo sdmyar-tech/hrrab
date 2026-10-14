@@ -244,81 +244,84 @@
             </section>
         @endif
 
-        @if (! $unitDipilih && $ringkasanUnit->isNotEmpty())
-            <section class="panel mt-3" id="ringkasan-unit">
-                <div class="panel-header flex-wrap gap-2 align-items-start">
-                    <div>
-                        <h2 class="h5 mb-1 section-title"><i class="bi bi-diagram-3" aria-hidden="true"></i><span>Ringkasan per Unit</span></h2>
-                        <p class="text-muted mb-0">{{ $ringkasanUnit->count() }} unit &middot; klik kartu untuk membuka dashboard unit. Pegawai rangkap dihitung di setiap unitnya.</p>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 unit-alat">
-                        <input type="search" class="form-control form-control-sm" placeholder="Cari unit / kepala..." data-unit-cari aria-label="Cari unit">
-                        <select class="form-select form-select-sm" data-unit-urut aria-label="Urutkan unit">
-                            <option value="asli">Urutan default</option>
-                            <option value="nama">Nama A–Z</option>
-                            <option value="jumlah">Pegawai terbanyak</option>
-                            <option value="perhatian">Perlu perhatian</option>
-                        </select>
+        @php
+            // Diagram per unit: batang = jumlah pegawai, warna = status kerja; klik untuk rincian.
+            $itemUnit = $unitDipilih ? [] : $ringkasanUnit->map(fn ($r) => [
+                'kunci' => $r['unit'], 'nama' => $r['unit'], 'jumlah' => $r['jumlah'], 'status' => $r['status'],
+                'cari' => $r['unit'] . ' ' . $r['kepala'],
+                'perhatian' => ($r['kepala'] ? 0 : 3) + $r['kontrak_habis'] * 2 + ($bisaLaporan ? $r['pending'] : 0),
+                'peringatan' => array_values(array_filter([
+                    $r['kepala'] ? null : ['bi-exclamation-circle', 'Belum ada kepala'],
+                    $r['kontrak_habis'] ? ['bi-hourglass-split', $r['kontrak_habis'] . ' kontrak berakhir ≤ 60 hari'] : null,
+                ])),
+                'detail' => array_values(array_filter([
+                    $r['kepala'] ? ['bi-person-badge', 'Kepala: ' . $r['kepala']] : ['bi-exclamation-circle', 'Belum ada kepala unit', 'is-danger'],
+                    ['bi-gender-ambiguous', "Laki-laki {$r['laki']} · Perempuan {$r['perempuan']}"],
+                    $r['kontrak_habis'] ? ['bi-hourglass-split', $r['kontrak_habis'] . ' kontrak berakhir ≤ 60 hari', 'is-danger'] : null,
+                    $bisaLaporan && $r['pending'] ? ['bi-inbox', $r['pending'] . ' pengajuan menunggu persetujuan', 'is-warning'] : null,
+                    $bisaLaporan && $r['cuti_hari_ini'] ? ['bi-calendar-x', $r['cuti_hari_ini'] . ' orang cuti hari ini'] : null,
+                    $bisaLaporan && $r['cuti_bulan_ini'] ? ['bi-calendar2-check', $r['cuti_bulan_ini'] . ' hari cuti bulan ini'] : null,
+                    $bisaLaporan && $r['lembur_bulan_ini'] ? ['bi-clock-history', $jam($r['lembur_bulan_ini']) . ' jam lembur bulan ini'] : null,
+                ])),
+                'tautan' => [route('admin.dashboard', ['unit' => $r['unit']]), 'Buka dashboard unit'],
+            ])->all();
+            $itemArea = $ringkasanArea->map(fn ($r) => [
+                'kunci' => $r['area'], 'nama' => $r['area'], 'jumlah' => $r['jumlah'], 'status' => $r['status'],
+                'cari' => $r['area'] . ' ' . implode(' ', array_keys($r['unit'])),
+                'perhatian' => $r['kontrak_habis'],
+                'peringatan' => $r['kontrak_habis'] ? [['bi-hourglass-split', $r['kontrak_habis'] . ' kontrak berakhir ≤ 60 hari']] : [],
+                'detail' => array_values(array_filter([
+                    ['bi-diagram-3', 'Unit: ' . collect($r['unit'])->map(fn ($n, $u) => "{$u} ({$n})")->implode(', ')],
+                    ['bi-gender-ambiguous', "Laki-laki {$r['laki']} · Perempuan {$r['perempuan']}"],
+                    $r['kontrak_habis'] ? ['bi-hourglass-split', $r['kontrak_habis'] . ' kontrak berakhir ≤ 60 hari', 'is-danger'] : null,
+                ])),
+            ])->all();
+        @endphp
+
+        @if ($itemUnit || $itemArea)
+            <section class="mt-3" id="ringkasan-unit">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h2 class="h5 mb-0 section-title"><i class="bi bi-bar-chart-steps" aria-hidden="true"></i><span>Sebaran Pegawai Aktif</span></h2>
+                    <div class="d-flex flex-wrap gap-3 small text-muted viz">
+                        @foreach (['Tetap', 'Kontrak', 'Harian Lepas'] as $s)
+                            <span class="d-inline-flex align-items-center gap-1"><span class="unit-sw" style="background:var(--viz-{{ $paletStatus[$s] }});"></span>{{ $s }}</span>
+                        @endforeach
+                        <span class="d-inline-flex align-items-center gap-1"><i class="bi bi-hand-index"></i>klik baris untuk rincian</span>
                     </div>
                 </div>
-
-                <div class="d-flex flex-wrap gap-3 small text-muted viz mb-3">
-                    @foreach (['Tetap', 'Kontrak', 'Harian Lepas'] as $s)
-                        <span class="d-inline-flex align-items-center gap-1"><span class="unit-sw" style="background:var(--viz-{{ $paletStatus[$s] }});"></span>{{ $s }}</span>
-                    @endforeach
-                </div>
-
-                <div class="row g-3" data-unit-grid>
-                    @foreach ($ringkasanUnit as $r)
-                        @php
-                            // Skor "perlu perhatian" untuk pengurutan: unit tanpa kepala, kontrak hampir habis, pengajuan menunggu.
-                            $perhatian = ($r['kepala'] ? 0 : 3) + $r['kontrak_habis'] * 2 + ($bisaLaporan ? $r['pending'] : 0);
-                            $status = collect($r['status'])->filter(fn ($s) => $s['jumlah'] > 0);
-                            $chip = array_filter([
-                                $r['kontrak_habis'] ? ['danger', 'bi-hourglass-split', $r['kontrak_habis'] . ' kontrak ≤ 60 hari'] : null,
-                                $bisaLaporan && $r['pending'] ? ['warning', 'bi-inbox', $r['pending'] . ' menunggu persetujuan'] : null,
-                                $bisaLaporan && $r['cuti_hari_ini'] ? ['info', 'bi-calendar-x', $r['cuti_hari_ini'] . ' cuti hari ini'] : null,
-                                $bisaLaporan && $r['cuti_bulan_ini'] ? ['netral', 'bi-calendar2-check', $r['cuti_bulan_ini'] . ' hr cuti bln ini'] : null,
-                                $bisaLaporan && $r['lembur_bulan_ini'] ? ['netral', 'bi-clock-history', $jam($r['lembur_bulan_ini']) . ' jam lembur bln ini'] : null,
-                            ]);
-                        @endphp
-                        <div class="col-12 col-sm-6 col-xl-4 col-xxl-3" data-unit-kartu data-urut-asli="{{ $loop->index }}"
-                            data-nama="{{ strtolower($r['unit']) }}" data-cari="{{ strtolower($r['unit'] . ' ' . $r['kepala']) }}"
-                            data-jumlah="{{ $r['jumlah'] }}" data-perhatian="{{ $perhatian }}">
-                            <a href="{{ route('admin.dashboard', ['unit' => $r['unit']]) }}" class="unit-kartu viz">
-                                <div class="d-flex justify-content-between align-items-start gap-2">
-                                    <span class="unit-nama">{{ $r['unit'] }}</span>
-                                    <span class="unit-jumlah"><strong>{{ $r['jumlah'] }}</strong> org</span>
+                <div class="row g-3">
+                    @foreach (array_filter([
+                        $itemUnit ? ['id' => 'diagram-unit', 'judul' => 'Per Unit', 'ikon' => 'bi-diagram-3', 'items' => $itemUnit, 'ket' => count($itemUnit) . ' unit · pegawai rangkap dihitung di setiap unitnya', 'cari' => 'Cari unit / kepala…', 'perhatian' => true] : null,
+                        $itemArea ? ['id' => 'diagram-area', 'judul' => 'Per Area Kerja', 'ikon' => 'bi-geo-alt', 'items' => $itemArea, 'ket' => count($itemArea) . ' area kerja (lokasi)', 'cari' => 'Cari area / unit…', 'perhatian' => false] : null,
+                    ]) as $d)
+                        <div class="col-12 {{ $itemUnit && $itemArea ? 'col-xl-6' : '' }}">
+                            <div class="panel h-100">
+                                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                    <div>
+                                        <h3 class="h6 fw-bold mb-0"><i class="bi {{ $d['ikon'] }}"></i>{{ $d['judul'] }}</h3>
+                                        <p class="small text-muted mb-0">{{ $d['ket'] }}</p>
+                                    </div>
+                                    <div class="d-flex gap-2 unit-alat" data-baris-alat="{{ $d['id'] }}">
+                                        <input type="search" class="form-control form-control-sm" placeholder="{{ $d['cari'] }}" data-baris-cari aria-label="{{ $d['cari'] }}">
+                                        <select class="form-select form-select-sm" data-baris-urut aria-label="Urutkan">
+                                            <option value="asli">{{ $d['id'] === 'diagram-unit' ? 'Urutan default' : 'Terbanyak' }}</option>
+                                            @if ($d['id'] === 'diagram-unit')<option value="jumlah">Terbanyak</option>@endif
+                                            <option value="nama">Nama A–Z</option>
+                                            @if ($d['perhatian'])<option value="perhatian">Perlu perhatian</option>@endif
+                                        </select>
+                                    </div>
                                 </div>
-
-                                <div class="unit-kepala {{ $r['kepala'] ? '' : 'kosong' }}" title="{{ $r['kepala'] ? 'Kepala: ' . $r['kepala'] : 'Unit belum punya kepala' }}">
-                                    <i class="bi {{ $r['kepala'] ? 'bi-person-badge' : 'bi-exclamation-circle' }}" aria-hidden="true"></i>
-                                    <span class="text-truncate">{{ $r['kepala'] ?: 'Belum ada kepala' }}</span>
+                                <div id="{{ $d['id'] }}" class="dash-scroll">
+                                    @include('partials.viz.baris-detail', ['items' => $d['items'], 'palet' => $paletStatus])
                                 </div>
-
-                                @include('partials.viz.komposisi', ['items' => $r['status'], 'palet' => $paletStatus, 'kecil' => true, 'tanpaLegenda' => true])
-
-                                <div class="unit-rincian">
-                                    @foreach ($status as $s)
-                                        <span><span class="unit-sw" style="background:var(--viz-{{ $paletStatus[$s['label']] ?? 'netral' }});"></span>{{ $s['jumlah'] }} {{ $s['label'] === 'Harian Lepas' ? 'harian' : strtolower($s['label']) }}</span>
-                                    @endforeach
-                                    <span class="ms-auto" title="Laki-laki / Perempuan"><i class="bi bi-gender-male"></i>{{ $r['laki'] }} <i class="bi bi-gender-female ms-1"></i>{{ $r['perempuan'] }}</span>
-                                </div>
-
-                                <div class="unit-chip-wrap">
-                                    @forelse ($chip as [$warna, $ikon, $teks])
-                                        <span class="unit-chip is-{{ $warna }}"><i class="bi {{ $ikon }}" aria-hidden="true"></i>{{ $teks }}</span>
-                                    @empty
-                                        <span class="unit-chip is-aman"><i class="bi bi-check2" aria-hidden="true"></i>Tidak ada yang perlu ditindak</span>
-                                    @endforelse
-                                </div>
-                            </a>
+                            </div>
                         </div>
                     @endforeach
                 </div>
-                <p class="text-muted small text-center py-3 mb-0" data-unit-kosong hidden>Tidak ada unit yang cocok.</p>
             </section>
         @endif
+
+        @include('admin.partials.keluar-masuk', ['data' => $keluarMasuk, 'labelLingkup' => $labelLingkup])
 
         @if ($pipeline || $akunPerRole)
             <section class="row g-3 mt-1">
@@ -425,37 +428,5 @@
             });
         });
     });
-
-    // Ringkasan per Unit: cari & urutkan kartu di sisi klien.
-    (function () {
-        const grid = document.querySelector('[data-unit-grid]');
-        if (!grid) return;
-        const kartu = Array.from(grid.querySelectorAll('[data-unit-kartu]'));
-        const cari = document.querySelector('[data-unit-cari]');
-        const urut = document.querySelector('[data-unit-urut]');
-        const kosong = document.querySelector('[data-unit-kosong]');
-
-        const pembanding = {
-            asli: (a, b) => a.dataset.urutAsli - b.dataset.urutAsli,
-            nama: (a, b) => a.dataset.nama.localeCompare(b.dataset.nama, 'id'),
-            jumlah: (a, b) => b.dataset.jumlah - a.dataset.jumlah,
-            // Skor sama → yang anggotanya lebih banyak didahulukan.
-            perhatian: (a, b) => (b.dataset.perhatian - a.dataset.perhatian) || (b.dataset.jumlah - a.dataset.jumlah),
-        };
-
-        function terapkan() {
-            const kata = cari.value.trim().toLowerCase();
-            let tampil = 0;
-            kartu.sort(pembanding[urut.value] || pembanding.asli).forEach(function (k) {
-                k.hidden = kata !== '' && !k.dataset.cari.includes(kata);
-                if (!k.hidden) tampil++;
-                grid.appendChild(k);
-            });
-            kosong.hidden = tampil > 0;
-        }
-
-        cari.addEventListener('input', terapkan);
-        urut.addEventListener('change', terapkan);
-    })();
 </script>
 @endsection

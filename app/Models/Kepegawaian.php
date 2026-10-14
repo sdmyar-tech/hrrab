@@ -19,6 +19,7 @@ class Kepegawaian extends Model
         'unit_kerja',
         'lokasi_kerja',
         'tanggal_masuk',
+        'tanggal_keluar',
         'masa_kerja',
         'status_rekrutmen',
         'status_kerja',
@@ -27,8 +28,22 @@ class Kepegawaian extends Model
 
     protected $casts = [
         'tanggal_masuk' => 'date',
+        'tanggal_keluar' => 'date',
         'tanggal_habis_kontrak' => 'date',
     ];
+
+    /** Tanggal keluar mengikuti status: jadi "Tidak Aktif" → hari ini (bila belum diisi); aktif lagi → dikosongkan. */
+    protected static function booted(): void
+    {
+        static::saving(function (Kepegawaian $k) {
+            if ($k->status_rekrutmen === 'Aktif') {
+                $k->tanggal_keluar = null;
+            } elseif ($k->status_rekrutmen === 'Tidak Aktif' && $k->exists && $k->isDirty('status_rekrutmen') && ! $k->tanggal_keluar) {
+                // Hanya saat berubah dari Aktif; data baru/impor yang sudah nonaktif tidak diberi tanggal palsu.
+                $k->tanggal_keluar = now()->toDateString();
+            }
+        });
+    }
 
     public function dataPegawai(): BelongsTo
     {

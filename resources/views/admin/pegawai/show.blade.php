@@ -319,6 +319,7 @@
                             'Tanggal Masuk' => optional($kepeg?->tanggal_masuk)->translatedFormat('d F Y'),
                             'Masa Kerja' => $kepeg?->masa_kerja,
                             'Status Rekrutmen' => $kepeg?->status_rekrutmen,
+                            ...($kepeg?->status_rekrutmen === 'Tidak Aktif' ? ['Tanggal Keluar' => optional($kepeg->tanggal_keluar)->translatedFormat('d F Y') ?? 'Tidak diketahui'] : []),
                             'Status Kerja' => $kepeg?->status_kerja,
                             'Tanggal Habis Kontrak' => optional($kepeg?->tanggal_habis_kontrak)->translatedFormat('d F Y'),
                         ]])
