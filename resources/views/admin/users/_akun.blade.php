@@ -1,3 +1,21 @@
+@php $pegawaiDipilih = (int) old('data_pegawai_id', $akun?->data_pegawai_id); @endphp
+<div class="mb-3 pilih-pegawai">
+    <label class="form-label" for="data_pegawai_id">Data Pegawai <span class="text-muted fw-normal">(nama, email & NIP terisi otomatis)</span></label>
+    <input type="search" class="form-control form-control-sm mb-1" placeholder="Cari nama, NIP, atau unit…" data-cari-pegawai aria-label="Cari pegawai">
+    <select name="data_pegawai_id" id="data_pegawai_id" class="form-select @error('data_pegawai_id') is-invalid @enderror">
+        <option value="">— Tidak ditautkan ke pegawai —</option>
+        @foreach ($pegawaiOpsi as $p)
+            <option value="{{ $p['id'] }}" @selected($pegawaiDipilih === $p['id'])
+                data-nama="{{ $p['nama'] }}" data-email="{{ $p['email'] }}" data-nip="{{ $p['nip'] }}"
+                data-teks="{{ mb_strtolower($p['nama'] . ' ' . $p['nip'] . ' ' . $p['unit']) }}">
+                {{ $p['nama'] }}{{ $p['nip'] ? ' · ' . $p['nip'] : '' }}{{ $p['unit'] ? ' · ' . $p['unit'] : '' }}{{ $p['akun'] && $pegawaiDipilih !== $p['id'] ? ' (sudah punya akun)' : '' }}
+            </option>
+        @endforeach
+    </select>
+    @error('data_pegawai_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    <div class="form-text" data-info-pegawai></div>
+</div>
+
 <div class="mb-3">
     <label class="form-label">Nama Lengkap</label>
     <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $akun?->name) }}" required>
@@ -57,3 +75,40 @@
         @error('nip')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
 </div>
+
+<script>
+    // Dropdown Data Pegawai: cari + isi otomatis nama, email, NIP.
+    document.addEventListener('DOMContentLoaded', function () {
+        const wadah = document.querySelector('.pilih-pegawai');
+        if (!wadah) return;
+        const pilih = wadah.querySelector('select');
+        const cari = wadah.querySelector('[data-cari-pegawai]');
+        const info = wadah.querySelector('[data-info-pegawai]');
+        const form = pilih.closest('form');
+        const akunBaru = @json(! $akun);
+
+        cari.addEventListener('input', function () {
+            const kata = cari.value.trim().toLowerCase();
+            let pertama = null;
+            pilih.querySelectorAll('option[data-teks]').forEach((o) => {
+                const cocok = !kata || o.dataset.teks.includes(kata);
+                o.hidden = !cocok;
+                if (cocok && !pertama) pertama = o;
+            });
+            // Satu-satunya hasil langsung dipilih.
+            const terlihat = pilih.querySelectorAll('option[data-teks]:not([hidden])');
+            if (kata && terlihat.length === 1) { pilih.value = terlihat[0].value; pilih.dispatchEvent(new Event('change')); }
+            info.textContent = kata ? terlihat.length + ' pegawai cocok' : '';
+        });
+
+        pilih.addEventListener('change', function () {
+            const o = pilih.selectedOptions[0];
+            if (!o || !o.value) { info.textContent = 'Akun tidak ditautkan ke Data Pegawai.'; return; }
+            const isi = (nama, nilai, timpa) => { const el = form.querySelector('[name="' + nama + '"]'); if (el && nilai && (timpa || !el.value)) el.value = nilai; };
+            isi('name', o.dataset.nama, true);
+            isi('nip', o.dataset.nip, true);
+            isi('email', o.dataset.email, akunBaru); // akun lama: email hanya diisi bila masih kosong
+            info.textContent = 'Tertaut ke ' + o.dataset.nama + (o.textContent.includes('sudah punya akun') ? ' — pegawai ini sudah punya akun lain.' : '.');
+        });
+    });
+</script>

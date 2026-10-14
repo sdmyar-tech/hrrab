@@ -94,6 +94,7 @@ class UserController extends Controller
             'kepala_unit.*' => ['string', Rule::in(config('kepegawaian.unit_kerja'))],
             'nip' => ['nullable', 'string', 'max:50'],
             'wajib_ganti_password' => ['nullable', 'boolean'],
+            'data_pegawai_id' => ['nullable', 'integer', 'exists:data_pegawais,id'],
         ]);
 
         unset($validated['password_confirmation']);
@@ -124,6 +125,7 @@ class UserController extends Controller
             'kepala_unit.*' => ['string', Rule::in(config('kepegawaian.unit_kerja'))],
             'nip' => ['nullable', 'string', 'max:50'],
             'wajib_ganti_password' => ['nullable', 'boolean'],
+            'data_pegawai_id' => ['nullable', 'integer', 'exists:data_pegawais,id'],
         ]);
 
         if (empty($validated['password'])) {
@@ -174,7 +176,30 @@ class UserController extends Controller
             'roles' => self::ROLES,
             'divisiOptions' => config('kepegawaian.unit_kerja'),
             'gmBidang' => config('kepegawaian.gm_bidang'),
+            'pegawaiOpsi' => $this->pegawaiOpsi(),
         ];
+    }
+
+    /**
+     * Pilihan dropdown "Data Pegawai": nama, NIP, email, unit, dan jumlah akun yang sudah tertaut.
+     *
+     * @return \Illuminate\Support\Collection<int, array{id: int, nama: string, nip: ?string, email: ?string, unit: ?string, akun: int}>
+     */
+    private function pegawaiOpsi(): \Illuminate\Support\Collection
+    {
+        $akun = User::whereNotNull('data_pegawai_id')->selectRaw('data_pegawai_id, count(*) n')->groupBy('data_pegawai_id')->pluck('n', 'data_pegawai_id');
+
+        return DataPegawai::with('kepegawaian:id,data_pegawai_id,unit_kerja,jabatan')
+            ->orderBy('nama_lengkap')
+            ->get(['id', 'nama_lengkap', 'nip', 'email'])
+            ->map(fn (DataPegawai $p) => [
+                'id' => $p->id,
+                'nama' => $p->nama_lengkap,
+                'nip' => $p->nip,
+                'email' => $p->email,
+                'unit' => $p->kepegawaian?->unit_kerja,
+                'akun' => (int) ($akun[$p->id] ?? 0),
+            ]);
     }
 
     private function normalizeDivisi(array $validated): array
@@ -207,8 +232,13 @@ class UserController extends Controller
         $kepalaUnit = $validated['kepala_unit'];
         unset($validated['kepala_unit']);
 
-        if (! empty($validated['nip']) && ($pegawaiId = DataPegawai::where('nip', $validated['nip'])->value('id'))) {
+        // Utamakan pegawai yang dipilih dari dropdown; bila kosong, cocokkan lewat NIP yang diketik.
+        if (! empty($validated['data_pegawai_id'])) {
+            $validated['nip'] = $validated['nip'] ?: DataPegawai::whereKey($validated['data_pegawai_id'])->value('nip');
+        } elseif (! empty($validated['nip']) && ($pegawaiId = DataPegawai::where('nip', $validated['nip'])->value('id'))) {
             $validated['data_pegawai_id'] = $pegawaiId;
+        } else {
+            unset($validated['data_pegawai_id']); // jangan memutus tautan lama hanya karena dropdown kosong
         }
 
         return [$validated, $kepalaUnit];
