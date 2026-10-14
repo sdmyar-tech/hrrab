@@ -109,6 +109,8 @@ class User extends Authenticatable
         'nip',
         'data_pegawai_id',
         'data_pelamar_id',
+        'wajib_ganti_password',
+        'password_diganti_pada',
     ];
 
     protected $hidden = [
@@ -122,6 +124,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'divisi' => 'array',
+            'wajib_ganti_password' => 'boolean',
+            'password_diganti_pada' => 'datetime',
         ];
     }
 

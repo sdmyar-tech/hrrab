@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\AlurPegawai;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanLembur;
 use App\Models\Penugasan;
@@ -40,6 +41,11 @@ class PengajuanWorkflow
     /** Tingkat approval pertama saat pengajuan baru dibuat di $unit (cuti: unit utama; lembur: unit yang dipilih). */
     public static function initialLevel(User $user, ?string $unit, bool $lembur = false): string
     {
+        // Alur khusus (diatur Kepala SDM/Admin) selalu menang atas aturan otomatis.
+        if ($alur = AlurPegawai::milik($user->data_pegawai_id)) {
+            return $alur->daftarTahap()[0] ?? self::LEVEL_KEPALA_SDM;
+        }
+
         $level = self::submitterLevel($user);
 
         if (in_array($level, [self::LEVEL_KEPALA_SDM, self::LEVEL_GM], true)) {
@@ -60,6 +66,10 @@ class PengajuanWorkflow
     /** Tahap berikutnya setelah $currentLevel disetujui, bergantung pada siapa $submitter-nya. */
     public static function nextLevel(?User $submitter, string $currentLevel): ?string
     {
+        if ($alur = AlurPegawai::milik($submitter?->data_pegawai_id)) {
+            return $alur->tahapSetelah($currentLevel);
+        }
+
         return match ($currentLevel) {
             self::LEVEL_KEPALA_DIVISI => self::LEVEL_KEPALA_SDM,
             self::LEVEL_GM => ($submitter && in_array(self::submitterLevel($submitter), [self::LEVEL_KEPALA_SDM, self::LEVEL_GM], true))
@@ -144,21 +154,31 @@ class PengajuanWorkflow
     public static function rute(User $user, ?string $unit, bool $lembur = false): array
     {
         $pegawaiId = $user->data_pegawai_id;
+        $alur = AlurPegawai::with(['atasan', 'gm'])->where('data_pegawai_id', $pegawaiId ?? 0)->first();
         $tahap = [];
         $level = self::initialLevel($user, $unit, $lembur);
 
         while ($level) {
             $approvers = match ($level) {
-                self::LEVEL_KEPALA_DIVISI => self::kepalaUnit($unit, $pegawaiId),
-                self::LEVEL_GM => self::gmTersedia($pegawaiId)->sortByDesc(fn (User $gm) => $gm->memegangDivisi($unit))->values(),
+                self::LEVEL_KEPALA_DIVISI => match (true) {
+                    (bool) $alur?->atasan => collect([$alur->atasan]),
+                    // Alur khusus tanpa atasan tertentu & unit tanpa kepala: GM yang menyetujui (sama seperti canAct).
+                    $alur !== null && self::kepalaUnit($unit, $pegawaiId)->isEmpty() => self::gmTersedia($pegawaiId),
+                    default => self::kepalaUnit($unit, $pegawaiId),
+                },
+                self::LEVEL_GM => $alur?->gm
+                    ? collect([$alur->gm])
+                    : self::gmTersedia($pegawaiId)->sortByDesc(fn (User $gm) => $gm->memegangDivisi($unit))->values(),
                 default => self::kepalaSdmTersedia($pegawaiId),
             };
 
-            $next = ($level === self::LEVEL_KEPALA_DIVISI && $approvers->isNotEmpty() && $approvers->every->isKepalaSdm())
-                ? null
-                : self::nextLevel($user, $level);
+            $next = self::nextLevel($user, $level);
+            // Atasan yang juga Kepala SDM langsung menjadi persetujuan akhir (tidak menyetujui dua kali).
+            if ($level === self::LEVEL_KEPALA_DIVISI && $next === self::LEVEL_KEPALA_SDM && $approvers->isNotEmpty() && $approvers->every->isKepalaSdm()) {
+                $next = null;
+            }
 
-            $tahap[] = ['level' => $level, 'label' => self::levelLabel($level), 'approvers' => $approvers, 'final' => $next === null];
+            $tahap[] = ['level' => $level, 'label' => self::levelLabel($level), 'approvers' => $approvers, 'final' => $next === null, 'khusus' => $alur !== null];
             $level = $next;
         }
 
@@ -198,11 +218,14 @@ class PengajuanWorkflow
         }
 
         $submitterUnit = self::unitPengajuan($pengajuan);
+        $alur = AlurPegawai::milik($pengajuan->data_pegawai_id);
 
         return match ($pengajuan->current_level) {
-            self::LEVEL_KEPALA_DIVISI => $approver->memimpinUnit($submitterUnit)
-                || ($approver->isGm() && self::kepalaUnit($submitterUnit, $pengajuan->data_pegawai_id)->isEmpty()),
-            self::LEVEL_GM => $approver->isGm(),
+            self::LEVEL_KEPALA_DIVISI => $alur?->atasan_user_id
+                ? self::orangSama($approver, $alur->atasan_user_id)
+                : $approver->memimpinUnit($submitterUnit)
+                    || ($approver->isGm() && self::kepalaUnit($submitterUnit, $pengajuan->data_pegawai_id)->isEmpty()),
+            self::LEVEL_GM => $alur?->gm_user_id ? self::orangSama($approver, $alur->gm_user_id) : $approver->isGm(),
             self::LEVEL_KEPALA_SDM => $approver->isKepalaSdm(),
             default => false,
         };
@@ -225,9 +248,10 @@ class PengajuanWorkflow
             $updates['gm_pengganti'] = self::isGmPengganti($approver, $pengajuan);
         }
 
-        $level = ($current === self::LEVEL_KEPALA_DIVISI && $approver->isKepalaSdm())
-            ? null
-            : self::nextLevel(self::submitterUser($pengajuan), $current);
+        $level = self::nextLevel(self::submitterUser($pengajuan), $current);
+        if ($current === self::LEVEL_KEPALA_DIVISI && $level === self::LEVEL_KEPALA_SDM && $approver->isKepalaSdm()) {
+            $level = null; // Kepala SDM sebagai atasan langsung = sekaligus persetujuan akhir.
+        }
         $updates['current_level'] = $level;
 
         if ($level === null) {
@@ -256,7 +280,30 @@ class PengajuanWorkflow
         };
     }
 
-    /** $gm menangani pengajuan di luar bidang utamanya (menggantikan GM lain). */    public static function isGmPengganti(User $gm, PengajuanCuti|PengajuanLembur $pengajuan): bool
+    /** $approver adalah orang yang sama dengan akun $userId (satu orang bisa punya beberapa akun). */
+    private static function orangSama(User $approver, int $userId): bool
+    {
+        if ($approver->id === $userId) {
+            return true;
+        }
+        $pegawaiId = User::whereKey($userId)->value('data_pegawai_id');
+
+        return $pegawaiId && $approver->data_pegawai_id === $pegawaiId;
+    }
+
+    /** Subquery pegawai yang alur khususnya menunjuk $viewer (sebagai atasan atau GM) — agar pengajuannya terlihat. */
+    private static function pegawaiDenganAtasan(User $viewer): \Illuminate\Database\Query\Builder
+    {
+        $akun = $viewer->data_pegawai_id
+            ? User::where('data_pegawai_id', $viewer->data_pegawai_id)->pluck('id')->push($viewer->id)->unique()->all()
+            : [$viewer->id];
+
+        return AlurPegawai::query()->toBase()->select('data_pegawai_id')
+            ->where(fn ($q) => $q->whereIn('atasan_user_id', $akun)->orWhereIn('gm_user_id', $akun));
+    }
+
+    /** $gm menangani pengajuan di luar bidang utamanya (menggantikan GM lain). */
+    public static function isGmPengganti(User $gm, PengajuanCuti|PengajuanLembur $pengajuan): bool
     {
         return ! $gm->memegangDivisi(self::unitPengajuan($pengajuan));
     }
@@ -322,18 +369,21 @@ class PengajuanWorkflow
                 if ($units = $viewer->unitsDipimpin()) {
                     $q->orWhereIn('unit_kerja', $units);
                 }
+                $q->orWhereIn('data_pegawai_id', self::pegawaiDenganAtasan($viewer));
             }),
             User::ROLE_KEPALA_SDM => $query->where(function ($q) use ($viewer) {
                 $q->whereNotNull('kepala_approved_by')
                     ->orWhereNotNull('gm_approved_by')
                     ->orWhere('current_level', self::LEVEL_KEPALA_SDM)
                     ->orWhere('data_pegawai_id', $viewer->data_pegawai_id ?? 0)
-                    ->orWhereIn('unit_kerja', $viewer->unitsDipimpinUntukQuery());
+                    ->orWhereIn('unit_kerja', $viewer->unitsDipimpinUntukQuery())
+                    ->orWhereIn('data_pegawai_id', self::pegawaiDenganAtasan($viewer));
             }),
             User::ROLE_KEPALA_BAGIAN => $query->where(function ($q) use ($viewer) {
                 $units = $viewer->unitsDipimpinUntukQuery();
                 $q->whereIn('unit_kerja', $units)
-                    ->orWhere('data_pegawai_id', $viewer->data_pegawai_id ?? 0);
+                    ->orWhere('data_pegawai_id', $viewer->data_pegawai_id ?? 0)
+                    ->orWhereIn('data_pegawai_id', self::pegawaiDenganAtasan($viewer));
                 if ($q->getModel() instanceof PengajuanCuti) {
                     $q->orWhereIn('data_pegawai_id', Penugasan::aktif()->whereIn('unit_kerja', $units)->select('data_pegawai_id'));
                 }

@@ -23,6 +23,19 @@
     @unless ($wajibPassword)
         <div class="col-12 form-text mt-1">Kosongkan bila password tidak diubah.</div>
     @endunless
+    @if (! $akun || $akun->id !== auth()->id())
+        <div class="col-12">
+            <input type="hidden" name="wajib_ganti_password" value="0">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" name="wajib_ganti_password" value="1" id="wajib_ganti_password"
+                    @checked(old('wajib_ganti_password', $akun?->wajib_ganti_password ?? false))>
+                <label class="form-check-label" for="wajib_ganti_password">
+                    Wajib ganti password saat membuka sistem
+                    <span class="d-block small text-muted">Pemilik akun tidak bisa memakai halaman apa pun sebelum mengganti password.</span>
+                </label>
+            </div>
+        </div>
+    @endif
 </div>
 
 <div class="row g-3">

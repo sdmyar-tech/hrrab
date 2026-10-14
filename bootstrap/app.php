@@ -21,7 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         'nocache'  => \App\Http\Middleware\PreventBackHistory::class,
     ]);
 
-    $middleware->web(append: [\App\Http\Middleware\CatatAktivitas::class]);
+    $middleware->web(append: [\App\Http\Middleware\PaksaGantiPassword::class, \App\Http\Middleware\CatatAktivitas::class]);
 
     $middleware->redirectGuestsTo(function (\Illuminate\Http\Request $request) {
         if ($request->is('pelamar/*')) {

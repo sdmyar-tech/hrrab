@@ -93,9 +93,11 @@ class UserController extends Controller
             'kepala_unit' => ['nullable', 'array'],
             'kepala_unit.*' => ['string', Rule::in(config('kepegawaian.unit_kerja'))],
             'nip' => ['nullable', 'string', 'max:50'],
+            'wajib_ganti_password' => ['nullable', 'boolean'],
         ]);
 
         unset($validated['password_confirmation']);
+        $validated['wajib_ganti_password'] = $request->boolean('wajib_ganti_password');
         $validated = $this->normalizeDivisi($validated);
         [$validated, $kepalaUnit] = $this->pisahkanKepalaUnit($validated);
 
@@ -121,12 +123,17 @@ class UserController extends Controller
             'kepala_unit' => ['nullable', 'array'],
             'kepala_unit.*' => ['string', Rule::in(config('kepegawaian.unit_kerja'))],
             'nip' => ['nullable', 'string', 'max:50'],
+            'wajib_ganti_password' => ['nullable', 'boolean'],
         ]);
 
         if (empty($validated['password'])) {
             unset($validated['password']);
         }
         unset($validated['password_confirmation']);
+        // Akun sendiri tidak bisa dikunci dari form ini.
+        $validated['wajib_ganti_password'] = $user->id === Auth::id()
+            ? $user->wajib_ganti_password
+            : $request->boolean('wajib_ganti_password');
         $validated = $this->normalizeDivisi($validated);
 
         if ($user->isAdmin() && $validated['role'] !== User::ROLE_ADMIN && User::where('role', User::ROLE_ADMIN)->count() <= 1) {

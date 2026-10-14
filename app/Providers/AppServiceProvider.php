@@ -49,6 +49,8 @@ class AppServiceProvider extends ServiceProvider
         }
         // Menyetujui/menolak cuti & lembur: penyetuju sesuai tahap, atau Admin (boleh di tahap mana pun).
         Gate::define('proses-pengajuan', fn (User $user) => $user->hasAbility(User::ABILITY_APPROVE) || $user->isAdmin());
+        // Atur alur persetujuan/atasan pegawai & paksa ganti password akun: hanya Kepala SDM dan Admin.
+        Gate::define('atur-akun-pegawai', fn (User $user) => $user->isAdmin() || $user->isKepalaSdm());
 
         View::composer(['layouts.admin.sidebar', 'layouts.pegawai.sidebar'], function ($view) {
             $user = Auth::user();

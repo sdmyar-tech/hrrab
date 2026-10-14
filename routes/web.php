@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AbsenAcaraController;
+use App\Http\Controllers\Admin\AlurPegawaiController;
+use App\Http\Controllers\WajibPasswordController;
 use App\Http\Controllers\AbsensiSayaController;
 use App\Http\Controllers\Admin\AbsensiController as AdminAbsensiController;
 use App\Http\Controllers\Admin\AbsensiImportController as AdminAbsensiImportController;
@@ -315,4 +317,15 @@ Route::prefix('pelamar')->name('pelamar.')->middleware('pelamar')->group(functio
 
     Route::get('/profile', [LoginController::class, 'profile'])->name('profile');
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    // Wajib ganti password (satu-satunya halaman yang terbuka selama penanda aktif).
+    Route::get('/akun/ganti-password', [WajibPasswordController::class, 'halaman'])->name('akun.ganti-password');
+    Route::post('/akun/ganti-password', [WajibPasswordController::class, 'simpan'])->middleware('throttle:10,1')->name('akun.ganti-password.simpan');
+
+    // Kepala SDM & Admin: alur persetujuan/atasan pegawai + paksa ganti password akun.
+    Route::prefix('admin')->name('admin.')->middleware(['internal', 'can:atur-akun-pegawai'])->group(function () {
+        Route::put('/pegawai/{pegawai}/alur', [AlurPegawaiController::class, 'update'])->name('pegawai.alur.update');
+        Route::delete('/pegawai/{pegawai}/alur', [AlurPegawaiController::class, 'destroy'])->name('pegawai.alur.destroy');
+        Route::post('/akun/{user}/wajib-password', [WajibPasswordController::class, 'atur'])->name('akun.wajib-password');
+    });
 });

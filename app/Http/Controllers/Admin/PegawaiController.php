@@ -261,7 +261,7 @@ class PegawaiController extends Controller
             ->first();
 
         if (! $akun) {
-            return ['akun' => null, 'alurApproval' => [], 'unitsDisetujui' => []];
+            return ['akun' => null, 'semuaAkun' => collect(), 'alurApproval' => [], 'unitsDisetujui' => [], 'alurKhusus' => null, 'bolehAturAkun' => false, 'pilihanAlur' => null];
         }
 
         $akun->setRelation('dataPegawai', $pegawai);
@@ -276,13 +276,24 @@ class PegawaiController extends Controller
             }
         }
 
-        $unitsDisetujui = User::where('data_pegawai_id', $pegawai->id)->get()
-            ->each->setRelation('dataPegawai', $pegawai)
+        $semuaAkun = User::where('data_pegawai_id', $pegawai->id)->orderBy('id')->get()->each->setRelation('dataPegawai', $pegawai);
+        $unitsDisetujui = $semuaAkun
             ->filter(fn (User $u) => $u->hasAbility(User::ABILITY_APPROVE))
             ->flatMap(fn (User $u) => $u->unitsDipimpin())
             ->unique()->values()->all();
 
-        return ['akun' => $akun, 'alurApproval' => $alur, 'unitsDisetujui' => $unitsDisetujui];
+        // Pengaturan alur khusus & wajib ganti password (Kepala SDM/Admin).
+        $bolehAtur = Auth::user()->can('atur-akun-pegawai');
+
+        return [
+            'akun' => $akun,
+            'semuaAkun' => $semuaAkun,
+            'alurApproval' => $alur,
+            'unitsDisetujui' => $unitsDisetujui,
+            'alurKhusus' => \App\Models\AlurPegawai::with(['atasan', 'gm', 'pengubah'])->where('data_pegawai_id', $pegawai->id)->first(),
+            'bolehAturAkun' => $bolehAtur,
+            'pilihanAlur' => $bolehAtur ? AlurPegawaiController::pilihan($pegawai) : null,
+        ];
     }
 
     public function edit(string $id): View

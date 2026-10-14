@@ -67,7 +67,12 @@
                         @forelse ($users as $item)
                             <tr>
                                 <td class="fw-semibold">{{ $item->name }}</td>
-                                <td>{{ $item->email }}</td>
+                                <td>
+                                    {{ $item->email }}
+                                    @if ($item->wajib_ganti_password)
+                                        <span class="badge text-bg-warning d-inline-block mt-1"><i class="bi bi-shield-exclamation me-1"></i>Wajib ganti password</span>
+                                    @endif
+                                </td>
                                 <td>
                                     <span class="badge text-bg-light border">{{ $item->roleLabel() }}</span>
                                     @if ($item->isGm())

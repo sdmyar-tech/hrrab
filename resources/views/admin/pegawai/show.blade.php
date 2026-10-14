@@ -339,21 +339,54 @@
                             <div class="alert alert-danger small mb-3"><i class="bi bi-x-circle-fill me-1"></i>{{ $errors->first() }}</div>
                         @endif
 
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                            <h2 class="pd-section-title mb-0"><i class="bi bi-signpost-split"></i> Alur Approval</h2>
-                            @if ($unitsDisetujui)
-                                <div class="d-flex flex-wrap align-items-center gap-1 small text-muted">
-                                    <span>Menyetujui pengajuan staf di:</span>
-                                    @foreach ($unitsDisetujui as $unit)
-                                        <span class="pd-chip pd-chip-dark"><i class="bi bi-shield-check"></i> {{ $unit }}</span>
-                                    @endforeach
+                        @include('admin.pegawai._akun-login')
+                        @if ($bolehAturAkun && $akun)
+                            @push('modal-pegawai')
+                                @include('admin.pegawai._modal-alur')
+                            @endpush
+                        @endif
+
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2" id="alur-approval">
+                            <h2 class="pd-section-title mb-0">
+                                <i class="bi bi-signpost-split"></i> Alur Approval
+                                @if ($alurKhusus)<span class="pd-chip pd-chip-primary ms-1"><i class="bi bi-sliders"></i> Diatur khusus</span>@endif
+                            </h2>
+                            @if ($bolehAturAkun && $akun)
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAlurPegawai">
+                                        <i class="bi bi-diagram-3"></i> Ubah Alur & Atasan
+                                    </button>
+                                    @if ($alurKhusus)
+                                        <form action="{{ route('admin.pegawai.alur.destroy', $pegawai) }}" method="POST"
+                                            data-confirm="Kembalikan alur persetujuan {{ $pegawai->nama_lengkap }} ke otomatis (mengikuti unit & jabatan)?">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="btn btn-light btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Kembali Otomatis</button>
+                                        </form>
+                                    @endif
                                 </div>
                             @endif
                         </div>
-                        <p class="text-muted small mb-3">
-                            Cuti mengikuti unit utama. Lembur dipilih per unit dan di-approve kepala unit tersebut;
-                            bila pegawai ini kepala di unit itu, atau unitnya tidak punya kepala, approval naik ke GM.
-                        </p>
+                        @if ($alurKhusus)
+                            <div class="alert alert-info small py-2 mb-2">
+                                <i class="bi bi-info-circle me-1"></i>Alur pegawai ini diatur khusus oleh {{ $alurKhusus->pengubah?->name ?? 'SDM' }}
+                                ({{ $alurKhusus->updated_at?->translatedFormat('d M Y H:i') }}) dan berlaku untuk cuti & lembur.
+                                @if ($alurKhusus->catatan)<span class="d-block text-muted">Catatan: {{ $alurKhusus->catatan }}</span>@endif
+                            </div>
+                        @endif
+                        @if ($unitsDisetujui)
+                            <div class="d-flex flex-wrap align-items-center gap-1 small text-muted mb-2">
+                                <span>Menyetujui pengajuan staf di:</span>
+                                @foreach ($unitsDisetujui as $unit)
+                                    <span class="pd-chip pd-chip-dark"><i class="bi bi-shield-check"></i> {{ $unit }}</span>
+                                @endforeach
+                            </div>
+                        @endif
+                        @unless ($alurKhusus)
+                            <p class="text-muted small mb-3">
+                                Cuti mengikuti unit utama. Lembur dipilih per unit dan di-approve kepala unit tersebut;
+                                bila pegawai ini kepala di unit itu, atau unitnya tidak punya kepala, approval naik ke GM.
+                            </p>
+                        @endunless
 
                         @if (! $akun)
                             <div class="pd-empty mb-4"><i class="bi bi-person-x"></i>Pegawai ini belum punya akun, jadi belum bisa mengajukan cuti/lembur.</div>
@@ -379,7 +412,11 @@
                                                         </span>
                                                         <div style="min-width: 0">
                                                             <div class="pd-step-label">
-                                                                {{ $tahap['level'] === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_SDM ? 'Kepala SDM' : $tahap['label'] }}
+                                                                {{ match (true) {
+                                                                    $tahap['level'] === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_SDM => 'Kepala SDM',
+                                                                    $tahap['level'] === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_DIVISI && ($tahap['khusus'] ?? false) && $alurKhusus?->atasan_user_id => 'Atasan Langsung',
+                                                                    default => $tahap['label'],
+                                                                } }}
                                                                 @if ($tahap['final'])<span class="pd-chip pd-chip-success ms-1">Final</span>@endif
                                                             </div>
                                                             <div class="pd-step-who">
@@ -560,6 +597,7 @@
     </main>
 
     @include('partials.preview-file-modal')
+    @stack('modal-pegawai')
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -567,6 +605,9 @@
             const btn = tab && document.getElementById('tab-' + tab + '-btn');
             if (btn && window.bootstrap) {
                 bootstrap.Tab.getOrCreateInstance(btn).show();
+                // Kembali dari simpan pengaturan: gulir ke bagiannya (#alur-approval / #akun-login).
+                const target = location.hash && document.querySelector(location.hash);
+                if (target) setTimeout(() => target.scrollIntoView({ block: 'start' }), 150);
             }
         });
     </script>
