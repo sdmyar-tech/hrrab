@@ -42,7 +42,8 @@ class InterviewFlow
         return User::whereIn('data_pegawai_id', $pegawaiIds)
             ->whereIn('role', [User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM, User::ROLE_GM])
             ->orderBy('id')
-            ->first();
+            ->first()
+            ?? User::gmKepalaTanpaPegawai($unit)->orderBy('id')->first(); // GM tanpa Data Pegawai yang memimpin unit
     }
 
     /** Tahap wajib yang perlu dijadwalkan berikutnya. */

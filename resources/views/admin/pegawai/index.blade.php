@@ -48,7 +48,7 @@
                         </div>
                         <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterPegawaiForm'])</div>
                         <div class="col-auto text-end">
-                            @if (request()->hasAny(['q', 'unit_kerja', 'status_rekrutmen']))
+                            @if (request()->hasAny(['q', 'unit_kerja', 'status_rekrutmen']) || $saringanDashboard)
                                 <a href="{{ route('admin.pegawai.index') }}" class="btn btn-outline-secondary btn-sm"
                                     title="Reset filter">
                                     <i class="bi bi-x-lg"></i>
@@ -57,7 +57,22 @@
                         </div>
                     </div>
 
-                    @if (request()->hasAny(['q', 'unit_kerja', 'status_rekrutmen']))
+                    {{-- Filter yang datang dari klik grafik dashboard: tetap terbawa saat mencari, bisa dilepas satu per satu. --}}
+                    @if ($saringanDashboard)
+                        @foreach (array_keys($saringanDashboard) as $kunci)
+                            <input type="hidden" name="{{ $kunci }}" value="{{ request($kunci) }}">
+                        @endforeach
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2" data-saringan-dashboard>
+                            <span class="small text-muted"><i class="bi bi-funnel me-1"></i>Dari dashboard:</span>
+                            @foreach ($saringanDashboard as $kunci => $nilai)
+                                <a href="{{ request()->fullUrlWithoutQuery([$kunci, 'page']) }}" class="badge text-bg-info text-decoration-none" title="Lepas filter ini">
+                                    {{ \App\Support\KelompokPegawai::LABEL[$kunci] }}: {{ $nilai }} <i class="bi bi-x-lg ms-1"></i>
+                                </a>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if (request()->hasAny(['q', 'unit_kerja', 'status_rekrutmen']) || $saringanDashboard)
                         <div class="mt-2">
                             <small class="text-muted">
                                 Menampilkan {{ $pegawais->total() }} hasil

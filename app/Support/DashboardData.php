@@ -41,13 +41,13 @@ class DashboardData
             'unitDipilih' => $unit,
             'pilihanUnit' => $pilihanUnit,
             'labelLingkup' => $unit ?? ($lingkup ? implode(', ', $lingkup) : 'Semua unit'),
-            'kartu' => self::kartu($user, $aktif, $kontrakHabis, $approvalCuti, $approvalLembur, $interviewSaya, $cutiHariIni),
+            'kartu' => self::kartu($user, $aktif, $kontrakHabis, $approvalCuti, $approvalLembur, $interviewSaya, $cutiHariIni, $unit),
             'tugas' => self::tugas($user, $approvalCuti, $approvalLembur),
             'agenda' => self::agenda($user),
             'ringkasanUnit' => self::ringkasanUnit($user, $aktif),
             'ringkasanArea' => self::ringkasanArea($aktif),
             'keluarMasuk' => self::keluarMasuk($lingkup),
-            'komposisi' => self::komposisi($aktif),
+            'komposisi' => self::komposisi($aktif, $unit),
             'tren' => $bisaLaporan ? self::tren($lingkup) : null,
             'kontrakHabis' => $kontrakHabis,
             'pegawaiBaru' => $aktif->filter(fn ($p) => $p->kepegawaian?->tanggal_masuk?->gte(now()->subDays(90)))
@@ -109,24 +109,25 @@ public static function pilihanUnit(User $user): array
             : implode(', ', $daftar);
     }
 
-private static function kartu(User $user, Collection $aktif, Collection $kontrakHabis, int $approvalCuti, int $approvalLembur, int $interviewSaya, Collection $cutiHariIni): array
+private static function kartu(User $user, Collection $aktif, Collection $kontrakHabis, int $approvalCuti, int $approvalLembur, int $interviewSaya, Collection $cutiHariIni, ?string $unit = null): array
     {
         $tetap = $aktif->where('kepegawaian.status_kerja', 'Tetap')->count();
         $kartu = [[
             'label' => $user->isKepalaBagian() ? 'Anggota Unit' : 'Pegawai Aktif', 'nilai' => $aktif->count(),
             'meta' => "{$tetap} tetap · " . ($aktif->count() - $tetap) . ' kontrak/lainnya', 'ikon' => 'bi-people', 'warna' => 'primary',
-            'url' => $user->can(User::ABILITY_LIHAT_TABEL_KARYAWAN) ? route('admin.pegawai.index') : null,
+            'url' => $user->can(User::ABILITY_LIHAT_TABEL_KARYAWAN) ? route('admin.pegawai.index', array_filter(['status_rekrutmen' => 'Aktif', 'unit_kerja' => $unit])) : null,
         ]];
 
         if ($user->isAdmin()) {
             $kartu[] = ['label' => 'Akun Login', 'nilai' => User::where('role', '!=', User::ROLE_PELAMAR)->count(), 'meta' => 'akun internal', 'ikon' => 'bi-person-lock', 'warna' => 'success', 'url' => route('admin.users.index')];
         }
         if ($user->can(User::ABILITY_APPROVE)) {
-            $kartu[] = ['label' => 'Menunggu Persetujuan', 'nilai' => $approvalCuti + $approvalLembur, 'meta' => "{$approvalCuti} cuti · {$approvalLembur} lembur", 'ikon' => 'bi-inbox', 'warna' => 'warning', 'url' => route('admin.pengajuan-cuti.index')];
+            $kartu[] = ['label' => 'Menunggu Persetujuan', 'nilai' => $approvalCuti + $approvalLembur, 'meta' => "{$approvalCuti} cuti · {$approvalLembur} lembur", 'ikon' => 'bi-inbox', 'warna' => 'warning', 'url' => route($approvalCuti || ! $approvalLembur ? 'admin.pengajuan-cuti.index' : 'admin.pengajuan-lembur.index', ['status' => 'pending'])];
         }
-        $kartu[] = ['label' => 'Kontrak ≤ 60 Hari', 'nilai' => $kontrakHabis->count(), 'meta' => 'perlu perpanjangan/keputusan', 'ikon' => 'bi-hourglass-split', 'warna' => 'danger', 'url' => null];
+        $kartu[] = ['label' => 'Kontrak ≤ 60 Hari', 'nilai' => $kontrakHabis->count(), 'meta' => 'perlu perpanjangan/keputusan', 'ikon' => 'bi-hourglass-split', 'warna' => 'danger',
+            'url' => $user->can(User::ABILITY_LIHAT_TABEL_KARYAWAN) ? route('admin.pegawai.index', array_filter(['status_rekrutmen' => 'Aktif', 'kontrak' => 60, 'unit_kerja' => $unit])) : null];
         if ($user->can(User::ABILITY_LIHAT_LAPORAN)) {
-            $kartu[] = ['label' => 'Cuti Hari Ini', 'nilai' => $cutiHariIni->count(), 'meta' => 'pegawai tidak masuk', 'ikon' => 'bi-calendar-x', 'warna' => 'prpl', 'url' => route('admin.pengajuan-cuti.index')];
+            $kartu[] = ['label' => 'Cuti Hari Ini', 'nilai' => $cutiHariIni->count(), 'meta' => 'pegawai tidak masuk', 'ikon' => 'bi-calendar-x', 'warna' => 'prpl', 'url' => route('admin.pengajuan-cuti.index', ['berlangsung' => 1])];
         }
         if ($user->bisaMenginterview()) {
             $kartu[] = ['label' => 'Interview Saya', 'nilai' => $interviewSaya, 'meta' => 'jadwal terjadwal', 'ikon' => 'bi-calendar2-week', 'warna' => 'prpl', 'url' => route('interview.saya')];
@@ -294,6 +295,10 @@ private static function ringkasanUnit(User $user, Collection $aktif): Collection
         $cutiHariIni = PengajuanCuti::where('status', PengajuanCuti::STATUS_APPROVED)->whereDate('tanggal_mulai', '<=', now())->whereDate('tanggal_selesai', '>=', now())
             ->selectRaw('unit_kerja, count(*) n')->groupBy('unit_kerja')->pluck('n', 'unit_kerja');
         $kepala = Penugasan::aktif()->kepala()->with('dataPegawai:id,nama_lengkap')->get()->groupBy('unit_kerja');
+        // GM tanpa Data Pegawai yang memimpin unit (disimpan di akun).
+        $kepalaGm = User::gmKepalaTanpaPegawai()->get(['id', 'name', 'kepala_unit_gm'])
+            ->flatMap(fn (User $u) => collect((array) $u->kepala_unit_gm)->map(fn ($unit) => [$unit, $u->name]))
+            ->groupBy(0)->map(fn ($baris) => $baris->pluck(1));
 
         $perUnit = [];
         foreach ($aktif as $p) {
@@ -304,13 +309,14 @@ private static function ringkasanUnit(User $user, Collection $aktif): Collection
 
         $units = array_values(array_filter(self::pilihanUnit($user), fn ($u) => isset($perUnit[$u])));
 
-        return collect($units)->map(function ($unit) use ($perUnit, $lembur, $cutiBulan, $pending, $cutiHariIni, $kepala) {
+        return collect($units)->map(function ($unit) use ($perUnit, $lembur, $cutiBulan, $pending, $cutiHariIni, $kepala, $kepalaGm) {
             $anggota = collect($perUnit[$unit]);
             $batas = now()->addDays(60);
 
             return [
                 'unit' => $unit,
-                'kepala' => $kepala->get($unit)?->map(fn ($k) => $k->dataPegawai?->nama_lengkap)->filter()->implode(', ') ?: null,
+                'kepala' => collect($kepala->get($unit)?->map(fn ($k) => $k->dataPegawai?->nama_lengkap) ?? [])
+                    ->merge($kepalaGm->get($unit) ?? [])->filter()->unique()->implode(', ') ?: null,
                 'jumlah' => $anggota->count(),
                 'laki' => $anggota->where('jenis_kelamin', 'Laki-laki')->count(),
                 'perempuan' => $anggota->where('jenis_kelamin', 'Perempuan')->count(),
@@ -369,6 +375,7 @@ private static function ringkasanUnit(User $user, Collection $aktif): Collection
 
         return [
             'bulan' => $bulan->map(fn ($b) => [
+                'kunci' => $b->format('Y-m'),
                 'label' => $b->translatedFormat('M'),
                 'judul' => $b->translatedFormat('F Y'),
                 'masuk' => (int) ($masuk[$b->format('Y-m')] ?? 0),
@@ -380,52 +387,21 @@ private static function ringkasanUnit(User $user, Collection $aktif): Collection
         ];
     }
 
-private static function komposisi(Collection $aktif): array
+private static function komposisi(Collection $aktif, ?string $unit = null): array
     {
-        $masa = fn ($p) => match (true) {
-            ! $p->kepegawaian?->tanggal_masuk => 'Belum diisi',
-            ($t = $p->kepegawaian->tanggal_masuk->diffInYears(now())) < 1 => '< 1 th',
-            $t < 3 => '1–3 th',
-            $t < 5 => '3–5 th',
-            $t < 10 => '5–10 th',
-            default => '≥ 10 th',
-        };
-        $usia = fn ($p) => match (true) {
-            ! $p->tanggal_lahir => 'Belum diisi',
-            ($u = $p->tanggal_lahir->age) < 25 => '< 25',
-            $u < 35 => '25–34',
-            $u < 45 => '35–44',
-            $u < 55 => '45–54',
-            default => '≥ 55',
-        };
+        // Setiap batang/potongan bisa diklik → Data Pegawai dengan filter yang sama (lihat KelompokPegawai::terapkan).
+        $tautan = fn (string $kunci) => fn (array $item) => $item + ['url' => route('admin.pegawai.index', array_filter([
+            'status_rekrutmen' => 'Aktif', 'unit_kerja' => $unit, $kunci => $item['label'],
+        ]))];
 
         return [
-            'status' => self::hitung($aktif->map(fn ($p) => $p->kepegawaian?->status_kerja ?: 'Belum diisi'), ['Tetap', 'Kontrak', 'Harian Lepas', 'Probation', 'Magang', 'Belum diisi']),
-            'gender' => self::hitung($aktif->map(fn ($p) => $p->jenis_kelamin ?: 'Belum diisi'), ['Laki-laki', 'Perempuan', 'Belum diisi']),
-            'masa' => self::hitung($aktif->map($masa), ['< 1 th', '1–3 th', '3–5 th', '5–10 th', '≥ 10 th', 'Belum diisi']),
-            'usia' => self::hitung($aktif->map($usia), ['< 25', '25–34', '35–44', '45–54', '≥ 55', 'Belum diisi']),
-            'pendidikan' => self::hitung($aktif->map(fn ($p) => self::jenjang($p->pendidikan_terakhir)), ['SD', 'SMP', 'SMA/SMK', 'Diploma', 'S1/D4', 'S2', 'S3', 'Profesi', 'Belum diisi']),
+            'status' => array_map($tautan('status_kerja'), self::hitung($aktif->map(fn ($p) => $p->kepegawaian?->status_kerja ?: 'Belum diisi'), KelompokPegawai::STATUS_KERJA)),
+            'gender' => array_map($tautan('jk'), self::hitung($aktif->map(fn ($p) => $p->jenis_kelamin ?: 'Belum diisi'), KelompokPegawai::GENDER)),
+            'masa' => array_map($tautan('masa'), self::hitung($aktif->map(fn ($p) => KelompokPegawai::masa($p)), KelompokPegawai::MASA)),
+            'usia' => array_map($tautan('usia'), self::hitung($aktif->map(fn ($p) => KelompokPegawai::usia($p)), KelompokPegawai::USIA)),
+            'pendidikan' => array_map($tautan('pendidikan'), self::hitung($aktif->map(fn ($p) => KelompokPegawai::jenjang($p->pendidikan_terakhir)), KelompokPegawai::PENDIDIKAN)),
         ];
     }
-
-    private static function jenjang(?string $teks): string
-    {
-        $t = mb_strtoupper(trim((string) $teks));
-
-        return match (true) {
-            $t === '' => 'Belum diisi',
-            (bool) preg_match('/^(S3|STRATA 3|STRATA TIGA|DOKTOR)/', $t) => 'S3',
-            (bool) preg_match('/^(S2|STRATA 2|STRATA DUA|MAGISTER)/', $t) => 'S2',
-            (bool) preg_match('/^PROFESI/', $t) => 'Profesi',
-            (bool) preg_match('/^(S1|D4|STRATA 1|STRATA SATU|SARJANA)|UNIVERSITAS|INSTITUT/', $t) => 'S1/D4',
-            (bool) preg_match('/^D[123]\b|^DIPLOMA/', $t) => 'Diploma',
-            (bool) preg_match('/^(SMA|SMK|MA\b|MAN|SLTA|STM|SMEA|PAKET C)/', $t) => 'SMA/SMK',
-            (bool) preg_match('/^(SMP|MTS|SLTP|PAKET B)/', $t) => 'SMP',
-            (bool) preg_match('/^(SD|MI\b|PAKET A)/', $t) => 'SD',
-            default => 'Belum diisi',
-        };
-    }
-
     private static function hitung(Collection $nilai, array $urutan): array
     {
         $jumlah = $nilai->countBy();
@@ -447,9 +423,13 @@ private static function komposisi(Collection $aktif): array
             ->when($lingkup, fn ($q) => $q->whereIn('unit_kerja', $lingkup))
             ->selectRaw("DATE_FORMAT(tanggal, '%Y-%m') b, sum(jumlah_jam) n")->groupBy('b')->pluck('n', 'b');
 
-        $seri = fn ($data) => $bulan->map(fn ($b) => ['label' => $b->translatedFormat('M'), 'judul' => $b->translatedFormat('F Y'), 'jumlah' => round((float) ($data[$b->format('Y-m')] ?? 0), 1)])->all();
+        // Klik batang bulan → daftar pengajuan yang disetujui pada bulan itu.
+        $seri = fn ($data, string $rute) => $bulan->map(fn ($b) => [
+            'label' => $b->translatedFormat('M'), 'judul' => $b->translatedFormat('F Y'), 'jumlah' => round((float) ($data[$b->format('Y-m')] ?? 0), 1),
+            'url' => route($rute, ['status' => 'approved', 'tanggal_dari' => $b->toDateString(), 'tanggal_sampai' => $b->copy()->endOfMonth()->toDateString()]),
+        ])->all();
 
-        return ['cuti' => $seri($cuti), 'lembur' => $seri($lembur)];
+        return ['cuti' => $seri($cuti, 'admin.pengajuan-cuti.index'), 'lembur' => $seri($lembur, 'admin.pengajuan-lembur.index')];
     }
 
     private static function pipeline(): array

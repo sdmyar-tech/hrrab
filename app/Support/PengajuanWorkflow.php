@@ -99,9 +99,12 @@ class PengajuanWorkflow
 
         return once(fn () => User::query()
             ->whereIn('role', [User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM, User::ROLE_GM])
-            ->whereIn('data_pegawai_id', Penugasan::aktif()->kepala()->where('unit_kerja', $unit)
-                ->when($kecualiPegawaiId, fn ($q) => $q->where('data_pegawai_id', '!=', $kecualiPegawaiId))
-                ->select('data_pegawai_id'))
+            ->where(fn ($w) => $w
+                ->whereIn('data_pegawai_id', Penugasan::aktif()->kepala()->where('unit_kerja', $unit)
+                    ->when($kecualiPegawaiId, fn ($q) => $q->where('data_pegawai_id', '!=', $kecualiPegawaiId))
+                    ->select('data_pegawai_id'))
+                // GM tanpa Data Pegawai yang memimpin unit ini (disimpan di akun).
+                ->orWhereIn('id', User::gmKepalaTanpaPegawai($unit)->select('id')))
             ->orderBy('name')
             ->get()
             ->filter(fn (User $u) => $u->hasAbility(User::ABILITY_APPROVE))

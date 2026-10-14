@@ -106,6 +106,7 @@ class User extends Authenticatable
         'password',
         'role',
         'divisi',
+        'kepala_unit_gm',
         'nip',
         'data_pegawai_id',
         'data_pelamar_id',
@@ -124,6 +125,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'divisi' => 'array',
+            'kepala_unit_gm' => 'array',
             'wajib_ganti_password' => 'boolean',
             'password_diganti_pada' => 'datetime',
         ];
@@ -286,6 +288,11 @@ public function hasAbility(string $ability): bool
             return [];
         }
 
+        // GM tanpa Data Pegawai: unit dipimpin disimpan langsung di akun.
+        if ($this->isGm() && ! $this->data_pegawai_id) {
+            return array_values(array_unique((array) $this->kepala_unit_gm));
+        }
+
         $penugasan = $this->penugasanAktif();
 
         if ($penugasan->isEmpty()) {
@@ -329,6 +336,21 @@ public function hasAbility(string $ability): bool
     public function unitsDipimpinUntukQuery(): array
     {
         return $this->unitsDipimpin() ?: ['__none__'];
+    }
+
+    /**
+     * Akun GM tanpa Data Pegawai yang memimpin $unit (atau semua unit yang dipimpin akun seperti itu bila $unit null).
+     */
+    public static function gmKepalaTanpaPegawai(?string $unit = null): \Illuminate\Database\Eloquent\Builder
+    {
+        return self::query()->where('role', self::ROLE_GM)->whereNull('data_pegawai_id')->whereNotNull('kepala_unit_gm')
+            ->when($unit !== null, fn ($q) => $q->whereJsonContains('kepala_unit_gm', $unit));
+    }
+
+    /** @return list<string> unit yang dipimpin GM tanpa Data Pegawai */
+    public static function unitsKepalaGmTanpaPegawai(): array
+    {
+        return self::gmKepalaTanpaPegawai()->pluck('kepala_unit_gm')->flatten()->unique()->values()->all();
     }
 
     public static function gmUtamaUntuk(?string $unit): \Illuminate\Support\Collection

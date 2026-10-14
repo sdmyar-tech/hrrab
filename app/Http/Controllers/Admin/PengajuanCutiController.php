@@ -108,6 +108,12 @@ class PengajuanCutiController extends Controller
             $query->whereDate('tanggal_mulai', '<=', $request->date('tanggal_sampai'));
         }
 
+        // Dari kartu dashboard "Cuti Hari Ini": cuti disetujui yang sedang berlangsung.
+        if ($request->boolean('berlangsung')) {
+            $query->where('status', PengajuanCuti::STATUS_APPROVED)
+                ->whereDate('tanggal_mulai', '<=', now())->whereDate('tanggal_selesai', '>=', now());
+        }
+
         return $query;
     }
 

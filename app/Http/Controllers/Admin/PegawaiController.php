@@ -7,6 +7,7 @@ use App\Models\DataPegawai;
 use App\Models\DokumenPegawai;
 use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\KelompokPegawai;
 use App\Support\PengajuanWorkflow;
 use App\Support\PenugasanService;
 use App\Support\Urutan;
@@ -32,7 +33,7 @@ class PegawaiController extends Controller
 
     public function index(Request $request): View
     {
-        $query = $this->filteredQuery($request);
+        $query = $this->filteredQuery($request, $saringanDashboard);
 
         $kepeg = fn (string $kolom) => "(select {$kolom} from kepegawaians where kepegawaians.data_pegawai_id = data_pegawais.id limit 1)";
         $urut = Urutan::terapkan($query, [
@@ -47,7 +48,7 @@ class PegawaiController extends Controller
 
         $unitKerjaOptions = config('kepegawaian.unit_kerja');
 
-        return view('admin.pegawai.index', compact('pegawais', 'unitKerjaOptions') + $urut);
+        return view('admin.pegawai.index', compact('pegawais', 'unitKerjaOptions', 'saringanDashboard') + $urut);
     }
 
     public function export(Request $request): BinaryFileResponse
@@ -140,7 +141,7 @@ class PegawaiController extends Controller
         ]);
     }
 
-    private function filteredQuery(Request $request)
+    private function filteredQuery(Request $request, ?array &$saringan = null)
     {
         $query = DataPegawai::with(['kepegawaian', 'kontakDarurat', 'bpjs', 'dokumen', 'penugasanAktif']);
 
@@ -171,6 +172,9 @@ class PegawaiController extends Controller
                 $q->where('status_rekrutmen', $status);
             });
         }
+
+        // Filter dari grafik dashboard (status kerja, jenis kelamin, masa kerja, usia, pendidikan, area, bulan masuk/keluar, kontrak).
+        $saringan = KelompokPegawai::terapkan($query, $request->query());
 
         return $query;
     }

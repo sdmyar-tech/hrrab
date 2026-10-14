@@ -261,12 +261,23 @@ class UserController extends Controller
      */
     private function simpanKepalaUnit(User $user, array $units): void
     {
+        $user->unsetRelation('dataPegawai'); // tautan bisa baru saja berubah di form ini
         $pegawai = $user->dataPegawai;
+
+        // GM (role tertinggi yang menyetujui) boleh memimpin unit tanpa NIP / Data Pegawai: disimpan di akun.
+        if ($user->isGm()) {
+            $user->forceFill(['kepala_unit_gm' => $pegawai ? null : ($units ?: null)])->save();
+            if (! $pegawai) {
+                return;
+            }
+        } elseif ($user->kepala_unit_gm) {
+            $user->forceFill(['kepala_unit_gm' => null])->save(); // role turun dari GM: bersihkan sisa
+        }
 
         if (! $pegawai) {
             if ($units) {
                 throw ValidationException::withMessages([
-                    'kepala_unit' => 'Akun ini belum tertaut ke Data Pegawai. Isi NIP yang sama dengan Data Pegawai agar bisa memimpin unit.',
+                    'kepala_unit' => 'Akun ini belum tertaut ke Data Pegawai. Untuk role di bawah GM, pilih pegawai (atau isi NIP) agar bisa memimpin unit.',
                 ]);
             }
 

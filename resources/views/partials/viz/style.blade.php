@@ -49,6 +49,18 @@
     .viz-xlab span { flex: 1; text-align: center; font-size: .72rem; color: var(--viz-muted); }
 
     .viz-empty { font-size: .8rem; color: var(--viz-muted); }
+
+    /* Elemen grafik yang bisa diklik ke detail. */
+    .viz-stack > a { display: block; height: 100%; min-width: 3px; transition: filter .15s; }
+    .viz-stack > a:hover { filter: brightness(1.12) saturate(1.1); }
+    .viz-legend-link { display: flex; align-items: center; gap: .45rem; width: 100%; padding: .1rem .3rem; margin: -.1rem -.3rem; border-radius: .35rem; color: inherit !important; text-decoration: none !important; }
+    .viz-legend-link:hover { background: var(--admin-surface-soft, #f8f9fb); }
+    a.viz-col { text-decoration: none; cursor: pointer; }
+    .viz-hbar a.lbl:hover { color: var(--hr-primary, #8b1215) !important; text-decoration: underline; }
+    /* Baris daftar di panel dashboard (kontrak, cuti, pegawai baru). */
+    .dash-baris { padding: .4rem .5rem; margin: 0 -.5rem 2px; border-radius: .5rem; color: inherit !important; text-decoration: none !important; }
+    a.dash-baris[href]:hover { background: var(--admin-surface-soft, #f8f9fb); }
+    a.dash-baris[href]:hover .fw-semibold { color: var(--hr-primary, #8b1215); }
     .dash-link { color: #880f12; }
     .dash-link:hover { color: #880f12; text-decoration: underline; }
     html[data-theme="dark"] .dash-link { color: #f08a8c; }

@@ -25,10 +25,10 @@
         <div class="col-12 col-lg-4">
             <div class="row g-2 viz">
                 <div class="col-4 col-lg-12">
-                    <div class="dash-mini-stat km-stat is-masuk"><div class="n">+{{ $m30 }}</div><div class="l">Masuk (30 hari)</div></div>
+                    <a href="#km-daftar-masuk" class="dash-mini-stat km-stat is-masuk"><div class="n">+{{ $m30 }}</div><div class="l">Masuk (30 hari)</div></a>
                 </div>
                 <div class="col-4 col-lg-12">
-                    <div class="dash-mini-stat km-stat is-keluar"><div class="n">−{{ $k30 }}</div><div class="l">Keluar (30 hari)</div></div>
+                    <a href="#km-daftar-keluar" class="dash-mini-stat km-stat is-keluar"><div class="n">−{{ $k30 }}</div><div class="l">Keluar (30 hari)</div></a>
                 </div>
                 <div class="col-4 col-lg-12">
                     <div class="dash-mini-stat km-stat"><div class="n {{ $selisih > 0 ? 'text-success' : ($selisih < 0 ? 'text-danger' : '') }}">{{ $selisih > 0 ? '+' : '' }}{{ $selisih }}</div><div class="l">Perubahan bersih</div></div>
@@ -42,8 +42,15 @@
                     @foreach ($data['bulan'] as $b)
                         <div class="km-col {{ $loop->last ? 'is-kini' : '' }}" tabindex="0">
                             <span class="tip">{{ $b['judul'] }}: masuk {{ $b['masuk'] }}, keluar {{ $b['keluar'] }}</span>
-                            <span class="bar km-masuk" style="height: {{ $b['masuk'] ? max(3, round($b['masuk'] / $maks * 100)) : 0 }}%"></span>
-                            <span class="bar km-keluar" style="height: {{ $b['keluar'] ? max(3, round($b['keluar'] / $maks * 100)) : 0 }}%"></span>
+                            @foreach (['masuk', 'keluar'] as $jenis)
+                                @if ($bisaBuka && $b[$jenis])
+                                    {{-- Klik batang → Data Pegawai yang masuk/keluar pada bulan itu. --}}
+                                    <a href="{{ route('admin.pegawai.index', [$jenis => $b['kunci']]) }}" class="bar km-{{ $jenis }}" style="height: {{ max(3, round($b[$jenis] / $maks * 100)) }}%"
+                                        aria-label="{{ ucfirst($jenis) }} {{ $b['judul'] }}: {{ $b[$jenis] }}"></a>
+                                @else
+                                    <span class="bar km-{{ $jenis }}" style="height: {{ $b[$jenis] ? max(3, round($b[$jenis] / $maks * 100)) : 0 }}%"></span>
+                                @endif
+                            @endforeach
                         </div>
                     @endforeach
                 </div>
@@ -64,7 +71,7 @@
 
         @foreach ([['Masuk', $data['masuk30'], 'bi-box-arrow-in-right', 'is-masuk'], ['Keluar', $data['keluar30'], 'bi-box-arrow-right', 'is-keluar']] as [$judul, $daftar, $ikon, $kelas])
             <div class="col-12 col-md-6">
-                <div class="km-daftar {{ $kelas }}">
+                <div class="km-daftar {{ $kelas }}" id="km-daftar-{{ strtolower($judul) }}">
                     <div class="fw-semibold small mb-1"><i class="bi {{ $ikon }} me-1"></i>{{ $judul }} 30 hari terakhir</div>
                     @forelse ($daftar as $p)
                         <div class="km-orang">
@@ -106,7 +113,8 @@
     .km-cols { display: flex; align-items: flex-end; gap: 6px; height: 150px; padding-top: .5rem; border-bottom: 1px solid var(--viz-track); }
     .km-col { flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 2px; position: relative; outline: none; border-radius: 4px 4px 0 0; }
     .km-col.is-kini { background: var(--admin-surface-soft, #f8f9fb); }
-    .km-col .bar { flex: 1; max-width: 16px; border-radius: 3px 3px 0 0; transition: opacity .15s; }
+    .km-col .bar { flex: 1; max-width: 16px; border-radius: 3px 3px 0 0; transition: opacity .15s; display: block; }
+    a.bar:hover { filter: brightness(1.15); }
     .km-cols:hover .km-col .bar { opacity: .5; }
     .km-cols .km-col:hover .bar, .km-col:focus-visible .bar { opacity: 1; }
     .km-col .tip { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--viz-text); color: var(--viz-surface);

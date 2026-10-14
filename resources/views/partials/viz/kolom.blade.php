@@ -11,13 +11,15 @@
 <div class="viz">
     <div class="viz-cols" aria-hidden="true">
         @foreach ($items as $k => $i)
-            <div class="viz-col" tabindex="0">
+            {{-- Kolom dengan 'url' bisa diklik → daftar pengajuan bulan itu. --}}
+            @php $tag = ! empty($i['url']) && $i['jumlah'] > 0 ? 'a' : 'div'; @endphp
+            <{{ $tag }} class="viz-col" tabindex="0" @if ($tag === 'a') href="{{ $i['url'] }}" @endif>
                 @if ($i['jumlah'] > 0 && ($k === $iMaks || $k === $iAkhir))
                     <span class="tag">{{ $format($i['jumlah']) }}</span>
                 @endif
-                <span class="tip">{{ $i['judul'] }}: {{ $format($i['jumlah']) }} {{ $satuan }}</span>
+                <span class="tip">{{ $i['judul'] }}: {{ $format($i['jumlah']) }} {{ $satuan }}{{ $tag === 'a' ? ' — klik untuk daftar' : '' }}</span>
                 <span class="bar" style="height: {{ max(1, round($i['jumlah'] / $maks * 100)) }}%"></span>
-            </div>
+            </{{ $tag }}>
         @endforeach
     </div>
     <div class="viz-xlab" aria-hidden="true">

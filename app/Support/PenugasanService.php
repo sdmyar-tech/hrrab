@@ -336,7 +336,8 @@ class PenugasanService
 
     public static function unitTanpaKepala(string $unit, $tanggal = null): bool
     {
-        return ! Penugasan::aktif($tanggal)->kepala()->where('unit_kerja', $unit)->exists();
+        return ! Penugasan::aktif($tanggal)->kepala()->where('unit_kerja', $unit)->exists()
+            && ! User::gmKepalaTanpaPegawai($unit)->exists();
     }
 
     /**
@@ -346,7 +347,7 @@ class PenugasanService
      */
     public static function unitsTanpaKepala(): array
     {
-        $berKepala = Penugasan::aktif()->kepala()->distinct()->pluck('unit_kerja')->all();
+        $berKepala = [...Penugasan::aktif()->kepala()->distinct()->pluck('unit_kerja')->all(), ...User::unitsKepalaGmTanpaPegawai()];
 
         return Penugasan::aktif()->whereNotIn('unit_kerja', $berKepala)->distinct()->orderBy('unit_kerja')->pluck('unit_kerja')->all();
     }
