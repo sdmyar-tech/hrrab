@@ -17,10 +17,13 @@ class JabatanController extends Controller
     public function index(Request $request): View
     {
         // Pencarian & penyaringan dilakukan langsung di halaman (?q= dipakai sebagai isian awal kotak cari).
+        $rincian = $this->rincianPemakaian();
+
         return view('admin.jabatan.index', [
             'jabatans' => Jabatan::orderBy('nama')->get(),
             'semuaJabatan' => Jabatan::orderBy('nama')->get(['id', 'nama']),
-            'dipakai' => $this->hitungPemakaian(),
+            'dipakai' => array_map('array_sum', $rincian),
+            'rincian' => $rincian,
         ]);
     }
 
@@ -36,18 +39,35 @@ class JabatanController extends Controller
     {
         $nama = $this->validasiNama($request);
 
-        Jabatan::create(['nama' => $nama]);
+        $jabatan = Jabatan::create(['nama' => $nama]);
 
-        return back()->with('success', "Jabatan {$nama} ditambahkan.");
+        return $this->kembali($jabatan)->with('success', "Jabatan {$nama} ditambahkan.");
     }
 
     public function update(Request $request, Jabatan $jabatan): RedirectResponse
     {
-        $nama = $this->validasiNama($request, $jabatan->id);
+        // Galat form ubah memakai bag "ubah" supaya modal yang benar dibuka lagi (bukan form tambah).
+        $nama = $this->validasiNama($request, $jabatan->id, 'ubah');
+        $lama = $jabatan->nama;
 
+        if ($nama === $lama) {
+            return $this->kembali($jabatan)->with('info', 'Nama jabatan tidak berubah.');
+        }
+
+        $dipakai = $jabatan->jumlahDipakai();
         $jabatan->ubahNama($nama);
 
-        return back()->with('success', "Jabatan diubah menjadi {$nama}. Data pegawai, penugasan, lowongan & formasi ikut diperbarui.");
+        return $this->kembali($jabatan)->with('success', "Jabatan {$lama} diubah menjadi {$nama}."
+            . ($dipakai ? " {$dipakai} data (pegawai, mutasi, lowongan, formasi, lamaran) ikut diperbarui." : ''));
+    }
+
+    /** Kembali ke daftar, menyorot & menggulir ke jabatan yang baru diubah, dengan pencarian sebelumnya. */
+    private function kembali(Jabatan $jabatan): RedirectResponse
+    {
+        $q = request()->input('kembali_q');
+
+        return redirect()->to(route('admin.jabatan.index', array_filter(['q' => $q])) . '#jabatan-' . $jabatan->id)
+            ->with('jabatan_disorot', $jabatan->id);
     }
 
     public function destroy(Request $request, Jabatan $jabatan): RedirectResponse
@@ -70,35 +90,47 @@ class JabatanController extends Controller
             . ($pengganti ? " {$dipindah} data dipindahkan ke {$pengganti->nama}." : ''));
     }
 
-    private function validasiNama(Request $request, ?int $abaikanId = null): string
+    private function validasiNama(Request $request, ?int $abaikanId = null, string $bag = 'default'): string
     {
         $request->merge(['nama' => mb_strtoupper(trim(preg_replace('/\s+/', ' ', (string) $request->input('nama'))))]);
 
-        return $request->validate([
+        return $request->validateWithBag($bag, [
             'nama' => ['required', 'string', 'max:150', Rule::unique('jabatans', 'nama')->ignore($abaikanId)],
         ], [
-            'nama.unique' => 'Jabatan dengan nama ini sudah ada.',
+            'nama.required' => 'Nama jabatan wajib diisi.',
+            'nama.unique' => 'Jabatan dengan nama ini sudah ada. Gunakan "Gabungkan" bila keduanya jabatan yang sama.',
         ])['nama'];
     }
 
     /** @return array<string, int> nama jabatan => jumlah data yang memakainya */
     private function hitungPemakaian(): array
     {
+        return array_map('array_sum', $this->rincianPemakaian());
+    }
+
+    /**
+     * Pemakaian per jabatan, dirinci per sumber data (untuk info dampak di modal ubah/hapus).
+     *
+     * @return array<string, array<string, int>> nama jabatan => [label sumber => jumlah]
+     */
+    private function rincianPemakaian(): array
+    {
         $sumber = [
-            ['kepegawaians', 'jabatan'], ['kepegawaians', 'jabatan_tambahan'], ['penugasans', 'jabatan'],
-            ['lowongans', 'jabatan'], ['pengajuan_formasis', 'jabatan'], ['lamarans', 'jabatan_tujuan'],
+            'Pegawai' => ['kepegawaians', 'jabatan'], 'Jabatan tambahan' => ['kepegawaians', 'jabatan_tambahan'],
+            'Mutasi/rangkap' => ['penugasans', 'jabatan'], 'Lowongan' => ['lowongans', 'jabatan'],
+            'Formasi' => ['pengajuan_formasis', 'jabatan'], 'Lamaran' => ['lamarans', 'jabatan_tujuan'],
         ];
 
-        $total = [];
-        foreach ($sumber as [$tabel, $kolom]) {
+        $hasil = [];
+        foreach ($sumber as $label => [$tabel, $kolom]) {
             $baris = DB::table($tabel)->whereNotNull($kolom)->groupBy($kolom)
                 ->selectRaw("{$kolom} as nama, count(*) as jumlah")->pluck('jumlah', 'nama');
 
             foreach ($baris as $nama => $jumlah) {
-                $total[$nama] = ($total[$nama] ?? 0) + $jumlah;
+                $hasil[$nama][$label] = (int) $jumlah;
             }
         }
 
-        return $total;
+        return $hasil;
     }
 }

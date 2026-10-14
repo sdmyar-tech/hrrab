@@ -29,7 +29,8 @@
     <h2 class="h6 fw-bold mb-1"><i class="bi bi-person-badge"></i>Kepala Unit</h2>
     <p class="small text-muted mb-3">
         Unit yang dipimpin akun ini (approve tahap Kepala Bagian & interviewer tahap 2). Bisa lebih dari satu.
-        Akun <strong>Staff</strong> yang dicentang otomatis jadi Kepala Bagian. Akun harus tertaut ke Data Pegawai (NIP sama).
+        Akun <strong>Staff</strong> yang dicentang otomatis jadi Kepala Bagian. Memimpin unit butuh akun yang tertaut ke Data Pegawai;
+        untuk <strong>GM</strong> bagian ini opsional — kosongkan bila GM tidak memimpin unit.
     </p>
     <div class="row row-cols-2 row-cols-md-3 g-1 kotak-centang">
         @foreach ($divisiOptions as $unit)

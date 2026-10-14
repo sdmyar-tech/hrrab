@@ -40,7 +40,7 @@
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-plus-lg"></i></span>
                         <input type="text" name="nama" class="form-control @error('nama') is-invalid @enderror" placeholder="Tambah jabatan baru, mis. STAFF IT"
-                            value="{{ old('nama') }}" maxlength="150" required autocomplete="off">
+                            value="{{ $errors->ubah->any() ? '' : old('nama') }}" maxlength="150" required autocomplete="off">
                         <button type="submit" class="btn btn-primary">Tambah</button>
                     </div>
                     @error('nama')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
@@ -59,15 +59,17 @@
 
             <div class="jb-info small text-muted px-3 py-2">
                 Menampilkan <strong id="jb-tampil">{{ $total }}</strong> dari {{ $total }} jabatan.
-                Nama otomatis huruf kapital · ubah nama ikut memperbarui semua data · hapus jabatan yang dipakai akan meminta jabatan pengganti.
+                Klik nama atau <strong>Ubah</strong> untuk mengganti nama (semua data ikut diperbarui) · hapus jabatan yang dipakai akan meminta jabatan pengganti.
             </div>
 
             <ul class="jb-daftar list-unstyled mb-0" id="jb-daftar">
                 @forelse ($jabatans as $j)
                     @php $n = $dipakai[$j->nama] ?? 0; @endphp
-                    <li class="jb-baris" data-nama="{{ $j->nama }}" data-dipakai="{{ $n }}">
+                    <li class="jb-baris {{ session('jabatan_disorot') === $j->id ? 'disorot' : '' }}" id="jabatan-{{ $j->id }}" data-nama="{{ $j->nama }}" data-dipakai="{{ $n }}"
+                        data-id="{{ $j->id }}" data-url="{{ route('admin.jabatan.update', $j) }}" data-url-hapus="{{ route('admin.jabatan.destroy', $j) }}"
+                        data-rincian='@json($rincian[$j->nama] ?? (object) [])'>
                         <div class="jb-tampil">
-                            <span class="jb-nama">{{ $j->nama }}</span>
+                            <button type="button" class="jb-nama" data-ubah-jabatan title="Klik untuk mengubah nama">{{ $j->nama }}</button>
                             @if ($n)
                                 <a href="{{ route('admin.pegawai.index', ['q' => $j->nama]) }}" class="jb-pakai" title="Lihat pegawai dengan jabatan ini">
                                     <i class="bi bi-people"></i> {{ $n }} data
@@ -76,7 +78,7 @@
                                 <span class="jb-pakai kosong">tidak dipakai</span>
                             @endif
                             <span class="jb-aksi">
-                                <button type="button" class="btn btn-outline-secondary btn-sm jb-ubah" title="Ubah nama">
+                                <button type="button" class="btn btn-outline-secondary btn-sm jb-ubah" title="Ubah nama" data-ubah-jabatan>
                                     <i class="bi bi-pencil"></i><span class="d-none d-sm-inline">Ubah</span>
                                 </button>
                                 @if ($n)
@@ -95,14 +97,6 @@
                             </span>
                         </div>
 
-                        {{-- Ubah nama langsung di baris (Enter = simpan, Esc = batal) --}}
-                        <form action="{{ route('admin.jabatan.update', $j) }}" method="POST" class="jb-form-ubah" hidden>
-                            @csrf
-                            @method('PUT')
-                            <input type="text" name="nama" class="form-control form-control-sm" value="{{ $j->nama }}" maxlength="150" required>
-                            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg"></i>Simpan</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm jb-batal">Batal</button>
-                        </form>
                     </li>
                 @empty
                     <li class="text-center text-muted py-5">Belum ada jabatan.</li>
@@ -145,7 +139,64 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalUbahJabatan" tabindex="-1" aria-labelledby="judulUbahJabatan" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" class="modal-content" id="formUbahJabatan" autocomplete="off">
+            @csrf
+            @method('PUT')
+            <input type="hidden" name="jabatan_id">
+            <input type="hidden" name="kembali_q">
+            <div class="modal-header">
+                <h5 class="modal-title" id="judulUbahJabatan"><i class="bi bi-pencil-square me-1"></i>Ubah Jabatan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <div class="jb-lama mb-3">
+                    <span class="small text-muted d-block">Nama sekarang</span>
+                    <strong data-nama-lama></strong>
+                </div>
+
+                <label class="form-label" for="jb-nama-baru">Nama baru</label>
+                <input type="text" name="nama" id="jb-nama-baru" class="form-control form-control-lg @error('nama', 'ubah') is-invalid @enderror" maxlength="150" required>
+                <div class="d-flex justify-content-between gap-2 mt-1">
+                    <span class="form-text m-0" data-pesan-nama>Otomatis huruf kapital. Spasi berlebih dirapikan.</span>
+                    <span class="form-text m-0 text-nowrap" data-hitung-huruf></span>
+                </div>
+                @error('nama', 'ubah')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+
+                {{-- Nama sama dengan jabatan lain → tawarkan penggabungan. --}}
+                <div class="alert alert-warning small mt-3 mb-0" data-kembar hidden>
+                    <i class="bi bi-exclamation-triangle me-1"></i>Jabatan <strong data-nama-kembar></strong> sudah ada.
+                    Bila keduanya sama, <strong>gabungkan</strong>: semua data dipindahkan ke jabatan itu lalu jabatan ini dihapus.
+                    <button type="button" class="btn btn-warning btn-sm mt-2 w-100" data-gabungkan><i class="bi bi-intersect"></i> Gabungkan ke <span data-nama-kembar></span></button>
+                </div>
+
+                <div class="jb-dampak mt-3" data-dampak></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-primary" data-simpan><i class="bi bi-check-lg"></i>Simpan Perubahan</button>
+            </div>
+        </form>
+        <form method="POST" id="formGabungJabatan" hidden>
+            @csrf
+            @method('DELETE')
+            <input type="hidden" name="pengganti_id">
+        </form>
+    </div>
+</div>
+
 <style>
+    .jb-lama { padding: .6rem .8rem; border-radius: 10px; background: var(--admin-surface-soft); border: 1px solid var(--admin-border); }
+    #jb-nama-baru { text-transform: uppercase; font-weight: 600; letter-spacing: .01em; }
+    .jb-dampak { font-size: .8125rem; padding: .7rem .85rem; border-radius: 10px; border: 1px dashed var(--admin-border); }
+    .jb-dampak.ada { border-style: solid; border-color: #e3c3c4; background: var(--hr-primary-soft); }
+    .jb-dampak ul { list-style: none; padding: 0; margin: .4rem 0 0; display: flex; flex-wrap: wrap; gap: .35rem; }
+    .jb-dampak li { padding: .15rem .55rem; border-radius: 999px; background: var(--admin-surface); border: 1px solid var(--admin-border); font-weight: 600; }
+    button.jb-nama { border: 0; background: none; padding: 0; text-align: left; color: inherit; cursor: pointer; }
+    button.jb-nama:hover { color: var(--hr-primary); text-decoration: underline; text-underline-offset: 3px; }
+    .jb-baris.disorot { animation: jb-sorot 2.4s ease-out; }
+    @keyframes jb-sorot { 0%, 40% { background: #fff3d6; } 100% { background: transparent; } }
     .jb-stat { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; border: 1px solid var(--admin-border); border-radius: .85rem;
         background: var(--admin-surface); color: var(--admin-text); text-align: left; transition: border-color .15s, box-shadow .15s; }
     .jb-stat > i { width: 38px; height: 38px; display: inline-grid; place-items: center; border-radius: .6rem; background: var(--hr-primary-soft); color: var(--hr-primary); font-size: 1.05rem; flex: none; }
@@ -230,18 +281,86 @@
             });
         });
 
-        // Ubah nama langsung di baris.
-        baris.forEach(function (li) {
-            const viewBaris = li.querySelector('.jb-tampil');
-            const form = li.querySelector('.jb-form-ubah');
-            const input = form.querySelector('input[name=nama]');
-            const tutup = function () { form.hidden = true; viewBaris.hidden = false; input.value = li.dataset.nama; };
-            li.querySelector('.jb-ubah').addEventListener('click', function () {
-                viewBaris.hidden = true; form.hidden = false; input.focus(); input.select();
+        // ---------- Modal Ubah Jabatan ----------
+        const modalUbah = document.getElementById('modalUbahJabatan');
+        const formUbah = document.getElementById('formUbahJabatan');
+        const formGabung = document.getElementById('formGabungJabatan');
+        const inputNama = formUbah.querySelector('[name=nama]');
+        const tombolSimpan = formUbah.querySelector('[data-simpan]');
+        const pesanNama = formUbah.querySelector('[data-pesan-nama]');
+        const kotakKembar = formUbah.querySelector('[data-kembar]');
+        const kotakDampak = formUbah.querySelector('[data-dampak]');
+        // Peta nama → id semua jabatan untuk cek nama kembar tanpa memuat ulang.
+        const semua = new Map(baris.map((li) => [li.dataset.nama, li.dataset.id]));
+        const rapikan = (v) => v.replace(/\s+/g, ' ').trim().toUpperCase();
+        let aktif = null;
+
+        function bukaUbah(li, namaAwal) {
+            aktif = li;
+            formUbah.action = li.dataset.url;
+            formUbah.jabatan_id.value = li.dataset.id;
+            formUbah.kembali_q.value = cari.value;
+            modalUbah.querySelector('[data-nama-lama]').textContent = li.dataset.nama;
+            inputNama.value = namaAwal ?? li.dataset.nama;
+            // Rincian dampak: data apa saja yang ikut berganti nama.
+            const rincian = JSON.parse(li.dataset.rincian || '{}');
+            const total = Object.values(rincian).reduce((a, b) => a + b, 0);
+            kotakDampak.classList.toggle('ada', total > 0);
+            kotakDampak.innerHTML = total
+                ? '<i class="bi bi-arrow-repeat me-1"></i>Nama baru otomatis dipakai di <strong>' + total + ' data</strong>:<ul></ul>'
+                : '<i class="bi bi-info-circle me-1"></i>Jabatan ini belum dipakai di data mana pun.';
+            Object.entries(rincian).forEach(([label, n]) => {
+                const item = document.createElement('li');
+                item.textContent = label + ' ' + n;
+                kotakDampak.querySelector('ul').appendChild(item);
             });
-            form.querySelector('.jb-batal').addEventListener('click', tutup);
-            input.addEventListener('keydown', function (e) { if (e.key === 'Escape') tutup(); });
+            periksa();
+            bootstrap.Modal.getOrCreateInstance(modalUbah).show();
+        }
+
+        function periksa() {
+            const nama = rapikan(inputNama.value);
+            const lama = aktif.dataset.nama;
+            const idKembar = semua.get(nama);
+            const kembar = Boolean(nama && nama !== lama && idKembar && idKembar !== aktif.dataset.id);
+            kotakKembar.hidden = !kembar;
+            kotakKembar.querySelectorAll('[data-nama-kembar]').forEach((e) => { e.textContent = nama; });
+            formGabung.pengganti_id.value = kembar ? idKembar : '';
+            formGabung.action = aktif.dataset.urlHapus;
+            tombolSimpan.disabled = !nama || nama === lama || kembar;
+            pesanNama.textContent = !nama ? 'Nama jabatan wajib diisi.'
+                : nama === lama ? 'Belum ada perubahan.'
+                : kembar ? 'Nama ini sudah dipakai jabatan lain.'
+                : 'Akan disimpan sebagai: ' + nama;
+            pesanNama.classList.toggle('text-danger', !nama || kembar);
+            formUbah.querySelector('[data-hitung-huruf]').textContent = nama.length + '/150';
+        }
+
+        document.querySelectorAll('[data-ubah-jabatan]').forEach((b) => b.addEventListener('click', () => bukaUbah(b.closest('.jb-baris'))));
+        inputNama.addEventListener('input', periksa);
+        modalUbah.addEventListener('shown.bs.modal', () => { inputNama.focus(); inputNama.select(); });
+        formUbah.addEventListener('submit', () => { inputNama.value = rapikan(inputNama.value); });
+        kotakKembar.querySelector('[data-gabungkan]').addEventListener('click', function () {
+            const tujuan = rapikan(inputNama.value);
+            Swal.fire({
+                icon: 'warning', title: 'Gabungkan jabatan?',
+                html: 'Semua data <strong></strong> dipindahkan ke <strong></strong>, lalu jabatan lama dihapus.',
+                didOpen: (el) => { const s = el.querySelectorAll('strong'); s[0].textContent = aktif.dataset.nama; s[1].textContent = tujuan; },
+                showCancelButton: true, confirmButtonText: 'Ya, gabungkan', cancelButtonText: 'Batal', reverseButtons: true, confirmButtonColor: '#8b1215',
+            }).then((r) => { if (r.isConfirmed) formGabung.submit(); });
         });
+
+        // Galat validasi dari server → buka lagi modal untuk jabatan yang sama dengan isian terakhir.
+        @if ($errors->ubah->any() && old('jabatan_id'))
+            (function () {
+                const li = document.getElementById('jabatan-{{ (int) old('jabatan_id') }}');
+                if (li) bukaUbah(li, @json(old('nama')));
+            })();
+        @endif
+
+        // Kembali dari simpan: gulir ke baris yang disorot.
+        const disorot = daftar.querySelector('.jb-baris.disorot');
+        if (disorot) disorot.scrollIntoView({ block: 'center' });
 
         // Modal hapus: cari pengganti & sembunyikan jabatan yang sedang dihapus.
         const modal = document.getElementById('modalHapusJabatan');

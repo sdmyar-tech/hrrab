@@ -176,7 +176,12 @@ class AbsenAcaraController extends Controller
         if (! $user) {
             $request->session()->put('acara_tujuan', $request->fullUrl());
 
-            return view('pengumuman.absen-masuk', ['pengumuman' => $pengumuman]);
+            // Tombol ke halaman login hanya untuk yang memegang QR sah (sedang di lokasi acara),
+            // sehingga alamat login staf tidak terbuka bagi tautan lama/sembarang.
+            return view('pengumuman.absen-masuk', [
+                'pengumuman' => $pengumuman,
+                'urlMasuk' => AbsenAcara::tokenSah($pengumuman, $request->query('t')) ? route('login') : null,
+            ]);
         }
 
         $keadaan = $this->keadaan($request, $pengumuman, $user, $request->query('t'));

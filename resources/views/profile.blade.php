@@ -67,6 +67,17 @@
                     'Alamat Domisili' => $pelamar?->alamat_domisili,
                 ]])
             </section>
+        @elseif ($user->isGm() && ! $pegawai)
+            {{-- GM tidak wajib tertaut ke Data Pegawai: tampilkan info akun & bidang saja. --}}
+            <section class="panel">
+                <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-badge"></i>Akun General Manager</h2>
+                @include('admin.pegawai._info-grid', ['items' => [
+                    'Nama' => $user->name,
+                    'Email' => $user->email,
+                    'Role' => $user->roleLabel(),
+                    'Divisi Dipegang' => $user->divisi ? implode(', ', $user->divisi) : 'Semua divisi',
+                ]])
+            </section>
         @else
             <div class="row g-3">
                 <div class="col-lg-6">

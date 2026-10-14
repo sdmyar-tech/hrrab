@@ -114,6 +114,12 @@ class UserController extends Controller
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        // Pilihan "Lepaskan tautan": akun (mis. GM) tidak lagi terhubung ke Data Pegawai.
+        $lepasTautan = $request->input('data_pegawai_id') === 'lepas';
+        if ($lepasTautan) {
+            $request->merge(['data_pegawai_id' => null]);
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
@@ -142,7 +148,13 @@ class UserController extends Controller
             return redirect()->back()->withInput()->with('error', 'Tidak bisa mengubah role — ini Admin terakhir di sistem.');
         }
 
+        if ($lepasTautan) {
+            $validated['nip'] = null; // NIP yang tersisa akan menautkan ulang, jadi ikut dikosongkan
+        }
         [$validated, $kepalaUnit] = $this->pisahkanKepalaUnit($validated);
+        if ($lepasTautan) {
+            $validated['data_pegawai_id'] = null;
+        }
 
         DB::transaction(function () use ($user, $validated, $kepalaUnit) {
             $user->update($validated);

@@ -1,9 +1,16 @@
 @php $pegawaiDipilih = (int) old('data_pegawai_id', $akun?->data_pegawai_id); @endphp
+<div class="alert alert-info small py-2 mb-3" data-info-gm hidden>
+    <i class="bi bi-info-circle me-1"></i>Akun <strong>GM</strong> tidak perlu ditautkan ke Data Pegawai.
+    <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-buka-tautan>Tautkan ke pegawai (opsional)</button>
+</div>
 <div class="mb-3 pilih-pegawai">
     <label class="form-label" for="data_pegawai_id">Data Pegawai <span class="text-muted fw-normal">(nama, email & NIP terisi otomatis)</span></label>
     <input type="search" class="form-control form-control-sm mb-1" placeholder="Cari nama, NIP, atau unit…" data-cari-pegawai aria-label="Cari pegawai">
     <select name="data_pegawai_id" id="data_pegawai_id" class="form-select @error('data_pegawai_id') is-invalid @enderror">
         <option value="">— Tidak ditautkan ke pegawai —</option>
+        @if ($akun?->data_pegawai_id)
+            <option value="lepas" @selected(old('data_pegawai_id') === 'lepas')>✕ Lepaskan tautan dari Data Pegawai</option>
+        @endif
         @foreach ($pegawaiOpsi as $p)
             <option value="{{ $p['id'] }}" @selected($pegawaiDipilih === $p['id'])
                 data-nama="{{ $p['nama'] }}" data-email="{{ $p['email'] }}" data-nip="{{ $p['nip'] }}"
@@ -101,9 +108,26 @@
             info.textContent = kata ? terlihat.length + ' pegawai cocok' : '';
         });
 
+        // GM tidak wajib tertaut: blok Data Pegawai disembunyikan kecuali sudah tertaut / dibuka manual.
+        const role = form.querySelector('select[name=role]');
+        const infoGm = form.querySelector('[data-info-gm]');
+        let dibukaManual = !!pilih.value;
+        function aturGm() {
+            const gm = role && role.value === 'gm';
+            const tampil = !gm || dibukaManual;
+            wadah.hidden = !tampil;
+            pilih.disabled = !tampil;
+            cari.disabled = !tampil;
+            infoGm.hidden = !gm || dibukaManual;
+        }
+        infoGm.querySelector('[data-buka-tautan]').addEventListener('click', () => { dibukaManual = true; aturGm(); cari.focus(); });
+        role?.addEventListener('change', aturGm);
+        aturGm();
+
         pilih.addEventListener('change', function () {
             const o = pilih.selectedOptions[0];
             if (!o || !o.value) { info.textContent = 'Akun tidak ditautkan ke Data Pegawai.'; return; }
+            if (o.value === 'lepas') { info.textContent = 'Tautan ke Data Pegawai akan dilepas saat disimpan (NIP ikut dikosongkan).'; return; }
             const isi = (nama, nilai, timpa) => { const el = form.querySelector('[name="' + nama + '"]'); if (el && nilai && (timpa || !el.value)) el.value = nilai; };
             isi('name', o.dataset.nama, true);
             isi('nip', o.dataset.nip, true);

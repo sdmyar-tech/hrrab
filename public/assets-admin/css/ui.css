@@ -137,6 +137,14 @@ html[data-theme="dark"] .admin-navbar.bg-white { background-color: rgba(23, 29, 
 .btn { --bs-btn-font-weight: 600; --bs-btn-border-radius: 9px; min-height: 38px; font-weight: 600; letter-spacing: 0; }
 .btn-sm { --bs-btn-border-radius: 7px; min-height: 32px; }
 .btn-lg { --bs-btn-border-radius: 11px; min-height: 46px; }
+/* Warna merek juga untuk halaman tamu (login, scan QR, ganti password) yang tidak memuat hrrab.css. */
+.btn-primary {
+    --bs-btn-bg: var(--hr-primary); --bs-btn-border-color: var(--hr-primary);
+    --bs-btn-hover-bg: var(--hr-primary-dark); --bs-btn-hover-border-color: var(--hr-primary-dark);
+    --bs-btn-active-bg: var(--hr-primary-dark); --bs-btn-active-border-color: var(--hr-primary-dark);
+    --bs-btn-disabled-bg: var(--hr-primary); --bs-btn-disabled-border-color: var(--hr-primary);
+    --bs-btn-focus-shadow-rgb: 139, 18, 21;
+}
 .btn-primary { box-shadow: 0 1px 2px rgba(101, 16, 18, .25), inset 0 1px 0 rgba(255, 255, 255, .08); }
 .btn-outline-secondary, .btn-light { box-shadow: 0 1px 1px rgba(16, 24, 40, .04); }
 .btn-success { --bs-btn-bg: #15803d; --bs-btn-border-color: #15803d; --bs-btn-hover-bg: #166534; --bs-btn-hover-border-color: #166534; }
