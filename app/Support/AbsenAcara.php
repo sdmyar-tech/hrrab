@@ -39,13 +39,27 @@ class AbsenAcara
 
     /**
      * Akun pegawai aktif yang bisa diundang absen, beserta unit & jabatan aktifnya.
+     * Akun GM & Pembina (Owner) yang tidak tertaut Data Pegawai juga bisa diundang (jabatan = nama role-nya).
      * GM dibatasi ke divisi yang dipegangnya (bila diisi), sama seperti kirim notifikasi.
      *
-     * @return Collection<int, array{id: int, nama: string, pegawai_id: int, unit: list<string>, jabatan: list<string>}>
+     * @return Collection<int, array{id: int, nama: string, pegawai_id: ?int, unit: list<string>, jabatan: list<string>}>
      */
     public static function kandidat(User $pembuat): Collection
     {
         $divisi = $pembuat->isGm() && ! empty($pembuat->divisi) ? array_values($pembuat->divisi) : null;
+
+        $pimpinan = User::query()
+            ->whereIn('role', [User::ROLE_GM, User::ROLE_PEMBINA])
+            ->whereNull('data_pegawai_id')
+            ->get()
+            ->map(fn (User $u) => [
+                'id' => $u->id,
+                'nama' => $u->name,
+                'pegawai_id' => null,
+                // Tanpa unit: dipilih lewat "semua", per jabatan (General Manager / Pembina), atau nama.
+                'unit' => [],
+                'jabatan' => [$u->roleLabel()],
+            ]);
 
         return User::query()
             ->whereIn('role', User::INTERNAL_ROLES)
@@ -65,7 +79,8 @@ class AbsenAcara
                     'jabatan' => $tugas->pluck('jabatan')->filter()->unique()->values()->all() ?: array_values(array_filter([$kp?->jabatan])),
                 ];
             })
-            ->when($divisi, fn ($c) => $c->filter(fn ($k) => array_intersect($k['unit'], $divisi)))
+            ->concat($pimpinan)
+            ->when($divisi, fn ($c) => $c->filter(fn ($k) => array_intersect($k['unit'], $divisi) || $k['pegawai_id'] === null))
             ->sortBy('nama', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
     }
