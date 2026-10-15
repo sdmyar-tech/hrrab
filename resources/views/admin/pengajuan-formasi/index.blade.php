@@ -83,11 +83,24 @@
                                                 'Kemampuan / keahlian' => $item->kualifikasi,
                                                 'Atasan langsung' => $item->atasan_langsung,
                                                 'Tugas & tanggung jawab' => $item->tugas,
-                                                'Keterangan' => $item->alasan,
+                                                'Keterangan' => $item->diganti || $item->slot_tambahan ? null : $item->alasan,
                                             ] as $label => $nilai)
                                                 @if (filled($nilai))<dt>{{ $label }}</dt><dd>{{ $nilai }}</dd>@endif
                                             @endforeach
                                         </dl>
+                                        @if ($item->diganti || $item->slot_tambahan)
+                                            <div class="detail-formasi-bagan">
+                                                <div class="small fw-semibold mb-1">{{ $item->diganti ? 'Pegawai yang digantikan' : 'Posisi baru' }}</div>
+                                                <div class="bagan-anggota">
+                                                    @foreach ($item->diganti ?? [] as $o)
+                                                        <span class="bagan-node {{ $o['aktif'] ? 'aktif' : 'nonaktif' }} diganti"><i class="bi {{ $o['aktif'] ? 'bi-person-fill' : 'bi-person-dash' }}"></i><span class="nm">{{ $o['nama'] }} · {{ $o['jabatan'] }}</span><span class="bagan-lencana"><i class="bi bi-arrow-repeat"></i></span></span>
+                                                    @endforeach
+                                                    @foreach ($item->slot_tambahan ?? [] as $i => $ket)
+                                                        <span class="bagan-node kosong"><i class="bi bi-person-plus"></i><span class="nm">{{ $ket ?: 'Posisi baru #' . ($i + 1) }}</span><span class="bagan-lencana"><i class="bi bi-plus-lg"></i></span></span>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endif
                                     </template>
                                 </td>
                                 <td>{{ $item->jumlahLabel() }}</td>
@@ -234,7 +247,10 @@
         });
     });
 </script>
+@include('admin.pengajuan-formasi._bagan-gaya')
 <style>
+    .detail-formasi-bagan { margin-top: .9rem; text-align: left; }
+    .detail-formasi-bagan .bagan-node { margin-bottom: .45rem; }
     .detail-formasi { text-align: left; margin: 0; font-size: .875rem; }
     .detail-formasi dt { font-size: .75rem; color: var(--admin-muted); font-weight: 600; margin-top: .55rem; }
     .detail-formasi dd { margin: 0; white-space: pre-line; color: var(--admin-text); }

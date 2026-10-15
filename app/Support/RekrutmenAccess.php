@@ -33,10 +33,56 @@ class RekrutmenAccess
             || PengajuanWorkflow::submitterLevel($user) === PengajuanWorkflow::LEVEL_KEPALA_DIVISI;
     }
 
-    /** @return list<string> */
+    /**
+     * Unit pengajuan formasi = unit pengaju sendiri (unit utama; tidak bisa diganti).
+     * Admin tetap bebas memilih unit mana pun.
+     *
+     * @return list<string>
+     */
     public static function unitAjuanFormasi(User $user): array
     {
-        return ($user->isKepalaSdm() || $user->isAdmin()) ? config('kepegawaian.unit_kerja') : $user->unitsDipimpin();
+        if ($user->isAdmin()) {
+            return config('kepegawaian.unit_kerja');
+        }
+        $unit = $user->unitKerja() ?? ($user->unitsDipimpin()[0] ?? null);
+
+        return $unit ? [$unit] : [];
+    }
+
+    /**
+     * Data bagan unit untuk formulir formasi: kepala di atas, pegawai dikelompokkan per jabatan.
+     * aktif = pegawai aktif (hijau), tidak aktif = pernah di unit ini tapi sudah nonaktif (abu).
+     *
+     * @return array{kepala: list<string>, grup: array<string, list<array{id: int, nama: string, aktif: bool}>>}
+     */
+    public static function baganUnit(string $unit): array
+    {
+        $kepalaIds = \App\Models\Penugasan::aktif()->kepala()->where('unit_kerja', $unit)->pluck('data_pegawai_id')->all();
+        $orang = [];
+
+        // Aktif: penugasan aktif di unit ini (termasuk rangkap).
+        \App\Models\Penugasan::aktif()->where('unit_kerja', $unit)->with('dataPegawai:id,nama_lengkap')
+            ->whereHas('dataPegawai.kepegawaian', fn ($q) => $q->where('status_rekrutmen', 'Aktif'))->get()
+            ->each(function ($p) use (&$orang, $kepalaIds) {
+                if ($p->dataPegawai && ! in_array($p->data_pegawai_id, $kepalaIds, true)) {
+                    $orang[$p->data_pegawai_id] = ['id' => $p->data_pegawai_id, 'nama' => $p->dataPegawai->nama_lengkap, 'aktif' => true, 'jabatan' => mb_strtoupper((string) $p->jabatan) ?: 'LAINNYA'];
+                }
+            });
+        // Tidak aktif: unit terakhirnya unit ini.
+        \App\Models\Kepegawaian::where('unit_kerja', $unit)->where('status_rekrutmen', 'Tidak Aktif')->with('dataPegawai:id,nama_lengkap')->get()
+            ->each(function ($k) use (&$orang) {
+                if ($k->dataPegawai && ! isset($orang[$k->data_pegawai_id])) {
+                    $orang[$k->data_pegawai_id] = ['id' => $k->data_pegawai_id, 'nama' => $k->dataPegawai->nama_lengkap, 'aktif' => false, 'jabatan' => mb_strtoupper((string) $k->jabatan) ?: 'LAINNYA'];
+                }
+            });
+
+        $grup = collect($orang)->sortBy([['aktif', 'desc'], ['nama', 'asc']])->groupBy('jabatan')->sortKeys()
+            ->map(fn ($g) => $g->map(fn ($o) => collect($o)->except('jabatan')->all())->values()->all())->all();
+
+        return [
+            'kepala' => \App\Models\DataPegawai::whereIn('id', $kepalaIds)->pluck('nama_lengkap')->all(),
+            'grup' => $grup,
+        ];
     }
 
     /**

@@ -37,10 +37,13 @@ class PengajuanFormasi extends Model
         'jumlah_dibutuhkan',
         'jumlah_laki',
         'jumlah_perempuan',
+        'jumlah_bebas',
         'min_pendidikan',
         'min_usia',
         'atasan_langsung',
         'tugas',
+        'diganti',
+        'slot_tambahan',
         'kualifikasi',
         'target_waktu',
         'alasan',
@@ -58,6 +61,9 @@ class PengajuanFormasi extends Model
         'jumlah_dibutuhkan' => 'integer',
         'jumlah_laki' => 'integer',
         'jumlah_perempuan' => 'integer',
+        'jumlah_bebas' => 'integer',
+        'diganti' => 'array',
+        'slot_tambahan' => 'array',
         'min_usia' => 'integer',
         'target_waktu' => 'date',
         'direview_pada' => 'datetime',
@@ -106,12 +112,16 @@ class PengajuanFormasi extends Model
         return self::JENIS_LABEL[$this->jenis_kebutuhan] ?? '-';
     }
 
-    /** "2 orang (L 1, P 1)" — rincian L/P hanya bila diisi. */
+    /** "3 orang (L 1, P 1, bebas 1)" — rincian hanya bila diisi. */
     public function jumlahLabel(): string
     {
-        $rinci = $this->jumlah_laki || $this->jumlah_perempuan ? " (L {$this->jumlah_laki}, P {$this->jumlah_perempuan})" : '';
+        $bagian = array_filter([
+            $this->jumlah_laki ? "L {$this->jumlah_laki}" : null,
+            $this->jumlah_perempuan ? "P {$this->jumlah_perempuan}" : null,
+            $this->jumlah_bebas ? "bebas {$this->jumlah_bebas}" : null,
+        ]);
 
-        return "{$this->jumlah_dibutuhkan} orang{$rinci}";
+        return "{$this->jumlah_dibutuhkan} orang" . ($bagian ? ' (' . implode(', ', $bagian) . ')' : '');
     }
 
     public function statusLabel(): string

@@ -54,6 +54,7 @@ class PengajuanFormasiController extends Controller
             $f->jumlah_dibutuhkan,
             $f->jumlah_laki,
             $f->jumlah_perempuan,
+            $f->jumlah_bebas,
             optional($f->target_waktu)->format('d-m-Y'),
             $f->min_pendidikan,
             $f->min_usia,
@@ -71,7 +72,7 @@ class PengajuanFormasiController extends Controller
         ]);
 
         return ExcelExporter::download(ExcelExporter::namaFile('pengajuan-formasi'), [
-            'Tanggal Pengajuan', 'Diajukan Oleh', 'Unit', 'Kebutuhan Karena', 'Jabatan', 'Jumlah', 'Laki-laki', 'Perempuan',
+            'Tanggal Pengajuan', 'Diajukan Oleh', 'Unit', 'Kebutuhan Karena', 'Jabatan', 'Jumlah', 'Laki-laki', 'Perempuan', 'Bebas (L/P)',
             'Tanggal Dibutuhkan', 'Min. Pendidikan', 'Min. Usia', 'Kemampuan/Keahlian', 'Atasan Langsung', 'Tugas & Tanggung Jawab', 'Keterangan',
             'Status', 'Disetujui GM', 'Disetujui Owner', 'Direview Oleh', 'Tanggal Review', 'Catatan', 'Lowongan Terbit',
         ], $rows, 'Pengajuan Formasi');
@@ -117,6 +118,8 @@ class PengajuanFormasiController extends Controller
             // Jabatan per unit: dropdown jabatan hanya menampilkan jabatan yang ada di unit terpilih.
             'jabatanPerUnit' => collect($units)->mapWithKeys(fn ($u) => [$u => $user->isAdmin() ? \App\Models\Jabatan::daftar() : RekrutmenAccess::jabatanUnit($u)])->all(),
             'atasanBawaan' => $user->dataPegawai?->nama_lengkap ?? $user->name,
+            // Bagan unit (kepala + pegawai per jabatan) untuk memilih pegawai yang digantikan / posisi baru.
+            'baganPerUnit' => collect($units)->mapWithKeys(fn ($u) => [$u => RekrutmenAccess::baganUnit($u)])->all(),
         ]);
     }
 
@@ -130,15 +133,27 @@ class PengajuanFormasiController extends Controller
         }
 
         $unitBoleh = RekrutmenAccess::unitAjuanFormasi($user);
-        $unit = count($unitBoleh) === 1 ? $unitBoleh[0] : (string) $request->input('unit_kerja');
+        // Unit = unit pengaju (terkunci); hanya Admin yang memilih.
+        $unit = $user->isAdmin() ? (string) $request->input('unit_kerja') : (string) ($unitBoleh[0] ?? '');
+        if (! $user->isAdmin()) {
+            $request->merge(['unit_kerja' => $unit]);
+        }
+        $bagan = in_array($unit, $unitBoleh, true) ? RekrutmenAccess::baganUnit($unit) : ['grup' => []];
+        $idBagan = collect($bagan['grup'])->flatten(1)->pluck('id')->all();
         $jabatanBoleh = $user->isAdmin() ? \App\Models\Jabatan::daftar() : (in_array($unit, $unitBoleh, true) ? RekrutmenAccess::jabatanUnit($unit) : []);
 
         $validated = $request->validate([
             // Memimpin lebih dari satu unit → unit wajib dipilih (tidak ditebak diam-diam).
-            'unit_kerja' => [count($unitBoleh) > 1 ? 'required' : 'nullable', 'string', Rule::in($unitBoleh)],
+            'unit_kerja' => ['required', 'string', Rule::in($unitBoleh)],
             'jenis_kebutuhan' => ['required', Rule::in(array_keys(PengajuanFormasi::JENIS_LABEL))],
             'jumlah_laki' => ['required', 'integer', 'min:0', 'max:50'],
             'jumlah_perempuan' => ['required', 'integer', 'min:0', 'max:50'],
+            'jumlah_bebas' => ['nullable', 'integer', 'min:0', 'max:50'],
+            // Replacement: pegawai lama yang digantikan (klik di bagan). Penambahan: keterangan tiap posisi baru.
+            'diganti' => ['required_if:jenis_kebutuhan,replacement', 'array'],
+            'diganti.*' => ['integer', Rule::in($idBagan)],
+            'slot_tambahan' => ['nullable', 'array', 'max:50'],
+            'slot_tambahan.*' => ['nullable', 'string', 'max:150'],
             'target_waktu' => ['required', 'date', ...($user->isAdmin() ? [] : ['after_or_equal:today'])],
             'min_pendidikan' => ['required', Rule::in(PengajuanFormasi::PENDIDIKAN)],
             'min_usia' => ['nullable', 'integer', 'min:15', 'max:70'],
@@ -146,9 +161,11 @@ class PengajuanFormasiController extends Controller
             'jabatan' => ['required', 'string', Rule::in($jabatanBoleh)],
             'atasan_langsung' => ['required', 'string', 'max:150'],
             'tugas' => ['required', 'string', 'max:3000'],
-            'alasan' => ['nullable', 'string', 'max:2000'],
         ], [
-            'unit_kerja.required' => 'Pilih unit yang membutuhkan pegawai (Anda memimpin lebih dari satu unit).',
+            'unit_kerja.required' => 'Pilih unit yang membutuhkan pegawai.',
+            'unit_kerja.in' => 'Unit harus unit Anda sendiri.',
+            'diganti.required_if' => 'Pilih pegawai yang digantikan pada bagan unit.',
+            'diganti.*.in' => 'Pegawai yang digantikan harus dari unit ini.',
             'jenis_kebutuhan.required' => 'Pilih alasan kebutuhan: replacement atau penambahan karyawan.',
             'jabatan.in' => 'Jabatan harus jabatan yang ada di unit ' . ($unit ?: 'Anda') . '.',
             'target_waktu.required' => 'Isi tanggal dibutuhkan.',
@@ -159,16 +176,36 @@ class PengajuanFormasiController extends Controller
             'tugas.required' => 'Isi tugas dan tanggung jawab.',
         ]);
 
-        $jumlah = (int) $validated['jumlah_laki'] + (int) $validated['jumlah_perempuan'];
+        $jumlah = (int) $validated['jumlah_laki'] + (int) $validated['jumlah_perempuan'] + (int) ($validated['jumlah_bebas'] ?? 0);
         if ($jumlah < 1 || $jumlah > 50) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['jumlah_laki' => 'Jumlah kebutuhan (laki-laki + perempuan) harus 1–50 orang.']);
+            throw \Illuminate\Validation\ValidationException::withMessages(['jumlah_laki' => 'Jumlah kebutuhan (laki-laki + perempuan + bebas) harus 1–50 orang.']);
         }
 
+        // Isi keterangan dari bagan: siapa yang digantikan / keterangan posisi baru.
+        $diganti = [];
+        $slot = [];
+        if ($validated['jenis_kebutuhan'] === PengajuanFormasi::JENIS_REPLACEMENT) {
+            $peta = collect($bagan['grup'])->flatMap(fn ($g, $jab) => collect($g)->map(fn ($o) => $o + ['jabatan' => $jab]))->keyBy('id');
+            $diganti = collect($validated['diganti'] ?? [])->unique()->map(fn ($id) => $peta[$id])->values()->all();
+            if (count($diganti) !== $jumlah) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['diganti' => 'Jumlah pegawai yang digantikan (' . count($diganti) . ") harus sama dengan jumlah kebutuhan ({$jumlah} orang)."]);
+            }
+        } else {
+            $slot = array_slice(array_pad(array_map(fn ($s) => trim((string) $s), $validated['slot_tambahan'] ?? []), $jumlah, ''), 0, $jumlah);
+        }
+        $ringkas = $diganti
+            ? 'Menggantikan: ' . collect($diganti)->map(fn ($o) => $o['nama'] . ' (' . ($o['aktif'] ? 'aktif' : 'tidak aktif') . ')')->implode(', ')
+            : "Penambahan {$jumlah} posisi baru" . (array_filter($slot) ? ': ' . implode('; ', array_filter($slot)) : '');
+
         $formasi = $user->pengajuanFormasis()->create([
-            'unit_kerja' => $validated['unit_kerja'] ?? $unit,
+            'unit_kerja' => $unit,
             'jumlah_dibutuhkan' => $jumlah,
+            'jumlah_bebas' => (int) ($validated['jumlah_bebas'] ?? 0),
+            'diganti' => $diganti ?: null,
+            'slot_tambahan' => $slot ?: null,
+            'alasan' => $ringkas,
             'status' => PengajuanFormasi::STATUS_PENDING,
-        ] + collect($validated)->except('unit_kerja')->all());
+        ] + collect($validated)->except(['unit_kerja', 'diganti', 'slot_tambahan', 'alasan', 'jumlah_bebas'])->all());
         Notifikasi::formasiBaru($formasi);
 
         $penyetuju = $formasi->butuhDuaPersetujuan()
@@ -242,7 +279,7 @@ class PengajuanFormasiController extends Controller
         $baris = array_filter([
             $f->min_pendidikan ? "Pendidikan minimal {$f->min_pendidikan}" : null,
             $f->min_usia ? "Usia minimal {$f->min_usia} tahun" : null,
-            $f->jumlah_laki || $f->jumlah_perempuan ? "Dibutuhkan: laki-laki {$f->jumlah_laki} orang, perempuan {$f->jumlah_perempuan} orang" : null,
+            $f->jumlah_laki || $f->jumlah_perempuan ? 'Dibutuhkan: ' . $f->jumlahLabel() : null,
             $f->kualifikasi,
         ]);
 
