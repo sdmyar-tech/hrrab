@@ -34,8 +34,8 @@ class RekrutmenAccess
     }
 
     /**
-     * Unit pengajuan formasi = unit pengaju sendiri (unit utama; tidak bisa diganti).
-     * Admin tetap bebas memilih unit mana pun.
+     * Unit pengajuan formasi = unit yang dipimpin pengaju (mis. Nurfahmi: GA & CS), unit utama lebih dulu.
+     * Tidak bisa unit lain. Tanpa unit dipimpin → unit utamanya. Admin bebas memilih unit mana pun.
      *
      * @return list<string>
      */
@@ -44,9 +44,14 @@ class RekrutmenAccess
         if ($user->isAdmin()) {
             return config('kepegawaian.unit_kerja');
         }
-        $unit = $user->unitKerja() ?? ($user->unitsDipimpin()[0] ?? null);
+        $utama = $user->unitKerja();
+        $dipimpin = $user->unitsDipimpin();
+        if (! $dipimpin) {
+            return $utama ? [$utama] : [];
+        }
 
-        return $unit ? [$unit] : [];
+        // Unit utama di urutan pertama (jadi pilihan bawaan) bila memang dipimpin.
+        return array_values(array_unique(in_array($utama, $dipimpin, true) ? [$utama, ...$dipimpin] : $dipimpin));
     }
 
     /**
@@ -109,22 +114,29 @@ class RekrutmenAccess
     }
 
     /**
-     * Sisi persetujuan formasi "penambahan" yang masih bisa dilakukan $user: 'gm', 'owner', atau null.
-     * GM unit & Owner menyetujui paralel (tidak bertahap); tiap sisi cukup sekali.
+     * Tahap persetujuan formasi "penambahan" yang sedang berjalan: 'gm' → 'owner' (bertahap), null bila selesai.
+     * Unit tanpa GM langsung ke tahap Owner.
      */
-    public static function sisiPersetujuan(User $user, PengajuanFormasi $formasi): ?string
+    public static function tahapPersetujuan(PengajuanFormasi $formasi): ?string
     {
         if (! $formasi->butuhDuaPersetujuan()) {
             return null;
         }
-        if ($user->isPembina() && ! $formasi->owner_disetujui_oleh) {
-            return 'owner';
-        }
-        if ($user->isGm() && ! $formasi->gm_disetujui_oleh && self::gmFormasi($formasi)->contains('id', $user->id)) {
+        if (! $formasi->gm_disetujui_oleh && self::perluGm($formasi)) {
             return 'gm';
         }
 
-        return null;
+        return $formasi->owner_disetujui_oleh ? null : 'owner';
+    }
+
+    /** Sisi persetujuan yang bisa dilakukan $user sekarang: hanya pemegang tahap berjalan ('gm' / 'owner'), selain itu null. */
+    public static function sisiPersetujuan(User $user, PengajuanFormasi $formasi): ?string
+    {
+        return match (self::tahapPersetujuan($formasi)) {
+            'gm' => $user->isGm() && self::gmFormasi($formasi)->contains('id', $user->id) ? 'gm' : null,
+            'owner' => $user->isPembina() ? 'owner' : null,
+            default => null,
+        };
     }
 
     /** Penambahan: GM unit tidak ada → cukup persetujuan Owner. */

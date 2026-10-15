@@ -91,7 +91,7 @@
                                         @if ($item->diganti || $item->slot_tambahan)
                                             <div class="detail-formasi-bagan">
                                                 <div class="small fw-semibold mb-1">{{ $item->diganti ? 'Pegawai yang digantikan' : 'Posisi baru' }}</div>
-                                                <div class="bagan-anggota">
+                                                <div class="bagan-deret">
                                                     @foreach ($item->diganti ?? [] as $o)
                                                         <span class="bagan-node {{ $o['aktif'] ? 'aktif' : 'nonaktif' }} diganti"><i class="bi {{ $o['aktif'] ? 'bi-person-fill' : 'bi-person-dash' }}"></i><span class="nm">{{ $o['nama'] }} · {{ $o['jabatan'] }}</span><span class="bagan-lencana"><i class="bi bi-arrow-repeat"></i></span></span>
                                                     @endforeach
@@ -107,13 +107,21 @@
                                 <td>
                                     <span class="badge {{ $item->badgeClass() }}">{{ $item->statusLabel() }}</span>
                                     @if ($item->butuhDuaPersetujuan())
-                                        {{-- Penambahan: GM unit & Owner menyetujui paralel. --}}
-                                        <div class="small mt-1 d-grid gap-1">
-                                            @if (\App\Support\RekrutmenAccess::perluGm($item))
-                                                <span class="{{ $item->gm_disetujui_oleh ? 'text-success' : 'text-muted' }}"><i class="bi {{ $item->gm_disetujui_oleh ? 'bi-check-circle-fill' : 'bi-hourglass-split' }} me-1"></i>GM{{ $item->gmPenyetuju ? ': ' . $item->gmPenyetuju->name : '' }}</span>
-                                            @endif
-                                            <span class="{{ $item->owner_disetujui_oleh ? 'text-success' : 'text-muted' }}"><i class="bi {{ $item->owner_disetujui_oleh ? 'bi-check-circle-fill' : 'bi-hourglass-split' }} me-1"></i>Owner{{ $item->ownerPenyetuju ? ': ' . $item->ownerPenyetuju->name : '' }}</span>
-                                        </div>
+                                        {{-- Penambahan: bertahap GM unit → Owner. Tahap berjalan ditandai jam pasir, tahap berikutnya abu. --}}
+                                        @php
+                                            $tahap = $item->isPending() ? \App\Support\RekrutmenAccess::tahapPersetujuan($item) : null;
+                                            $langkah = array_filter([
+                                                'gm' => \App\Support\RekrutmenAccess::perluGm($item) ? ['GM unit', $item->gm_disetujui_oleh, $item->gmPenyetuju] : null,
+                                                'owner' => ['Owner', $item->owner_disetujui_oleh, $item->ownerPenyetuju],
+                                            ]);
+                                        @endphp
+                                        <ol class="tahap-setuju small mt-1">
+                                            @foreach ($langkah as $kode => [$label, $sudah, $oleh])
+                                                <li class="{{ $sudah ? 'text-success' : ($tahap === $kode ? 'text-warning-emphasis fw-semibold' : 'text-muted') }}">
+                                                    <i class="bi {{ $sudah ? 'bi-check-circle-fill' : ($tahap === $kode ? 'bi-hourglass-split' : 'bi-circle') }} me-1"></i>{{ $label }}{{ $oleh ? ': ' . $oleh->name : '' }}
+                                                </li>
+                                            @endforeach
+                                        </ol>
                                     @endif
                                     @if ($item->status === 'rejected' && $item->catatan_admin)
                                         <small class="text-muted d-block mt-1">{{ $item->catatan_admin }}</small>
@@ -250,7 +258,8 @@
 @include('admin.pengajuan-formasi._bagan-gaya')
 <style>
     .detail-formasi-bagan { margin-top: .9rem; text-align: left; }
-    .detail-formasi-bagan .bagan-node { margin-bottom: .45rem; }
+    .tahap-setuju { list-style: none; padding: 0; margin: .25rem 0 0; display: grid; gap: .15rem; counter-reset: tahap; }
+    .tahap-setuju li { white-space: nowrap; }
     .detail-formasi { text-align: left; margin: 0; font-size: .875rem; }
     .detail-formasi dt { font-size: .75rem; color: var(--admin-muted); font-weight: 600; margin-top: .55rem; }
     .detail-formasi dd { margin: 0; white-space: pre-line; color: var(--admin-text); }

@@ -101,7 +101,7 @@ class PengajuanFormasi extends Model
         return $this->status === self::STATUS_PENDING;
     }
 
-    /** Penambahan karyawan: wajib disetujui GM unit & Owner (paralel, bukan bertahap). */
+    /** Penambahan karyawan: wajib disetujui GM unit lalu Owner (bertahap). */
     public function butuhDuaPersetujuan(): bool
     {
         return $this->jenis_kebutuhan === self::JENIS_PENAMBAHAN;

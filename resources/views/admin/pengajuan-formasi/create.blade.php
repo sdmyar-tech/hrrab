@@ -15,7 +15,7 @@
         </div>
 
         <div class="row g-3 align-items-start">
-        <div class="col-lg-7 col-xl-8">
+        <div class="col-xxl-8">
         <section class="panel p-4">
             <form action="{{ route('admin.pengajuan-formasi.store') }}" method="POST" id="formFormasi" data-confirm="Kirim pengajuan formasi ini?">
                 @csrf
@@ -27,11 +27,12 @@
                 {{-- ===== Kebutuhan karyawan ===== --}}
                 <h2 class="form-bagian"><i class="bi bi-clipboard-plus"></i>Kebutuhan Karyawan</h2>
 
-                @if (auth()->user()->isAdmin())
+                @if (auth()->user()->isAdmin() || count($unitOptions) > 1)
+                    {{-- Admin: semua unit. Kepala beberapa unit: hanya unit yang dipimpinnya. --}}
                     <div class="mb-3">
-                        <label class="form-label" for="f-unit">Unit <span class="text-muted fw-normal">(Admin)</span></label>
+                        <label class="form-label" for="f-unit">Unit <span class="text-muted fw-normal">({{ auth()->user()->isAdmin() ? 'Admin' : 'unit yang Anda pimpin' }})</span></label>
                         <select name="unit_kerja" id="f-unit" class="form-select @error('unit_kerja') is-invalid @enderror" required>
-                            <option value="">-- Pilih unit --</option>
+                            @if (auth()->user()->isAdmin())<option value="">-- Pilih unit --</option>@endif
                             @foreach ($unitOptions as $u)
                                 <option value="{{ $u }}" @selected($unitAwal === $u)>{{ $u }}</option>
                             @endforeach
@@ -39,7 +40,7 @@
                         @error('unit_kerja')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                 @else
-                    {{-- Unit = unit pengaju sendiri, tidak bisa diganti. --}}
+                    {{-- Hanya satu unit → terkunci. --}}
                     <div class="mb-3">
                         <label class="form-label">Unit</label>
                         <div class="unit-terkunci"><i class="bi bi-lock-fill"></i><strong>{{ $unitOptions[0] ?? '-' }}</strong><span class="text-muted small ms-auto">unit Anda</span></div>
@@ -61,7 +62,7 @@
                 </div>
                 @error('jenis_kebutuhan')<div class="text-danger small">{{ $message }}</div>@enderror
                 <p class="form-text mb-3" data-info-jenis>
-                    <span data-jenis="penambahan" @if ($jenis !== 'penambahan') hidden @endif><i class="bi bi-people me-1"></i>Penambahan karyawan perlu disetujui <strong>GM unit dan Owner</strong> (bersamaan, tidak bertahap).</span>
+                    <span data-jenis="penambahan" @if ($jenis !== 'penambahan') hidden @endif><i class="bi bi-people me-1"></i>Penambahan karyawan disetujui bertahap: <strong>GM unit</strong>, lalu <strong>Owner</strong>.</span>
                     <span data-jenis="replacement" @if ($jenis !== 'replacement') hidden @endif><i class="bi bi-person-check me-1"></i>Replacement direview Kepala SDM/GM seperti biasa.</span>
                 </p>
 
@@ -155,8 +156,20 @@
                     <span><i class="bi bi-arrow-repeat"></i>digantikan</span>
                 </div>
                 <p class="small mb-2" data-bagan-petunjuk></p>
-                <input type="search" class="form-control form-control-sm mb-2" placeholder="Cari nama pegawai di bagan…" data-bagan-cari>
-                <div class="bagan" id="baganUnit" aria-live="polite"></div>
+                <div class="bagan">
+                    <div class="bagan-alat">
+                        <input type="search" class="form-control form-control-sm" placeholder="Cari nama pegawai di bagan…" data-bagan-cari>
+                        <div class="ms-auto d-flex align-items-center gap-1">
+                            <button type="button" class="btn btn-outline-secondary" data-zoom="-" title="Perkecil" aria-label="Perkecil"><i class="bi bi-zoom-out"></i></button>
+                            <span class="bagan-skala" data-bagan-skala>100%</span>
+                            <button type="button" class="btn btn-outline-secondary" data-zoom="+" title="Perbesar" aria-label="Perbesar"><i class="bi bi-zoom-in"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" data-zoom="pas" title="Muat seluruh bagan di layar"><i class="bi bi-arrows-angle-contract me-1"></i>Pas layar</button>
+                        </div>
+                    </div>
+                    <div class="bagan-layar" data-bagan-layar>
+                        <div class="bagan-pohon" id="baganUnit" aria-live="polite"></div>
+                    </div>
+                </div>
                 <div data-bagan-input></div>
                 @error('diganti')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                 @error('diganti.*')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
@@ -173,12 +186,12 @@
         </section>
         </div>
 
-        <div class="col-lg-5 col-xl-4">
+        <div class="col-xxl-4">
             <section class="panel">
                 <h2 class="h6 fw-bold mb-3"><i class="bi bi-signpost-split"></i>Alur Pengajuan</h2>
                 <ol class="alur-langkah">
                     <li><strong>Diajukan</strong><span>Anda mengisi kebutuhan pegawai beserta alasannya.</span></li>
-                    <li><strong>Disetujui</strong><span><b>Penambahan karyawan</b>: GM unit dan Owner menyetujui bersamaan (keduanya wajib). <b>Replacement</b>: {{ auth()->user()->isKepalaSdm() ? 'GM' : 'Kepala SDM atau GM' }} (unit SMK oleh Pembina).</span></li>
+                    <li><strong>Disetujui</strong><span><b>Penambahan karyawan</b>: bertahap, GM unit dulu lalu Owner (keduanya wajib). <b>Replacement</b>: {{ auth()->user()->isKepalaSdm() ? 'GM' : 'Kepala SDM atau GM' }} (unit SMK oleh Pembina).</span></li>
                     <li><strong>Lowongan terbit</strong><span>Bila disetujui, lowongan otomatis tampil di halaman publik dan pelamar bisa mulai melamar.</span></li>
                 </ol>
                 <div class="alert alert-light border small mb-0">
@@ -230,6 +243,13 @@
             jabatan.disabled = !daftar.length;
         }
 
+        const layar = form.querySelector('[data-bagan-layar]');
+        const labelSkala = form.querySelector('[data-bagan-skala]');
+        // Ukuran harus sama dengan CSS (--node, padding cabang) agar pembagian baris tepat.
+        const LEBAR_NODE = 148, TULANG = 28, MAKS_SEJAJAR = 4, BATAS_LIPAT = 12;
+        const terbuka = new Set();          // jabatan yang raknya dibuka penuh
+        let skala = 1, skalaOtomatis = true;
+
         function node(kelas, ikon, nama, judul) {
             const b = el('button', 'bagan-node ' + kelas);
             b.type = 'button';
@@ -238,65 +258,172 @@
             return b;
         }
 
-        // Gambar ulang bagan sesuai unit, jenis kebutuhan, jabatan, dan jumlah.
+        // ---- Zoom & geser (untuk struktur besar) ----
+        function setSkala(s, otomatis) {
+            skala = Math.min(1.5, Math.max(0.4, s));
+            skalaOtomatis = !!otomatis;
+            wadah.style.zoom = skala;
+            labelSkala.textContent = Math.round(skala * 100) + '%';
+        }
+        // Perkecil secukupnya agar seluruh bagan muat lebar layar (tidak memperbesar di atas 100%).
+        function pasLayar() {
+            wadah.style.zoom = 1;
+            const lebar = wadah.scrollWidth, ruang = layar.clientWidth - 24;
+            setSkala(lebar > ruang ? Math.floor((ruang / lebar) * 20) / 20 : 1, true);
+        }
+
+        // Perkiraan lebar satu cabang jabatan: anggota berjajar atau rak grid (bila tidak muat berjajar).
+        const lebarCabang = (jumlah, uk) => 16 + Math.max(LEBAR_NODE, jumlah > uk.sejajar
+            ? Math.min(uk.rak, jumlah) * (LEBAR_NODE + 8) + 14
+            : jumlah * (LEBAR_NODE + 8));
+
+        // Titik belah baris: kiri & kanan tulang punggung selebar mungkin seimbang (kiri minimal satu cabang).
+        function belah(baris) {
+            const jumlah = baris.reduce((s, c) => s + c.lebar, 0);
+            let kiri = 0, terbaik = 1, selisih = Infinity;
+            baris.forEach((c, i) => {
+                kiri += c.lebar;
+                const d = Math.abs(jumlah - 2 * kiri);
+                if (d < selisih) { selisih = d; terbaik = i + 1; }
+            });
+            return terbaik;
+        }
+
+        function simpulPegawai(o, mode, kata) {
+            // Tanda "digantikan" hanya di mode replacement (pilihan tetap diingat bila pengguna kembali).
+            const ganti = mode === 'replacement' && dipilih.has(o.id);
+            const b = node((o.aktif ? 'aktif' : 'nonaktif') + (ganti ? ' diganti' : '') + (kata && o.nama.toLowerCase().includes(kata) ? ' cocok' : ''),
+                o.aktif ? 'bi-person-fill' : 'bi-person-dash', o.nama,
+                o.nama + (o.aktif ? ' (aktif)' : ' (tidak aktif)') + (mode === 'replacement' ? ' — klik untuk ' + (ganti ? 'batal' : 'pilih sebagai yang digantikan') : ''));
+            if (ganti) { const l = el('span', 'bagan-lencana'); l.append(el('i', 'bi bi-arrow-repeat')); b.append(l); }
+            if (mode === 'replacement') {
+                b.addEventListener('click', () => { dipilih.has(o.id) ? dipilih.delete(o.id) : dipilih.add(o.id); gambar(); });
+            } else {
+                b.disabled = true;
+            }
+            return { b, penting: ganti };
+        }
+
+        function simpulBaru(i) {
+            const b = node('kosong', 'bi-person-plus', slot[i] || 'Posisi baru #' + (i + 1), 'Klik untuk menulis keterangan posisi ini');
+            const l = el('span', 'bagan-lencana'); l.append(el('i', 'bi bi-plus-lg')); b.append(l);
+            b.addEventListener('click', () => {
+                Swal.fire({
+                    title: 'Keterangan posisi baru #' + (i + 1), input: 'text', inputValue: slot[i] || '',
+                    inputPlaceholder: 'mis. untuk shift malam / gedung B', inputAttributes: { maxlength: 150 },
+                    showCancelButton: true, confirmButtonText: 'Simpan', cancelButtonText: 'Batal', confirmButtonColor: '#8b1215',
+                }).then((r) => { if (r.isConfirmed) { slot[i] = r.value.trim(); gambar(); } });
+            });
+            return { b, penting: true };
+        }
+
+        // Satu cabang jabatan: label → anggota berjajar (garis masing-masing) atau rak grid bila banyak.
+        function buatCabang(c, mode, kata, uk) {
+            const kotak = el('div', 'bagan-cabang' + (c.jab === jabatan.value ? ' terpilih' : ''));
+            kotak.append(el('div', 'bagan-jabatan', c.jab + ' (' + c.total + ')'), el('div', 'bagan-turun'));
+            const simpul = c.isi.map((o) => simpulPegawai(o, mode, kata));
+            for (let i = 0; i < c.baru; i++) simpul.push(simpulBaru(i));
+
+            if (simpul.length <= uk.sejajar) {
+                const anak = el('div', 'bagan-anak');
+                simpul.forEach((s) => { const d = el('div', 'bagan-daun'); d.append(s.b); anak.append(d); });
+                kotak.append(anak);
+                return kotak;
+            }
+
+            const rak = el('div', 'bagan-rak');
+            rak.style.setProperty('--kol', Math.min(uk.rak, simpul.length));
+            // Dilipat bila banyak (kecuali sedang mencari/dibuka); yang dipilih & posisi baru selalu tampil.
+            const bisaLipat = !kata && simpul.length > BATAS_LIPAT;
+            const lipat = bisaLipat && !terbuka.has(c.jab);
+            let biasa = 0;
+            simpul.forEach((s) => { if (!lipat || s.penting || biasa++ < BATAS_LIPAT - 1) rak.append(s.b); });
+            if (bisaLipat) {
+                const sisa = simpul.length - rak.children.length;
+                const t = el('button', 'btn btn-sm btn-link bagan-lagi', lipat ? '+' + sisa + ' lainnya — tampilkan semua' : 'Ringkas');
+                t.type = 'button';
+                t.addEventListener('click', () => { lipat ? terbuka.add(c.jab) : terbuka.delete(c.jab); gambar(); });
+                rak.append(t);
+            }
+            kotak.append(rak);
+            return kotak;
+        }
+
+        // Gambar ulang bagan sesuai unit, jenis kebutuhan, jabatan, jumlah, dan pencarian.
         function gambar() {
             const data = baganPerUnit[unit.value] || { kepala: [], grup: {} };
             const mode = jenis();
             const n = total();
             const kata = (cari.value || '').trim().toLowerCase();
+            // Ukur sebelum dikosongkan agar posisi gulir tidak terlempar.
+            const ruang = Math.max(560, layar.clientWidth - 24);
+            const gulir = [layar.scrollLeft, layar.scrollTop];
+            // Satu sisi tulang punggung = setengah lebar; berjajar & kolom rak disesuaikan agar muat di situ.
+            const setengah = (ruang - TULANG) / 2;
+            const uk = {
+                sejajar: Math.max(1, Math.min(MAKS_SEJAJAR, Math.floor((setengah - 16) / (LEBAR_NODE + 8)))),
+                rak: Math.max(2, Math.min(4, Math.floor((setengah - 30) / (LEBAR_NODE + 8)))),
+            };
             wadah.innerHTML = '';
-            masukan.innerHTML = '';
 
-            const kepala = node('kepala', 'bi-person-badge', (data.kepala.length ? data.kepala.join(', ') : 'Kepala unit') + ' · ' + (unit.value || '-'));
-            kepala.disabled = true;
-            wadah.append(el('div', 'bagan-kepala'), el('div', 'bagan-garis'));
-            wadah.firstChild.append(kepala);
-            const baris = el('div', 'bagan-grup-wrap');
-            wadah.append(baris);
+            // Akar: kepala unit (lebih dari satu → berjajar).
+            const akar = el('div', 'bagan-akar');
+            const deretKepala = el('div', 'bagan-akar-deret');
+            (data.kepala.length ? data.kepala : ['Kepala unit']).forEach((nm) => { const k = node('kepala', 'bi-person-badge', nm); k.disabled = true; deretKepala.append(k); });
+            akar.append(el('div', 'bagan-akar-label', 'Kepala · ' + (unit.value || '-')), deretKepala);
+            wadah.append(akar);
 
+            // Cabang per jabatan: anggota (tersaring pencarian) + posisi baru (penambahan) di jabatan terpilih.
             const grup = Object.assign({}, data.grup);
-            // Penambahan: posisi baru (kotak merah) muncul di grup jabatan yang dipilih.
             if (mode === 'penambahan' && jabatan.value && !grup[jabatan.value]) grup[jabatan.value] = [];
-            const jabatanAktif = jabatan.value;
-
+            const cabang = [];
             Object.keys(grup).forEach((jab) => {
-                const kotak = el('div', 'bagan-grup' + (jab === jabatanAktif ? ' terpilih' : ''));
-                const daftar = el('div', 'bagan-anggota');
-                const anggota = grup[jab].filter((o) => !kata || o.nama.toLowerCase().includes(kata) || dipilih.has(o.id));
-                kotak.append(el('div', 'bagan-jabatan', jab + ' (' + grup[jab].length + ')'), daftar);
-                anggota.forEach((o) => {
-                    // Tanda "digantikan" hanya berlaku di mode replacement (pilihan tetap diingat bila pengguna kembali).
-                    const ganti = mode === 'replacement' && dipilih.has(o.id);
-                    const b = node((o.aktif ? 'aktif' : 'nonaktif') + (ganti ? ' diganti' : ''), o.aktif ? 'bi-person-fill' : 'bi-person-dash',
-                        o.nama, o.nama + (o.aktif ? ' (aktif)' : ' (tidak aktif)') + (mode === 'replacement' ? ' — klik untuk ' + (ganti ? 'batal' : 'pilih sebagai yang digantikan') : ''));
-                    if (ganti) { const l = el('span', 'bagan-lencana'); l.append(el('i', 'bi bi-arrow-repeat')); b.append(l); }
-                    if (mode === 'replacement') {
-                        b.addEventListener('click', () => { dipilih.has(o.id) ? dipilih.delete(o.id) : dipilih.add(o.id); gambar(); });
-                    } else {
-                        b.disabled = true;
-                    }
-                    daftar.append(b);
-                });
-                if (mode === 'penambahan' && jab === jabatanAktif) {
-                    for (let i = 0; i < n; i++) {
-                        const ket = slot[i] || '';
-                        const b = node('kosong', 'bi-person-plus', ket || 'Posisi baru #' + (i + 1), 'Klik untuk menulis keterangan posisi ini');
-                        const l = el('span', 'bagan-lencana'); l.append(el('i', 'bi bi-plus-lg')); b.append(l);
-                        b.addEventListener('click', () => {
-                            Swal.fire({
-                                title: 'Keterangan posisi baru #' + (i + 1), input: 'text', inputValue: slot[i] || '',
-                                inputPlaceholder: 'mis. untuk shift malam / gedung B', inputAttributes: { maxlength: 150 },
-                                showCancelButton: true, confirmButtonText: 'Simpan', cancelButtonText: 'Batal', confirmButtonColor: '#8b1215',
-                            }).then((r) => { if (r.isConfirmed) { slot[i] = r.value.trim(); gambar(); } });
-                        });
-                        daftar.append(b);
-                    }
-                }
-                if (anggota.length || (mode === 'penambahan' && jab === jabatanAktif)) baris.append(kotak);
+                const isi = grup[jab].filter((o) => !kata || o.nama.toLowerCase().includes(kata) || (mode === 'replacement' && dipilih.has(o.id)));
+                const baru = mode === 'penambahan' && jab === jabatan.value ? n : 0;
+                if (isi.length || baru) cabang.push({ jab, isi, baru, total: grup[jab].length, lebar: lebarCabang(isi.length + baru, uk) });
             });
-            if (!baris.children.length) baris.append(el('div', 'bagan-kosong-info', kata ? 'Tidak ada pegawai yang cocok.' : 'Belum ada pegawai tercatat di unit ini.'));
 
-            // Nilai terkirim: id yang digantikan / keterangan posisi baru.
+            if (!cabang.length) {
+                wadah.append(el('div', 'bagan-kosong-info', kata ? 'Tidak ada pegawai yang cocok.' : 'Belum ada pegawai tercatat di unit ini.'));
+            } else if (cabang.length === 1) {
+                // Satu jabatan saja: pakai lebar penuh (bukan setengah) untuk berjajar/rak.
+                const lebarPenuh = Math.max(layar.clientWidth - 24, 200);
+                const sisi = el('div', 'bagan-sisi tunggal');
+                sisi.append(buatCabang(cabang[0], mode, kata, {
+                    sejajar: Math.max(1, Math.min(MAKS_SEJAJAR, Math.floor((lebarPenuh - 16) / (LEBAR_NODE + 8)))),
+                    rak: Math.max(1, Math.min(4, Math.floor((lebarPenuh - 30) / (LEBAR_NODE + 8)))),
+                }));
+                wadah.append(sisi);
+            } else {
+                // Bagi ke beberapa baris: tiap sisi (kiri/kanan tulang punggung) maksimal setengah lebar layar, urutan tetap.
+                const baris = [];
+                let kini = { kiri: [], kanan: [], lk: 0, lka: 0 };
+                cabang.forEach((c) => {
+                    if (!kini.kanan.length && (!kini.kiri.length || kini.lk + c.lebar <= setengah)) { kini.kiri.push(c); kini.lk += c.lebar; return; }
+                    if (!kini.kanan.length || kini.lka + c.lebar <= setengah) { kini.kanan.push(c); kini.lka += c.lebar; return; }
+                    baris.push(kini);
+                    kini = { kiri: [c], kanan: [], lk: c.lebar, lka: 0 };
+                });
+                baris.push(kini);                baris.forEach((r, i) => {
+                    // Seimbangkan kiri/kanan bila kedua sisi tetap muat; jika tidak, pakai pembagian berurutan.
+                    const b = [...r.kiri, ...r.kanan];
+                    let k = belah(b);
+                    const lebarSisi = (a) => a.reduce((s, c) => s + c.lebar, 0);
+                    if (lebarSisi(b.slice(0, k)) > setengah || lebarSisi(b.slice(k)) > setengah) k = r.kiri.length;
+                    const kiri = el('div', 'bagan-sisi kiri');
+                    const kanan = el('div', 'bagan-sisi kanan');
+                    b.slice(0, k).forEach((c) => kiri.append(buatCabang(c, mode, kata, uk)));
+                    b.slice(k).forEach((c) => kanan.append(buatCabang(c, mode, kata, uk)));
+                    wadah.append(kiri, el('div', 'bagan-tulang' + (i === baris.length - 1 ? ' akhir' : '') + (k === b.length ? ' hanya-kiri' : '')), kanan);
+                });
+            }
+            [layar.scrollLeft, layar.scrollTop] = gulir;
+            perbaruiMasukan(mode, n);
+        }
+
+        // Nilai terkirim (id yang digantikan / keterangan posisi baru) + judul & petunjuk bagan.
+        function perbaruiMasukan(mode, n) {
+            masukan.innerHTML = '';
             if (mode === 'replacement') {
                 dipilih.forEach((id) => { const i = el('input'); i.type = 'hidden'; i.name = 'diganti[]'; i.value = id; masukan.append(i); });
             } else if (mode === 'penambahan') {
@@ -312,7 +439,28 @@
                     : 'Bagan menampilkan susunan pegawai unit Anda.';
         }
 
-        unit.addEventListener('change', () => { dipilih.clear(); slot = []; isiJabatan(); gambar(); });
+        form.querySelectorAll('[data-zoom]').forEach((b) => b.addEventListener('click', () => {
+            if (b.dataset.zoom === 'pas') pasLayar();
+            else setSkala(Math.round((skala + (b.dataset.zoom === '+' ? 0.1 : -0.1)) * 20) / 20, false);
+        }));
+        // Geser bagan dengan menyeret (mouse); di layar sentuh cukup digulir biasa.
+        let seret = null;
+        layar.addEventListener('pointerdown', (e) => {
+            if (e.pointerType !== 'mouse' || e.button !== 0 || e.target.closest('button, input, a')) return;
+            seret = { x: e.clientX, y: e.clientY, l: layar.scrollLeft, t: layar.scrollTop };
+            layar.classList.add('geser');
+        });
+        window.addEventListener('pointermove', (e) => {
+            if (!seret) return;
+            layar.scrollLeft = seret.l - (e.clientX - seret.x);
+            layar.scrollTop = seret.t - (e.clientY - seret.y);
+        });
+        window.addEventListener('pointerup', () => { seret = null; layar.classList.remove('geser'); });
+        let jedaUkur;
+        window.addEventListener('resize', () => { clearTimeout(jedaUkur); jedaUkur = setTimeout(() => { gambar(); if (skalaOtomatis) pasLayar(); }, 200); });
+        cari.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });   // Enter tidak mengirim form
+
+        unit.addEventListener('change', () => { dipilih.clear(); slot = []; terbuka.clear(); isiJabatan(); gambar(); pasLayar(); });
         jabatan.addEventListener('change', gambar);
         cari.addEventListener('input', gambar);
         form.querySelectorAll('[name=jenis_kebutuhan]').forEach((r) => r.addEventListener('change', () => {
@@ -331,6 +479,7 @@
         isiJabatan();
         hitung();
         gambar();
+        pasLayar();
     });
 </script>
 @endsection

@@ -100,12 +100,13 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
             : ['Pengajuan lembur', 'admin.pengajuan-lembur.show'];
     }
 
-public static function formasiBaru(PengajuanFormasi $formasi): void
+    /** Ke semua yang bisa mereview formasi saat ini (penambahan: hanya pemegang tahap berjalan, GM lalu Owner). */
+    public static function formasiBaru(PengajuanFormasi $formasi, string $judul = 'Pengajuan formasi baru'): void
     {
         $reviewer = User::whereIn('role', [User::ROLE_KEPALA_SDM, User::ROLE_GM, User::ROLE_PEMBINA])->get()
             ->filter(fn (User $u) => RekrutmenAccess::canReviewFormasi($u, $formasi));
 
-        self::kirim($reviewer, 'Pengajuan formasi baru', "{$formasi->jumlah_dibutuhkan} orang {$formasi->jabatan} untuk unit {$formasi->unit_kerja}.",
+        self::kirim($reviewer, $judul, "{$formasi->jumlah_dibutuhkan} orang {$formasi->jabatan} untuk unit {$formasi->unit_kerja}.",
             route('admin.pengajuan-formasi.index'), Pemberitahuan::JENIS_TUGAS, 'bi-person-plus', null, TugasNotifikasi::penanda(TugasNotifikasi::FORMASI, $formasi->id));
     }
 

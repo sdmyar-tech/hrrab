@@ -133,17 +133,16 @@ class PengajuanFormasiController extends Controller
         }
 
         $unitBoleh = RekrutmenAccess::unitAjuanFormasi($user);
-        // Unit = unit pengaju (terkunci); hanya Admin yang memilih.
-        $unit = $user->isAdmin() ? (string) $request->input('unit_kerja') : (string) ($unitBoleh[0] ?? '');
-        if (! $user->isAdmin()) {
-            $request->merge(['unit_kerja' => $unit]);
+        // Satu unit → terkunci ke unit itu; memimpin beberapa unit → pilih salah satunya (divalidasi di bawah).
+        if (count($unitBoleh) === 1 && ! $user->isAdmin()) {
+            $request->merge(['unit_kerja' => $unitBoleh[0]]);
         }
+        $unit = (string) $request->input('unit_kerja');
         $bagan = in_array($unit, $unitBoleh, true) ? RekrutmenAccess::baganUnit($unit) : ['grup' => []];
         $idBagan = collect($bagan['grup'])->flatten(1)->pluck('id')->all();
         $jabatanBoleh = $user->isAdmin() ? \App\Models\Jabatan::daftar() : (in_array($unit, $unitBoleh, true) ? RekrutmenAccess::jabatanUnit($unit) : []);
 
         $validated = $request->validate([
-            // Memimpin lebih dari satu unit → unit wajib dipilih (tidak ditebak diam-diam).
             'unit_kerja' => ['required', 'string', Rule::in($unitBoleh)],
             'jenis_kebutuhan' => ['required', Rule::in(array_keys(PengajuanFormasi::JENIS_LABEL))],
             'jumlah_laki' => ['required', 'integer', 'min:0', 'max:50'],
@@ -163,7 +162,7 @@ class PengajuanFormasiController extends Controller
             'tugas' => ['required', 'string', 'max:3000'],
         ], [
             'unit_kerja.required' => 'Pilih unit yang membutuhkan pegawai.',
-            'unit_kerja.in' => 'Unit harus unit Anda sendiri.',
+            'unit_kerja.in' => 'Unit harus unit yang Anda pimpin.',
             'diganti.required_if' => 'Pilih pegawai yang digantikan pada bagan unit.',
             'diganti.*.in' => 'Pegawai yang digantikan harus dari unit ini.',
             'jenis_kebutuhan.required' => 'Pilih alasan kebutuhan: replacement atau penambahan karyawan.',
@@ -209,7 +208,7 @@ class PengajuanFormasiController extends Controller
         Notifikasi::formasiBaru($formasi);
 
         $penyetuju = $formasi->butuhDuaPersetujuan()
-            ? (RekrutmenAccess::perluGm($formasi) ? 'GM unit & Owner (bersamaan)' : 'Owner')
+            ? (RekrutmenAccess::perluGm($formasi) ? 'GM unit, lalu Owner' : 'Owner')
             : ($user->isKepalaSdm() ? 'GM' : 'Kepala SDM/GM');
 
         return redirect()
@@ -230,7 +229,7 @@ class PengajuanFormasiController extends Controller
             return redirect()->back()->with('error', 'Pengajuan formasi ini sudah diproses.');
         }
 
-        // Penambahan karyawan: catat persetujuan sisi GM / Owner; baru final bila kedua sisi setuju.
+        // Penambahan karyawan bertahap: GM unit → Owner. Final (lowongan terbit) setelah tahap Owner.
         if ($pengajuanFormasi->butuhDuaPersetujuan() && ! $reviewer->isAdmin()) {
             $sisi = RekrutmenAccess::sisiPersetujuan($reviewer, $pengajuanFormasi);
             $pengajuanFormasi->update([
@@ -238,10 +237,11 @@ class PengajuanFormasiController extends Controller
                 "{$sisi}_disetujui_pada" => now(),
             ]);
 
-            $gmBeres = $pengajuanFormasi->gm_disetujui_oleh || ! RekrutmenAccess::perluGm($pengajuanFormasi);
-            if (! $gmBeres || ! $pengajuanFormasi->owner_disetujui_oleh) {
+            if (RekrutmenAccess::tahapPersetujuan($pengajuanFormasi) === 'owner') {
+                Notifikasi::formasiBaru($pengajuanFormasi, 'Formasi menunggu persetujuan Owner');
+
                 return redirect()->route('admin.pengajuan-formasi.index')
-                    ->with('success', 'Persetujuan Anda tercatat. Menunggu persetujuan ' . ($gmBeres ? 'Owner' : 'GM unit') . ' agar lowongan terbit.');
+                    ->with('success', 'Persetujuan GM tercatat. Diteruskan ke Owner untuk persetujuan akhir.');
             }
         }
 
