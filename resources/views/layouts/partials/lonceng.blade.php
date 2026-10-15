@@ -21,6 +21,7 @@
     .lonceng-item .judul { font-size: .82rem; font-weight: 600; line-height: 1.25; }
     .lonceng-item .pesan { font-size: .76rem; color: var(--bs-secondary-color); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .lonceng-item .waktu { font-size: .7rem; color: var(--bs-secondary-color); }
+    .lonceng-tugas { display: inline-block; margin-top: .2rem; font-size: .7rem; font-weight: 600; color: #a15c00; background: #fff3d6; border-radius: 999px; padding: .05rem .5rem; }
     .lonceng-dot { width: 8px; height: 8px; border-radius: 50%; background: #dc3545; flex: none; margin-top: .4rem; }
     .lonceng-foot { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .5rem .9rem; font-size: .78rem; }
     .lonceng-foot a, .lonceng-foot button { color: #880f12 !important; background: none; border: 0; padding: 0; font-size: .78rem; }
@@ -64,6 +65,7 @@
                                 <span class="judul d-block">{{ $n->data['judul'] ?? '' }}</span>
                                 <span class="pesan">{{ $n->data['pesan'] ?? '' }}</span>
                                 <span class="waktu">{{ $n->created_at->diffForHumans() }}@if (! empty($n->data['pengirim'])) &middot; {{ $n->data['pengirim'] }}@endif</span>
+                                @if (! $n->read_at && isset($n->data['tugas']))<span class="lonceng-tugas"><i class="bi bi-hourglass-split"></i> Tugas belum selesai</span>@endif
                             </span>
                             @unless ($n->read_at)<span class="lonceng-dot" aria-label="belum dibaca"></span>@endunless
                         </a>

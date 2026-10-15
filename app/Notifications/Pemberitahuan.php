@@ -17,6 +17,8 @@ class Pemberitahuan extends Notification
         public string $jenis = self::JENIS_INFO,
         public string $ikon = 'bi-bell',
         public ?string $pengirim = null,
+        // Penanda tugas (lihat TugasNotifikasi): tanda belum-dibaca bertahan sampai tugasnya selesai.
+        public ?array $tugas = null,
     ) {}
 
     public function via(object $notifiable): array
@@ -33,6 +35,7 @@ class Pemberitahuan extends Notification
             'jenis' => $this->jenis,
             'ikon' => $this->ikon,
             'pengirim' => $this->pengirim,
+            ...($this->tugas ? ['tugas' => $this->tugas] : []),
         ];
     }
 }

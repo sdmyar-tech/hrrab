@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Notifications\Pemberitahuan;
 use App\Support\KelengkapanData;
 use App\Support\Notifikasi;
+use App\Support\TugasNotifikasi;
 use App\Support\Urutan;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +29,7 @@ class NotifikasiController extends Controller
     public function index(Request $request): View
     {
         $user = $this->user();
+        TugasNotifikasi::rapikan($user);
         $belum = $request->query('tab') === 'belum';
 
         $query = $belum ? $user->unreadNotifications() : $user->notifications();
@@ -48,8 +50,12 @@ class NotifikasiController extends Controller
 
     public function buka(string $id): RedirectResponse
     {
-        $notif = $this->user()->notifications()->findOrFail($id);
-        $notif->markAsRead();
+        $user = $this->user();
+        $notif = $user->notifications()->findOrFail($id);
+        // Notifikasi tugas tetap bertanda sampai tugasnya selesai (mis. absen acara belum dilakukan).
+        if (! TugasNotifikasi::tertunda($notif, $user)) {
+            $notif->markAsRead();
+        }
 
         return $notif->data['url'] ?? null
             ? redirect()->to($notif->data['url'])
@@ -58,14 +64,18 @@ class NotifikasiController extends Controller
 
     public function bacaSemua(): RedirectResponse
     {
-        $this->user()->unreadNotifications->markAsRead();
+        $user = $this->user();
+        [$tertunda, $biasa] = $user->unreadNotifications->partition(fn ($n) => TugasNotifikasi::tertunda($n, $user));
+        $biasa->markAsRead();
 
-        return back()->with('success', 'Semua notifikasi ditandai sudah dibaca.');
+        return back()->with('success', 'Semua notifikasi ditandai sudah dibaca.'
+            . ($tertunda->isNotEmpty() ? ' ' . $tertunda->count() . ' tugas yang belum selesai tetap ditandai.' : ''));
     }
 
     public function ringkas(): JsonResponse
     {
         $user = $this->user();
+        TugasNotifikasi::rapikan($user);
         $notif = $user->notifications()->latest()->take(8)->get();
 
         return response()->json([
@@ -77,6 +87,7 @@ class NotifikasiController extends Controller
                 'pesan' => $n->data['pesan'] ?? '',
                 'ikon' => $n->data['ikon'] ?? 'bi-bell',
                 'baru' => $n->read_at === null,
+                'tugas' => $n->read_at === null && isset($n->data['tugas']),
                 'waktu' => $n->created_at->diffForHumans(),
                 'url' => route('notifikasi.buka', $n->id),
             ]),

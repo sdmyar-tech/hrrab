@@ -224,6 +224,10 @@
       var tersimpan = [];
 
       try {
+        // Baru login: lupakan grup yang dibuka di sesi sebelumnya, semua submenu mulai tertutup.
+        if (document.body.hasAttribute("data-baru-masuk")) {
+          window.localStorage.removeItem(grupStorageKey);
+        }
         tersimpan = JSON.parse(window.localStorage.getItem(grupStorageKey) || "[]");
       } catch (error) {
         tersimpan = [];

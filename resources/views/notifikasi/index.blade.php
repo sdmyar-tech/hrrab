@@ -47,7 +47,11 @@
                             <span class="d-flex flex-wrap align-items-center gap-2">
                                 <span class="fw-semibold">{{ $n->data['judul'] ?? '' }}</span>
                                 <span class="badge {{ $label[1] }}">{{ $label[0] }}</span>
-                                @unless ($n->read_at)<span class="badge text-bg-danger">Baru</span>@endunless
+                                @if (! $n->read_at && isset($n->data['tugas']))
+                                    <span class="badge text-bg-warning" title="Tanda hilang otomatis setelah tugas diselesaikan"><i class="bi bi-hourglass-split me-1"></i>Belum selesai</span>
+                                @elseif (! $n->read_at)
+                                    <span class="badge text-bg-danger">Baru</span>
+                                @endif
                             </span>
                             <span class="d-block text-muted small mt-1">{{ $n->data['pesan'] ?? '' }}</span>
                             <span class="d-block small text-muted mt-1">

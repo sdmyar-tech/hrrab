@@ -16,6 +16,7 @@ class SidebarHitung
     /** @return array<string, int> */
     public static function untuk(User $user): array
     {
+        TugasNotifikasi::rapikan($user); // tugas yang sudah selesai tidak ikut dihitung
         $hitung = [
             'pengumuman' => Pengumuman::untuk($user)->berlaku()->belumDibaca($user)->count(),
             'notifikasi' => $user->unreadNotifications()->count(),

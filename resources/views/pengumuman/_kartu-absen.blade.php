@@ -10,6 +10,13 @@
     @if ($saya)
         @if ($saya->sudahAbsen())
             <span class="badge text-bg-success py-2"><i class="bi bi-check-circle-fill me-1"></i>Sudah absen {{ $saya->waktu_absen?->format('H:i') }}</span>
+        @elseif ($saya->berhalangan())
+            @php $st = $saya->tampilan(); @endphp
+            <span class="badge {{ $st['kelas'] }} py-2" title="{{ $saya->catatan }}"><i class="bi {{ $st['ikon'] }} me-1"></i>Tercatat {{ mb_strtolower($st['label']) }}</span>
+            @if ($fase === \App\Models\Pengumuman::ABSEN_BUKA)
+                {{-- Ternyata bisa datang: scan tetap mengubah status menjadi hadir. --}}
+                <button type="button" class="btn btn-outline-primary btn-sm" data-scan-acara><i class="bi bi-qr-code-scan me-1"></i>Tetap hadir? Absen</button>
+            @endif
         @elseif ($fase === \App\Models\Pengumuman::ABSEN_BUKA)
             <button type="button" class="btn btn-primary btn-sm" data-scan-acara><i class="bi bi-qr-code-scan me-1"></i>Absen Sekarang</button>
         @elseif ($fase === \App\Models\Pengumuman::ABSEN_BELUM_BUKA)

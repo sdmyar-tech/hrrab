@@ -59,11 +59,17 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer('layouts.pelamar.sidebar', function ($view) {
             $user = Auth::user();
+            if ($user instanceof User) {
+                \App\Support\TugasNotifikasi::rapikan($user);
+            }
             $view->with('hitungPelamar', $user instanceof User ? ['notifikasi' => $user->unreadNotifications()->count()] : []);
         });
 
         View::composer('layouts.partials.navbar', function ($view) {
             $user = Auth::user();
+            if ($user instanceof User) {
+                \App\Support\TugasNotifikasi::rapikan($user);
+            }
 
             if (! $user instanceof User) {
                 $view->with('lonceng', null);

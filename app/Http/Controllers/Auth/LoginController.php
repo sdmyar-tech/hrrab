@@ -68,6 +68,8 @@ class LoginController extends Controller
 
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
+        // Halaman pertama setelah login: submenu sidebar dimulai dalam keadaan tertutup.
+        $request->session()->put('baru_masuk', true);
 
         // Datang dari scan QR absen acara sebelum login → kembali ke halaman absen itu.
         if (! $isGuest && ($tujuanAcara = $request->session()->pull('acara_tujuan'))) {

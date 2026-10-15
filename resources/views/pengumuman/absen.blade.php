@@ -42,8 +42,8 @@
             @foreach ([
                 ['Diundang', $ringkas['total'], 'bi-people', 'text-primary', null],
                 ['Sudah absen', $ringkas['sudah'], 'bi-check-circle', 'text-success', $persen . '%'],
+                ['Berhalangan', $ringkas['berhalangan'], 'bi-envelope-paper', 'text-info', collect(['izin' => 'izin', 'sakit' => 'sakit', 'dinas' => 'dinas', 'cuti' => 'cuti'])->filter(fn ($l, $k) => $ringkas[$k])->map(fn ($l, $k) => $ringkas[$k] . ' ' . $l)->implode(' · ') ?: 'izin / sakit / dinas / cuti'],
                 ['Belum absen', $ringkas['belum'], 'bi-hourglass-split', 'text-secondary', $fase === 'tutup' ? 'kedaluwarsa' : null],
-                ['Ditandai manual', $ringkas['manual'], 'bi-person-check', 'text-primary', 'oleh panitia'],
             ] as [$label, $angka, $ikon, $warna, $ket])
                 <div class="col-6 col-xl-3">
                     <div class="panel p-3 h-100 d-flex align-items-center gap-3">
@@ -106,22 +106,35 @@
                                     <span class="badge {{ $st['kelas'] }}"><i class="bi {{ $st['ikon'] }} me-1"></i>{{ $st['label'] }}</span>
                                     @if ($p->status === 'manual')
                                         <div class="small text-muted mt-1">{{ $p->catatan }} — {{ $p->penanda?->name }}</div>
+                                    @elseif ($p->berhalangan())
+                                        <div class="small text-muted mt-1">{{ $p->catatan }}<span class="d-block fst-italic">{{ $p->sumberLabel() }}</span></div>
                                     @endif
                                 </td>
                                 <td class="small">{{ $p->waktu_absen?->format('H:i') ?? '–' }}@if ($p->waktu_absen && ! $p->waktu_absen->isSameDay($pengumuman->absen_buka))<span class="text-muted d-block">{{ $p->waktu_absen->translatedFormat('d M') }}</span>@endif</td>
                                 <td class="text-end text-nowrap">
                                     @include('admin.editor-data._tombol', ['entitas' => 'peserta_acara', 'id' => $p->id, 'teks' => '', 'hapus' => false])
-                                    @if ($p->sudahAbsen())
-                                        <form action="{{ route('pengumuman.absen.tandai', [$pengumuman, $p]) }}" method="POST" class="d-inline"
-                                            data-confirm="Batalkan kehadiran {{ $nama($p) }}? Status kembali menjadi belum absen.">
-                                            @csrf <input type="hidden" name="aksi" value="batal">
-                                            <button type="submit" class="btn btn-light btn-sm text-danger" title="Batalkan kehadiran"><i class="bi bi-x-circle"></i></button>
-                                        </form>
-                                    @else
-                                        <button type="button" class="btn btn-outline-primary btn-sm" data-tandai-hadir
+                                    @php $cutiOtomatis = $p->status === 'cuti' && $p->otomatis(); @endphp
+                                    @unless ($p->sudahAbsen())
+                                        <button type="button" class="btn btn-outline-primary btn-sm" data-tetapkan="hadir"
                                             data-url="{{ route('pengumuman.absen.tandai', [$pengumuman, $p]) }}" data-nama="{{ $nama($p) }}">
                                             <i class="bi bi-person-check me-1"></i>Tandai hadir
                                         </button>
+                                        <div class="dropdown d-inline-block">
+                                            <button type="button" class="btn btn-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Tetapkan izin / sakit / dinas">Tetapkan</button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                @foreach ($bisaDitetapkan as $kode => $label)
+                                                    <li><button type="button" class="dropdown-item" data-tetapkan="{{ $kode }}" data-label="{{ $label }}"
+                                                        data-url="{{ route('pengumuman.absen.tandai', [$pengumuman, $p]) }}" data-nama="{{ $nama($p) }}">{{ $label }}</button></li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endunless
+                                    @if ($p->status !== 'belum' && ! $cutiOtomatis)
+                                        <form action="{{ route('pengumuman.absen.tandai', [$pengumuman, $p]) }}" method="POST" class="d-inline"
+                                            data-confirm="{{ $p->sudahAbsen() ? 'Batalkan kehadiran' : 'Batalkan status ' . $st['label'] }} {{ $nama($p) }}? Status kembali menjadi belum absen.">
+                                            @csrf <input type="hidden" name="aksi" value="batal">
+                                            <button type="submit" class="btn btn-light btn-sm text-danger" title="Batalkan {{ $st['label'] }}"><i class="bi bi-x-circle"></i></button>
+                                        </form>
                                     @endif
                                 </td>
                             </tr>
@@ -141,21 +154,30 @@
     <input type="hidden" name="catatan">
 </form>
 <script>
+    // Tetapkan status peserta: hadir manual, izin, sakit, atau dinas luar — selalu dengan alasan/keterangan.
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('formTandaiHadir');
-        document.querySelectorAll('[data-tandai-hadir]').forEach((b) => b.addEventListener('click', function () {
+        const teks = {
+            hadir: ['Tandai hadir manual?', 'mis. hadir tetapi HP mati / tidak bisa scan.', 'mis. HP mati, terlihat hadir oleh panitia', 'Tandai hadir'],
+            izin: ['Tetapkan izin?', 'Peserta tidak hadir dengan izin.', 'mis. izin keperluan keluarga', 'Tetapkan izin'],
+            sakit: ['Tetapkan sakit?', 'Peserta tidak hadir karena sakit.', 'mis. sakit, surat dokter menyusul', 'Tetapkan sakit'],
+            dinas: ['Tetapkan dinas luar?', 'Peserta sedang tugas di luar.', 'mis. rapat di dinas pendidikan', 'Tetapkan dinas luar'],
+        };
+        document.querySelectorAll('[data-tetapkan]').forEach((b) => b.addEventListener('click', function () {
+            const [judul, ket, contoh, tombol] = teks[b.dataset.tetapkan];
             Swal.fire({
-                title: 'Tandai hadir manual?',
-                html: 'Untuk <strong></strong> — mis. hadir tetapi HP mati / tidak bisa scan.',
+                title: judul,
+                html: 'Untuk <strong></strong> — ' + ket,
                 didOpen: (el) => { el.querySelector('strong').textContent = b.dataset.nama; },
-                input: 'text', inputLabel: 'Alasan', inputPlaceholder: 'mis. HP mati, terlihat hadir oleh panitia',
+                input: 'text', inputLabel: b.dataset.tetapkan === 'hadir' ? 'Alasan' : 'Keterangan', inputPlaceholder: contoh,
                 inputAttributes: { maxlength: 255 },
                 inputValidator: (v) => (!v || !v.trim()) ? 'Isi alasan terlebih dahulu.' : undefined,
-                showCancelButton: true, confirmButtonText: 'Tandai hadir', cancelButtonText: 'Batal',
+                showCancelButton: true, confirmButtonText: tombol, cancelButtonText: 'Batal',
                 confirmButtonColor: '#880f12', reverseButtons: true,
             }).then((r) => {
                 if (!r.isConfirmed) return;
                 form.action = b.dataset.url;
+                form.aksi.value = b.dataset.tetapkan;
                 form.catatan.value = r.value.trim();
                 form.submit();
             });

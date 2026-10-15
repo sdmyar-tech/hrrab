@@ -116,10 +116,12 @@ class AbsenAcara
         }
 
         $target = self::terapkanKriteria($pengumuman->absen_kriteria ?? [], self::kandidat($pembuat))->keyBy('id');
-        $ada = $pengumuman->peserta()->get(['id', 'user_id', 'status'])->keyBy('user_id');
+        $ada = $pengumuman->peserta()->get(['id', 'user_id', 'status', 'sumber'])->keyBy('user_id');
 
         // Hapus yang tidak lagi termasuk & belum absen.
-        $hapus = $ada->reject(fn ($p, $uid) => $target->has($uid) || $p->status !== PengumumanPeserta::STATUS_BELUM)->pluck('id');
+        // Yang dihapus hanya yang belum absen atau berhalangan otomatis (bukan yang hadir / ditetapkan panitia).
+        $hapus = $ada->reject(fn ($p, $uid) => $target->has($uid)
+            || ! ($p->status === PengumumanPeserta::STATUS_BELUM || $p->otomatis()))->pluck('id');
         if ($hapus->isNotEmpty()) {
             PengumumanPeserta::whereIn('id', $hapus)->delete();
         }
@@ -144,7 +146,8 @@ class AbsenAcara
 
         return Notifikasi::kirim($users, "Absen acara: {$pengumuman->judul}",
             "Anda diminta absen di lokasi acara. Waktu absen: {$pengumuman->absenJendelaLabel()}. Scan QR yang ditampilkan panitia di lokasi acara.",
-            route('pengumuman.index') . '#pengumuman-' . $pengumuman->id, Pemberitahuan::JENIS_TUGAS, 'bi-qr-code-scan');
+            route('pengumuman.index') . '#pengumuman-' . $pengumuman->id, Pemberitahuan::JENIS_TUGAS, 'bi-qr-code-scan',
+            null, TugasNotifikasi::penanda(TugasNotifikasi::ABSEN_ACARA, $pengumuman->id));
     }
 
     // ------------------------------------------------------------------ QR
@@ -197,18 +200,85 @@ class AbsenAcara
 
     // ------------------------------------------------------------------ Ringkasan
 
-    /** @return array{total: int, sudah: int, belum: int, manual: int} */
+    /**
+     * @return array{total: int, sudah: int, belum: int, manual: int, berhalangan: int, izin: int, sakit: int, dinas: int, cuti: int}
+     */
     public static function ringkasan(Pengumuman $pengumuman): array
     {
         $hitung = $pengumuman->peserta()->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
-        $total = (int) $hitung->sum();
-        $belum = (int) ($hitung[PengumumanPeserta::STATUS_BELUM] ?? 0);
+        $n = fn (string $status) => (int) ($hitung[$status] ?? 0);
+        $berhalangan = collect(PengumumanPeserta::BERHALANGAN)->sum($n);
 
         return [
-            'total' => $total,
-            'sudah' => $total - $belum,
-            'belum' => $belum,
-            'manual' => (int) ($hitung[PengumumanPeserta::STATUS_MANUAL] ?? 0),
+            'total' => (int) $hitung->sum(),
+            'sudah' => $n(PengumumanPeserta::STATUS_HADIR) + $n(PengumumanPeserta::STATUS_MANUAL),
+            'belum' => $n(PengumumanPeserta::STATUS_BELUM),
+            'manual' => $n(PengumumanPeserta::STATUS_MANUAL),
+            'berhalangan' => $berhalangan,
+            'izin' => $n(PengumumanPeserta::STATUS_IZIN),
+            'sakit' => $n(PengumumanPeserta::STATUS_SAKIT),
+            'dinas' => $n(PengumumanPeserta::STATUS_DINAS),
+            'cuti' => $n(PengumumanPeserta::STATUS_CUTI),
         ];
+    }
+
+    // ------------------------------------------------------------------ Berhalangan otomatis
+
+    /**
+     * Samakan status berhalangan dengan data lain pada tanggal acara:
+     *  - pengajuan cuti yang DISETUJUI → "Cuti";
+     *  - koreksi absensi harian Izin / Sakit / Dinas Luar → status yang sama.
+     * Hanya menyentuh peserta yang belum absen atau yang statusnya memang berasal dari sinkron ini;
+     * yang sudah hadir atau ditetapkan panitia tidak pernah ditimpa. Mengembalikan jumlah baris yang berubah.
+     */
+    public static function sinkronBerhalangan(Pengumuman $pengumuman): int
+    {
+        if (! $pengumuman->absen_aktif || ! $pengumuman->absen_buka || ! $pengumuman->absen_tutup) {
+            return 0;
+        }
+
+        $dari = $pengumuman->absen_buka->toDateString();
+        $sampai = $pengumuman->absen_tutup->toDateString();
+        $peserta = $pengumuman->peserta()
+            ->where(fn ($q) => $q->where('status', PengumumanPeserta::STATUS_BELUM)
+                ->orWhere(fn ($o) => $o->whereIn('sumber', [PengumumanPeserta::SUMBER_CUTI, PengumumanPeserta::SUMBER_ABSENSI])
+                    ->whereIn('status', PengumumanPeserta::BERHALANGAN)))
+            ->whereNotNull('data_pegawai_id')->get();
+        if ($peserta->isEmpty()) {
+            return 0;
+        }
+        $ids = $peserta->pluck('data_pegawai_id')->unique()->all();
+
+        $cuti = \App\Models\PengajuanCuti::where('status', \App\Models\PengajuanCuti::STATUS_APPROVED)->whereIn('data_pegawai_id', $ids)
+            ->whereDate('tanggal_mulai', '<=', $sampai)->whereDate('tanggal_selesai', '>=', $dari)
+            ->orderBy('id')->get()->keyBy('data_pegawai_id');
+        $petaAbsensi = [
+            \App\Models\Absensi::MANUAL_IZIN => PengumumanPeserta::STATUS_IZIN,
+            \App\Models\Absensi::MANUAL_SAKIT => PengumumanPeserta::STATUS_SAKIT,
+            \App\Models\Absensi::MANUAL_DINAS_LUAR => PengumumanPeserta::STATUS_DINAS,
+        ];
+        $absensi = \App\Models\Absensi::whereIn('data_pegawai_id', $ids)->whereIn('status_manual', array_keys($petaAbsensi))
+            ->whereBetween('tanggal', [$dari, $sampai])->orderBy('tanggal')->get()->keyBy('data_pegawai_id');
+
+        $berubah = 0;
+        foreach ($peserta as $p) {
+            $c = $cuti->get($p->data_pegawai_id);
+            $a = $absensi->get($p->data_pegawai_id);
+            $baru = match (true) {
+                (bool) $c => ['status' => PengumumanPeserta::STATUS_CUTI, 'sumber' => PengumumanPeserta::SUMBER_CUTI, 'sumber_id' => $c->id,
+                    'catatan' => $c->jenisLabel() . ' ' . $c->tanggal_mulai->translatedFormat('d M') . ' – ' . $c->tanggal_selesai->translatedFormat('d M Y')],
+                (bool) $a => ['status' => $petaAbsensi[$a->status_manual], 'sumber' => PengumumanPeserta::SUMBER_ABSENSI, 'sumber_id' => $a->id,
+                    'catatan' => trim(\App\Models\Absensi::STATUS_MANUAL[$a->status_manual] . ' di absensi harian ' . $a->tanggal->translatedFormat('d M') . ($a->alasan_koreksi ? " — {$a->alasan_koreksi}" : ''))],
+                // Sumbernya hilang (cuti dibatalkan / koreksi dihapus) → kembali belum absen.
+                default => ['status' => PengumumanPeserta::STATUS_BELUM, 'sumber' => null, 'sumber_id' => null, 'catatan' => null],
+            };
+            $p->fill($baru + ['ditandai_oleh' => null]);
+            if ($p->isDirty()) {
+                $p->save();
+                $berubah++;
+            }
+        }
+
+        return $berubah;
     }
 }

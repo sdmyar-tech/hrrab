@@ -11,7 +11,7 @@
     @include('layouts.partials.css')
 </head>
 
-<body>
+<body @if (session()->pull('baru_masuk')) data-baru-masuk="1" @endif>
     <script>
         window.adminHMDUser = {
             name: "{{ Auth::user()->name ?? 'User' }}",

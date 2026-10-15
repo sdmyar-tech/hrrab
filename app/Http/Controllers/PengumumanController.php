@@ -24,6 +24,10 @@ class PengumumanController extends Controller
         $kategori = array_key_exists($request->query('kategori'), Pengumuman::KATEGORI) ? $request->query('kategori') : null;
         $arsip = $request->boolean('arsip');
 
+        // Absen acara yang sedang berjalan: samakan status izin/sakit/dinas/cuti dari data cuti & absensi harian.
+        Pengumuman::untuk($user)->where('absen_aktif', true)->where('absen_tutup', '>=', now()->subDay())->get()
+            ->each(fn (Pengumuman $p) => AbsenAcara::sinkronBerhalangan($p));
+
         $query = Pengumuman::with('pembuat')->untuk($user)
             ->when(! $arsip, fn ($q) => $q->berlaku())
             ->when($arsip, fn ($q) => $q->whereNotNull('tampil_sampai')->whereDate('tampil_sampai', '<', now()))
@@ -31,7 +35,7 @@ class PengumumanController extends Controller
             ->withExists(['pembaca as sudah_dibaca' => fn ($q) => $q->where('users.id', $user->id)])
             // Baris absen milik pengguna ini (untuk tombol 'Absen Sekarang') + rekap untuk pengelola.
             ->with(['peserta' => fn ($q) => $q->where('user_id', $user->id)])
-            ->withCount(['peserta as peserta_total', 'peserta as peserta_sudah' => fn ($q) => $q->where('status', '!=', PengumumanPeserta::STATUS_BELUM)]);
+            ->withCount(['peserta as peserta_total', 'peserta as peserta_sudah' => fn ($q) => $q->whereIn('status', [PengumumanPeserta::STATUS_HADIR, PengumumanPeserta::STATUS_MANUAL])]);
 
         $urut = Urutan::terapkan($query, [
             // Bawaan: yang disematkan penting tetap di atas, lalu terbaru.
@@ -62,7 +66,7 @@ class PengumumanController extends Controller
         $kategori = array_key_exists($request->query('kategori'), Pengumuman::KATEGORI) ? $request->query('kategori') : null;
 
         $rows = Pengumuman::with('pembuat')->withCount(['pembaca', 'peserta as peserta_total',
-            'peserta as peserta_sudah' => fn ($q) => $q->where('status', '!=', PengumumanPeserta::STATUS_BELUM)])->untuk($user)
+            'peserta as peserta_sudah' => fn ($q) => $q->whereIn('status', [PengumumanPeserta::STATUS_HADIR, PengumumanPeserta::STATUS_MANUAL])])->untuk($user)
             ->when($kategori, fn ($q) => $q->where('kategori', $kategori))
             ->orderBy('id')->get()
             ->map(fn (Pengumuman $p) => [

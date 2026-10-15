@@ -22,14 +22,14 @@ class Notifikasi
      * @param  iterable<User>|User|null  $penerima
      */
     public static function kirim(iterable|User|null $penerima, string $judul, string $pesan, ?string $url = null,
-        string $jenis = Pemberitahuan::JENIS_INFO, string $ikon = 'bi-bell', ?string $pengirim = null): int
+        string $jenis = Pemberitahuan::JENIS_INFO, string $ikon = 'bi-bell', ?string $pengirim = null, ?array $tugas = null): int
     {
         $pelaku = Auth::id();
         $users = collect($penerima instanceof User ? [$penerima] : ($penerima ?? []))
             ->filter()->unique('id')->reject(fn (User $u) => $u->id === $pelaku)->values();
 
         if ($users->isNotEmpty()) {
-            Notification::send($users, new Pemberitahuan($judul, $pesan, $url, $jenis, $ikon, $pengirim ?? Auth::user()?->name));
+            Notification::send($users, new Pemberitahuan($judul, $pesan, $url, $jenis, $ikon, $pengirim ?? Auth::user()?->name, $tugas));
         }
 
         return $users->count();
@@ -47,6 +47,8 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
             route($route, $pengajuan),
             Pemberitahuan::JENIS_TUGAS,
             $pengajuan instanceof PengajuanCuti ? 'bi-calendar2-check' : 'bi-clock-history',
+            null,
+            TugasNotifikasi::penanda($pengajuan instanceof PengajuanCuti ? TugasNotifikasi::CUTI : TugasNotifikasi::LEMBUR, $pengajuan->id),
         );
     }
 
@@ -104,7 +106,7 @@ public static function formasiBaru(PengajuanFormasi $formasi): void
             ->filter(fn (User $u) => RekrutmenAccess::canReviewFormasi($u, $formasi));
 
         self::kirim($reviewer, 'Pengajuan formasi baru', "{$formasi->jumlah_dibutuhkan} orang {$formasi->jabatan} untuk unit {$formasi->unit_kerja}.",
-            route('admin.pengajuan-formasi.index'), Pemberitahuan::JENIS_TUGAS, 'bi-person-plus');
+            route('admin.pengajuan-formasi.index'), Pemberitahuan::JENIS_TUGAS, 'bi-person-plus', null, TugasNotifikasi::penanda(TugasNotifikasi::FORMASI, $formasi->id));
     }
 
     public static function formasiDiputuskan(PengajuanFormasi $formasi): void
@@ -122,7 +124,7 @@ public static function formasiBaru(PengajuanFormasi $formasi): void
 
         self::kirim($jadwal->interviewer, "Jadwal interview: {$jadwal->lamaran?->namaKandidat()}",
             "{$jadwal->tahapLabel()} — {$jadwal->tanggal->translatedFormat('d M Y')}, " . substr($jadwal->waktu_mulai, 0, 5) . ($jadwal->lokasi ? " · {$jadwal->lokasi}" : '') . '.',
-            route('admin.lamaran.show', $jadwal->lamaran_id), Pemberitahuan::JENIS_TUGAS, 'bi-chat-square-text');
+            route('admin.lamaran.show', $jadwal->lamaran_id), Pemberitahuan::JENIS_TUGAS, 'bi-chat-square-text', null, TugasNotifikasi::penanda(TugasNotifikasi::INTERVIEW, $jadwal->id));
     }
 
     public static function onboardingDimulai(ScreeningOnboarding $screening): void
@@ -132,7 +134,7 @@ public static function formasiBaru(PengajuanFormasi $formasi): void
 
         self::kirim($penerima, "Onboarding dimulai: {$screening->lamaran?->namaKandidat()}",
             "{$screening->tanggal_mulai->translatedFormat('d M')} – {$screening->tanggal_selesai->translatedFormat('d M Y')}. Konfirmasi hasil setelah masa onboarding.",
-            route('admin.lamaran.show', $screening->lamaran_id), Pemberitahuan::JENIS_TUGAS, 'bi-clipboard-check');
+            route('admin.lamaran.show', $screening->lamaran_id), Pemberitahuan::JENIS_TUGAS, 'bi-clipboard-check', null, TugasNotifikasi::penanda(TugasNotifikasi::ONBOARDING, $screening->id));
     }
 
     /** Kabar perkembangan lamaran untuk kandidat (pelamar eksternal atau pegawai jalur internal). */
@@ -210,7 +212,7 @@ public static function formasiBaru(PengajuanFormasi $formasi): void
                 $penerima = collect($s->hasil_sdm === null ? $kepalaSdm : [])->concat($s->hasil_kepala === null && $s->kepala ? [$s->kepala] : []);
                 $hasil['onboarding'] += self::kirim($penerima, "Konfirmasi onboarding: {$s->lamaran->namaKandidat()}",
                     'Masa onboarding berakhir ' . $s->tanggal_selesai->translatedFormat('d M Y') . '. Tahap ini tidak lanjut otomatis — isi hasil Lulus/Tidak Lulus.',
-                    route('admin.lamaran.show', $s->lamaran_id), Pemberitahuan::JENIS_PENGINGAT, 'bi-clipboard-check', 'Sistem');
+                    route('admin.lamaran.show', $s->lamaran_id), Pemberitahuan::JENIS_PENGINGAT, 'bi-clipboard-check', 'Sistem', TugasNotifikasi::penanda(TugasNotifikasi::ONBOARDING, $s->id));
             });
 
         InterviewJadwal::with(['lamaran.dataPelamar', 'lamaran.dataPegawai', 'lamaran.lowongan', 'interviewer'])
@@ -219,7 +221,7 @@ public static function formasiBaru(PengajuanFormasi $formasi): void
             ->each(function (InterviewJadwal $j) use (&$hasil) {
                 $hasil['interview'] += self::kirim($j->interviewer, "Hasil interview belum diisi: {$j->lamaran->namaKandidat()}",
                     "{$j->tahapLabel()} tanggal " . $j->tanggal->translatedFormat('d M Y') . ' sudah lewat. Isi hasilnya atau jadwalkan ulang.',
-                    route('admin.lamaran.show', $j->lamaran_id), Pemberitahuan::JENIS_PENGINGAT, 'bi-chat-square-text', 'Sistem');
+                    route('admin.lamaran.show', $j->lamaran_id), Pemberitahuan::JENIS_PENGINGAT, 'bi-chat-square-text', 'Sistem', TugasNotifikasi::penanda(TugasNotifikasi::INTERVIEW, $j->id));
             });
 
         KontrakJadwal::with(['lamaran.dataPelamar', 'lamaran.dataPegawai', 'lamaran.lowongan'])
@@ -228,7 +230,7 @@ public static function formasiBaru(PengajuanFormasi $formasi): void
             ->each(function (KontrakJadwal $k) use ($kepalaSdm, &$hasil) {
                 $hasil['kontrak'] += self::kirim($kepalaSdm, "Kontrak belum diproses: {$k->lamaran->namaKandidat()}",
                     'Jadwal tanda tangan ' . $k->tanggal->translatedFormat('d M Y') . ' sudah lewat. Rekrut kandidat atau ubah jadwalnya.',
-                    route('admin.lamaran.show', $k->lamaran_id), Pemberitahuan::JENIS_PENGINGAT, 'bi-pen', 'Sistem');
+                    route('admin.lamaran.show', $k->lamaran_id), Pemberitahuan::JENIS_PENGINGAT, 'bi-pen', 'Sistem', TugasNotifikasi::penanda(TugasNotifikasi::KONTRAK, $k->id));
             });
 
         return $hasil;

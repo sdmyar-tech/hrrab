@@ -24,6 +24,7 @@ class AbsenAcaraController extends Controller
         'semua' => 'Semua',
         'sudah' => 'Sudah absen',
         'belum' => 'Belum absen',
+        'berhalangan' => 'Izin / sakit / dinas / cuti',
         'manual' => 'Ditandai manual',
         'kedaluwarsa' => 'Kedaluwarsa',
     ];
@@ -33,6 +34,7 @@ class AbsenAcaraController extends Controller
     public function pantau(Request $request, Pengumuman $pengumuman): View
     {
         $user = $this->pengelola($pengumuman);
+        AbsenAcara::sinkronBerhalangan($pengumuman);
         ['semua' => $semua, 'baris' => $baris, 'filter' => $filter, 'urut' => $urut] = $this->saring($request, $pengumuman);
 
         return view('pengumuman.absen', [
@@ -46,6 +48,7 @@ class AbsenAcaraController extends Controller
             'urut' => $urut,
             'nama' => fn (PengumumanPeserta $p) => $this->nama($p),
             'unit' => fn (PengumumanPeserta $p) => $this->unit($p),
+            'bisaDitetapkan' => PengumumanPeserta::BISA_DITETAPKAN,
         ]);
     }
 
@@ -53,6 +56,7 @@ class AbsenAcaraController extends Controller
     public function export(Request $request, Pengumuman $pengumuman): BinaryFileResponse
     {
         $this->pengelola($pengumuman);
+        AbsenAcara::sinkronBerhalangan($pengumuman);
         ['baris' => $baris, 'filter' => $filter] = $this->saring($request, $pengumuman);
         $r = AbsenAcara::ringkasan($pengumuman);
 
@@ -64,7 +68,11 @@ class AbsenAcaraController extends Controller
             $this->jabatan($p),
             $p->tampilan()['label'],
             $p->waktu_absen?->format('d-m-Y H:i'),
-            $p->status === PengumumanPeserta::STATUS_MANUAL ? "Ditandai {$p->penanda?->name}: {$p->catatan}" : null,
+            match (true) {
+                $p->status === PengumumanPeserta::STATUS_MANUAL => "Ditandai {$p->penanda?->name}: {$p->catatan}",
+                $p->berhalangan() => trim($p->catatan . ' (' . $p->sumberLabel() . ')'),
+                default => null,
+            },
             $p->diingatkan_pada?->format('d-m-Y H:i'),
         ]);
 
@@ -75,6 +83,11 @@ class AbsenAcaraController extends Controller
             ['Diundang', $r['total']],
             ['Sudah absen', $r['sudah']],
             ['  - di antaranya ditandai manual', $r['manual']],
+            ['Berhalangan', $r['berhalangan']],
+            ['  - izin', $r['izin']],
+            ['  - sakit', $r['sakit']],
+            ['  - dinas luar', $r['dinas']],
+            ['  - cuti', $r['cuti']],
             ['Belum absen', $r['belum']],
             ['Persentase hadir', $r['total'] ? round($r['sudah'] / $r['total'] * 100) . '%' : '-'],
             ['Filter ekspor', self::FILTER[$filter] . ($request->filled('q') ? ' · cari "' . $request->query('q') . '"' : '')],
@@ -100,6 +113,7 @@ class AbsenAcaraController extends Controller
     {
         $this->pengelola($pengumuman);
         AbsenAcara::pastikanKunci($pengumuman);
+        AbsenAcara::sinkronBerhalangan($pengumuman);
 
         return response()->json([
             'url' => AbsenAcara::urlScan($pengumuman),
@@ -109,40 +123,56 @@ class AbsenAcaraController extends Controller
         ]);
     }
 
-    /** Tandai hadir manual (mis. HP mati / tidak bisa scan) atau batalkan kehadiran. */
+    /**
+     * Tetapkan status peserta oleh panitia: hadir (mis. HP mati), izin, sakit, dinas luar — atau batalkan.
+     * Status cuti tidak ditetapkan di sini: selalu otomatis dari pengajuan cuti yang disetujui.
+     */
     public function tandai(Request $request, Pengumuman $pengumuman, PengumumanPeserta $peserta): RedirectResponse
     {
         $user = $this->pengelola($pengumuman);
         abort_unless($peserta->pengumuman_id === $pengumuman->id, 404);
 
         $v = $request->validate([
-            'aksi' => ['required', Rule::in(['hadir', 'batal'])],
-            'catatan' => ['required_if:aksi,hadir', 'nullable', 'string', 'max:255'],
-        ], ['catatan.required_if' => 'Isi alasan menandai hadir secara manual.']);
+            'aksi' => ['required', Rule::in(['hadir', 'batal', ...array_keys(PengumumanPeserta::BISA_DITETAPKAN)])],
+            'catatan' => ['required_unless:aksi,batal', 'nullable', 'string', 'max:255'],
+        ], ['catatan.required_unless' => 'Isi alasan / keterangan terlebih dahulu.']);
+        $nama = $this->nama($peserta->loadMissing('dataPegawai', 'user'));
+
+        if ($v['aksi'] === 'batal') {
+            if ($peserta->status === PengumumanPeserta::STATUS_CUTI && $peserta->otomatis()) {
+                return back()->with('info', "{$nama} tercatat cuti dari data cuti yang disetujui. Ubah/batalkan pengajuan cutinya bila keliru.");
+            }
+            $tadinyaHadir = $peserta->sudahAbsen();
+            $peserta->update(['status' => PengumumanPeserta::STATUS_BELUM, 'sumber' => null, 'sumber_id' => null,
+                'waktu_absen' => null, 'catatan' => null, 'ditandai_oleh' => null]);
+
+            return back()->with('success', $tadinyaHadir
+                ? "{$nama} dibatalkan kehadirannya."
+                : "Status {$nama} dikembalikan menjadi belum absen.");
+        }
 
         if ($v['aksi'] === 'hadir') {
             if ($peserta->sudahAbsen()) {
                 return back()->with('info', 'Pegawai ini sudah tercatat hadir.');
             }
-            $peserta->update([
-                'status' => PengumumanPeserta::STATUS_MANUAL, 'waktu_absen' => now(), 'catatan' => $v['catatan'],
-                'ditandai_oleh' => $user->id,
-            ]);
-            $pesan = 'ditandai hadir';
-        } else {
-            $peserta->update([
-                'status' => PengumumanPeserta::STATUS_BELUM, 'waktu_absen' => null, 'catatan' => null, 'ditandai_oleh' => null,
-            ]);
-            $pesan = 'dibatalkan kehadirannya';
+            $peserta->update(['status' => PengumumanPeserta::STATUS_MANUAL, 'sumber' => PengumumanPeserta::SUMBER_MANUAL, 'sumber_id' => null,
+                'waktu_absen' => now(), 'catatan' => $v['catatan'], 'ditandai_oleh' => $user->id]);
+
+            return back()->with('success', "{$nama} ditandai hadir.");
         }
 
-        return back()->with('success', $this->nama($peserta->load('dataPegawai', 'user')) . " {$pesan}.");
+        // Izin / sakit / dinas luar oleh panitia (menimpa status otomatis, tidak ditimpa sinkron berikutnya).
+        $peserta->update(['status' => $v['aksi'], 'sumber' => PengumumanPeserta::SUMBER_MANUAL, 'sumber_id' => null,
+            'waktu_absen' => null, 'catatan' => $v['catatan'], 'ditandai_oleh' => $user->id]);
+
+        return back()->with('success', "{$nama} ditetapkan " . mb_strtolower(PengumumanPeserta::BISA_DITETAPKAN[$v['aksi']]) . '.');
     }
 
     /** Kirim pengingat ke peserta yang belum absen (lewati yang baru diingatkan < 15 menit). */
     public function ingatkan(Pengumuman $pengumuman): RedirectResponse
     {
         $this->pengelola($pengumuman);
+        AbsenAcara::sinkronBerhalangan($pengumuman); // yang cuti / izin di absensi harian tidak ikut diingatkan
 
         if ($pengumuman->absenFase() === Pengumuman::ABSEN_TUTUP) {
             return back()->with('error', 'Absen sudah ditutup — pengingat tidak dikirim.');
@@ -158,7 +188,8 @@ class AbsenAcaraController extends Controller
 
         $jumlah = Notifikasi::kirim($target->pluck('user')->filter(), "Pengingat absen: {$pengumuman->judul}",
             "Anda belum absen. Waktu absen: {$pengumuman->absenJendelaLabel()}. Scan QR di lokasi acara.",
-            route('pengumuman.index') . '#pengumuman-' . $pengumuman->id, Pemberitahuan::JENIS_PENGINGAT, 'bi-qr-code-scan');
+            route('pengumuman.index') . '#pengumuman-' . $pengumuman->id, Pemberitahuan::JENIS_PENGINGAT, 'bi-qr-code-scan',
+            null, \App\Support\TugasNotifikasi::penanda(\App\Support\TugasNotifikasi::ABSEN_ACARA, $pengumuman->id));
         PengumumanPeserta::whereIn('id', $target->pluck('id'))->update(['diingatkan_pada' => now()]);
 
         return back()->with('success', "Pengingat dikirim ke {$jumlah} pegawai.");
@@ -212,7 +243,9 @@ class AbsenAcaraController extends Controller
             });
         }
 
-        $keadaan['peserta']->update(['status' => PengumumanPeserta::STATUS_HADIR, 'waktu_absen' => now()]);
+        // Peserta yang tercatat izin/sakit/dinas/cuti tetap boleh datang: scan mengubahnya menjadi hadir.
+        $keadaan['peserta']->update(['status' => PengumumanPeserta::STATUS_HADIR, 'waktu_absen' => now(),
+            'sumber' => null, 'sumber_id' => null, 'catatan' => null, 'ditandai_oleh' => null]);
         $request->session()->forget("acara_scan.{$pengumuman->id}");
 
         return redirect()->to(route('pengumuman.index') . '#pengumuman-' . $pengumuman->id)
@@ -269,8 +302,8 @@ class AbsenAcaraController extends Controller
             ->filter(fn (PengumumanPeserta $p) => $this->cocokFilter($p, $filter))
             ->filter(fn (PengumumanPeserta $p) => $cari === '' || str_contains(mb_strtolower($this->nama($p) . ' ' . $this->unit($p) . ' ' . $p->dataPegawai?->nip), $cari));
 
-        // Bawaan: yang perlu perhatian dulu (belum → kedaluwarsa → sudah), lalu nama.
-        $peringkat = ['belum' => 0, 'kedaluwarsa' => 1, 'manual' => 2, 'valid' => 3];
+        // Bawaan: yang perlu perhatian dulu (belum → kedaluwarsa → berhalangan → sudah), lalu nama.
+        $peringkat = ['belum' => 0, 'kedaluwarsa' => 1, 'izin' => 2, 'sakit' => 2, 'dinas' => 2, 'cuti' => 2, 'manual' => 3, 'valid' => 4];
         $baris = match ($urut) {
             'nama' => $baris->sortBy(fn ($p) => mb_strtolower($this->nama($p))),
             'waktu' => $baris->sortBy(fn ($p) => $p->waktu_absen?->getTimestamp() ?? PHP_INT_MAX),
@@ -284,7 +317,8 @@ class AbsenAcaraController extends Controller
     {
         return match ($filter) {
             'sudah' => $p->sudahAbsen(),
-            'belum' => ! $p->sudahAbsen(),
+            'belum' => $p->status === PengumumanPeserta::STATUS_BELUM,
+            'berhalangan' => $p->berhalangan(),
             'manual', 'kedaluwarsa' => $p->tampilan()['kunci'] === $filter,
             default => true,
         };

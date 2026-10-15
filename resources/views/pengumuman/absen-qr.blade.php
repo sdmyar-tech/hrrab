@@ -26,6 +26,7 @@
     <div class="d-flex gap-4 mt-4 fs-5">
         <div><strong class="fs-2 d-block" data-angka="sudah">0</strong><span class="small opacity-75">sudah absen</span></div>
         <div><strong class="fs-2 d-block" data-angka="belum">0</strong><span class="small opacity-75">belum</span></div>
+        <div><strong class="fs-2 d-block" data-angka="berhalangan">0</strong><span class="small opacity-75">izin/cuti</span></div>
         <div><strong class="fs-2 d-block" data-angka="total">0</strong><span class="small opacity-75">diundang</span></div>
     </div>
     <p class="small opacity-75 mt-4 mb-0">Buka HRRAB → Pengumuman → <strong>Absen Sekarang</strong>, atau scan dengan kamera HP.</p>
@@ -68,7 +69,7 @@
                 const d = await r.json();
                 if (d.url !== urlTerakhir) { qr.clear(); qr.makeCode(d.url); urlTerakhir = d.url; }
                 sisa = d.sisa;
-                ['sudah', 'belum', 'total'].forEach((k) => { document.querySelector('[data-angka="' + k + '"]').textContent = d[k]; });
+                ['sudah', 'belum', 'berhalangan', 'total'].forEach((k) => { document.querySelector('[data-angka="' + k + '"]').textContent = d[k]; });
                 tampilFase(d.fase);
             } catch (e) {
                 pesanFase.textContent = 'Koneksi terputus — mencoba lagi…';
