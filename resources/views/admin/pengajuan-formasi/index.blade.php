@@ -68,17 +68,40 @@
                                 <td>{{ $item->unit_kerja }}</td>
                                 <td>
                                     {{ $item->jabatan }}
-                                    <button type="button" class="btn btn-link btn-sm p-0 ms-1 btn-detail-formasi"
-                                        data-kualifikasi="{{ $item->kualifikasi }}"
-                                        data-alasan="{{ $item->alasan }}"
-                                        data-target="{{ optional($item->target_waktu)->translatedFormat('d M Y') ?? '-' }}"
-                                        title="Lihat detail">
+                                    <button type="button" class="btn btn-link btn-sm p-0 ms-1 btn-detail-formasi" data-detail="detail-formasi-{{ $item->id }}" title="Lihat detail">
                                         <i class="bi bi-info-circle"></i>
                                     </button>
+                                    @if ($item->jenis_kebutuhan)<small class="text-muted d-block">{{ $item->jenis_kebutuhan === 'penambahan' ? 'Penambahan' : 'Replacement' }}</small>@endif
+                                    <template id="detail-formasi-{{ $item->id }}">
+                                        <dl class="detail-formasi">
+                                            @foreach ([
+                                                'Kebutuhan karena' => $item->jenisLabel(),
+                                                'Jumlah' => $item->jumlahLabel(),
+                                                'Tanggal dibutuhkan' => optional($item->target_waktu)->translatedFormat('d M Y'),
+                                                'Minimal pendidikan' => $item->min_pendidikan,
+                                                'Minimal usia' => $item->min_usia ? $item->min_usia . ' tahun' : null,
+                                                'Kemampuan / keahlian' => $item->kualifikasi,
+                                                'Atasan langsung' => $item->atasan_langsung,
+                                                'Tugas & tanggung jawab' => $item->tugas,
+                                                'Keterangan' => $item->alasan,
+                                            ] as $label => $nilai)
+                                                @if (filled($nilai))<dt>{{ $label }}</dt><dd>{{ $nilai }}</dd>@endif
+                                            @endforeach
+                                        </dl>
+                                    </template>
                                 </td>
-                                <td>{{ $item->jumlah_dibutuhkan }} orang</td>
+                                <td>{{ $item->jumlahLabel() }}</td>
                                 <td>
                                     <span class="badge {{ $item->badgeClass() }}">{{ $item->statusLabel() }}</span>
+                                    @if ($item->butuhDuaPersetujuan())
+                                        {{-- Penambahan: GM unit & Owner menyetujui paralel. --}}
+                                        <div class="small mt-1 d-grid gap-1">
+                                            @if (\App\Support\RekrutmenAccess::perluGm($item))
+                                                <span class="{{ $item->gm_disetujui_oleh ? 'text-success' : 'text-muted' }}"><i class="bi {{ $item->gm_disetujui_oleh ? 'bi-check-circle-fill' : 'bi-hourglass-split' }} me-1"></i>GM{{ $item->gmPenyetuju ? ': ' . $item->gmPenyetuju->name : '' }}</span>
+                                            @endif
+                                            <span class="{{ $item->owner_disetujui_oleh ? 'text-success' : 'text-muted' }}"><i class="bi {{ $item->owner_disetujui_oleh ? 'bi-check-circle-fill' : 'bi-hourglass-split' }} me-1"></i>Owner{{ $item->ownerPenyetuju ? ': ' . $item->ownerPenyetuju->name : '' }}</span>
+                                        </div>
+                                    @endif
                                     @if ($item->status === 'rejected' && $item->catatan_admin)
                                         <small class="text-muted d-block mt-1">{{ $item->catatan_admin }}</small>
                                     @endif
@@ -201,18 +224,19 @@
         document.querySelectorAll('.btn-detail-formasi').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 Swal.fire({
-                    icon: 'info',
                     title: 'Detail Pengajuan Formasi',
-                    html: '<div class="text-start">'
-                        + '<p class="mb-1"><strong>Target Waktu:</strong> ' + (btn.dataset.target || '-') + '</p>'
-                        + '<p class="mb-1"><strong>Kualifikasi:</strong><br>' + btn.dataset.kualifikasi + '</p>'
-                        + '<p class="mb-0"><strong>Alasan:</strong><br>' + btn.dataset.alasan + '</p>'
-                        + '</div>',
+                    html: document.getElementById(btn.dataset.detail).innerHTML,
                     confirmButtonColor: '#880f12',
                     confirmButtonText: 'Tutup',
+                    width: 560,
                 });
             });
         });
     });
 </script>
+<style>
+    .detail-formasi { text-align: left; margin: 0; font-size: .875rem; }
+    .detail-formasi dt { font-size: .75rem; color: var(--admin-muted); font-weight: 600; margin-top: .55rem; }
+    .detail-formasi dd { margin: 0; white-space: pre-line; color: var(--admin-text); }
+</style>
 @endsection

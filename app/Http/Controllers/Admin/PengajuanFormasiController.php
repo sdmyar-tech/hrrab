@@ -49,12 +49,21 @@ class PengajuanFormasiController extends Controller
             optional($f->created_at)->format('d-m-Y H:i'),
             $f->diajukanOleh?->name,
             $f->unit_kerja,
+            $f->jenisLabel(),
             $f->jabatan,
             $f->jumlah_dibutuhkan,
-            $f->kualifikasi,
-            $f->alasan,
+            $f->jumlah_laki,
+            $f->jumlah_perempuan,
             optional($f->target_waktu)->format('d-m-Y'),
+            $f->min_pendidikan,
+            $f->min_usia,
+            $f->kualifikasi,
+            $f->atasan_langsung,
+            $f->tugas,
+            $f->alasan,
             $f->statusLabel(),
+            $f->gmPenyetuju?->name,
+            $f->ownerPenyetuju?->name,
             $f->direviewOleh?->name,
             optional($f->direview_pada)->format('d-m-Y'),
             $f->catatan_admin,
@@ -62,14 +71,15 @@ class PengajuanFormasiController extends Controller
         ]);
 
         return ExcelExporter::download(ExcelExporter::namaFile('pengajuan-formasi'), [
-            'Tanggal Pengajuan', 'Diajukan Oleh', 'Unit', 'Jabatan', 'Jumlah', 'Kualifikasi', 'Alasan',
-            'Target Waktu', 'Status', 'Direview Oleh', 'Tanggal Review', 'Catatan', 'Lowongan Terbit',
+            'Tanggal Pengajuan', 'Diajukan Oleh', 'Unit', 'Kebutuhan Karena', 'Jabatan', 'Jumlah', 'Laki-laki', 'Perempuan',
+            'Tanggal Dibutuhkan', 'Min. Pendidikan', 'Min. Usia', 'Kemampuan/Keahlian', 'Atasan Langsung', 'Tugas & Tanggung Jawab', 'Keterangan',
+            'Status', 'Disetujui GM', 'Disetujui Owner', 'Direview Oleh', 'Tanggal Review', 'Catatan', 'Lowongan Terbit',
         ], $rows, 'Pengajuan Formasi');
     }
 
     private function filteredQuery(Request $request, \App\Models\User $user)
     {
-        $query = PengajuanFormasi::with(['diajukanOleh.dataPegawai.kepegawaian', 'direviewOleh', 'lowongan']);
+        $query = PengajuanFormasi::with(['diajukanOleh.dataPegawai.kepegawaian', 'direviewOleh', 'lowongan', 'gmPenyetuju', 'ownerPenyetuju']);
 
         if (! RekrutmenAccess::canLihatSemuaFormasi($user)) {
             $query->where('diajukan_oleh', $user->id);
@@ -100,7 +110,14 @@ class PengajuanFormasiController extends Controller
                 ->with('error', 'Hanya Kepala Bagian/Koordinator dan Kepala SDM yang dapat mengajukan permintaan kekurangan pegawai.');
         }
 
-        return view('admin.pengajuan-formasi.create', ['unitOptions' => RekrutmenAccess::unitAjuanFormasi($user)]);
+        $units = RekrutmenAccess::unitAjuanFormasi($user);
+
+        return view('admin.pengajuan-formasi.create', [
+            'unitOptions' => $units,
+            // Jabatan per unit: dropdown jabatan hanya menampilkan jabatan yang ada di unit terpilih.
+            'jabatanPerUnit' => collect($units)->mapWithKeys(fn ($u) => [$u => $user->isAdmin() ? \App\Models\Jabatan::daftar() : RekrutmenAccess::jabatanUnit($u)])->all(),
+            'atasanBawaan' => $user->dataPegawai?->nama_lengkap ?? $user->name,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -113,32 +130,54 @@ class PengajuanFormasiController extends Controller
         }
 
         $unitBoleh = RekrutmenAccess::unitAjuanFormasi($user);
+        $unit = count($unitBoleh) === 1 ? $unitBoleh[0] : (string) $request->input('unit_kerja');
+        $jabatanBoleh = $user->isAdmin() ? \App\Models\Jabatan::daftar() : (in_array($unit, $unitBoleh, true) ? RekrutmenAccess::jabatanUnit($unit) : []);
+
         $validated = $request->validate([
             // Memimpin lebih dari satu unit → unit wajib dipilih (tidak ditebak diam-diam).
             'unit_kerja' => [count($unitBoleh) > 1 ? 'required' : 'nullable', 'string', Rule::in($unitBoleh)],
-            'jabatan' => ['required', 'string', Rule::in(\App\Models\Jabatan::daftar())],
-            'jumlah_dibutuhkan' => ['required', 'integer', 'min:1', 'max:50'],
+            'jenis_kebutuhan' => ['required', Rule::in(array_keys(PengajuanFormasi::JENIS_LABEL))],
+            'jumlah_laki' => ['required', 'integer', 'min:0', 'max:50'],
+            'jumlah_perempuan' => ['required', 'integer', 'min:0', 'max:50'],
+            'target_waktu' => ['required', 'date', ...($user->isAdmin() ? [] : ['after_or_equal:today'])],
+            'min_pendidikan' => ['required', Rule::in(PengajuanFormasi::PENDIDIKAN)],
+            'min_usia' => ['nullable', 'integer', 'min:15', 'max:70'],
             'kualifikasi' => ['required', 'string', 'max:2000'],
-            'target_waktu' => ['nullable', 'date', ...(Auth::user()->isAdmin() ? [] : ['after_or_equal:today'])],
-            'alasan' => ['required', 'string', 'max:2000'],
+            'jabatan' => ['required', 'string', Rule::in($jabatanBoleh)],
+            'atasan_langsung' => ['required', 'string', 'max:150'],
+            'tugas' => ['required', 'string', 'max:3000'],
+            'alasan' => ['nullable', 'string', 'max:2000'],
         ], [
             'unit_kerja.required' => 'Pilih unit yang membutuhkan pegawai (Anda memimpin lebih dari satu unit).',
+            'jenis_kebutuhan.required' => 'Pilih alasan kebutuhan: replacement atau penambahan karyawan.',
+            'jabatan.in' => 'Jabatan harus jabatan yang ada di unit ' . ($unit ?: 'Anda') . '.',
+            'target_waktu.required' => 'Isi tanggal dibutuhkan.',
+            'target_waktu.after_or_equal' => 'Tanggal dibutuhkan tidak boleh sebelum hari ini.',
+            'min_pendidikan.required' => 'Pilih minimal pendidikan.',
+            'kualifikasi.required' => 'Isi minimal kemampuan / keahlian yang dibutuhkan.',
+            'atasan_langsung.required' => 'Isi atasan langsung.',
+            'tugas.required' => 'Isi tugas dan tanggung jawab.',
         ]);
 
+        $jumlah = (int) $validated['jumlah_laki'] + (int) $validated['jumlah_perempuan'];
+        if ($jumlah < 1 || $jumlah > 50) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['jumlah_laki' => 'Jumlah kebutuhan (laki-laki + perempuan) harus 1–50 orang.']);
+        }
+
         $formasi = $user->pengajuanFormasis()->create([
-            'unit_kerja' => $validated['unit_kerja'] ?? $user->unitDipimpin(),
-            'jabatan' => $validated['jabatan'],
-            'jumlah_dibutuhkan' => $validated['jumlah_dibutuhkan'],
-            'kualifikasi' => $validated['kualifikasi'],
-            'target_waktu' => $validated['target_waktu'] ?? null,
-            'alasan' => $validated['alasan'],
+            'unit_kerja' => $validated['unit_kerja'] ?? $unit,
+            'jumlah_dibutuhkan' => $jumlah,
             'status' => PengajuanFormasi::STATUS_PENDING,
-        ]);
+        ] + collect($validated)->except('unit_kerja')->all());
         Notifikasi::formasiBaru($formasi);
+
+        $penyetuju = $formasi->butuhDuaPersetujuan()
+            ? (RekrutmenAccess::perluGm($formasi) ? 'GM unit & Owner (bersamaan)' : 'Owner')
+            : ($user->isKepalaSdm() ? 'GM' : 'Kepala SDM/GM');
 
         return redirect()
             ->route('admin.pengajuan-formasi.index')
-            ->with('success', 'Pengajuan formasi berhasil dikirim. Menunggu review ' . ($user->isKepalaSdm() ? 'GM.' : 'Kepala SDM/GM.'));
+            ->with('success', "Pengajuan formasi berhasil dikirim. Menunggu persetujuan {$penyetuju}.");
     }
 
     public function approve(PengajuanFormasi $pengajuanFormasi): RedirectResponse
@@ -154,6 +193,21 @@ class PengajuanFormasiController extends Controller
             return redirect()->back()->with('error', 'Pengajuan formasi ini sudah diproses.');
         }
 
+        // Penambahan karyawan: catat persetujuan sisi GM / Owner; baru final bila kedua sisi setuju.
+        if ($pengajuanFormasi->butuhDuaPersetujuan() && ! $reviewer->isAdmin()) {
+            $sisi = RekrutmenAccess::sisiPersetujuan($reviewer, $pengajuanFormasi);
+            $pengajuanFormasi->update([
+                "{$sisi}_disetujui_oleh" => $reviewer->id,
+                "{$sisi}_disetujui_pada" => now(),
+            ]);
+
+            $gmBeres = $pengajuanFormasi->gm_disetujui_oleh || ! RekrutmenAccess::perluGm($pengajuanFormasi);
+            if (! $gmBeres || ! $pengajuanFormasi->owner_disetujui_oleh) {
+                return redirect()->route('admin.pengajuan-formasi.index')
+                    ->with('success', 'Persetujuan Anda tercatat. Menunggu persetujuan ' . ($gmBeres ? 'Owner' : 'GM unit') . ' agar lowongan terbit.');
+            }
+        }
+
         $pengajuanFormasi->update([
             'status' => PengajuanFormasi::STATUS_APPROVED,
             'direview_oleh' => $reviewer->id,
@@ -162,18 +216,18 @@ class PengajuanFormasiController extends Controller
 
         // Admin bisa menyetujui ulang formasi yang sudah diproses; lowongan tidak dibuat dobel.
         if (! $pengajuanFormasi->lowongan()->exists()) {
-        $pengajuanFormasi->lowongan()->create([
-            'judul' => $pengajuanFormasi->jabatan,
-            'unit_kerja' => $pengajuanFormasi->unit_kerja,
-            'jabatan' => $pengajuanFormasi->jabatan,
-            'jumlah_dibutuhkan' => $pengajuanFormasi->jumlah_dibutuhkan,
-            'deskripsi' => $pengajuanFormasi->alasan,
-            'kualifikasi' => $pengajuanFormasi->kualifikasi,
-            'tanggal_tutup' => $pengajuanFormasi->target_waktu,
-            'status' => Lowongan::STATUS_DIPUBLIKASIKAN,
-            'dipublikasikan_oleh' => $reviewer->id,
-            'dipublikasikan_pada' => now(),
-        ]);
+            $pengajuanFormasi->lowongan()->create([
+                'judul' => $pengajuanFormasi->jabatan,
+                'unit_kerja' => $pengajuanFormasi->unit_kerja,
+                'jabatan' => $pengajuanFormasi->jabatan,
+                'jumlah_dibutuhkan' => $pengajuanFormasi->jumlah_dibutuhkan,
+                'deskripsi' => $pengajuanFormasi->tugas ?: $pengajuanFormasi->alasan,
+                'kualifikasi' => $this->kualifikasiLowongan($pengajuanFormasi),
+                'tanggal_tutup' => $pengajuanFormasi->target_waktu,
+                'status' => Lowongan::STATUS_DIPUBLIKASIKAN,
+                'dipublikasikan_oleh' => $reviewer->id,
+                'dipublikasikan_pada' => now(),
+            ]);
         }
         Notifikasi::formasiDiputuskan($pengajuanFormasi);
 
@@ -182,6 +236,18 @@ class PengajuanFormasiController extends Controller
             ->with('success', 'Pengajuan formasi disetujui. Lowongan rekrutmen telah terbit di halaman publik.');
     }
 
+    /** Kualifikasi lowongan dari persyaratan formulir (pendidikan, usia, keahlian). */
+    private function kualifikasiLowongan(PengajuanFormasi $f): ?string
+    {
+        $baris = array_filter([
+            $f->min_pendidikan ? "Pendidikan minimal {$f->min_pendidikan}" : null,
+            $f->min_usia ? "Usia minimal {$f->min_usia} tahun" : null,
+            $f->jumlah_laki || $f->jumlah_perempuan ? "Dibutuhkan: laki-laki {$f->jumlah_laki} orang, perempuan {$f->jumlah_perempuan} orang" : null,
+            $f->kualifikasi,
+        ]);
+
+        return $baris ? implode("\n", $baris) : null;
+    }
     public function reject(Request $request, PengajuanFormasi $pengajuanFormasi): RedirectResponse
     {
         /** @var \App\Models\User $reviewer */
