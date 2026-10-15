@@ -218,6 +218,7 @@
         const jabatan = document.getElementById('f-jabatan');
         const perUnit = @json($jabatanPerUnit);
         const baganPerUnit = @json($baganPerUnit);
+        const ADMIN = @json(auth()->user()->isAdmin());
         const lama = @json(old('jabatan'));
         const digantiLama = (@json(old('diganti', []))).map(Number);
         const slotLama = @json(old('slot_tambahan', []));
@@ -304,17 +305,67 @@
             return { b, penting: ganti };
         }
 
+        // Jenis kelamin posisi baru = isian jumlah. Urutan slot: laki-laki, perempuan, lalu bebas.
+        const JK = [['jumlah_laki', 'Laki-laki', 'L'], ['jumlah_perempuan', 'Perempuan', 'P'], ['jumlah_bebas', 'Bebas (L/P)', 'L/P']];
+        const jkSlot = (i) => {
+            const l = +form.jumlah_laki.value || 0, p = +form.jumlah_perempuan.value || 0;
+            return i < l ? 0 : (i < l + p ? 1 : 2);
+        };
+        const ubahJumlah = (jk, d) => { const f = form[JK[jk][0]]; f.value = Math.max(0, (+f.value || 0) + d); hitung(); };
+
+        // Posisi baru yang sudah ditambahkan (kotak merah): klik untuk ubah keterangan atau hapus.
         function simpulBaru(i) {
-            const b = node('kosong', 'bi-person-plus', slot[i] || 'Posisi baru #' + (i + 1), 'Klik untuk menulis keterangan posisi ini');
+            const jk = JK[jkSlot(i)];
+            const b = node('kosong slot', 'bi-person-plus', (slot[i] || 'Posisi baru #' + (i + 1)) + ' · ' + jk[2], 'Klik untuk ubah keterangan atau hapus posisi ini');
             const l = el('span', 'bagan-lencana'); l.append(el('i', 'bi bi-plus-lg')); b.append(l);
             b.addEventListener('click', () => {
                 Swal.fire({
-                    title: 'Keterangan posisi baru #' + (i + 1), input: 'text', inputValue: slot[i] || '',
-                    inputPlaceholder: 'mis. untuk shift malam / gedung B', inputAttributes: { maxlength: 150 },
-                    showCancelButton: true, confirmButtonText: 'Simpan', cancelButtonText: 'Batal', confirmButtonColor: '#8b1215',
-                }).then((r) => { if (r.isConfirmed) { slot[i] = r.value.trim(); gambar(); } });
+                    titleText: 'Posisi baru #' + (i + 1) + ' (' + jk[1] + ')', input: 'text', inputValue: slot[i] || '',
+                    inputLabel: 'Keterangan', inputPlaceholder: 'mis. untuk shift malam / gedung B', inputAttributes: { maxlength: 150 },
+                    showCancelButton: true, showDenyButton: true, confirmButtonText: 'Simpan', denyButtonText: 'Hapus posisi', cancelButtonText: 'Batal', confirmButtonColor: '#8b1215',
+                }).then((r) => {
+                    if (r.isConfirmed) { slot[i] = r.value.trim(); gambar(); }
+                    if (r.isDenied) { slot.splice(i, 1); ubahJumlah(jkSlot(i), -1); gambar(); }
+                });
             });
             return { b, penting: true };
+        }
+
+        // Kotak merah "+ Tambah posisi" di tiap jabatan: pilih jabatan itu, tanya jenis kelamin & keterangan, jumlah bertambah.
+        function simpulTambah(jab) {
+            const b = node('kosong tambah', 'bi-plus-circle', 'Tambah posisi', 'Tambah posisi baru di ' + jab);
+            b.addEventListener('click', () => tambahSlot(jab));
+            return { b, penting: true };
+        }
+
+        function tambahSlot(jab) {
+            const pindah = total() > 0 && jabatan.value && jabatan.value !== jab;
+            const wadahSwal = el('div', 'text-start');
+            wadahSwal.innerHTML = '<div class="small fw-semibold mb-1">Jenis kelamin</div><div class="d-flex flex-wrap gap-2 mb-3" data-jk></div>'
+                + '<label class="small fw-semibold mb-1" for="swal-ket">Keterangan <span class="fw-normal text-muted">(opsional)</span></label>'
+                + '<input id="swal-ket" class="form-control" maxlength="150" placeholder="mis. untuk shift malam / gedung B">'
+                + (pindah ? '<div class="alert alert-warning small mt-3 mb-0" data-pindah></div>' : '');
+            JK.forEach(([nama, label], k) => {
+                const r = el('input', 'btn-check'); r.type = 'radio'; r.name = 'swal-jk'; r.id = 'swal-jk-' + k; r.value = k; r.checked = k === 2;
+                const lb = el('label', 'btn btn-sm btn-outline-secondary', label); lb.htmlFor = r.id;
+                wadahSwal.querySelector('[data-jk]').append(r, lb);
+            });
+            if (pindah) wadahSwal.querySelector('[data-pindah]').textContent = 'Satu pengajuan untuk satu jabatan: ' + total() + ' posisi baru di ' + jabatan.value + ' akan dipindah ke ' + jab + '.';
+            Swal.fire({
+                titleText: 'Tambah posisi baru — ' + jab, html: wadahSwal, focusConfirm: false,
+                showCancelButton: true, confirmButtonText: 'Tambah', cancelButtonText: 'Batal', confirmButtonColor: '#8b1215',
+                didOpen: () => document.getElementById('swal-ket').focus(),
+                preConfirm: () => ({ jk: +document.querySelector('[name=swal-jk]:checked').value, ket: document.getElementById('swal-ket').value.trim() }),
+            }).then((r) => {
+                if (!r.isConfirmed) return;
+                if (![...jabatan.options].some((o) => o.value === jab)) jabatan.add(new Option(jab, jab));
+                jabatan.value = jab;
+                // Sisipkan di akhir kelompok jenis kelaminnya agar urutan slot tetap L, P, bebas.
+                const l = +form.jumlah_laki.value || 0, p = +form.jumlah_perempuan.value || 0;
+                slot.splice([l, l + p, total()][r.value.jk], 0, r.value.ket);
+                ubahJumlah(r.value.jk, 1);
+                gambar();
+            });
         }
 
         // Satu cabang jabatan: label → anggota berjajar (garis masing-masing) atau rak grid bila banyak.
@@ -323,6 +374,7 @@
             kotak.append(el('div', 'bagan-jabatan', c.jab + ' (' + c.total + ')'), el('div', 'bagan-turun'));
             const simpul = c.isi.map((o) => simpulPegawai(o, mode, kata));
             for (let i = 0; i < c.baru; i++) simpul.push(simpulBaru(i));
+            if (c.tambah) simpul.push(simpulTambah(c.jab));
 
             if (simpul.length <= uk.sejajar) {
                 const anak = el('div', 'bagan-anak');
@@ -376,11 +428,16 @@
             // Cabang per jabatan: anggota (tersaring pencarian) + posisi baru (penambahan) di jabatan terpilih.
             const grup = Object.assign({}, data.grup);
             if (mode === 'penambahan' && jabatan.value && !grup[jabatan.value]) grup[jabatan.value] = [];
+            // Penambahan: tiap jabatan yang boleh diajukan mendapat kotak merah "+ Tambah posisi"
+            // (jabatan unit yang belum berpegawai ikut tampil; Admin tidak, karena daftarnya semua jabatan).
+            const bolehJabatan = new Set(perUnit[unit.value] || []);
+            if (mode === 'penambahan' && !ADMIN) bolehJabatan.forEach((j) => { if (!grup[j]) grup[j] = []; });
             const cabang = [];
             Object.keys(grup).forEach((jab) => {
                 const isi = grup[jab].filter((o) => !kata || o.nama.toLowerCase().includes(kata) || (mode === 'replacement' && dipilih.has(o.id)));
                 const baru = mode === 'penambahan' && jab === jabatan.value ? n : 0;
-                if (isi.length || baru) cabang.push({ jab, isi, baru, total: grup[jab].length, lebar: lebarCabang(isi.length + baru, uk) });
+                const tambah = mode === 'penambahan' && bolehJabatan.has(jab) && (!kata || isi.length > 0 || baru > 0);
+                if (isi.length || baru || tambah) cabang.push({ jab, isi, baru, tambah, total: grup[jab].length, lebar: lebarCabang(isi.length + baru + (tambah ? 1 : 0), uk) });
             });
 
             if (!cabang.length) {
@@ -404,7 +461,8 @@
                     baris.push(kini);
                     kini = { kiri: [c], kanan: [], lk: c.lebar, lka: 0 };
                 });
-                baris.push(kini);                baris.forEach((r, i) => {
+                baris.push(kini);
+                baris.forEach((r, i) => {
                     // Seimbangkan kiri/kanan bila kedua sisi tetap muat; jika tidak, pakai pembagian berurutan.
                     const b = [...r.kiri, ...r.kanan];
                     let k = belah(b);
@@ -435,7 +493,8 @@
             petunjuk.textContent = mode === 'replacement'
                 ? 'Dipilih ' + dipilih.size + ' dari ' + n + ' orang yang dibutuhkan. Hijau = masih aktif, abu = sudah tidak aktif.'
                 : mode === 'penambahan'
-                    ? (jabatan.value ? n + ' kotak merah = posisi baru di ' + jabatan.value + '. Klik kotak untuk menambah keterangan.' : 'Pilih jabatan/posisi di atas agar posisi baru tampil di bagan.')
+                    ? 'Klik kotak merah "+ Tambah posisi" pada jabatan yang dibutuhkan (jabatan & jumlah terisi otomatis).'
+                        + (n && jabatan.value ? ' Sekarang ' + n + ' posisi baru di ' + jabatan.value + '; klik kotaknya untuk ubah keterangan atau hapus.' : '')
                     : 'Bagan menampilkan susunan pegawai unit Anda.';
         }
 

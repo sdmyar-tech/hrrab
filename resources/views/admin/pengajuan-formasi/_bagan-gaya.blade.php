@@ -63,6 +63,9 @@
     .bagan-node.aktif { border-color: var(--b-hijau); background: var(--b-hijau-bg); color: #14532d; }
     .bagan-node.nonaktif { border-color: #c4c7cc; background: var(--b-abu-bg); color: var(--b-abu); }
     .bagan-node.kosong { border-style: dashed; border-color: var(--b-merah); background: var(--b-merah-bg); color: var(--b-merah); }
+    /* Kotak "+ Tambah posisi": merah putus-putus, tengah, menyala saat disorot. */
+    .bagan-node.tambah { justify-content: center; background: transparent; }
+    button.bagan-node.tambah:hover { background: var(--b-merah-bg); }
     .bagan-node.kepala { width: auto; min-width: 180px; max-width: 260px; justify-content: center; border-color: var(--hr-primary); background: #fff; color: var(--admin-text); }
     button.bagan-node { cursor: pointer; transition: transform .12s, box-shadow .12s; }
     button.bagan-node:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(16, 24, 40, .12); }
