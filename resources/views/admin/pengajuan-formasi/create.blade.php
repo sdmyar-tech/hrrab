@@ -331,9 +331,11 @@
             return { b, penting: true };
         }
 
-        // Kotak merah "+ Tambah posisi" di tiap jabatan: pilih jabatan itu, tanya jenis kelamin & keterangan, jumlah bertambah.
+        // Simpul merah kosong "Posisi kosong" (+) di tiap jabatan: pilih jabatan itu, tanya jenis kelamin & keterangan, jumlah bertambah.
         function simpulTambah(jab) {
-            const b = node('kosong tambah', 'bi-plus-circle', 'Tambah posisi', 'Tambah posisi baru di ' + jab);
+            const b = node('kosong tambah', 'bi-person', 'Posisi kosong', 'Klik untuk mengajukan pegawai baru di ' + jab);
+            b.querySelector('.nm').append(el('small', 'sub', 'klik untuk ajukan'));
+            const l = el('span', 'bagan-lencana'); l.append(el('i', 'bi bi-plus-lg')); b.append(l);
             b.addEventListener('click', () => tambahSlot(jab));
             return { b, penting: true };
         }
@@ -352,7 +354,7 @@
             });
             if (pindah) wadahSwal.querySelector('[data-pindah]').textContent = 'Satu pengajuan untuk satu jabatan: ' + total() + ' posisi baru di ' + jabatan.value + ' akan dipindah ke ' + jab + '.';
             Swal.fire({
-                titleText: 'Tambah posisi baru — ' + jab, html: wadahSwal, focusConfirm: false,
+                titleText: 'Ajukan pegawai baru — ' + jab, html: wadahSwal, focusConfirm: false,
                 showCancelButton: true, confirmButtonText: 'Tambah', cancelButtonText: 'Batal', confirmButtonColor: '#8b1215',
                 didOpen: () => document.getElementById('swal-ket').focus(),
                 preConfirm: () => ({ jk: +document.querySelector('[name=swal-jk]:checked').value, ket: document.getElementById('swal-ket').value.trim() }),
@@ -421,14 +423,15 @@
             // Akar: kepala unit (lebih dari satu → berjajar).
             const akar = el('div', 'bagan-akar');
             const deretKepala = el('div', 'bagan-akar-deret');
-            (data.kepala.length ? data.kepala : ['Kepala unit']).forEach((nm) => { const k = node('kepala', 'bi-person-badge', nm); k.disabled = true; deretKepala.append(k); });
+            // Kepala = pegawai aktif (hijau); belum ada kepala tercatat → abu.
+            (data.kepala.length ? data.kepala : ['Kepala unit belum tercatat']).forEach((nm) => { const k = node((data.kepala.length ? 'aktif' : 'nonaktif') + ' kepala', 'bi-person-badge', nm); k.disabled = true; deretKepala.append(k); });
             akar.append(el('div', 'bagan-akar-label', 'Kepala · ' + (unit.value || '-')), deretKepala);
             wadah.append(akar);
 
             // Cabang per jabatan: anggota (tersaring pencarian) + posisi baru (penambahan) di jabatan terpilih.
             const grup = Object.assign({}, data.grup);
             if (mode === 'penambahan' && jabatan.value && !grup[jabatan.value]) grup[jabatan.value] = [];
-            // Penambahan: tiap jabatan yang boleh diajukan mendapat kotak merah "+ Tambah posisi"
+            // Penambahan: tiap jabatan yang boleh diajukan mendapat simpul merah kosong "Posisi kosong"
             // (jabatan unit yang belum berpegawai ikut tampil; Admin tidak, karena daftarnya semua jabatan).
             const bolehJabatan = new Set(perUnit[unit.value] || []);
             if (mode === 'penambahan' && !ADMIN) bolehJabatan.forEach((j) => { if (!grup[j]) grup[j] = []; });
@@ -493,7 +496,7 @@
             petunjuk.textContent = mode === 'replacement'
                 ? 'Dipilih ' + dipilih.size + ' dari ' + n + ' orang yang dibutuhkan. Hijau = masih aktif, abu = sudah tidak aktif.'
                 : mode === 'penambahan'
-                    ? 'Klik kotak merah "+ Tambah posisi" pada jabatan yang dibutuhkan (jabatan & jumlah terisi otomatis).'
+                    ? 'Klik kotak merah "Posisi kosong" (+) pada jabatan yang dibutuhkan untuk mengajukan pegawai baru (jabatan & jumlah terisi otomatis).'
                         + (n && jabatan.value ? ' Sekarang ' + n + ' posisi baru di ' + jabatan.value + '; klik kotaknya untuk ubah keterangan atau hapus.' : '')
                     : 'Bagan menampilkan susunan pegawai unit Anda.';
         }

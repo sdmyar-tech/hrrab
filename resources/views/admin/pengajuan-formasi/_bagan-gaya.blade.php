@@ -62,11 +62,14 @@
     .bagan-node .nm { min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .bagan-node.aktif { border-color: var(--b-hijau); background: var(--b-hijau-bg); color: #14532d; }
     .bagan-node.nonaktif { border-color: #c4c7cc; background: var(--b-abu-bg); color: var(--b-abu); }
+    /* Merah = posisi kosong. Putus-putus = kursi kosong yang bisa diklik untuk diajukan; garis penuh = posisi baru yang sudah diajukan. */
     .bagan-node.kosong { border-style: dashed; border-color: var(--b-merah); background: var(--b-merah-bg); color: var(--b-merah); }
-    /* Kotak "+ Tambah posisi": merah putus-putus, tengah, menyala saat disorot. */
-    .bagan-node.tambah { justify-content: center; background: transparent; }
-    button.bagan-node.tambah:hover { background: var(--b-merah-bg); }
-    .bagan-node.kepala { width: auto; min-width: 180px; max-width: 260px; justify-content: center; border-color: var(--hr-primary); background: #fff; color: var(--admin-text); }
+    .bagan-node.kosong.slot { border-style: solid; }
+    .bagan-node.tambah .sub { display: block; font-size: .64rem; font-weight: 500; opacity: .8; }
+    button.bagan-node.tambah:hover { background: #fbd5d5; }
+    /* Kepala = pegawai aktif (hijau), sedikit lebih tegas. */
+    .bagan-node.kepala { width: auto; min-width: 180px; max-width: 260px; justify-content: center; border-width: 2px; font-weight: 700; }
+    .bagan-node.kepala:disabled { opacity: 1; }
     button.bagan-node { cursor: pointer; transition: transform .12s, box-shadow .12s; }
     button.bagan-node:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(16, 24, 40, .12); }
     button.bagan-node:disabled { cursor: default; opacity: .8; }
