@@ -11,6 +11,7 @@
             align-items: center;
             justify-content: center;
             font-family: var(--hr-font);
+            padding: 16px; /* HP: kartu tidak menempel ke tepi layar */
         }
 
         .login-box {

@@ -15,12 +15,12 @@
                             </h2>
                             <p class="text-muted mb-0">Isi formulir secara bertahap, atau klik langsung tab yang ingin diisi.</p>
                         </div>
-                        <a href="{{ route('admin.pegawai.index') }}" class="btn btn-outline-secondary btn-sm">
+                        <a href="{{ route('admin.pegawai.index') }}" class="btn btn-outline-secondary btn-sm d-none d-md-inline-flex">
                             <i class="bi bi-arrow-left me-1"></i> Kembali
                         </a>
                     </div>
 
-                    <div class="panel-body p-4">
+                    <div class="panel-body p-0 pt-3 p-md-4">{{-- HP: .panel sudah berpadding --}}
                         <form action="{{ isset($pegawai) ? route('admin.pegawai.update', $pegawai->id) : route('admin.pegawai.store') }}"
                             method="POST"
                             enctype="multipart/form-data"

@@ -94,7 +94,7 @@
 
             <div class="col-12 col-xl-7">
                 <section class="panel">
-                    <div class="panel-header">
+                    <div class="panel-header panel-header-baris">
                         <a href="{{ route('admin.absensi.izin', ['bulan' => $bulan->copy()->subMonth()->format('Y-m')]) }}" class="btn btn-light btn-sm" aria-label="Bulan sebelumnya"><i class="bi bi-chevron-left"></i></a>
                         <h2 class="h6 fw-bold mb-0 mx-auto">Izin {{ $bulan->translatedFormat('F Y') }}</h2>
                         <a href="{{ route('admin.absensi.izin', ['bulan' => $bulan->copy()->addMonth()->format('Y-m')]) }}" class="btn btn-light btn-sm" aria-label="Bulan berikutnya"><i class="bi bi-chevron-right"></i></a>

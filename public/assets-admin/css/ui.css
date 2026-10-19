@@ -249,3 +249,56 @@ html[data-theme="dark"] .swal2-popup { background: var(--admin-surface); }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* =====================================================================
+   Tampilan HP (≤ 767.98px) — hasil audit 390px.
+   ===================================================================== */
+@media (max-width: 767.98px) {
+    /* G2: deretan tab/pill satu baris yang bisa digeser, bukan terlipat berantakan. */
+    .nav-tabs, .nav-pills, .pd-tabs, .absensi-nav {
+        flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden;
+        scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    }
+    .nav-tabs::-webkit-scrollbar, .nav-pills::-webkit-scrollbar, .pd-tabs::-webkit-scrollbar { display: none; }
+    .nav-tabs .nav-link, .nav-pills .nav-link, .pd-tabs .nav-link { white-space: nowrap; }
+    .nav-justified > .nav-item, .nav-justified > .nav-link, .nav-fill > .nav-item, .nav-fill > .nav-link { flex: 0 0 auto !important; }
+    /* Masih ada tab di kanan: tepi kanan memudar sebagai petunjuk bisa digeser (kelas dipasang JS). */
+    .bisa-geser-kanan { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+    /* Tab di dalam dropdown (lonceng notifikasi) tetap mengisi lebar. */
+    .dropdown-menu .nav { flex-wrap: wrap !important; overflow: visible; -webkit-mask-image: none; mask-image: none; }
+    .dropdown-menu .nav-fill > .nav-item { flex: 1 1 auto !important; }
+
+    /* G3: filter di dalam panel tidak berpadding ganda → sejajar dengan kartu di bawahnya. */
+    .panel > .panel-filter, .panel > form.panel-filter { padding-left: 0 !important; padding-right: 0 !important; padding-top: 0 !important; }
+
+    /* G1: kartu tabel ringkas — kolom pertama & aksi selebar kartu, kolom lain 2 per baris. */
+    table.table-mobile-cards tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: .9rem; position: relative; }
+    table.table-mobile-cards td { min-width: 0; overflow-wrap: anywhere; }
+    table.table-mobile-cards td:first-child, table.table-mobile-cards td.text-end,
+    table.table-mobile-cards td[colspan], table.table-mobile-cards td.kolom-penuh { grid-column: 1 / -1; }
+    /* Kolom centang (pilih baris) dipindah ke pojok kanan atas; kolom sesudahnya jadi judul kartu. */
+    table.table-mobile-cards td:has(> input[type=checkbox]:only-child), table.table-mobile-cards td:has(> .form-check:only-child) {
+        position: absolute; top: .8rem; right: 1rem; padding: 0; border: 0 !important; width: auto;
+    }
+    table.table-mobile-cards td:has(> input[type=checkbox]:only-child)::before, table.table-mobile-cards td:has(> .form-check:only-child)::before { display: none; }
+    table.table-mobile-cards td:has(> input[type=checkbox]:only-child) + td, table.table-mobile-cards td:has(> .form-check:only-child) + td { grid-column: 1 / -1; padding-right: 2rem; }
+    /* Sel kosong tanpa label (mis. kolom ID tersembunyi) tidak menyisakan jalur kosong. */
+    table.table-mobile-cards td:empty { display: none; }
+
+    /* G4: ringkasan penyetuju menempel ke kartu pengajuannya (bukan kartu terpisah). */
+    table.table-mobile-cards tr:has(+ tr.rk-baris) { margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom-style: dashed; }
+    table.table-mobile-cards tr.rk-baris { display: block; border-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; padding-top: .5rem; }
+    table.table-mobile-cards tr.rk-baris > td { text-align: left; padding: 0; }
+    .rk-chip { border-radius: 8px; }
+    .rk-kepala { flex-wrap: wrap; }
+    .rk-kepala > .min-w-0 { flex: 1 1 180px; }
+    .rk-judul { white-space: normal; }
+
+    /* Keterangan kartu KPI (mis. "perlu perpanjangan/keputusan") boleh turun baris, tidak menempel ke tepi. */
+    .metric-meta .text-truncate { white-space: normal; overflow-wrap: anywhere; }
+    /* Header panel yang harus tetap sebaris (mis. < Bulan > di Izin). */
+    .panel-header.panel-header-baris { flex-direction: row !important; flex-wrap: nowrap !important; align-items: center !important; }
+    /* Bilah simpan editor: keterangan di baris sendiri, Batal & Simpan berdampingan. */
+    .aksi-lengket [data-jumlah-ubah] { flex: 1 0 100%; }
+    .aksi-lengket > .btn { flex: 1 1 0; }
+}

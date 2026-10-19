@@ -44,15 +44,19 @@
                             <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Ditolak</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <input type="date" name="tanggal_dari" class="form-control form-control-sm"
-                            value="{{ request('tanggal_dari') }}" title="Tanggal mulai dari"
-                            onchange="this.form.submit()">
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Dari</span>
+                            <input type="date" name="tanggal_dari" class="form-control form-control-sm" aria-label="Tanggal mulai dari"
+                                value="{{ request('tanggal_dari') }}" title="Tanggal mulai dari" onchange="this.form.submit()">
+                        </div>
                     </div>
-                    <div class="col-md-2">
-                        <input type="date" name="tanggal_sampai" class="form-control form-control-sm"
-                            value="{{ request('tanggal_sampai') }}" title="Tanggal mulai sampai"
-                            onchange="this.form.submit()">
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">s/d</span>
+                            <input type="date" name="tanggal_sampai" class="form-control form-control-sm" aria-label="Tanggal mulai sampai"
+                                value="{{ request('tanggal_sampai') }}" title="Tanggal mulai sampai" onchange="this.form.submit()">
+                        </div>
                     </div>
                     <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterCutiForm'])</div>
                     @if (request()->hasAny(['q', 'jenis_cuti', 'status', 'tanggal_dari', 'tanggal_sampai']))
@@ -194,8 +198,9 @@
 <style>
     /* Kolom aksi cukup lebar untuk dropdown pengganti + tombol (tidak terjepit). */
     /* Mengalahkan aturan global .table td (min-width: 0; kolom terakhir width: 1%). */
-    .table tbody td.kolom-aksi { width: 200px; min-width: 200px; }
+    .table tbody td.kolom-aksi { width: 200px; min-width: 200px; white-space: normal !important; }
     .kolom-aksi .btn-outline-secondary { width: 100%; }
+    .kolom-aksi > .text-muted { display: block; text-align: center; }   /* "Menunggu: …" / "Sudah diproses" di bawah tombol */
 </style>
 <script>
     document.addEventListener('DOMContentLoaded', function () {

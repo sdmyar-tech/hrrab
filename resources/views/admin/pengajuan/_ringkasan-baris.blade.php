@@ -1,10 +1,11 @@
 {{-- Ringkasan singkat di bawah baris daftar (pengajuan yang menunggu keputusan Anda): angka, peringatan, alur mini, riwayat; rincian lengkap bisa dibuka. --}}
-@include('admin.pengajuan._ringkasan-gaya')
 @php
     $ikonAlur = ['selesai' => 'bi-check-circle-fill', 'berjalan' => 'bi-hourglass-split', 'menunggu' => 'bi-circle', 'ditolak' => 'bi-x-circle-fill', 'lewati' => 'bi-dash-circle'];
 @endphp
 <tr class="rk-baris">
     <td colspan="{{ $kolom }}">
+        {{-- Gaya dimuat di dalam sel: <style> di antara dua <tr> memutus selektor "baris sebelum ringkasan". --}}
+        @include('admin.pengajuan._ringkasan-gaya')
         <div class="rk-ringkas">
             <div class="rk-chips">
                 @foreach ($r['angka'] as $a)

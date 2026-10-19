@@ -135,8 +135,19 @@
                     </div>
                     <div class="col-sm-6">
                         <label class="form-label" for="f-atasan">Atasan langsung</label>
-                        <input type="text" name="atasan_langsung" id="f-atasan" class="form-control @error('atasan_langsung') is-invalid @enderror" maxlength="150"
-                            value="{{ old('atasan_langsung', $atasanBawaan) }}" required>
+                        @if (auth()->user()->isAdmin())
+                            {{-- Admin: pilih dari Kepala Bagian, Kepala SDM, dan GM. --}}
+                            <select name="atasan_langsung" id="f-atasan" class="form-select @error('atasan_langsung') is-invalid @enderror" required>
+                                <option value="">-- Pilih kepala / GM --</option>
+                                @foreach ($pilihanAtasan as $nama => $label)
+                                    <option value="{{ $nama }}" @selected(old('atasan_langsung') === $nama)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        @else
+                            {{-- Pengaju = atasan langsung; tidak bisa diubah (server juga memaksa nilai ini). --}}
+                            <input type="text" name="atasan_langsung" id="f-atasan" class="form-control" value="{{ $atasanBawaan }}" readonly>
+                            <div class="form-text"><i class="bi bi-lock-fill me-1"></i>Otomatis sesuai pengaju.</div>
+                        @endif
                         @error('atasan_langsung')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12">

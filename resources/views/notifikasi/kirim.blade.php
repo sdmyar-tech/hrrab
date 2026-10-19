@@ -60,8 +60,12 @@
                                         <tbody>
                                             @foreach ($belumLengkap as $r)
                                                 <tr>
-                                                    <td class="fw-semibold text-nowrap">{{ $r['user']->name }}<span class="d-block text-muted fw-normal">{{ $r['user']->roleLabel() }} &middot; {{ $r['user']->dataPegawai?->kepegawaian?->unit_kerja }}</span></td>
-                                                    <td class="text-muted">{{ implode(', ', array_slice($r['kurang'], 0, 4)) }}{{ count($r['kurang']) > 4 ? ' +' . (count($r['kurang']) - 4) : '' }}</td>
+                                                    {{-- Satu kolom agar tidak terpotong di kotak sempit (HP). --}}
+                                                    <td>
+                                                        <span class="fw-semibold">{{ $r['user']->name }}</span>
+                                                        <span class="d-block text-muted">{{ $r['user']->roleLabel() }} &middot; {{ $r['user']->dataPegawai?->kepegawaian?->unit_kerja }}</span>
+                                                        <span class="d-block text-danger-emphasis"><i class="bi bi-exclamation-circle me-1"></i>Kurang: {{ implode(', ', array_slice($r['kurang'], 0, 4)) }}{{ count($r['kurang']) > 4 ? ' +' . (count($r['kurang']) - 4) : '' }}</span>
+                                                    </td>
                                                 </tr>
                                             @endforeach
                                         </tbody>

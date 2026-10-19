@@ -38,6 +38,8 @@
     @include('layouts.partials.js')
 
     @include('layouts.partials.sweetalert')
+@include('layouts.partials.tanpa-spasi')
+@include('layouts.partials.geser-tab')
 </body>
 
 </html>

@@ -67,6 +67,8 @@
     .dash-hero { background: linear-gradient(135deg, rgba(136, 15, 18, .08), rgba(42, 120, 214, .06)); border-radius: 1rem; }
     .dash-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--viz-track); flex: none; display: inline-flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 600; color: var(--viz-muted); }
     .dash-scroll { max-height: 420px; overflow-y: auto; }
+    /* HP: kartu tabel lebih tinggi per baris → ruang gulir lebih besar (inline max-height ikut dikalahkan). */
+    @media (max-width: 767.98px) { .dash-scroll { max-height: 70vh !important; } }
     /* Isi masih bisa digulir: baris terbawah memudar agar tidak terlihat "terpotong". */
     .dash-scroll.ada-lanjutan { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent); }
     .dash-mini-stat { border: 1px solid var(--viz-track); border-radius: .6rem; padding: .55rem .7rem; }

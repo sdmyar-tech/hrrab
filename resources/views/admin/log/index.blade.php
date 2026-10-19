@@ -59,8 +59,8 @@
                     <option value="berhasil" @selected(request('status') === 'berhasil')>Berhasil</option>
                     <option value="gagal" @selected(request('status') === 'gagal')>Gagal</option>
                 </select>
-                <input type="date" name="dari" class="form-control" value="{{ request('dari') }}" title="Dari tanggal" onchange="this.form.submit()">
-                <input type="date" name="sampai" class="form-control" value="{{ request('sampai') }}" title="Sampai tanggal" onchange="this.form.submit()">
+                <div class="input-group log-rentang"><span class="input-group-text">Dari</span><input type="date" name="dari" class="form-control" value="{{ request('dari') }}" title="Dari tanggal" aria-label="Dari tanggal" onchange="this.form.submit()"></div>
+                <div class="input-group log-rentang"><span class="input-group-text">s/d</span><input type="date" name="sampai" class="form-control" value="{{ request('sampai') }}" title="Sampai tanggal" aria-label="Sampai tanggal" onchange="this.form.submit()"></div>
                 @include('partials.urut', ['urutForm' => 'filterLogForm'])
                 <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i>Terapkan</button>
                 @if (request()->hasAny(['q', 'modul', 'aksi', 'role', 'status', 'dari', 'sampai']))
@@ -182,6 +182,7 @@
     .log-filter { display: flex; flex-wrap: wrap; gap: .5rem; padding: 1rem; border-bottom: 1px solid var(--admin-border); background: var(--admin-surface-soft); }
     .log-filter .log-cari { flex: 1 1 260px; }
     .log-filter .form-select, .log-filter input[type=date] { flex: 0 1 auto; width: auto; }
+    .log-filter .log-rentang { flex: 0 1 210px; width: auto; }
     .log-tanggal { position: sticky; top: 0; z-index: 1; padding: .45rem 1rem; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
         color: var(--admin-muted); background: var(--admin-surface-soft); border-bottom: 1px solid var(--admin-border); }
     .log-baris { display: flex; gap: .75rem; padding: .75rem 1rem; border-bottom: 1px solid var(--admin-border); }
@@ -207,7 +208,7 @@
         color: var(--admin-text) !important; text-decoration: none; }
     .log-arsip:hover { background: var(--hr-primary-soft); border-color: #e4b0b1; }
     @media (max-width: 575.98px) {
-        .log-filter .form-select, .log-filter input[type=date], .log-filter .btn { flex: 1 1 calc(50% - .5rem); }
+        .log-filter .form-select, .log-filter input[type=date], .log-filter .btn, .log-filter .log-rentang { flex: 1 1 calc(50% - .5rem); }
         .log-jam { width: 36px; }
     }
 </style>

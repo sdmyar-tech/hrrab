@@ -23,7 +23,7 @@
             <form method="GET" class="mb-3" style="max-width:420px">
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="search" name="q" class="form-control" value="{{ request('q') }}" placeholder="Cari nama, kata kunci, atau ID…" aria-label="Cari">
+                    <input type="search" name="q" class="form-control" value="{{ request('q') }}" placeholder="Cari nama / ID…" aria-label="Cari nama, kata kunci, atau ID">
                     <button class="btn btn-primary">Cari</button>
                 </div>
             </form>

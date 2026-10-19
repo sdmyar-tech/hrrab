@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Lowongan;
 use App\Models\PengajuanFormasi;
+use App\Models\User;
 use App\Support\ExcelExporter;
 use App\Support\RekrutmenAccess;
 use App\Support\Urutan;
@@ -117,7 +118,9 @@ class PengajuanFormasiController extends Controller
             'unitOptions' => $units,
             // Jabatan per unit: dropdown jabatan hanya menampilkan jabatan yang ada di unit terpilih.
             'jabatanPerUnit' => collect($units)->mapWithKeys(fn ($u) => [$u => $user->isAdmin() ? \App\Models\Jabatan::daftar() : RekrutmenAccess::jabatanUnit($u)])->all(),
-            'atasanBawaan' => $user->dataPegawai?->nama_lengkap ?? $user->name,
+            // Atasan langsung = pengaju (readonly); Admin memilih dari daftar kepala & GM.
+            'atasanBawaan' => $this->namaAtasan($user),
+            'pilihanAtasan' => $user->isAdmin() ? $this->pilihanAtasan() : [],
             // Bagan unit (kepala + pegawai per jabatan) untuk memilih pegawai yang digantikan / posisi baru.
             'baganPerUnit' => collect($units)->mapWithKeys(fn ($u) => [$u => RekrutmenAccess::baganUnit($u)])->all(),
         ]);
@@ -138,6 +141,10 @@ class PengajuanFormasiController extends Controller
             $request->merge(['unit_kerja' => $unitBoleh[0]]);
         }
         $unit = (string) $request->input('unit_kerja');
+        // Atasan langsung tidak bisa diubah pengaju (selalu dirinya); hanya Admin yang memilih.
+        if (! $user->isAdmin()) {
+            $request->merge(['atasan_langsung' => $this->namaAtasan($user)]);
+        }
         $bagan = in_array($unit, $unitBoleh, true) ? RekrutmenAccess::baganUnit($unit) : ['grup' => []];
         $idBagan = collect($bagan['grup'])->flatten(1)->pluck('id')->all();
         $jabatanBoleh = $user->isAdmin() ? \App\Models\Jabatan::daftar() : (in_array($unit, $unitBoleh, true) ? RekrutmenAccess::jabatanUnit($unit) : []);
@@ -158,7 +165,7 @@ class PengajuanFormasiController extends Controller
             'min_usia' => ['nullable', 'integer', 'min:15', 'max:70'],
             'kualifikasi' => ['required', 'string', 'max:2000'],
             'jabatan' => ['required', 'string', Rule::in($jabatanBoleh)],
-            'atasan_langsung' => ['required', 'string', 'max:150'],
+            'atasan_langsung' => ['required', 'string', 'max:150', ...($user->isAdmin() ? [Rule::in(array_keys($this->pilihanAtasan()))] : [])],
             'tugas' => ['required', 'string', 'max:3000'],
         ], [
             'unit_kerja.required' => 'Pilih unit yang membutuhkan pegawai.',
@@ -172,6 +179,7 @@ class PengajuanFormasiController extends Controller
             'min_pendidikan.required' => 'Pilih minimal pendidikan.',
             'kualifikasi.required' => 'Isi minimal kemampuan / keahlian yang dibutuhkan.',
             'atasan_langsung.required' => 'Isi atasan langsung.',
+            'atasan_langsung.in' => 'Atasan langsung harus kepala atau GM yang terdaftar.',
             'tugas.required' => 'Isi tugas dan tanggung jawab.',
         ]);
 
@@ -271,6 +279,28 @@ class PengajuanFormasiController extends Controller
         return redirect()
             ->route('admin.pengajuan-formasi.index')
             ->with('success', 'Pengajuan formasi disetujui. Lowongan rekrutmen telah terbit di halaman publik.');
+    }
+
+    /** Nama atasan yang tercatat untuk akun: nama di Data Pegawai, atau nama akun bila tidak tertaut. */
+    private function namaAtasan(User $user): string
+    {
+        return $user->dataPegawai?->nama_lengkap ?? $user->name;
+    }
+
+    /**
+     * Pilihan atasan langsung untuk Admin: semua Kepala Bagian, Kepala SDM, dan GM.
+     *
+     * @return array<string, string> nama => label (nama — peran · unit dipimpin)
+     */
+    private function pilihanAtasan(): array
+    {
+        return once(fn () => User::with('dataPegawai:id,nama_lengkap')
+            ->whereIn('role', [User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM, User::ROLE_GM])
+            ->get()
+            ->mapWithKeys(fn (User $u) => [$this->namaAtasan($u) => $this->namaAtasan($u) . ' — ' . $u->roleLabel()
+                . (($unit = $u->unitsDipimpin()) ? ' · ' . implode(', ', $unit) : '')])
+            ->sortKeys()
+            ->all());
     }
 
     /** Kualifikasi lowongan dari persyaratan formulir (pendidikan, usia, keahlian). */
