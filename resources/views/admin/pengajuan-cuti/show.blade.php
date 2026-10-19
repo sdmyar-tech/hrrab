@@ -23,92 +23,14 @@
         </div>
 
         <div class="row g-3">
-            <div class="col-lg-6">
-                <div class="panel p-4 mb-3">
-                    <h2 class="h6 fw-bold mb-3">Data Pegawai</h2>
-                    <dl class="row mb-0 small">
-                        <dt class="col-5 text-muted">Nama Lengkap</dt>
-                        <dd class="col-7">{{ $pengajuanCuti->dataPegawai?->nama_lengkap ?? '-' }}</dd>
-                        <dt class="col-5 text-muted">NIP</dt>
-                        <dd class="col-7">{{ $pengajuanCuti->dataPegawai?->nip ?? '-' }}</dd>
-                        <dt class="col-5 text-muted">Jabatan</dt>
-                        <dd class="col-7">{{ $pengajuanCuti->dataPegawai?->kepegawaian?->jabatan ?? '-' }}</dd>
-                        <dt class="col-5 text-muted">Unit Kerja</dt>
-                        <dd class="col-7">{{ $pengajuanCuti->unit_kerja ?? $pengajuanCuti->dataPegawai?->kepegawaian?->unit_kerja ?? '-' }}</dd>
-                    </dl>
-                </div>
-
+            <div class="col-lg-7">
                 <div class="panel p-4">
-                    <h2 class="h6 fw-bold mb-3">Detail Pengajuan</h2>
-                    <dl class="row mb-0 small">
-                        <dt class="col-5 text-muted">Jenis Cuti</dt>
-                        <dd class="col-7">
-                            {{ $pengajuanCuti->jenisLabel() }}
-                            @if ($pengajuanCuti->kategoriBesarLabel())
-                                <br><span class="text-muted">{{ $pengajuanCuti->kategoriBesarLabel() }}</span>
-                            @endif
-                        </dd>
-                        <dt class="col-5 text-muted">Tanggal</dt>
-                        <dd class="col-7">{{ $pengajuanCuti->tanggal_mulai->translatedFormat('d M Y') }} &ndash; {{ $pengajuanCuti->tanggal_selesai->translatedFormat('d M Y') }}</dd>
-                        <dt class="col-5 text-muted">Lama Cuti</dt>
-                        <dd class="col-7">{{ $pengajuanCuti->lama_cuti }} hari</dd>
-                        <dt class="col-5 text-muted">Sisa Cuti Tahunan</dt>
-                        <dd class="col-7">{{ \App\Models\PengajuanCuti::sisaCutiTahunan($pengajuanCuti->dataPegawai, $pengajuanCuti->tanggal_mulai->year) }} / {{ \App\Models\PengajuanCuti::ANNUAL_QUOTA }} hari</dd>
-                        <dt class="col-5 text-muted">Jumlah Pengajuan Tahun Ini</dt>
-                        <dd class="col-7">{{ \App\Models\PengajuanCuti::jumlahPengajuanTahunIni($pengajuanCuti->dataPegawai, $pengajuanCuti->tanggal_mulai->year) }} / {{ \App\Models\PengajuanCuti::MAX_PENGAJUAN_PER_TAHUN }} kali</dd>
-                        <dt class="col-5 text-muted">Pengganti Tugas</dt>
-                        <dd class="col-7">{{ $pengajuanCuti->pengganti_nama ?? '-' }}</dd>
-                        <dt class="col-5 text-muted">Keterangan</dt>
-                        <dd class="col-7">{{ $pengajuanCuti->keterangan ?? '-' }}</dd>
-                        <dt class="col-5 text-muted">Tanggal Pengajuan</dt>
-                        <dd class="col-7">{{ optional($pengajuanCuti->created_at)->translatedFormat('d M Y H:i') }}</dd>
-                    </dl>
+                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-clipboard-data me-1"></i>Ringkasan Pengajuan</h2>
+                    @include('admin.pengajuan._ringkasan', ['r' => \App\Support\RingkasanPengajuan::cuti($pengajuanCuti)])
                 </div>
             </div>
 
-            <div class="col-lg-6">
-                <div class="panel p-4 mb-3">
-                    <h2 class="h6 fw-bold mb-3">Riwayat Persetujuan</h2>
-                    <dl class="row mb-0 small">
-                        <dt class="col-5 text-muted">Tahap Saat Ini</dt>
-                        <dd class="col-7">{{ $pengajuanCuti->isPending() ? $pengajuanCuti->currentLevelLabel() : '-' }}</dd>
-                        <dt class="col-5 text-muted">Disetujui Kepala Bagian</dt>
-                        <dd class="col-7">
-                            @if ($pengajuanCuti->kepala_approved_by)
-                                {{ $pengajuanCuti->kepalaApprovedBy?->name }}
-                                <br><span class="text-muted">{{ optional($pengajuanCuti->kepala_approved_at)->translatedFormat('d M Y H:i') }}</span>
-                            @else
-                                <span class="text-muted">Belum</span>
-                            @endif
-                        </dd>
-                        <dt class="col-5 text-muted">Disetujui GM</dt>
-                        <dd class="col-7">
-                            @if ($pengajuanCuti->gm_approved_by)
-                                {{ $pengajuanCuti->gmApprovedBy?->name }}
-                                @if ($pengajuanCuti->gm_pengganti)
-                                    <span class="badge text-bg-warning">GM pengganti</span>
-                                @endif
-                                <br><span class="text-muted">{{ optional($pengajuanCuti->gm_approved_at)->translatedFormat('d M Y H:i') }}</span>
-                            @else
-                                <span class="text-muted">Belum</span>
-                            @endif
-                        </dd>
-                        <dt class="col-5 text-muted">Disetujui Akhir (Kepala SDM/GM)</dt>
-                        <dd class="col-7">
-                            @if ($pengajuanCuti->approved_by)
-                                {{ $pengajuanCuti->approvedBy?->name }}
-                                <br><span class="text-muted">{{ optional($pengajuanCuti->approved_at)->translatedFormat('d M Y H:i') }}</span>
-                            @else
-                                <span class="text-muted">Belum</span>
-                            @endif
-                        </dd>
-                        @if ($pengajuanCuti->status === 'rejected' && $pengajuanCuti->catatan_admin)
-                            <dt class="col-5 text-muted">Alasan Penolakan</dt>
-                            <dd class="col-7">{{ $pengajuanCuti->catatan_admin }}</dd>
-                        @endif
-                    </dl>
-                </div>
-
+            <div class="col-lg-5">
                 @if ($pengajuanCuti->isPending())
                     @if (\App\Support\PengajuanWorkflow::canAct(auth()->user(), $pengajuanCuti))
                         <div class="panel p-4">

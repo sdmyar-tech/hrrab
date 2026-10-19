@@ -175,6 +175,10 @@
                                     @endif
                                 </td>
                             </tr>
+                        {{-- Rincian untuk penyetuju: tampil sebelum tombol Setujui/Tolak diklik. --}}
+                        @if ($item->isPending() && \App\Support\RekrutmenAccess::canReviewFormasi(auth()->user(), $item))
+                            @include('admin.pengajuan._ringkasan-baris', ['r' => \App\Support\RingkasanPengajuan::formasi($item), 'kolom' => 7])
+                        @endif
                         @empty
                             <tr>
                                 <td colspan="7" class="text-center py-4 text-muted">

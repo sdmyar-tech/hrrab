@@ -23,81 +23,14 @@
         </div>
 
         <div class="row g-3">
-            <div class="col-lg-6">
-                <div class="panel p-4 mb-3">
-                    <h2 class="h6 fw-bold mb-3">Data Pegawai</h2>
-                    <dl class="row mb-0 small">
-                        <dt class="col-5 text-muted">Nama Lengkap</dt>
-                        <dd class="col-7">{{ $pengajuanLembur->dataPegawai?->nama_lengkap ?? '-' }}</dd>
-                        <dt class="col-5 text-muted">NIP</dt>
-                        <dd class="col-7">{{ $pengajuanLembur->dataPegawai?->nip ?? '-' }}</dd>
-                        <dt class="col-5 text-muted">Jabatan</dt>
-                        <dd class="col-7">{{ $pengajuanLembur->dataPegawai?->kepegawaian?->jabatan ?? '-' }}</dd>
-                        <dt class="col-5 text-muted">Unit Kerja</dt>
-                        <dd class="col-7">{{ $pengajuanLembur->unit_kerja ?? $pengajuanLembur->dataPegawai?->kepegawaian?->unit_kerja ?? '-' }}</dd>
-                    </dl>
-                </div>
-
+            <div class="col-lg-7">
                 <div class="panel p-4">
-                    <h2 class="h6 fw-bold mb-3">Detail Pengajuan</h2>
-                    <dl class="row mb-0 small">
-                        <dt class="col-5 text-muted">Tanggal</dt>
-                        <dd class="col-7">{{ $pengajuanLembur->tanggal->translatedFormat('d M Y') }} <span class="text-muted">({{ $pengajuanLembur->hari }})</span></dd>
-                        <dt class="col-5 text-muted">Jam</dt>
-                        <dd class="col-7">{{ substr((string) $pengajuanLembur->jam_mulai, 0, 5) }} &ndash; {{ substr((string) $pengajuanLembur->jam_selesai, 0, 5) }}</dd>
-                        <dt class="col-5 text-muted">Jumlah Jam</dt>
-                        <dd class="col-7">{{ $pengajuanLembur->jumlah_jam }} jam</dd>
-                        <dt class="col-5 text-muted">Uraian Tugas</dt>
-                        <dd class="col-7" style="white-space:pre-line;">{{ $pengajuanLembur->uraian_tugas }}</dd>
-                        <dt class="col-5 text-muted">Tanggal Pengajuan</dt>
-                        <dd class="col-7">{{ optional($pengajuanLembur->created_at)->translatedFormat('d M Y H:i') }}</dd>
-                    </dl>
+                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-clipboard-data me-1"></i>Ringkasan Pengajuan</h2>
+                    @include('admin.pengajuan._ringkasan', ['r' => \App\Support\RingkasanPengajuan::lembur($pengajuanLembur)])
                 </div>
             </div>
 
-            <div class="col-lg-6">
-                <div class="panel p-4 mb-3">
-                    <h2 class="h6 fw-bold mb-3">Riwayat Persetujuan</h2>
-                    <dl class="row mb-0 small">
-                        <dt class="col-5 text-muted">Tahap Saat Ini</dt>
-                        <dd class="col-7">{{ $pengajuanLembur->isPending() ? $pengajuanLembur->currentLevelLabel() : '-' }}</dd>
-                        <dt class="col-5 text-muted">Disetujui Kepala Bagian</dt>
-                        <dd class="col-7">
-                            @if ($pengajuanLembur->kepala_approved_by)
-                                {{ $pengajuanLembur->kepalaApprovedBy?->name }}
-                                <br><span class="text-muted">{{ optional($pengajuanLembur->kepala_approved_at)->translatedFormat('d M Y H:i') }}</span>
-                            @else
-                                <span class="text-muted">Belum</span>
-                            @endif
-                        </dd>
-                        <dt class="col-5 text-muted">Disetujui GM</dt>
-                        <dd class="col-7">
-                            @if ($pengajuanLembur->gm_approved_by)
-                                {{ $pengajuanLembur->gmApprovedBy?->name }}
-                                @if ($pengajuanLembur->gm_pengganti)
-                                    <span class="badge text-bg-warning">GM pengganti</span>
-                                @endif
-                                <br><span class="text-muted">{{ optional($pengajuanLembur->gm_approved_at)->translatedFormat('d M Y H:i') }}</span>
-                            @else
-                                <span class="text-muted">Belum</span>
-                            @endif
-                        </dd>
-                        <dt class="col-5 text-muted">Disetujui Akhir (Kepala SDM/GM)</dt>
-                        <dd class="col-7">
-                            @if ($pengajuanLembur->approved_by)
-                                {{ $pengajuanLembur->approvedBy?->name }}
-                                <br><span class="text-muted">{{ optional($pengajuanLembur->approved_at)->translatedFormat('d M Y H:i') }}</span>
-                            @else
-                                <span class="text-muted">Belum</span>
-                            @endif
-                        </dd>
-                        @if ($pengajuanLembur->status === 'rejected' && $pengajuanLembur->catatan_admin)
-                            <dt class="col-5 text-muted">Alasan Penolakan</dt>
-                            <dd class="col-7">{{ $pengajuanLembur->catatan_admin }}</dd>
-                        @endif
-                    </dl>
-                </div>
-
+            <div class="col-lg-5">
                 @if ($pengajuanLembur->isPending())
                     @if (\App\Support\PengajuanWorkflow::canAct(auth()->user(), $pengajuanLembur))
                         <div class="panel p-4">
