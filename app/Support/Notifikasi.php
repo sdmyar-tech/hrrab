@@ -120,20 +120,20 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
     }
 
     /** H-30: tugas untuk penilai memberi nilai evaluasi kontrak. */
-    public static function evaluasiKontrakBaru(\App\Models\EvaluasiKontrak $e): void
+    public static function evaluasiKontrakBaru(\App\Models\EvaluasiKontrak $e, ?iterable $penerima = null): void
     {
         $e->loadMissing('dataPegawai.kepegawaian');
-        self::kirim(EvaluasiKontrakAlur::penilai($e->dataPegawai, $e->unit_kerja), 'Evaluasi kontrak: beri penilaian',
+        self::kirim($penerima ?? EvaluasiKontrakAlur::penilai($e->dataPegawai, $e->unit_kerja), 'Evaluasi kontrak: beri penilaian',
             ($e->dataPegawai?->nama_lengkap ?? '-') . " ({$e->unit_kerja}) — kontrak habis " . $e->tanggal_habis_kontrak->translatedFormat('d M Y') . '.',
             route('admin.evaluasi-kontrak.show', $e), Pemberitahuan::JENIS_TUGAS, 'bi-clipboard-check', 'Sistem',
             TugasNotifikasi::penanda(TugasNotifikasi::EVALUASI_KONTRAK, $e->id));
     }
 
     /** Nilai sudah masuk → pemutus (Kepala SDM, atau GM untuk kontrak Kepala SDM) memutuskan. */
-    public static function evaluasiKontrakDiisi(\App\Models\EvaluasiKontrak $e): void
+    public static function evaluasiKontrakDiisi(\App\Models\EvaluasiKontrak $e, ?iterable $penerima = null): void
     {
         $e->loadMissing('dataPegawai.kepegawaian');
-        $pemutus = EvaluasiKontrakAlur::pemutus($e->dataPegawai, $e->unit_kerja)->filter(fn (User $u) => EvaluasiKontrakAlur::bisaPutuskan($u, $e));
+        $pemutus = $penerima ?? EvaluasiKontrakAlur::pemutus($e->dataPegawai, $e->unit_kerja)->filter(fn (User $u) => EvaluasiKontrakAlur::bisaPutuskan($u, $e));
         self::kirim($pemutus, 'Evaluasi kontrak menunggu keputusan',
             ($e->dataPegawai?->nama_lengkap ?? '-') . " — total nilai {$e->total_nilai} (" . \App\Models\EvaluasiKontrak::predikat($e->total_nilai) . ').',
             route('admin.evaluasi-kontrak.show', $e), Pemberitahuan::JENIS_TUGAS, 'bi-clipboard-check', null,

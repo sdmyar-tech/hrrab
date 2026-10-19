@@ -42,6 +42,7 @@ Schedule::command('log:bersihkan')->monthlyOn(1, '01:00');
 // H-30 sebelum kontrak habis: buat evaluasi kontrak & beri tugas ke atasan (aman dijalankan berulang).
 Artisan::command('kontrak:evaluasi', function () {
     $baru = App\Support\EvaluasiKontrakAlur::buatJatuhTempo();
-    $this->info("Evaluasi kontrak baru: {$baru}");
+    $dikabari = App\Support\EvaluasiKontrakAlur::kirimTugasTertunda();
+    $this->info("Evaluasi kontrak baru: {$baru}; penilai/pemutus dikabari ulang: {$dikabari}");
 })->purpose('Buat evaluasi kontrak untuk pegawai yang kontraknya habis dalam 30 hari');
 Schedule::command('kontrak:evaluasi')->dailyAt('06:00');

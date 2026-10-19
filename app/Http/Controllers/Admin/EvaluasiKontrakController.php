@@ -32,6 +32,7 @@ class EvaluasiKontrakController extends Controller
 
         // Jaring pengaman bila penjadwal harian belum jalan: buat evaluasi yang sudah jatuh tempo (H-30).
         EvaluasiKontrakAlur::buatJatuhTempo();
+        EvaluasiKontrakAlur::kirimTugasTertunda();
 
         $semua = EvaluasiKontrak::with('dataPegawai.kepegawaian', 'pengisi')->get()
             ->filter(fn (EvaluasiKontrak $e) => EvaluasiKontrakAlur::bisaLihat($user, $e));

@@ -11,56 +11,81 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 
 /**
- * Alur evaluasi kontrak: dibuat otomatis H-30 → PENILAI memberi nilai → PEMUTUS memutuskan → data kontrak diperbarui.
- *
- * Penilai:  staf → atasan langsung (alur khusus → kepala unit, termasuk kepala sekolah → GM bila unit tanpa kepala);
- *           kepala bagian (memimpin unit) → GM bagiannya; Kepala SDM → GM.
- * Pemutus:  Kepala SDM; khusus kontrak Kepala SDM sendiri → GM.
- * Bila penilai sekaligus pemutus (Kepala SDM untuk staf SDM, GM untuk Kepala SDM) → nilai & keputusan sekali isi.
+ * Alur evaluasi kontrak — tahapannya SAMA dengan alur pengajuan cuti/lembur (PengajuanWorkflow):
+ * alur khusus pegawai (atasan/GM/tahap tertentu) bila ada; selain itu staf → kepala unit → Kepala SDM,
+ * kepala bagian → GM → Kepala SDM, Kepala SDM / GM → GM.
+ *   - PENILAI = penyetuju tahap pertama (hanya memberi nilai),
+ *   - PEMUTUS = penyetuju tahap terakhir (keputusan + jadwal TTD); bila hanya satu tahap → sekali isi.
+ * Beda dengan pengajuan: kepala unit tidak disyaratkan punya hak menyetujui cuti (kepala sekolah tetap menilai).
  */
 class EvaluasiKontrakAlur
 {
     /** @return Collection<int, User> */
     public static function penilai(DataPegawai $pegawai, ?string $unit = null): Collection
     {
-        $unit ??= $pegawai->kepegawaian?->unit_kerja;
-        if (self::adalahKepalaSdm($pegawai) || self::memimpinUnit($pegawai)) {
-            return self::gmBagian($pegawai, $unit);
-        }
-
-        return self::atasan($pegawai, $unit);
+        return self::tahap($pegawai, $unit)[0]['penyetuju'];
     }
 
     /** @return Collection<int, User> */
     public static function pemutus(DataPegawai $pegawai, ?string $unit = null): Collection
     {
-        return self::adalahKepalaSdm($pegawai)
-            ? self::gmBagian($pegawai, $unit ?? $pegawai->kepegawaian?->unit_kerja)
-            : PengajuanWorkflow::kepalaSdmTersedia($pegawai->id);
+        $tahap = self::tahap($pegawai, $unit);
+
+        return end($tahap)['penyetuju'];
     }
 
-    /** Atasan langsung staf: alur khusus → kepala unit (termasuk kepala sekolah) → GM (unit tanpa kepala). */
-    private static function atasan(DataPegawai $pegawai, ?string $unit): Collection
+    /**
+     * Tahap persetujuan pegawai, meniru PengajuanWorkflow::rute (initialLevel → nextLevel).
+     *
+     * @return list<array{level: string, penyetuju: Collection<int, User>}>
+     */
+    public static function tahap(DataPegawai $pegawai, ?string $unit = null): array
     {
-        if (($alur = AlurPegawai::milik($pegawai->id)) && $alur->atasan) {
-            return collect([$alur->atasan]);
+        $unit ??= $pegawai->kepegawaian?->unit_kerja;
+        $alur = AlurPegawai::with(['atasan', 'gm'])->where('data_pegawai_id', $pegawai->id)->first();
+        $peran = User::where('data_pegawai_id', $pegawai->id)->pluck('role');
+        $pimpinan = $peran->contains(User::ROLE_GM) || $peran->contains(User::ROLE_KEPALA_SDM);   // GM / Kepala SDM
+        $kepala = $peran->contains(User::ROLE_KEPALA_BAGIAN) || self::memimpinUnit($pegawai);
+
+        // Tahap awal (seperti initialLevel).
+        $level = match (true) {
+            (bool) $alur => $alur->daftarTahap()[0] ?? PengajuanWorkflow::LEVEL_KEPALA_SDM,
+            $pimpinan, $kepala => PengajuanWorkflow::LEVEL_GM,
+            self::kepalaUnit($unit, $pegawai->id)->isEmpty() => PengajuanWorkflow::LEVEL_GM,
+            default => PengajuanWorkflow::LEVEL_KEPALA_DIVISI,
+        };
+
+        $tahap = [];
+        while ($level && count($tahap) < 3) {
+            $penyetuju = match ($level) {
+                PengajuanWorkflow::LEVEL_KEPALA_DIVISI => $alur?->atasan ? collect([$alur->atasan])
+                    : (($k = self::kepalaUnit($unit, $pegawai->id))->isNotEmpty() ? $k : self::gmBagian($pegawai, $unit)),
+                PengajuanWorkflow::LEVEL_GM => $alur?->gm ? collect([$alur->gm]) : self::gmBagian($pegawai, $unit),
+                default => PengajuanWorkflow::kepalaSdmTersedia($pegawai->id),
+            };
+            // Tahap berikutnya (seperti nextLevel).
+            $berikut = $alur ? $alur->tahapSetelah($level) : match ($level) {
+                PengajuanWorkflow::LEVEL_KEPALA_DIVISI => PengajuanWorkflow::LEVEL_KEPALA_SDM,
+                PengajuanWorkflow::LEVEL_GM => $pimpinan ? null : PengajuanWorkflow::LEVEL_KEPALA_SDM,
+                default => null,
+            };
+            // Atasan yang juga Kepala SDM langsung menjadi tahap akhir (tidak dua kali).
+            if ($level === PengajuanWorkflow::LEVEL_KEPALA_DIVISI && $berikut === PengajuanWorkflow::LEVEL_KEPALA_SDM
+                && $penyetuju->isNotEmpty() && $penyetuju->every->isKepalaSdm()) {
+                $berikut = null;
+            }
+            $tahap[] = ['level' => $level, 'penyetuju' => $penyetuju];
+            $level = $berikut;
         }
-        $kepala = self::kepalaUnit($unit, $pegawai->id);
 
-        return $kepala->isNotEmpty() ? $kepala : self::gmBagian($pegawai, $unit);
+        return $tahap ?: [['level' => PengajuanWorkflow::LEVEL_KEPALA_SDM, 'penyetuju' => PengajuanWorkflow::kepalaSdmTersedia($pegawai->id)]];
     }
-
     /** GM yang memegang bagian/unit pegawai (bukan dirinya); bila tak ada, semua GM. */
     private static function gmBagian(DataPegawai $pegawai, ?string $unit): Collection
     {
         $gm = User::gmUtamaUntuk($unit)->reject(fn (User $g) => $g->data_pegawai_id && $g->data_pegawai_id === $pegawai->id);
 
         return $gm->isNotEmpty() ? $gm->values() : PengajuanWorkflow::gmTersedia($pegawai->id);
-    }
-
-    private static function adalahKepalaSdm(DataPegawai $pegawai): bool
-    {
-        return User::where('data_pegawai_id', $pegawai->id)->where('role', User::ROLE_KEPALA_SDM)->exists();
     }
 
     private static function memimpinUnit(DataPegawai $pegawai): bool
@@ -188,8 +213,8 @@ class EvaluasiKontrakAlur
         $baru = 0;
         Kepegawaian::with('dataPegawai')
             ->when($hanyaPegawaiId, fn ($q) => $q->where('data_pegawai_id', $hanyaPegawaiId))
+            // Tanggal habis kontrak yang menentukan (apa pun label status kerjanya); angkat tetap mengosongkan tanggal ini.
             ->where('status_rekrutmen', 'Aktif')
-            ->where(fn ($q) => $q->whereNull('status_kerja')->orWhere('status_kerja', '!=', 'Tetap'))
             ->whereNotNull('tanggal_habis_kontrak')
             ->whereDate('tanggal_habis_kontrak', '>=', now()->toDateString())
             ->whereDate('tanggal_habis_kontrak', '<=', now()->addDays(EvaluasiKontrak::HARI_SEBELUM)->toDateString())
@@ -213,6 +238,34 @@ class EvaluasiKontrakAlur
     }
 
     /**
+     * Pastikan penilai (menunggu penilaian) / pemutus (menunggu keputusan) yang berlaku SAAT INI sudah menerima
+     * notifikasi tugas — mis. evaluasi dibuat sebelum kepala unit diganti, atau notifikasi awal terlewat.
+     *
+     * @return int jumlah penerima yang baru dikabari
+     */
+    public static function kirimTugasTertunda(): int
+    {
+        $dikirim = 0;
+        EvaluasiKontrak::with('dataPegawai.kepegawaian')->where('status', '!=', EvaluasiKontrak::STATUS_SELESAI)->get()
+            ->each(function (EvaluasiKontrak $e) use (&$dikirim) {
+                if (! $e->dataPegawai) {
+                    return;
+                }
+                $menilai = $e->status === EvaluasiKontrak::STATUS_MENUNGGU_ATASAN;
+                $petugas = $menilai ? self::penilai($e->dataPegawai, $e->unit_kerja) : self::pemutus($e->dataPegawai, $e->unit_kerja);
+                $belum = $petugas->reject(fn (User $u) => $u->notifications()->where('data->tugas->tipe', TugasNotifikasi::EVALUASI_KONTRAK)
+                    ->where('data->tugas->id', $e->id)->exists())->values();
+                if ($belum->isEmpty()) {
+                    return;
+                }
+                $menilai ? Notifikasi::evaluasiKontrakBaru($e, $belum) : Notifikasi::evaluasiKontrakDiisi($e, $belum);
+                $dikirim += $belum->count();
+            });
+
+        return $dikirim;
+    }
+
+    /**
      * Kontrak (tanggal habis) ini sudah punya evaluasi yang masih berlaku: sedang berjalan, atau selesai dengan
      * keputusan "tidak diperpanjang". Keputusan perpanjang / angkat tetap yang tanggal kontraknya ternyata kembali
      * ke tanggal ini (dan masih Kontrak) dianggap tidak berlaku lagi → perlu evaluasi baru; yang lama jadi riwayat.
@@ -232,7 +285,7 @@ class EvaluasiKontrakAlur
     public static function bersihkanUsang(int $pegawaiId): int
     {
         $k = Kepegawaian::where('data_pegawai_id', $pegawaiId)->first();
-        $berlaku = $k && $k->status_rekrutmen === 'Aktif' && $k->status_kerja !== 'Tetap' ? $k->tanggal_habis_kontrak?->toDateString() : null;
+        $berlaku = $k && $k->status_rekrutmen === 'Aktif' ? $k->tanggal_habis_kontrak?->toDateString() : null;
 
         return EvaluasiKontrak::where('data_pegawai_id', $pegawaiId)
             ->where('status', EvaluasiKontrak::STATUS_MENUNGGU_ATASAN)
