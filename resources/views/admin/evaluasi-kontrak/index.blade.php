@@ -64,13 +64,13 @@
                                 <td><span class="badge {{ $e->badgeClass() }}">{{ $e->statusLabel() }}</span></td>
                                 <td>
                                     @if ($e->rekomendasi)
-                                        {{ \App\Models\EvaluasiKontrak::labelPilihan($e->rekomendasi, $e->lama_bulan) }}
+                                        {{ $e->labelRekomendasi() }}
                                         <small class="d-block text-muted">rata-rata {{ $e->rataNilai() ?? '-' }}/4 ({{ \App\Models\EvaluasiKontrak::predikat($e->rataNilai()) }}) · {{ $e->pengisi?->name }}</small>
                                     @else
                                         <span class="text-muted">Belum diisi</span>
                                     @endif
                                 </td>
-                                <td>{{ $e->keputusan ? \App\Models\EvaluasiKontrak::labelPilihan($e->keputusan, $e->keputusan_lama_bulan) : '-' }}</td>
+                                <td>{{ $e->keputusan ? $e->labelKeputusan() : '-' }}</td>
                                 <td class="text-end">
                                     @php $tugas = \App\Support\EvaluasiKontrakAlur::tugasUntuk(auth()->user(), $e); @endphp
                                     <a href="{{ route('admin.evaluasi-kontrak.show', $e) }}" class="btn btn-sm {{ $tugas ? 'btn-primary' : 'btn-outline-secondary' }}">

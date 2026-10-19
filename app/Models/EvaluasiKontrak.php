@@ -32,8 +32,8 @@ class EvaluasiKontrak extends Model
 
     protected $fillable = [
         'data_pegawai_id', 'unit_kerja', 'status_kerja', 'tanggal_habis_kontrak', 'status',
-        'rekomendasi', 'lama_bulan', 'nilai', 'total_nilai', 'rata_nilai', 'periode_mulai', 'periode_selesai', 'catatan', 'diisi_oleh', 'diisi_pada',
-        'keputusan', 'keputusan_lama_bulan', 'catatan_sdm', 'diputuskan_oleh', 'diputuskan_pada',
+        'rekomendasi', 'lama_bulan', 'naik_gaji', 'naik_gaji_nominal', 'naik_gaji_keterangan', 'nilai', 'total_nilai', 'rata_nilai', 'periode_mulai', 'periode_selesai', 'catatan', 'diisi_oleh', 'diisi_pada',
+        'keputusan', 'keputusan_lama_bulan', 'keputusan_naik_gaji', 'keputusan_naik_gaji_nominal', 'catatan_sdm', 'diputuskan_oleh', 'diputuskan_pada',
     ];
 
     protected $casts = [
@@ -42,6 +42,10 @@ class EvaluasiKontrak extends Model
         'diputuskan_pada' => 'datetime',
         'lama_bulan' => 'integer',
         'keputusan_lama_bulan' => 'integer',
+        'naik_gaji' => 'boolean',
+        'keputusan_naik_gaji' => 'boolean',
+        'naik_gaji_nominal' => 'integer',
+        'keputusan_naik_gaji_nominal' => 'integer',
         'nilai' => 'array',
         'total_nilai' => 'integer',
         'rata_nilai' => 'float',
@@ -82,10 +86,28 @@ class EvaluasiKontrak extends Model
         };
     }
 
-    /** "Perpanjang kontrak 12 bulan" / "Angkat jadi pegawai tetap" / "Tidak diperpanjang". */
-    public static function labelPilihan(?string $pilihan, ?int $lama = null): string
+    /** "Perpanjang kontrak 12 bulan + naik gaji Rp 300.000" / "Angkat jadi pegawai tetap" / "Tidak diperpanjang". */
+    public static function labelPilihan(?string $pilihan, ?int $lama = null, bool $naikGaji = false, ?int $nominal = null): string
     {
-        return ($pilihan ? self::PILIHAN[$pilihan] ?? $pilihan : '-') . ($pilihan === self::PERPANJANG && $lama ? " {$lama} bulan" : '');
+        return ($pilihan ? self::PILIHAN[$pilihan] ?? $pilihan : '-') . ($pilihan === self::PERPANJANG && $lama ? " {$lama} bulan" : '')
+            . ($naikGaji && $pilihan !== self::TIDAK ? ' + naik gaji' . ($nominal ? ' ' . self::rupiah($nominal) : '') : '');
+    }
+
+    public static function rupiah(?int $n): string
+    {
+        return $n === null ? '-' : 'Rp ' . number_format($n, 0, ',', '.');
+    }
+
+    /** Label rekomendasi atasan lengkap (termasuk usulan naik gaji). */
+    public function labelRekomendasi(): string
+    {
+        return self::labelPilihan($this->rekomendasi, $this->lama_bulan, (bool) $this->naik_gaji, $this->naik_gaji_nominal);
+    }
+
+    /** Label keputusan Kepala SDM lengkap (termasuk naik gaji). */
+    public function labelKeputusan(): string
+    {
+        return self::labelPilihan($this->keputusan, $this->keputusan_lama_bulan, (bool) $this->keputusan_naik_gaji, $this->keputusan_naik_gaji_nominal);
     }
 
     /** Semua butir penilaian: [nomor => teks] (config/penilaian_kontrak.php). */

@@ -134,7 +134,7 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
     {
         $sdm = User::where('role', User::ROLE_KEPALA_SDM)->get()->filter(fn (User $u) => EvaluasiKontrakAlur::bisaPutuskan($u, $e));
         self::kirim($sdm, 'Evaluasi kontrak menunggu keputusan',
-            ($e->dataPegawai?->nama_lengkap ?? '-') . ' — rekomendasi atasan: ' . \App\Models\EvaluasiKontrak::labelPilihan($e->rekomendasi, $e->lama_bulan) . '.',
+            ($e->dataPegawai?->nama_lengkap ?? '-') . ' — rekomendasi atasan: ' . $e->labelRekomendasi() . '.',
             route('admin.evaluasi-kontrak.show', $e), Pemberitahuan::JENIS_TUGAS, 'bi-clipboard-check', null,
             TugasNotifikasi::penanda(TugasNotifikasi::EVALUASI_KONTRAK, $e->id));
     }
@@ -143,7 +143,7 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
     public static function evaluasiKontrakDiputuskan(\App\Models\EvaluasiKontrak $e): void
     {
         self::kirim($e->diisi_oleh ? User::find($e->diisi_oleh) : null, 'Evaluasi kontrak diputuskan',
-            ($e->dataPegawai?->nama_lengkap ?? '-') . ': ' . \App\Models\EvaluasiKontrak::labelPilihan($e->keputusan, $e->keputusan_lama_bulan) . '.',
+            ($e->dataPegawai?->nama_lengkap ?? '-') . ': ' . $e->labelKeputusan() . '.',
             route('admin.evaluasi-kontrak.show', $e), Pemberitahuan::JENIS_INFO, 'bi-check-circle');
     }
 

@@ -85,7 +85,7 @@
                         @endif
                         <div class="ek-kartu"><span>Cuti {{ now()->year }}</span><strong>{{ $cutiTahunIni }} hari</strong></div>
                         <div class="ek-kartu"><span>Evaluasi sebelumnya</span><strong>{{ $riwayat->count() }} kali</strong>
-                            @if ($r = $riwayat->first())<small>{{ EK::labelPilihan($r->keputusan ?? $r->rekomendasi, $r->keputusan_lama_bulan ?? $r->lama_bulan) }}{{ $r->rata_nilai ? ' · ' . $r->rata_nilai . '/4' : '' }}</small>@endif
+                            @if ($r = $riwayat->first())<small>{{ $r->keputusan ? $r->labelKeputusan() : $r->labelRekomendasi() }}{{ $r->rata_nilai ? ' · ' . $r->rata_nilai . '/4' : '' }}</small>@endif
                         </div>
                     </div>
                     @unless ($absensi && ($absensi['hari_kerja'] ?? 0) > 0)
@@ -174,6 +174,22 @@
                                     @endforeach
                                 </select>
                             </div>
+                            {{-- Naik gaji: hanya catatan nominal + keterangan, tidak mengubah data gaji. --}}
+                            <div class="mb-3 pk-naik" data-tampil-naik>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" name="naik_gaji" id="naik" value="1" @checked(old('naik_gaji', $e->naik_gaji))>
+                                    <label class="form-check-label fw-semibold small" for="naik">Usulkan naik gaji</label>
+                                </div>
+                                <div class="mt-2" data-naik-isi>
+                                    <div class="input-group mb-2">
+                                        <span class="input-group-text">Rp</span>
+                                        <input type="text" inputmode="numeric" name="naik_gaji_nominal" class="form-control" data-rupiah placeholder="300.000" aria-label="Nominal kenaikan gaji"
+                                            value="{{ old('naik_gaji_nominal', $e->naik_gaji_nominal ? number_format($e->naik_gaji_nominal, 0, ',', '.') : '') }}">
+                                    </div>
+                                    <input type="text" name="naik_gaji_keterangan" class="form-control" maxlength="255" placeholder="Keterangan (mis. mulai kontrak baru)" value="{{ old('naik_gaji_keterangan', $e->naik_gaji_keterangan) }}">
+                                    <div class="form-text">Hanya catatan usulan — tidak mengubah data gaji.</div>
+                                </div>
+                            </div>
                             <label class="form-label fw-semibold small" for="catatan">Catatan <span class="fw-normal text-muted" data-wajib-catatan>(opsional)</span></label>
                             <textarea name="catatan" id="catatan" rows="3" class="form-control mb-3" maxlength="1000" placeholder="Pencapaian, hal yang perlu diperbaiki, alasan rekomendasi…">{{ old('catatan', $e->catatan) }}</textarea>
                             @if ($ksLangsung)
@@ -186,7 +202,8 @@
                                 <p class="small text-muted mt-2 mb-0">Terakhir diisi {{ $e->pengisi?->name }} · {{ $e->diisi_pada?->translatedFormat('d M Y H:i') }}</p>
                             @endif
                         @elseif ($e->rekomendasi)
-                            <p class="mb-1 fw-semibold">{{ EK::labelPilihan($e->rekomendasi, $e->lama_bulan) }}</p>
+                            <p class="mb-1 fw-semibold">{{ $e->labelRekomendasi() }}</p>
+                            @if ($e->naik_gaji && $e->naik_gaji_keterangan)<p class="small mb-1"><i class="bi bi-cash-coin me-1"></i>{{ $e->naik_gaji_keterangan }}</p>@endif
                             @if ($e->catatan)<p class="small mb-1" style="white-space: pre-line;">{{ $e->catatan }}</p>@endif
                             <p class="small text-muted mb-0">{{ $e->pengisi?->name }} · {{ $e->diisi_pada?->translatedFormat('d M Y H:i') }}</p>
                         @else
@@ -197,7 +214,7 @@
                     <section class="panel">
                         <h2 class="h6 fw-bold mb-3"><i class="bi bi-patch-check"></i>Keputusan Kepala SDM</h2>
                         @if ($e->keputusan)
-                            <p class="mb-1 fw-semibold">{{ EK::labelPilihan($e->keputusan, $e->keputusan_lama_bulan) }}</p>
+                            <p class="mb-1 fw-semibold">{{ $e->labelKeputusan() }}</p>
                             @if ($e->catatan_sdm)<p class="small mb-1">{{ $e->catatan_sdm }}</p>@endif
                             <p class="small text-muted mb-{{ $bisaPutuskan ? 3 : 0 }}">{{ $e->pemutus?->name }} · {{ $e->diputuskan_pada?->translatedFormat('d M Y H:i') }}</p>
                         @endif
@@ -212,6 +229,17 @@
                                     <option value="{{ $bln }}" @selected((int) old('keputusan_lama_bulan', $e->keputusan_lama_bulan ?? $e->lama_bulan ?? 12) === $bln)>{{ $bln }} bulan</option>
                                 @endforeach
                             </select>
+                            <div class="mb-2 pk-naik" data-tampil-naik-sdm>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" name="keputusan_naik_gaji" form="formPutuskan" id="naik-sdm" value="1" @checked(old('keputusan_naik_gaji', $e->keputusan ? $e->keputusan_naik_gaji : $e->naik_gaji))>
+                                    <label class="form-check-label small fw-semibold" for="naik-sdm">Setujui naik gaji{{ $e->naik_gaji ? ' (diusulkan ' . EK::rupiah($e->naik_gaji_nominal) . ')' : '' }}</label>
+                                </div>
+                                <div class="input-group input-group-sm mt-2" data-naik-isi-sdm>
+                                    <span class="input-group-text">Rp</span>
+                                    <input type="text" inputmode="numeric" name="keputusan_naik_gaji_nominal" form="formPutuskan" class="form-control" data-rupiah aria-label="Nominal kenaikan gaji disetujui"
+                                        value="{{ old('keputusan_naik_gaji_nominal', ($nominalAwal = $e->keputusan_naik_gaji_nominal ?? $e->naik_gaji_nominal) ? number_format($nominalAwal, 0, ',', '.') : '') }}">
+                                </div>
+                            </div>
                             <textarea name="catatan_sdm" form="formPutuskan" rows="2" class="form-control mb-2" maxlength="1000" placeholder="Catatan keputusan (opsional)">{{ old('catatan_sdm', $e->catatan_sdm) }}</textarea>
                             <p class="small text-muted mb-2"><i class="bi bi-info-circle me-1"></i>Perpanjang: tanggal habis kontrak dimundurkan. Angkat tetap: status kerja jadi Tetap.</p>
                             <button type="submit" form="formPutuskan" class="btn btn-success w-100"><i class="bi bi-check2-circle me-1"></i>Simpan keputusan</button>
@@ -304,16 +332,39 @@
                 isi.querySelector('[name=catatan]').required = v === 'tidak';
                 isi.querySelector('[data-wajib-catatan]').textContent = v === 'tidak' ? '(wajib — alasan tidak diperpanjang)' : '(opsional)';
             };
+            // Naik gaji: tidak untuk "Tidak diperpanjang"; nominal & keterangan tampil saat dicentang.
+            const naik = isi.querySelector('[name=naik_gaji]');
+            const aturNaik = () => {
+                const v = (isi.querySelector('[name=rekomendasi]:checked') || {}).value;
+                isi.querySelector('[data-tampil-naik]').hidden = v === 'tidak';
+                isi.querySelector('[data-naik-isi]').hidden = !naik.checked;
+                isi.querySelector('[name=naik_gaji_nominal]').required = naik.checked && v !== 'tidak';
+            };
+            naik.addEventListener('change', aturNaik);
+            isi.querySelectorAll('[name=rekomendasi]').forEach((r) => r.addEventListener('change', aturNaik));
+            aturNaik();
             isi.querySelectorAll('[name=rekomendasi]').forEach((r) => r.addEventListener('change', atur));
             atur();
             hitung();
         }
         const putus = document.querySelector('[name=keputusan][form=formPutuskan]');
         if (putus) {
-            const atur = () => { document.querySelector('[data-tampil-jika-sdm]').hidden = putus.value !== 'perpanjang'; };
+            const naikSdm = document.querySelector('[name=keputusan_naik_gaji]');
+            const atur = () => {
+                document.querySelector('[data-tampil-jika-sdm]').hidden = putus.value !== 'perpanjang';
+                document.querySelector('[data-tampil-naik-sdm]').hidden = putus.value === 'tidak';
+                document.querySelector('[data-naik-isi-sdm]').hidden = !naikSdm.checked;
+            };
+            naikSdm.addEventListener('change', atur);
             putus.addEventListener('change', atur);
             atur();
         }
+
+        // Nominal rupiah: tampil dengan titik ribuan saat diketik (server menyimpan angkanya saja).
+        document.querySelectorAll('[data-rupiah]').forEach((el) => el.addEventListener('input', () => {
+            const angka = el.value.replace(/\D/g, '');
+            el.value = angka ? Number(angka).toLocaleString('id-ID') : '';
+        }));
     });
 </script>
 @endsection

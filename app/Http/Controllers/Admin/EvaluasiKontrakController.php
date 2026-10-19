@@ -89,9 +89,14 @@ class EvaluasiKontrakController extends Controller
         abort_unless(EvaluasiKontrakAlur::bisaIsi($user, $e), 403, 'Hanya atasan pegawai ini yang dapat mengisi evaluasi.');
 
         $butir = EvaluasiKontrak::butir();
+        $this->angkaSaja($request, 'naik_gaji_nominal');
         $data = $request->validate([
             'rekomendasi' => ['required', Rule::in(array_keys(EvaluasiKontrak::PILIHAN))],
             'lama_bulan' => ['nullable', 'required_if:rekomendasi,' . EvaluasiKontrak::PERPANJANG, 'integer', Rule::in(EvaluasiKontrak::LAMA_BULAN)],
+            // Naik gaji: hanya catatan nominal + keterangan (tidak terhubung ke penggajian).
+            'naik_gaji' => ['nullable', 'boolean'],
+            'naik_gaji_nominal' => ['nullable', 'required_if_accepted:naik_gaji', 'integer', 'min:1', 'max:100000000'],
+            'naik_gaji_keterangan' => ['nullable', 'string', 'max:255'],
             'nilai' => ['required', 'array'],
             'nilai.*' => ['integer', Rule::in(array_keys(config('penilaian_kontrak.skala')))],
             'periode_mulai' => ['nullable', 'date'],
@@ -100,6 +105,7 @@ class EvaluasiKontrakController extends Controller
         ], [
             'rekomendasi.required' => 'Pilih rekomendasi.',
             'lama_bulan.required_if' => 'Pilih lama perpanjangan.',
+            'naik_gaji_nominal.required_if_accepted' => 'Isi nominal kenaikan gaji.',
             'nilai.required' => 'Isi penilaian setiap butir.',
             'nilai.*.in' => 'Nilai hanya 1–4.',
             'periode_selesai.after_or_equal' => 'Akhir periode penilaian tidak boleh sebelum awalnya.',
@@ -117,9 +123,15 @@ class EvaluasiKontrakController extends Controller
         $langsungTetapkan = $user->isKepalaSdm();
         $baruDiisi = $e->status === EvaluasiKontrak::STATUS_MENUNGGU_ATASAN;
         $lama = $data['rekomendasi'] === EvaluasiKontrak::PERPANJANG ? (int) $data['lama_bulan'] : null;
+        // Tidak diperpanjang → tidak ada naik gaji.
+        $naik = $data['rekomendasi'] !== EvaluasiKontrak::TIDAK && $request->boolean('naik_gaji');
+        $nominal = $naik ? (int) $data['naik_gaji_nominal'] : null;
         $e->update([
             'rekomendasi' => $data['rekomendasi'],
             'lama_bulan' => $lama,
+            'naik_gaji' => $naik,
+            'naik_gaji_nominal' => $nominal,
+            'naik_gaji_keterangan' => $naik ? ($data['naik_gaji_keterangan'] ?? null) : null,
             'nilai' => $nilai->sortKeys()->all(),
             'total_nilai' => $nilai->sum(),
             'rata_nilai' => round($nilai->avg(), 2),
@@ -132,6 +144,8 @@ class EvaluasiKontrakController extends Controller
             ...($langsungTetapkan ? [
                 'keputusan' => $data['rekomendasi'],
                 'keputusan_lama_bulan' => $lama,
+                'keputusan_naik_gaji' => $naik,
+                'keputusan_naik_gaji_nominal' => $nominal,
                 'diputuskan_oleh' => $user->id,
                 'diputuskan_pada' => now(),
             ] : []),
@@ -156,18 +170,25 @@ class EvaluasiKontrakController extends Controller
         $e = $evaluasiKontrak->load('dataPegawai.kepegawaian');
         abort_unless(EvaluasiKontrakAlur::bisaPutuskan($user, $e), 403, 'Keputusan evaluasi kontrak diambil Kepala SDM setelah atasan mengisi.');
 
+        $this->angkaSaja($request, 'keputusan_naik_gaji_nominal');
         $data = $request->validate([
             'keputusan' => ['required', Rule::in(array_keys(EvaluasiKontrak::PILIHAN))],
+            'keputusan_naik_gaji' => ['nullable', 'boolean'],
+            'keputusan_naik_gaji_nominal' => ['nullable', 'required_if_accepted:keputusan_naik_gaji', 'integer', 'min:1', 'max:100000000'],
             'keputusan_lama_bulan' => ['nullable', 'required_if:keputusan,' . EvaluasiKontrak::PERPANJANG, 'integer', Rule::in(EvaluasiKontrak::LAMA_BULAN)],
             'catatan_sdm' => ['nullable', 'string', 'max:1000'],
         ], [
             'keputusan.required' => 'Pilih keputusan.',
             'keputusan_lama_bulan.required_if' => 'Pilih lama perpanjangan.',
+            'keputusan_naik_gaji_nominal.required_if_accepted' => 'Isi nominal kenaikan gaji.',
         ]);
+        $naik = $data['keputusan'] !== EvaluasiKontrak::TIDAK && $request->boolean('keputusan_naik_gaji');
 
         $e->update([
             ...$data,
             'keputusan_lama_bulan' => $data['keputusan'] === EvaluasiKontrak::PERPANJANG ? $data['keputusan_lama_bulan'] : null,
+            'keputusan_naik_gaji' => $naik,
+            'keputusan_naik_gaji_nominal' => $naik ? (int) $data['keputusan_naik_gaji_nominal'] : null,
             'diputuskan_oleh' => $user->id,
             'diputuskan_pada' => now(),
             'status' => EvaluasiKontrak::STATUS_SELESAI,
@@ -176,6 +197,14 @@ class EvaluasiKontrakController extends Controller
         Notifikasi::evaluasiKontrakDiputuskan($e);
 
         return redirect()->route('admin.evaluasi-kontrak.show', $e)->with('success', 'Keputusan tersimpan. ' . $hasil);
+    }
+
+    /** Nominal boleh diketik "Rp 300.000" / "300.000": simpan angkanya saja. */
+    private function angkaSaja(Request $request, string $kolom): void
+    {
+        if ($request->filled($kolom)) {
+            $request->merge([$kolom => preg_replace('/\D/', '', (string) $request->input($kolom))]);
+        }
     }
 
     private function pengguna(): User
