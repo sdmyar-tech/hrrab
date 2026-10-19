@@ -138,20 +138,34 @@ class EvaluasiKontrakAlur
             ->whereDate('tanggal_habis_kontrak', '<=', now()->addDays(EvaluasiKontrak::HARI_SEBELUM)->toDateString())
             ->get()
             ->each(function (Kepegawaian $k) use (&$baru) {
-                if (! $k->dataPegawai) {
+                if (! $k->dataPegawai || self::sudahDitangani($k)) {
                     return;
                 }
-                $e = EvaluasiKontrak::firstOrCreate(
-                    ['data_pegawai_id' => $k->data_pegawai_id, 'tanggal_habis_kontrak' => $k->tanggal_habis_kontrak->toDateString()],
-                    ['unit_kerja' => $k->unit_kerja, 'status_kerja' => $k->status_kerja, 'status' => EvaluasiKontrak::STATUS_MENUNGGU_ATASAN],
-                );
-                if ($e->wasRecentlyCreated) {
-                    $baru++;
-                    Notifikasi::evaluasiKontrakBaru($e);
-                }
+                $e = EvaluasiKontrak::create([
+                    'data_pegawai_id' => $k->data_pegawai_id,
+                    'tanggal_habis_kontrak' => $k->tanggal_habis_kontrak->toDateString(),
+                    'unit_kerja' => $k->unit_kerja,
+                    'status_kerja' => $k->status_kerja,
+                    'status' => EvaluasiKontrak::STATUS_MENUNGGU_ATASAN,
+                ]);
+                $baru++;
+                Notifikasi::evaluasiKontrakBaru($e);
             });
 
         return $baru;
+    }
+
+    /**
+     * Kontrak (tanggal habis) ini sudah punya evaluasi yang masih berlaku: sedang berjalan, atau selesai dengan
+     * keputusan "tidak diperpanjang". Keputusan perpanjang / angkat tetap yang tanggal kontraknya ternyata kembali
+     * ke tanggal ini (dan masih Kontrak) dianggap tidak berlaku lagi → perlu evaluasi baru; yang lama jadi riwayat.
+     */
+    private static function sudahDitangani(Kepegawaian $k): bool
+    {
+        $terakhir = EvaluasiKontrak::where('data_pegawai_id', $k->data_pegawai_id)
+            ->whereDate('tanggal_habis_kontrak', $k->tanggal_habis_kontrak)->latest('id')->first();
+
+        return $terakhir && ($terakhir->status !== EvaluasiKontrak::STATUS_SELESAI || $terakhir->keputusan === EvaluasiKontrak::TIDAK);
     }
 
     /**
