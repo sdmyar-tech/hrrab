@@ -6,12 +6,13 @@ use App\Models\AlurPegawai;
 use App\Models\DataPegawai;
 use App\Models\EvaluasiKontrak;
 use App\Models\Kepegawaian;
+use App\Models\Penugasan;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
 /**
  * Alur evaluasi kontrak: dibuat otomatis H-30 → atasan mengisi → Kepala SDM memutuskan → data kontrak diperbarui.
- * Atasan = aturan yang sama dengan persetujuan cuti: atasan alur khusus → kepala unit → GM (unit tanpa kepala).
+ * Atasan = atasan alur khusus → kepala unit pegawai (termasuk kepala sekolah yang tidak menyetujui cuti) → GM (unit tanpa kepala).
  */
 class EvaluasiKontrakAlur
 {
@@ -22,13 +23,36 @@ class EvaluasiKontrakAlur
         if (($alur = AlurPegawai::milik($pegawai->id)) && $alur->atasan) {
             return collect([$alur->atasan]);
         }
-        $kepala = PengajuanWorkflow::kepalaUnit($unit, $pegawai->id);
+        $kepala = self::kepalaUnit($unit, $pegawai->id);
         if ($kepala->isNotEmpty()) {
             return $kepala;
         }
         $gm = User::gmUtamaUntuk($unit)->reject(fn (User $g) => $g->data_pegawai_id && $g->data_pegawai_id === $pegawai->id);
 
         return $gm->isNotEmpty() ? $gm->values() : PengajuanWorkflow::gmTersedia($pegawai->id);
+    }
+
+    /**
+     * Kepala unit (dari penugasan kepala aktif + GM tanpa data pegawai yang memegang unit), selain pegawai itu sendiri.
+     * Berbeda dengan PengajuanWorkflow::kepalaUnit: TIDAK mensyaratkan hak menyetujui cuti, karena kepala sekolah
+     * (SMA/SMP/SMK) tetap atasan yang menilai kontrak walau tidak memproses cuti.
+     *
+     * @return Collection<int, User>
+     */
+    private static function kepalaUnit(?string $unit, int $kecualiPegawaiId): Collection
+    {
+        if (! $unit) {
+            return collect();
+        }
+
+        return User::query()
+            ->whereIn('role', [User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM, User::ROLE_GM])
+            ->where(fn ($w) => $w
+                ->whereIn('data_pegawai_id', Penugasan::aktif()->kepala()->where('unit_kerja', $unit)
+                    ->where('data_pegawai_id', '!=', $kecualiPegawaiId)->select('data_pegawai_id'))
+                ->orWhereIn('id', User::gmKepalaTanpaPegawai($unit)->select('id')))
+            ->orderBy('name')
+            ->get();
     }
 
     public static function adalahAtasan(User $user, EvaluasiKontrak $e): bool
@@ -69,9 +93,11 @@ class EvaluasiKontrakAlur
         return self::lihatSemua($user) || self::adalahAtasan($user, $e);
     }
 
+    /** Pimpinan, penyetuju, kepala unit (termasuk kepala sekolah), atau atasan di alur khusus seseorang. */
     public static function bolehMembuka(User $user): bool
     {
-        return self::lihatSemua($user) || $user->can(User::ABILITY_APPROVE);
+        return self::lihatSemua($user) || $user->can(User::ABILITY_APPROVE) || ! empty($user->unitsDipimpin())
+            || AlurPegawai::where('atasan_user_id', $user->id)->exists();
     }
 
     /** Masih ada tugas untuk $user: isi (atasan, menunggu atasan) atau putuskan (Kepala SDM, menunggu SDM). */
@@ -100,10 +126,11 @@ class EvaluasiKontrakAlur
      *
      * @return int jumlah evaluasi baru
      */
-    public static function buatJatuhTempo(): int
+    public static function buatJatuhTempo(?int $hanyaPegawaiId = null): int
     {
         $baru = 0;
         Kepegawaian::with('dataPegawai')
+            ->when($hanyaPegawaiId, fn ($q) => $q->where('data_pegawai_id', $hanyaPegawaiId))
             ->where('status_rekrutmen', 'Aktif')
             ->where(fn ($q) => $q->whereNull('status_kerja')->orWhere('status_kerja', '!=', 'Tetap'))
             ->whereNotNull('tanggal_habis_kontrak')

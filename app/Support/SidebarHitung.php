@@ -36,6 +36,10 @@ class SidebarHitung
         if (RekrutmenAccess::canReview($user)) {
             $hitung['lamaran'] = Lamaran::where('status', Lamaran::STATUS_MENUNGGU_VERIFIKASI)->count();
         }
+        // Sekali sehari (siapa pun yang membuka aplikasi): buat evaluasi yang baru masuk H-30 — tidak bergantung cron.
+        if (\Illuminate\Support\Facades\Cache::add('evaluasi-kontrak:jatuh-tempo:' . now()->toDateString(), true, now()->endOfDay())) {
+            EvaluasiKontrakAlur::buatJatuhTempo();
+        }
         if (EvaluasiKontrakAlur::bolehMembuka($user)) {
             $hitung['evaluasi_kontrak'] = EvaluasiKontrakAlur::jumlahTugas($user);
         }

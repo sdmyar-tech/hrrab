@@ -43,6 +43,13 @@ class Kepegawaian extends Model
                 $k->tanggal_keluar = now()->toDateString();
             }
         });
+
+        // Kontrak diubah jadi habis ≤ 30 hari lagi → evaluasi kontrak langsung dibuat (tidak menunggu jadwal harian).
+        static::saved(function (Kepegawaian $k) {
+            if ($k->wasChanged(['tanggal_habis_kontrak', 'status_kerja', 'status_rekrutmen']) || $k->wasRecentlyCreated) {
+                \App\Support\EvaluasiKontrakAlur::buatJatuhTempo($k->data_pegawai_id);
+            }
+        });
     }
 
     public function dataPegawai(): BelongsTo

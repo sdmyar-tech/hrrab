@@ -159,6 +159,10 @@ private static function kartu(User $user, Collection $aktif, Collection $kontrak
                 ->whereDate('tanggal', '<=', now())->count(), 'url' => route('interview.saya'), 'ikon' => 'bi-chat-square-text'];
             $tugas[] = ['label' => 'Konfirmasi onboarding', 'jumlah' => self::onboardingMenunggu($user), 'url' => route('admin.lamaran.index'), 'ikon' => 'bi-clipboard-check'];
         }
+        if (EvaluasiKontrakAlur::bolehMembuka($user)) {
+            $tugas[] = ['label' => $user->isKepalaSdm() ? 'Isi / putuskan evaluasi kontrak' : 'Isi evaluasi kontrak (H-30)', 'jumlah' => EvaluasiKontrakAlur::jumlahTugas($user),
+                'url' => route('admin.evaluasi-kontrak.index'), 'ikon' => 'bi-clipboard-check'];
+        }
         if ($user->isKepalaBagian()) {
             $tugas[] = ['label' => 'Formasi saya menunggu review', 'jumlah' => PengajuanFormasi::where('diajukan_oleh', $user->id)->where('status', PengajuanFormasi::STATUS_PENDING)->count(),
                 'url' => route('admin.pengajuan-formasi.index'), 'ikon' => 'bi-hourglass'];
