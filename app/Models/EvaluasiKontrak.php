@@ -130,16 +130,38 @@ class EvaluasiKontrak extends Model
         return $this->rata_nilai;
     }
 
-    /** Predikat rata-rata mengikuti skala formulir: 4 Sangat Baik, 3 Baik, 2 Sedang, 1 Kurang. */
-    public static function predikat(?float $rata): string
+    /** Predikat dari total nilai (config penilaian_kontrak.predikat_total), mis. 151–200 = Sangat Baik. */
+    public static function predikat(?int $total): string
     {
-        return match (true) {
-            $rata === null => '-',
-            $rata >= 3.5 => 'Sangat Baik',
-            $rata >= 2.5 => 'Baik',
-            $rata >= 1.5 => 'Sedang',
-            default => 'Kurang',
-        };
+        if ($total === null) {
+            return '-';
+        }
+        foreach (self::rentangPredikat() as [$min, , $label]) {
+            if ($total >= $min) {
+                return $label;
+            }
+        }
+
+        return '-';
+    }
+
+    /**
+     * Rentang skor untuk keterangan: [[min, maks, predikat], ...] dari tertinggi; maks teratas = 4 × jumlah butir.
+     *
+     * @return list<array{0: int, 1: int, 2: string}>
+     */
+    public static function rentangPredikat(): array
+    {
+        $batas = config('penilaian_kontrak.predikat_total');
+        krsort($batas);
+        $maks = count(self::butir()) * max(array_keys(config('penilaian_kontrak.skala')));
+        $rentang = [];
+        foreach ($batas as $min => $label) {
+            $rentang[] = [$min, $maks, $label];
+            $maks = $min - 1;
+        }
+
+        return $rentang;
     }
 
     /** Rata-rata per bagian (A, B, …) untuk ringkasan. @return array<string, float|null> */

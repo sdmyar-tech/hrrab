@@ -7,6 +7,10 @@
 return [
     'skala' => [4 => 'Sangat Baik', 3 => 'Baik', 2 => 'Sedang', 1 => 'Kurang'],
 
+    // Keterangan skor dari TOTAL NILAI (jumlah seluruh butir): batas bawah => predikat.
+    // 151–200 Sangat Baik · 101–150 Baik · 51–100 Sedang · 0–50 Kurang.
+    'predikat_total' => [151 => 'Sangat Baik', 101 => 'Baik', 51 => 'Sedang', 0 => 'Kurang'],
+
     'bagian' => [
         ['kode' => 'A', 'judul' => 'RAB Value', 'kelompok' => [
             ['judul' => 'Rabbani', 'butir' => [

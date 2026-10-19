@@ -150,8 +150,17 @@
                         <h2 class="h6 fw-bold mb-3"><i class="bi bi-calculator"></i>Hasil penilaian</h2>
                         <div class="ek-angka">
                             <div class="ek-kartu"><span>Terisi</span><strong><span data-terisi>{{ count(array_filter($nilai)) }}</span>/{{ $jumlahButir }}</strong></div>
-                            <div class="ek-kartu"><span>Total nilai</span><strong data-total>{{ $e->total_nilai ?? array_sum($nilai) }}</strong><small>maks. {{ $jumlahButir * 4 }}</small></div>
-                            <div class="ek-kartu"><span>Rata-rata</span><strong data-rata>{{ $e->rata_nilai ?? '-' }}</strong><small data-predikat>{{ EK::predikat($e->rata_nilai) }}</small></div>
+                            <div class="ek-kartu"><span>Total nilai</span><strong data-total>{{ $e->total_nilai ?? array_sum($nilai) }}</strong><small data-predikat>{{ $e->total_nilai !== null ? EK::predikat($e->total_nilai) : 'maks. ' . $jumlahButir * 4 }}</small></div>
+                            <div class="ek-kartu"><span>Rata-rata</span><strong data-rata>{{ $e->rata_nilai ?? '-' }}</strong><small>skala 1–4</small></div>
+                        </div>
+                        {{-- Keterangan skor: predikat dari total nilai (jumlah seluruh butir). --}}
+                        <div class="pk-skor mt-3">
+                            <div class="small fw-semibold mb-1">Keterangan skor <span class="fw-normal text-muted">(total nilai = jumlah seluruh butir)</span></div>
+                            @foreach (EK::rentangPredikat() as [$min, $maks, $label])
+                                <div class="pk-skor-baris {{ $e->total_nilai !== null && $e->total_nilai >= $min && $e->total_nilai <= $maks ? 'aktif' : '' }}" data-min="{{ $min }}" data-maks="{{ $maks }}">
+                                    <span>{{ $min }} – {{ $maks }}</span><b>{{ $label }}</b>
+                                </div>
+                            @endforeach
                         </div>
                     </section>
 
@@ -263,7 +272,7 @@
     .pk-identitas dd { margin: 0; }
     .ek-angka { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .5rem; }
     .ek-kartu { display: flex; flex-direction: column; padding: .55rem .7rem; border: 1px solid var(--admin-border); border-radius: 9px; background: var(--admin-surface); }
-    .ek-kartu span { font-size: .72rem; font-weight: 600; color: var(--admin-muted); }
+    .ek-kartu > span { font-size: .72rem; font-weight: 600; color: var(--admin-muted); }
     .ek-kartu strong { font-size: .95rem; }
     .ek-kartu small { font-size: .72rem; color: var(--admin-muted); }
     .ek-kartu.waspada { border-color: #f5d48a; background: #fffbeb; }
@@ -280,6 +289,10 @@
     .pk-no { color: var(--admin-muted); font-weight: 600; font-variant-numeric: tabular-nums; }
     .pk-skala .btn { min-width: 2.25rem; font-weight: 700; }
     .pk-butir.belum { background: #fff7e6; }
+    .pk-skor-baris { display: flex; justify-content: space-between; gap: .5rem; padding: .25rem .55rem; border-radius: 6px; font-size: .8rem; color: var(--admin-muted); }
+    .pk-skor-baris b { font-weight: 600; }
+    .pk-skor-baris.aktif { background: var(--hr-primary-soft); color: var(--hr-primary); }
+    .pk-skor-baris.aktif b { font-weight: 800; }
     .pk-hasil { min-width: 2rem; text-align: center; font-weight: 700; border-radius: 6px; padding: .1rem .4rem; background: var(--admin-surface-soft); }
     .pk-hasil.n4 { background: #dcfce7; color: #166534; } .pk-hasil.n3 { background: #e0f2fe; color: #075985; }
     .pk-hasil.n2 { background: #fef3c7; color: #92400e; } .pk-hasil.n1 { background: #fee2e2; color: #991b1b; }
@@ -298,16 +311,21 @@
     document.addEventListener('DOMContentLoaded', function () {
         const isi = document.getElementById('formIsi');
         if (isi) {
-            const PREDIKAT = (r) => r === null ? '-' : r >= 3.5 ? 'Sangat Baik' : r >= 2.5 ? 'Baik' : r >= 1.5 ? 'Sedang' : 'Kurang';
+            // Predikat dari total nilai (rentang dari config); baru berlaku setelah semua butir dinilai.
+            const RENTANG = @json(EK::rentangPredikat());
+            const PREDIKAT = (total) => (RENTANG.find(([min]) => total >= min) || [])[2] || '-';
             const butir = [...isi.querySelectorAll('.pk-butir')];
-            // Hasil langsung: terisi, total, rata-rata & predikat.
+            // Hasil langsung: terisi, total, rata-rata, predikat & baris keterangan skor yang berlaku.
             const hitung = () => {
                 const nilai = butir.map((b) => +(b.querySelector('input:checked') || {}).value || 0).filter(Boolean);
                 const rata = nilai.length ? Math.round((nilai.reduce((a, n) => a + n, 0) / nilai.length) * 100) / 100 : null;
                 document.querySelector('[data-terisi]').textContent = nilai.length;
                 document.querySelector('[data-total]').textContent = nilai.reduce((a, n) => a + n, 0);
                 document.querySelector('[data-rata]').textContent = rata ?? '-';
-                document.querySelector('[data-predikat]').textContent = PREDIKAT(rata);
+                const total = nilai.reduce((a, n) => a + n, 0);
+                const lengkap = nilai.length === butir.length;
+                document.querySelector('[data-predikat]').textContent = lengkap ? PREDIKAT(total) : 'lengkapi semua butir';
+                document.querySelectorAll('.pk-skor-baris').forEach((b) => b.classList.toggle('aktif', lengkap && total >= +b.dataset.min && total <= +b.dataset.maks));
             };
             isi.addEventListener('change', (ev) => { if (ev.target.name?.startsWith('nilai[')) { ev.target.closest('.pk-butir').classList.remove('belum'); hitung(); } });
             // "Isi semua" per bagian.

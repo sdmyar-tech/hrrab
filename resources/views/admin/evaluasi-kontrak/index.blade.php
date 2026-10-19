@@ -65,7 +65,7 @@
                                 <td>
                                     @if ($e->rekomendasi)
                                         {{ $e->labelRekomendasi() }}
-                                        <small class="d-block text-muted">rata-rata {{ $e->rataNilai() ?? '-' }}/4 ({{ \App\Models\EvaluasiKontrak::predikat($e->rataNilai()) }}) · {{ $e->pengisi?->name }}</small>
+                                        <small class="d-block text-muted">total {{ $e->total_nilai ?? '-' }} ({{ \App\Models\EvaluasiKontrak::predikat($e->total_nilai) }}) · {{ $e->pengisi?->name }}</small>
                                     @else
                                         <span class="text-muted">Belum diisi</span>
                                     @endif
