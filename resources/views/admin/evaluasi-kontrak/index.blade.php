@@ -40,7 +40,7 @@
                             <th>Pegawai</th>
                             <th>Habis Kontrak</th>
                             <th>Status</th>
-                            <th>Rekomendasi Atasan</th>
+                            <th>Penilaian</th>
                             <th>Keputusan</th>
                             <th class="text-end">Aksi</th>
                         </tr>
@@ -63,18 +63,18 @@
                                 </td>
                                 <td><span class="badge {{ $e->badgeClass() }}">{{ $e->statusLabel() }}</span></td>
                                 <td>
-                                    @if ($e->rekomendasi)
-                                        {{ $e->labelRekomendasi() }}
-                                        <small class="d-block text-muted">total {{ $e->total_nilai ?? '-' }} ({{ \App\Models\EvaluasiKontrak::predikat($e->total_nilai) }}) · {{ $e->pengisi?->name }}</small>
+                                    @if ($e->total_nilai !== null)
+                                        {{ \App\Models\EvaluasiKontrak::predikat($e->total_nilai) }}
+                                        <small class="d-block text-muted">total {{ $e->total_nilai }} · {{ $e->pengisi?->name }}</small>
                                     @else
                                         <span class="text-muted">Belum diisi</span>
                                     @endif
                                 </td>
-                                <td>{{ $e->keputusan ? $e->labelKeputusan() : '-' }}</td>
+                                <td>{{ $e->keputusan ? $e->labelKeputusan() : '-' }}@if ($e->labelTtd())<small class="d-block text-muted"><i class="bi bi-pen me-1"></i>TTD {{ $e->labelTtd() }}</small>@endif</td>
                                 <td class="text-end">
                                     @php $tugas = \App\Support\EvaluasiKontrakAlur::tugasUntuk(auth()->user(), $e); @endphp
                                     <a href="{{ route('admin.evaluasi-kontrak.show', $e) }}" class="btn btn-sm {{ $tugas ? 'btn-primary' : 'btn-outline-secondary' }}">
-                                        <i class="bi {{ $tugas ? 'bi-pencil-square' : 'bi-eye' }} me-1"></i>{{ $tugas ? ($e->status === \App\Models\EvaluasiKontrak::STATUS_MENUNGGU_SDM ? 'Putuskan' : 'Isi evaluasi') : 'Lihat' }}
+                                        <i class="bi {{ $tugas ? 'bi-pencil-square' : 'bi-eye' }} me-1"></i>{{ $tugas ? ($e->status === \App\Models\EvaluasiKontrak::STATUS_MENUNGGU_SDM ? 'Putuskan' : 'Beri nilai') : 'Lihat' }}
                                     </a>
                                 </td>
                             </tr>

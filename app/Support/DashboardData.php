@@ -160,7 +160,7 @@ private static function kartu(User $user, Collection $aktif, Collection $kontrak
             $tugas[] = ['label' => 'Konfirmasi onboarding', 'jumlah' => self::onboardingMenunggu($user), 'url' => route('admin.lamaran.index'), 'ikon' => 'bi-clipboard-check'];
         }
         if (EvaluasiKontrakAlur::bolehMembuka($user)) {
-            $tugas[] = ['label' => $user->isKepalaSdm() ? 'Isi / putuskan evaluasi kontrak' : 'Isi evaluasi kontrak (H-30)', 'jumlah' => EvaluasiKontrakAlur::jumlahTugas($user),
+            $tugas[] = ['label' => $user->isKepalaSdm() || $user->isGm() ? 'Nilai / putuskan evaluasi kontrak' : 'Beri nilai evaluasi kontrak (H-30)', 'jumlah' => EvaluasiKontrakAlur::jumlahTugas($user),
                 'url' => route('admin.evaluasi-kontrak.index'), 'ikon' => 'bi-clipboard-check'];
         }
         if ($user->isKepalaBagian()) {

@@ -11,25 +11,61 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 
 /**
- * Alur evaluasi kontrak: dibuat otomatis H-30 → atasan mengisi → Kepala SDM memutuskan → data kontrak diperbarui.
- * Atasan = atasan alur khusus → kepala unit pegawai (termasuk kepala sekolah yang tidak menyetujui cuti) → GM (unit tanpa kepala).
+ * Alur evaluasi kontrak: dibuat otomatis H-30 → PENILAI memberi nilai → PEMUTUS memutuskan → data kontrak diperbarui.
+ *
+ * Penilai:  staf → atasan langsung (alur khusus → kepala unit, termasuk kepala sekolah → GM bila unit tanpa kepala);
+ *           kepala bagian (memimpin unit) → GM bagiannya; Kepala SDM → GM.
+ * Pemutus:  Kepala SDM; khusus kontrak Kepala SDM sendiri → GM.
+ * Bila penilai sekaligus pemutus (Kepala SDM untuk staf SDM, GM untuk Kepala SDM) → nilai & keputusan sekali isi.
  */
 class EvaluasiKontrakAlur
 {
     /** @return Collection<int, User> */
-    public static function atasan(DataPegawai $pegawai, ?string $unit = null): Collection
+    public static function penilai(DataPegawai $pegawai, ?string $unit = null): Collection
     {
         $unit ??= $pegawai->kepegawaian?->unit_kerja;
+        if (self::adalahKepalaSdm($pegawai) || self::memimpinUnit($pegawai)) {
+            return self::gmBagian($pegawai, $unit);
+        }
+
+        return self::atasan($pegawai, $unit);
+    }
+
+    /** @return Collection<int, User> */
+    public static function pemutus(DataPegawai $pegawai, ?string $unit = null): Collection
+    {
+        return self::adalahKepalaSdm($pegawai)
+            ? self::gmBagian($pegawai, $unit ?? $pegawai->kepegawaian?->unit_kerja)
+            : PengajuanWorkflow::kepalaSdmTersedia($pegawai->id);
+    }
+
+    /** Atasan langsung staf: alur khusus → kepala unit (termasuk kepala sekolah) → GM (unit tanpa kepala). */
+    private static function atasan(DataPegawai $pegawai, ?string $unit): Collection
+    {
         if (($alur = AlurPegawai::milik($pegawai->id)) && $alur->atasan) {
             return collect([$alur->atasan]);
         }
         $kepala = self::kepalaUnit($unit, $pegawai->id);
-        if ($kepala->isNotEmpty()) {
-            return $kepala;
-        }
+
+        return $kepala->isNotEmpty() ? $kepala : self::gmBagian($pegawai, $unit);
+    }
+
+    /** GM yang memegang bagian/unit pegawai (bukan dirinya); bila tak ada, semua GM. */
+    private static function gmBagian(DataPegawai $pegawai, ?string $unit): Collection
+    {
         $gm = User::gmUtamaUntuk($unit)->reject(fn (User $g) => $g->data_pegawai_id && $g->data_pegawai_id === $pegawai->id);
 
         return $gm->isNotEmpty() ? $gm->values() : PengajuanWorkflow::gmTersedia($pegawai->id);
+    }
+
+    private static function adalahKepalaSdm(DataPegawai $pegawai): bool
+    {
+        return User::where('data_pegawai_id', $pegawai->id)->where('role', User::ROLE_KEPALA_SDM)->exists();
+    }
+
+    private static function memimpinUnit(DataPegawai $pegawai): bool
+    {
+        return Penugasan::aktif()->kepala()->where('data_pegawai_id', $pegawai->id)->exists();
     }
 
     /**
@@ -55,34 +91,56 @@ class EvaluasiKontrakAlur
             ->get();
     }
 
-    public static function adalahAtasan(User $user, EvaluasiKontrak $e): bool
+    private static function termasuk(User $user, Collection $orang): bool
     {
-        return $e->dataPegawai && self::atasan($e->dataPegawai, $e->unit_kerja)
-            ->contains(fn (User $a) => PengajuanWorkflow::orangSama($user, $a->id));
+        return $orang->contains(fn (User $a) => PengajuanWorkflow::orangSama($user, $a->id));
     }
 
-    /** Atasan mengisi/mengubah rekomendasi selama Kepala SDM belum memutuskan; Admin selalu bisa. */
+    public static function adalahPenilai(User $user, EvaluasiKontrak $e): bool
+    {
+        return $e->dataPegawai && self::termasuk($user, self::penilai($e->dataPegawai, $e->unit_kerja));
+    }
+
+    public static function adalahPemutus(User $user, EvaluasiKontrak $e): bool
+    {
+        return $e->dataPegawai && ! ($user->data_pegawai_id && $user->data_pegawai_id === $e->data_pegawai_id)
+            && self::termasuk($user, self::pemutus($e->dataPegawai, $e->unit_kerja));
+    }
+
+    /** Penilai sekaligus pemutus (Kepala SDM untuk staf SDM, GM untuk Kepala SDM): nilai & keputusan sekali isi. */
+    public static function satuLangkah(User $user, EvaluasiKontrak $e): bool
+    {
+        return ! $user->isAdmin() && self::adalahPenilai($user, $e) && self::adalahPemutus($user, $e);
+    }
+
+    /** Penilai mengisi/mengubah nilai selama belum diputuskan; Admin selalu bisa. */
     public static function bisaIsi(User $user, EvaluasiKontrak $e): bool
     {
         if ($user->isAdmin()) {
             return true;
         }
 
-        return $e->status !== EvaluasiKontrak::STATUS_SELESAI && self::adalahAtasan($user, $e);
+        return $e->status !== EvaluasiKontrak::STATUS_SELESAI && self::adalahPenilai($user, $e);
     }
 
-    /** Kepala SDM memutuskan setelah atasan mengisi (bukan evaluasi dirinya sendiri); Admin kapan saja. */
+    /** Pemutus memutuskan setelah nilai masuk; Admin kapan saja. */
     public static function bisaPutuskan(User $user, EvaluasiKontrak $e): bool
     {
         if ($user->isAdmin()) {
             return true;
         }
 
-        return $user->isKepalaSdm() && $e->status === EvaluasiKontrak::STATUS_MENUNGGU_SDM
-            && ! ($user->data_pegawai_id && $user->data_pegawai_id === $e->data_pegawai_id);
+        return $e->status === EvaluasiKontrak::STATUS_MENUNGGU_SDM && self::adalahPemutus($user, $e);
     }
 
-    /** Pimpinan (Kepala SDM, GM, Owner, Admin) melihat semua; selain itu hanya bawahannya. */
+    /** Jadwal TTD boleh diatur/diubah pemutus (atau Admin) setelah keputusan perpanjang / angkat tetap. */
+    public static function bisaAturTtd(User $user, EvaluasiKontrak $e): bool
+    {
+        return $e->status === EvaluasiKontrak::STATUS_SELESAI && $e->keputusan && $e->keputusan !== EvaluasiKontrak::TIDAK
+            && ($user->isAdmin() || self::adalahPemutus($user, $e));
+    }
+
+    /** Pimpinan (Kepala SDM, GM, Owner, Admin) melihat semua; selain itu hanya yang dinilainya. */
     public static function lihatSemua(User $user): bool
     {
         return $user->isAdmin() || $user->isKepalaSdm() || $user->isGm() || $user->isPembina();
@@ -90,7 +148,7 @@ class EvaluasiKontrakAlur
 
     public static function bisaLihat(User $user, EvaluasiKontrak $e): bool
     {
-        return self::lihatSemua($user) || self::adalahAtasan($user, $e);
+        return self::lihatSemua($user) || self::adalahPenilai($user, $e);
     }
 
     /** Pimpinan, penyetuju, kepala unit (termasuk kepala sekolah), atau atasan di alur khusus seseorang. */
@@ -100,16 +158,15 @@ class EvaluasiKontrakAlur
             || AlurPegawai::where('atasan_user_id', $user->id)->exists();
     }
 
-    /** Masih ada tugas untuk $user: isi (atasan, menunggu atasan) atau putuskan (Kepala SDM, menunggu SDM). */
+    /** Masih ada tugas untuk $user: menilai (menunggu penilaian) atau memutuskan (menunggu keputusan). */
     public static function tugasUntuk(User $user, EvaluasiKontrak $e): bool
     {
         return match ($e->status) {
-            EvaluasiKontrak::STATUS_MENUNGGU_ATASAN => self::adalahAtasan($user, $e),
-            EvaluasiKontrak::STATUS_MENUNGGU_SDM => ! $user->isAdmin() && self::bisaPutuskan($user, $e),
+            EvaluasiKontrak::STATUS_MENUNGGU_ATASAN => self::adalahPenilai($user, $e),
+            EvaluasiKontrak::STATUS_MENUNGGU_SDM => ! $user->isAdmin() && self::adalahPemutus($user, $e),
             default => false,
         };
     }
-
     public static function jumlahTugas(User $user): int
     {
         if (! self::bolehMembuka($user)) {

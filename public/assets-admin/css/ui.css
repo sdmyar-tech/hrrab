@@ -302,3 +302,9 @@ html[data-theme="dark"] .swal2-popup { background: var(--admin-surface); }
     .aksi-lengket [data-jumlah-ubah] { flex: 1 0 100%; }
     .aksi-lengket > .btn { flex: 1 1 0; }
 }
+
+/* Surat peringatan: SP1 kuning, SP2 oranye, SP3 merah (makin tegas). */
+.sp-badge { font-weight: 700; color: #fff; }
+.sp-badge.sp-1 { background: #f59e0b; }
+.sp-badge.sp-2 { background: #ea580c; }
+.sp-badge.sp-3 { background: #b91c1c; }

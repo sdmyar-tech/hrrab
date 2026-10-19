@@ -43,6 +43,7 @@
             @endif
         </section>
 
+        @include('partials.jadwal-ttd-kontrak')
         <section class="row g-3" aria-label="Ringkasan">
             @foreach ($kartu as $k)
                 <div class="col-6 col-xl-3">

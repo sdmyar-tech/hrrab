@@ -27,19 +27,23 @@ class EvaluasiKontrak extends Model
     /** Lama perpanjangan yang bisa dipilih (bulan) — sama dengan masa kontrak saat rekrut. */
     public const LAMA_BULAN = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36];
 
+    /** Lokasi bawaan penandatanganan kontrak. */
+    public const TTD_LOKASI_BAWAAN = 'Ruangan SDM';
+
     /** Hari sebelum habis kontrak saat evaluasi dibuat (H-1 bulan). */
     public const HARI_SEBELUM = 30;
 
     protected $fillable = [
         'data_pegawai_id', 'unit_kerja', 'status_kerja', 'tanggal_habis_kontrak', 'status',
         'rekomendasi', 'lama_bulan', 'naik_gaji', 'naik_gaji_nominal', 'naik_gaji_keterangan', 'nilai', 'total_nilai', 'rata_nilai', 'periode_mulai', 'periode_selesai', 'catatan', 'diisi_oleh', 'diisi_pada',
-        'keputusan', 'keputusan_lama_bulan', 'keputusan_naik_gaji', 'keputusan_naik_gaji_nominal', 'catatan_sdm', 'diputuskan_oleh', 'diputuskan_pada',
+        'keputusan', 'keputusan_lama_bulan', 'keputusan_naik_gaji', 'keputusan_naik_gaji_nominal', 'catatan_sdm', 'diputuskan_oleh', 'diputuskan_pada', 'ttd_jadwal', 'ttd_lokasi',
     ];
 
     protected $casts = [
         'tanggal_habis_kontrak' => 'date',
         'diisi_pada' => 'datetime',
         'diputuskan_pada' => 'datetime',
+        'ttd_jadwal' => 'datetime',
         'lama_bulan' => 'integer',
         'keputusan_lama_bulan' => 'integer',
         'naik_gaji' => 'boolean',
@@ -71,8 +75,8 @@ class EvaluasiKontrak extends Model
     public function statusLabel(): string
     {
         return match ($this->status) {
-            self::STATUS_MENUNGGU_ATASAN => 'Menunggu atasan',
-            self::STATUS_MENUNGGU_SDM => 'Menunggu Kepala SDM',
+            self::STATUS_MENUNGGU_ATASAN => 'Menunggu penilaian',
+            self::STATUS_MENUNGGU_SDM => 'Menunggu keputusan',
             default => 'Selesai',
         };
     }
@@ -188,6 +192,12 @@ class EvaluasiKontrak extends Model
         $mulai = $sebelumnya ? \Carbon\Carbon::parse($sebelumnya)->addDay() : $this->dataPegawai?->kepegawaian?->tanggal_masuk;
 
         return [$mulai, $this->tanggal_habis_kontrak];
+    }
+
+    /** "Senin, 26 Okt 2026 09:00 · Ruangan SDM" atau null bila belum dijadwalkan. */
+    public function labelTtd(): ?string
+    {
+        return $this->ttd_jadwal ? $this->ttd_jadwal->translatedFormat('l, d M Y H:i') . ' · ' . ($this->ttd_lokasi ?: self::TTD_LOKASI_BAWAAN) : null;
     }
 
     /** Sisa hari menuju habis kontrak (negatif = sudah lewat). */

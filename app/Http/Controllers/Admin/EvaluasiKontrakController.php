@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\EvaluasiKontrak;
 use App\Models\PengajuanCuti;
+use App\Models\SuratPeringatan;
 use App\Models\User;
 use App\Support\Absensi\PenilaianAbsensi;
 use App\Support\EvaluasiKontrakAlur;
@@ -16,7 +17,10 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
-/** Evaluasi kontrak: atasan mengisi rekomendasi + penilaian (H-30), Kepala SDM memutuskan. */
+/**
+ * Evaluasi kontrak: penilai memberi nilai (H-30), pemutus (Kepala SDM; GM untuk Kepala SDM) memutuskan
+ * beserta jadwal & lokasi TTD kontrak. Penilai yang sekaligus pemutus mengisi keduanya sekali jalan.
+ */
 class EvaluasiKontrakController extends Controller
 {
     public const TAB = ['tugas' => 'Perlu tindakan saya', 'menunggu' => 'Sedang berjalan', 'selesai' => 'Selesai', 'semua' => 'Semua'];
@@ -61,55 +65,55 @@ class EvaluasiKontrakController extends Controller
 
         $pegawai = $e->dataPegawai;
         $k = $pegawai?->kepegawaian;
-        // Data pendukung: absensi 6 bulan terakhir (sejak masuk bila lebih baru), cuti tahun ini, evaluasi sebelumnya.
+        // Data pendukung: absensi 6 bulan terakhir (sejak masuk bila lebih baru), cuti tahun ini, SP selama kontrak.
         $sampai = now()->subDay()->startOfDay();
         $dari = max(now()->subMonths(6)->startOfDay(), $k?->tanggal_masuk?->copy()->startOfDay() ?? now()->subMonths(6)->startOfDay());
         $absensi = $pegawai && $dari->lte($sampai)
             ? PenilaianAbsensi::rekap(PenilaianAbsensi::rentang(collect([$pegawai]), $dari, $sampai)[$pegawai->id] ?? [])
             : null;
+        [$periodeMulai, $periodeSelesai] = $e->periode_mulai ? [$e->periode_mulai, $e->periode_selesai] : $e->periodeBawaan();
 
         return view('admin.evaluasi-kontrak.show', [
             'e' => $e,
             'absensi' => $absensi,
             'rentangAbsensi' => [$dari, $sampai],
+            'periode' => [$periodeMulai, $periodeSelesai],
             'cutiTahunIni' => (int) PengajuanCuti::where('data_pegawai_id', $e->data_pegawai_id)->where('status', PengajuanCuti::STATUS_APPROVED)
                 ->whereYear('tanggal_mulai', now()->year)->sum('lama_cuti'),
+            // SP selama masa kontrak terakhir (periode penilaian).
+            'spKontrak' => SuratPeringatan::with('pemberi')->where('data_pegawai_id', $e->data_pegawai_id)
+                ->when($periodeMulai, fn ($q) => $q->whereDate('tanggal', '>=', $periodeMulai))
+                ->whereDate('tanggal', '<=', $periodeSelesai ?? $e->tanggal_habis_kontrak)
+                ->orderBy('tanggal')->orderBy('tingkat')->get(),
             'riwayat' => EvaluasiKontrak::where('data_pegawai_id', $e->data_pegawai_id)->whereKeyNot($e->id)->latest('tanggal_habis_kontrak')->get(),
-            'atasan' => $pegawai ? EvaluasiKontrakAlur::atasan($pegawai, $e->unit_kerja) : collect(),
+            'penilai' => $pegawai ? EvaluasiKontrakAlur::penilai($pegawai, $e->unit_kerja) : collect(),
+            'pemutus' => $pegawai ? EvaluasiKontrakAlur::pemutus($pegawai, $e->unit_kerja) : collect(),
             'bisaIsi' => EvaluasiKontrakAlur::bisaIsi($user, $e),
             'bisaPutuskan' => EvaluasiKontrakAlur::bisaPutuskan($user, $e),
+            'satuLangkah' => EvaluasiKontrakAlur::satuLangkah($user, $e) && $e->status !== EvaluasiKontrak::STATUS_SELESAI,
+            'bisaAturTtd' => EvaluasiKontrakAlur::bisaAturTtd($user, $e),
         ]);
     }
 
-    /** Atasan mengisi / mengubah rekomendasi & penilaian. */
+    /** Penilai memberi nilai 50 butir (+ catatan). Bila sekaligus pemutus, keputusan & jadwal TTD ikut diisi. */
     public function isi(Request $request, EvaluasiKontrak $evaluasiKontrak): RedirectResponse
     {
         $user = $this->pengguna();
-        $e = $evaluasiKontrak;
-        abort_unless(EvaluasiKontrakAlur::bisaIsi($user, $e), 403, 'Hanya atasan pegawai ini yang dapat mengisi evaluasi.');
+        $e = $evaluasiKontrak->load('dataPegawai.kepegawaian');
+        abort_unless(EvaluasiKontrakAlur::bisaIsi($user, $e), 403, 'Hanya penilai pegawai ini yang dapat mengisi evaluasi.');
+        $satuLangkah = EvaluasiKontrakAlur::satuLangkah($user, $e);
 
         $butir = EvaluasiKontrak::butir();
-        $this->angkaSaja($request, 'naik_gaji_nominal');
         $data = $request->validate([
-            'rekomendasi' => ['required', Rule::in(array_keys(EvaluasiKontrak::PILIHAN))],
-            'lama_bulan' => ['nullable', 'required_if:rekomendasi,' . EvaluasiKontrak::PERPANJANG, 'integer', Rule::in(EvaluasiKontrak::LAMA_BULAN)],
-            // Naik gaji: hanya catatan nominal + keterangan (tidak terhubung ke penggajian).
-            'naik_gaji' => ['nullable', 'boolean'],
-            'naik_gaji_nominal' => ['nullable', 'required_if_accepted:naik_gaji', 'integer', 'min:1', 'max:100000000'],
-            'naik_gaji_keterangan' => ['nullable', 'string', 'max:255'],
             'nilai' => ['required', 'array'],
             'nilai.*' => ['integer', Rule::in(array_keys(config('penilaian_kontrak.skala')))],
             'periode_mulai' => ['nullable', 'date'],
             'periode_selesai' => ['nullable', 'date', 'after_or_equal:periode_mulai'],
-            'catatan' => ['nullable', 'required_if:rekomendasi,' . EvaluasiKontrak::TIDAK, 'string', 'max:1000'],
+            'catatan' => ['nullable', 'string', 'max:1000'],
         ], [
-            'rekomendasi.required' => 'Pilih rekomendasi.',
-            'lama_bulan.required_if' => 'Pilih lama perpanjangan.',
-            'naik_gaji_nominal.required_if_accepted' => 'Isi nominal kenaikan gaji.',
             'nilai.required' => 'Isi penilaian setiap butir.',
             'nilai.*.in' => 'Nilai hanya 1–4.',
             'periode_selesai.after_or_equal' => 'Akhir periode penilaian tidak boleh sebelum awalnya.',
-            'catatan.required_if' => 'Tulis alasan bila kontrak tidak diperpanjang.',
         ]);
 
         // Semua butir wajib dinilai (butir di luar formulir diabaikan).
@@ -118,20 +122,10 @@ class EvaluasiKontrakController extends Controller
         if ($kosong) {
             throw ValidationException::withMessages(['nilai' => 'Masih ada ' . count($kosong) . ' butir belum dinilai (no. ' . implode(', ', array_slice($kosong, 0, 10)) . (count($kosong) > 10 ? ', …' : '') . ').']);
         }
+        $keputusan = $satuLangkah ? $this->validasiKeputusan($request) : null;
 
-        // Kepala SDM yang menjadi atasan (mis. untuk staf SDM): rekomendasinya langsung menjadi keputusan.
-        $langsungTetapkan = $user->isKepalaSdm();
         $baruDiisi = $e->status === EvaluasiKontrak::STATUS_MENUNGGU_ATASAN;
-        $lama = $data['rekomendasi'] === EvaluasiKontrak::PERPANJANG ? (int) $data['lama_bulan'] : null;
-        // Tidak diperpanjang → tidak ada naik gaji.
-        $naik = $data['rekomendasi'] !== EvaluasiKontrak::TIDAK && $request->boolean('naik_gaji');
-        $nominal = $naik ? (int) $data['naik_gaji_nominal'] : null;
         $e->update([
-            'rekomendasi' => $data['rekomendasi'],
-            'lama_bulan' => $lama,
-            'naik_gaji' => $naik,
-            'naik_gaji_nominal' => $nominal,
-            'naik_gaji_keterangan' => $naik ? ($data['naik_gaji_keterangan'] ?? null) : null,
             'nilai' => $nilai->sortKeys()->all(),
             'total_nilai' => $nilai->sum(),
             'rata_nilai' => round($nilai->avg(), 2),
@@ -140,71 +134,96 @@ class EvaluasiKontrakController extends Controller
             'catatan' => $data['catatan'] ?? null,
             'diisi_oleh' => $user->id,
             'diisi_pada' => now(),
-            'status' => $langsungTetapkan ? EvaluasiKontrak::STATUS_SELESAI : ($baruDiisi ? EvaluasiKontrak::STATUS_MENUNGGU_SDM : $e->status),
-            ...($langsungTetapkan ? [
-                'keputusan' => $data['rekomendasi'],
-                'keputusan_lama_bulan' => $lama,
-                'keputusan_naik_gaji' => $naik,
-                'keputusan_naik_gaji_nominal' => $nominal,
-                'diputuskan_oleh' => $user->id,
-                'diputuskan_pada' => now(),
-            ] : []),
+            'status' => $baruDiisi ? EvaluasiKontrak::STATUS_MENUNGGU_SDM : $e->status,
         ]);
 
-        if ($langsungTetapkan) {
+        if ($keputusan) {
             return redirect()->route('admin.evaluasi-kontrak.show', $e)
-                ->with('success', 'Evaluasi tersimpan dan langsung ditetapkan (Anda Kepala SDM). ' . EvaluasiKontrakAlur::terapkan($e->load('dataPegawai.kepegawaian')));
+                ->with('success', 'Penilaian & keputusan tersimpan. ' . $this->simpanKeputusan($e, $keputusan, $user));
         }
         if ($baruDiisi) {
             Notifikasi::evaluasiKontrakDiisi($e);
         }
 
         return redirect()->route('admin.evaluasi-kontrak.show', $e)
-            ->with('success', $baruDiisi ? 'Evaluasi terkirim. Menunggu keputusan Kepala SDM.' : 'Evaluasi diperbarui.');
+            ->with('success', $baruDiisi ? 'Penilaian terkirim. Menunggu keputusan ' . ($e->dataPegawai && EvaluasiKontrakAlur::pemutus($e->dataPegawai)->every->isGm() ? 'GM.' : 'Kepala SDM.') : 'Penilaian diperbarui.');
     }
 
-    /** Kepala SDM (atau Admin) memutuskan; data kontrak pegawai ikut diperbarui. */
+    /** Pemutus (Kepala SDM; GM untuk Kepala SDM) atau Admin memutuskan; data kontrak & jadwal TTD diperbarui. */
     public function putuskan(Request $request, EvaluasiKontrak $evaluasiKontrak): RedirectResponse
     {
         $user = $this->pengguna();
         $e = $evaluasiKontrak->load('dataPegawai.kepegawaian');
-        abort_unless(EvaluasiKontrakAlur::bisaPutuskan($user, $e), 403, 'Keputusan evaluasi kontrak diambil Kepala SDM setelah atasan mengisi.');
+        abort_unless(EvaluasiKontrakAlur::bisaPutuskan($user, $e), 403, 'Keputusan diambil Kepala SDM (GM untuk kontrak Kepala SDM) setelah penilaian masuk.');
 
-        $this->angkaSaja($request, 'keputusan_naik_gaji_nominal');
+        return redirect()->route('admin.evaluasi-kontrak.show', $e)
+            ->with('success', 'Keputusan tersimpan. ' . $this->simpanKeputusan($e, $this->validasiKeputusan($request), $user));
+    }
+
+    /** Atur / ubah jadwal & lokasi TTD kontrak setelah diputuskan; pegawai dikabari ulang. */
+    public function jadwalTtd(Request $request, EvaluasiKontrak $evaluasiKontrak): RedirectResponse
+    {
+        $user = $this->pengguna();
+        $e = $evaluasiKontrak->load('dataPegawai.kepegawaian');
+        abort_unless(EvaluasiKontrakAlur::bisaAturTtd($user, $e), 403, 'Jadwal TTD diatur pemutus setelah keputusan perpanjang / angkat tetap.');
+
+        $data = $request->validate([
+            'ttd_jadwal' => ['required', 'date'],
+            'ttd_lokasi' => ['required', 'string', 'max:150'],
+        ], ['ttd_jadwal.required' => 'Isi tanggal & jam tanda tangan kontrak.', 'ttd_lokasi.required' => 'Isi lokasi tanda tangan kontrak.']);
+        $e->update($data);
+        Notifikasi::evaluasiKontrakJadwalTtd($e);
+
+        return redirect()->route('admin.evaluasi-kontrak.show', $e)->with('success', 'Jadwal TTD kontrak tersimpan: ' . $e->labelTtd() . '.');
+    }
+
+    /** Validasi isian keputusan (dipakai form keputusan & form sekali isi). */
+    private function validasiKeputusan(Request $request): array
+    {
+        // Nominal boleh diketik "Rp 300.000" / "300.000": simpan angkanya saja.
+        if ($request->filled('keputusan_naik_gaji_nominal')) {
+            $request->merge(['keputusan_naik_gaji_nominal' => preg_replace('/\D/', '', (string) $request->input('keputusan_naik_gaji_nominal'))]);
+        }
+        $tidak = $request->input('keputusan') === EvaluasiKontrak::TIDAK;
         $data = $request->validate([
             'keputusan' => ['required', Rule::in(array_keys(EvaluasiKontrak::PILIHAN))],
+            'keputusan_lama_bulan' => ['nullable', 'required_if:keputusan,' . EvaluasiKontrak::PERPANJANG, 'integer', Rule::in(EvaluasiKontrak::LAMA_BULAN)],
+            // Naik gaji: hanya catatan nominal (tidak terhubung ke penggajian).
             'keputusan_naik_gaji' => ['nullable', 'boolean'],
             'keputusan_naik_gaji_nominal' => ['nullable', 'required_if_accepted:keputusan_naik_gaji', 'integer', 'min:1', 'max:100000000'],
-            'keputusan_lama_bulan' => ['nullable', 'required_if:keputusan,' . EvaluasiKontrak::PERPANJANG, 'integer', Rule::in(EvaluasiKontrak::LAMA_BULAN)],
-            'catatan_sdm' => ['nullable', 'string', 'max:1000'],
+            'catatan_sdm' => ['nullable', 'required_if:keputusan,' . EvaluasiKontrak::TIDAK, 'string', 'max:1000'],
+            // Perpanjang / angkat tetap: jadwal & lokasi tanda tangan kontrak wajib.
+            'ttd_jadwal' => [$tidak ? 'nullable' : 'required', 'date'],
+            'ttd_lokasi' => [$tidak ? 'nullable' : 'required', 'string', 'max:150'],
         ], [
             'keputusan.required' => 'Pilih keputusan.',
             'keputusan_lama_bulan.required_if' => 'Pilih lama perpanjangan.',
             'keputusan_naik_gaji_nominal.required_if_accepted' => 'Isi nominal kenaikan gaji.',
+            'catatan_sdm.required_if' => 'Tulis alasan bila kontrak tidak diperpanjang.',
+            'ttd_jadwal.required' => 'Isi tanggal & jam tanda tangan kontrak.',
+            'ttd_lokasi.required' => 'Isi lokasi tanda tangan kontrak.',
         ]);
-        $naik = $data['keputusan'] !== EvaluasiKontrak::TIDAK && $request->boolean('keputusan_naik_gaji');
+        $naik = ! $tidak && $request->boolean('keputusan_naik_gaji');
 
-        $e->update([
-            ...$data,
-            'keputusan_lama_bulan' => $data['keputusan'] === EvaluasiKontrak::PERPANJANG ? $data['keputusan_lama_bulan'] : null,
+        return [
+            'keputusan' => $data['keputusan'],
+            'keputusan_lama_bulan' => $data['keputusan'] === EvaluasiKontrak::PERPANJANG ? (int) $data['keputusan_lama_bulan'] : null,
             'keputusan_naik_gaji' => $naik,
             'keputusan_naik_gaji_nominal' => $naik ? (int) $data['keputusan_naik_gaji_nominal'] : null,
-            'diputuskan_oleh' => $user->id,
-            'diputuskan_pada' => now(),
-            'status' => EvaluasiKontrak::STATUS_SELESAI,
-        ]);
+            'catatan_sdm' => $data['catatan_sdm'] ?? null,
+            'ttd_jadwal' => $tidak ? null : $data['ttd_jadwal'],
+            'ttd_lokasi' => $tidak ? null : $data['ttd_lokasi'],
+        ];
+    }
+
+    /** Simpan keputusan, terapkan ke data kontrak, kabari penilai & pegawai. @return string ringkasan hasil */
+    private function simpanKeputusan(EvaluasiKontrak $e, array $keputusan, User $user): string
+    {
+        $e->update([...$keputusan, 'diputuskan_oleh' => $user->id, 'diputuskan_pada' => now(), 'status' => EvaluasiKontrak::STATUS_SELESAI]);
         $hasil = EvaluasiKontrakAlur::terapkan($e);
         Notifikasi::evaluasiKontrakDiputuskan($e);
 
-        return redirect()->route('admin.evaluasi-kontrak.show', $e)->with('success', 'Keputusan tersimpan. ' . $hasil);
-    }
-
-    /** Nominal boleh diketik "Rp 300.000" / "300.000": simpan angkanya saja. */
-    private function angkaSaja(Request $request, string $kolom): void
-    {
-        if ($request->filled($kolom)) {
-            $request->merge([$kolom => preg_replace('/\D/', '', (string) $request->input($kolom))]);
-        }
+        return $hasil . ($e->labelTtd() ? ' TTD kontrak: ' . $e->labelTtd() . '.' : '');
     }
 
     private function pengguna(): User

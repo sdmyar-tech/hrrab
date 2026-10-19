@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\PengajuanLemburController as AdminPengajuanLembur
 use App\Http\Controllers\Admin\PenugasanController as AdminPenugasanController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\EvaluasiKontrakController as AdminEvaluasiKontrakController;
+use App\Http\Controllers\Admin\SuratPeringatanController as AdminSuratPeringatanController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -209,6 +210,14 @@ Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function (
             Route::get('/{evaluasiKontrak}', [AdminEvaluasiKontrakController::class, 'show'])->name('show');
             Route::post('/{evaluasiKontrak}/isi', [AdminEvaluasiKontrakController::class, 'isi'])->name('isi');
             Route::post('/{evaluasiKontrak}/putuskan', [AdminEvaluasiKontrakController::class, 'putuskan'])->name('putuskan');
+            Route::post('/{evaluasiKontrak}/jadwal-ttd', [AdminEvaluasiKontrakController::class, 'jadwalTtd'])->name('jadwal-ttd');
+        });
+
+        // Surat peringatan bulanan (SP1–SP3 per bulan). Hak akses dicek di controller.
+        Route::prefix('surat-peringatan')->name('surat-peringatan.')->group(function () {
+            Route::get('/', [AdminSuratPeringatanController::class, 'index'])->name('index');
+            Route::post('/', [AdminSuratPeringatanController::class, 'store'])->name('store');
+            Route::delete('/{suratPeringatan}', [AdminSuratPeringatanController::class, 'destroy'])->name('destroy');
         });
 
         Route::prefix('lowongan')->name('lowongan.')->group(function () {

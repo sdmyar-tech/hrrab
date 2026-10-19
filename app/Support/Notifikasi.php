@@ -119,32 +119,56 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
             route('admin.pengajuan-formasi.index'), Pemberitahuan::JENIS_INFO, $disetujui ? 'bi-check-circle' : 'bi-x-circle');
     }
 
-    /** H-30: tugas untuk atasan mengisi evaluasi kontrak bawahannya. */
+    /** H-30: tugas untuk penilai memberi nilai evaluasi kontrak. */
     public static function evaluasiKontrakBaru(\App\Models\EvaluasiKontrak $e): void
     {
         $e->loadMissing('dataPegawai.kepegawaian');
-        self::kirim(EvaluasiKontrakAlur::atasan($e->dataPegawai, $e->unit_kerja), 'Evaluasi kontrak perlu diisi',
-            ($e->dataPegawai?->nama_lengkap ?? '-') . " ({$e->unit_kerja}) — kontrak habis " . $e->tanggal_habis_kontrak->translatedFormat('d M Y') . '. Isi rekomendasi & penilaian.',
+        self::kirim(EvaluasiKontrakAlur::penilai($e->dataPegawai, $e->unit_kerja), 'Evaluasi kontrak: beri penilaian',
+            ($e->dataPegawai?->nama_lengkap ?? '-') . " ({$e->unit_kerja}) — kontrak habis " . $e->tanggal_habis_kontrak->translatedFormat('d M Y') . '.',
             route('admin.evaluasi-kontrak.show', $e), Pemberitahuan::JENIS_TUGAS, 'bi-clipboard-check', 'Sistem',
             TugasNotifikasi::penanda(TugasNotifikasi::EVALUASI_KONTRAK, $e->id));
     }
 
-    /** Atasan sudah mengisi → Kepala SDM memutuskan. */
+    /** Nilai sudah masuk → pemutus (Kepala SDM, atau GM untuk kontrak Kepala SDM) memutuskan. */
     public static function evaluasiKontrakDiisi(\App\Models\EvaluasiKontrak $e): void
     {
-        $sdm = User::where('role', User::ROLE_KEPALA_SDM)->get()->filter(fn (User $u) => EvaluasiKontrakAlur::bisaPutuskan($u, $e));
-        self::kirim($sdm, 'Evaluasi kontrak menunggu keputusan',
-            ($e->dataPegawai?->nama_lengkap ?? '-') . ' — rekomendasi atasan: ' . $e->labelRekomendasi() . '.',
+        $e->loadMissing('dataPegawai.kepegawaian');
+        $pemutus = EvaluasiKontrakAlur::pemutus($e->dataPegawai, $e->unit_kerja)->filter(fn (User $u) => EvaluasiKontrakAlur::bisaPutuskan($u, $e));
+        self::kirim($pemutus, 'Evaluasi kontrak menunggu keputusan',
+            ($e->dataPegawai?->nama_lengkap ?? '-') . " — total nilai {$e->total_nilai} (" . \App\Models\EvaluasiKontrak::predikat($e->total_nilai) . ').',
             route('admin.evaluasi-kontrak.show', $e), Pemberitahuan::JENIS_TUGAS, 'bi-clipboard-check', null,
             TugasNotifikasi::penanda(TugasNotifikasi::EVALUASI_KONTRAK, $e->id));
     }
 
-    /** Keputusan Kepala SDM dikabarkan ke atasan yang mengisi. */
+    /** Keputusan dikabarkan ke penilai; pegawai yang bersangkutan menerima jadwal & lokasi TTD kontrak. */
     public static function evaluasiKontrakDiputuskan(\App\Models\EvaluasiKontrak $e): void
     {
         self::kirim($e->diisi_oleh ? User::find($e->diisi_oleh) : null, 'Evaluasi kontrak diputuskan',
             ($e->dataPegawai?->nama_lengkap ?? '-') . ': ' . $e->labelKeputusan() . '.',
             route('admin.evaluasi-kontrak.show', $e), Pemberitahuan::JENIS_INFO, 'bi-check-circle');
+        self::evaluasiKontrakJadwalTtd($e);
+    }
+
+    /** Jadwal tanda tangan kontrak ke akun pegawai yang bersangkutan (bila sudah dijadwalkan). */
+    public static function evaluasiKontrakJadwalTtd(\App\Models\EvaluasiKontrak $e): void
+    {
+        if (! $e->labelTtd()) {
+            return;
+        }
+        self::kirim(User::where('data_pegawai_id', $e->data_pegawai_id)->get(), 'Jadwal tanda tangan kontrak',
+            'Kontrak Anda: ' . $e->labelKeputusan() . '. Silakan tanda tangan kontrak pada ' . $e->labelTtd() . '.',
+            null, Pemberitahuan::JENIS_PENGINGAT, 'bi-pen', 'SDM');
+    }
+    /** SP baru: dikabarkan ke pegawai yang bersangkutan dan Kepala SDM. */
+    public static function spDiberikan(\App\Models\SuratPeringatan $sp): void
+    {
+        $sp->loadMissing('dataPegawai');
+        $teks = "{$sp->label()} tanggal " . $sp->tanggal->translatedFormat('d M Y') . ": {$sp->alasan}.";
+        self::kirim(User::where('data_pegawai_id', $sp->data_pegawai_id)->get(), "Anda menerima {$sp->label()}", $teks,
+            null, Pemberitahuan::JENIS_INFO, 'bi-exclamation-octagon');
+        self::kirim(User::where('role', User::ROLE_KEPALA_SDM)->get()->reject(fn (User $u) => $u->data_pegawai_id === $sp->data_pegawai_id),
+            "{$sp->label()}: " . ($sp->dataPegawai?->nama_lengkap ?? '-'), $teks . " ({$sp->unit_kerja})",
+            route('admin.surat-peringatan.index', ['bulan' => $sp->tanggal->format('Y-m')]), Pemberitahuan::JENIS_INFO, 'bi-exclamation-octagon');
     }
 
     public static function interviewDijadwalkan(InterviewJadwal $jadwal): void

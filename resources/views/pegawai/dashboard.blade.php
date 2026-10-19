@@ -205,6 +205,7 @@
                     @endif
                 </div>
 
+                @include('partials.jadwal-ttd-kontrak')
                 <div class="panel">
                     <h2 class="h6 fw-bold mb-3"><i class="bi bi-building me-1"></i>Unit Saya</h2>
                     @if ($unitSaya)
