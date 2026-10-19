@@ -19,6 +19,7 @@
         ['bagian' => 'Kepegawaian', 'ikon' => 'bi-people', 'item' => [
             ['Data Pegawai', 'bi-people', 'admin.pegawai.index', 'admin.pegawai.*', $u->can('lihat-tabel-karyawan'), null],
             ['Mutasi & Rangkap', 'bi-arrow-left-right', 'admin.penugasan.index', 'admin.penugasan.*', $u->can('kelola-penugasan'), null],
+            ['Evaluasi Kontrak', 'bi-clipboard-check', 'admin.evaluasi-kontrak.index', 'admin.evaluasi-kontrak.*', \App\Support\EvaluasiKontrakAlur::bolehMembuka($u), $hitung['evaluasi_kontrak'] ?? null],
         ]],
         // Izin telat/pulang cepat diakses dari tab modul & tombol di halaman Harian (menu tetap ringkas).
         ['bagian' => 'Absensi', 'ikon' => $ik['modul'], 'item' => [

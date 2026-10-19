@@ -36,6 +36,8 @@ class PencatatLog
         'admin.penugasan.destroy' => ['hapus', 'Mutasi & Rangkap', 'Menghapus mutasi/rangkap'],
         'admin.penugasan.export' => ['ekspor', 'Mutasi & Rangkap', 'Mengekspor mutasi & rangkap'],
         'admin.pengajuan-cuti.approve' => ['setujui', 'Cuti', 'Menyetujui cuti'],
+        'admin.evaluasi-kontrak.isi' => ['kirim', 'Evaluasi Kontrak', 'Mengisi evaluasi kontrak'],
+        'admin.evaluasi-kontrak.putuskan' => ['setujui', 'Evaluasi Kontrak', 'Memutuskan evaluasi kontrak'],
         'admin.pengajuan-cuti.reject' => ['tolak', 'Cuti', 'Menolak cuti'],
         'admin.pengajuan-cuti.ubah-admin' => ['ubah', 'Cuti', 'Mengubah langsung cuti'],
         'admin.pengajuan-cuti.destroy' => ['hapus', 'Cuti', 'Menghapus pengajuan cuti'],

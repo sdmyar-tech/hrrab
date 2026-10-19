@@ -284,7 +284,7 @@ class PengajuanWorkflow
     }
 
     /** $approver adalah orang yang sama dengan akun $userId (satu orang bisa punya beberapa akun). */
-    private static function orangSama(User $approver, int $userId): bool
+    public static function orangSama(User $approver, int $userId): bool
     {
         if ($approver->id === $userId) {
             return true;

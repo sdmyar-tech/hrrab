@@ -119,6 +119,34 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
             route('admin.pengajuan-formasi.index'), Pemberitahuan::JENIS_INFO, $disetujui ? 'bi-check-circle' : 'bi-x-circle');
     }
 
+    /** H-30: tugas untuk atasan mengisi evaluasi kontrak bawahannya. */
+    public static function evaluasiKontrakBaru(\App\Models\EvaluasiKontrak $e): void
+    {
+        $e->loadMissing('dataPegawai.kepegawaian');
+        self::kirim(EvaluasiKontrakAlur::atasan($e->dataPegawai, $e->unit_kerja), 'Evaluasi kontrak perlu diisi',
+            ($e->dataPegawai?->nama_lengkap ?? '-') . " ({$e->unit_kerja}) — kontrak habis " . $e->tanggal_habis_kontrak->translatedFormat('d M Y') . '. Isi rekomendasi & penilaian.',
+            route('admin.evaluasi-kontrak.show', $e), Pemberitahuan::JENIS_TUGAS, 'bi-clipboard-check', 'Sistem',
+            TugasNotifikasi::penanda(TugasNotifikasi::EVALUASI_KONTRAK, $e->id));
+    }
+
+    /** Atasan sudah mengisi → Kepala SDM memutuskan. */
+    public static function evaluasiKontrakDiisi(\App\Models\EvaluasiKontrak $e): void
+    {
+        $sdm = User::where('role', User::ROLE_KEPALA_SDM)->get()->filter(fn (User $u) => EvaluasiKontrakAlur::bisaPutuskan($u, $e));
+        self::kirim($sdm, 'Evaluasi kontrak menunggu keputusan',
+            ($e->dataPegawai?->nama_lengkap ?? '-') . ' — rekomendasi atasan: ' . \App\Models\EvaluasiKontrak::labelPilihan($e->rekomendasi, $e->lama_bulan) . '.',
+            route('admin.evaluasi-kontrak.show', $e), Pemberitahuan::JENIS_TUGAS, 'bi-clipboard-check', null,
+            TugasNotifikasi::penanda(TugasNotifikasi::EVALUASI_KONTRAK, $e->id));
+    }
+
+    /** Keputusan Kepala SDM dikabarkan ke atasan yang mengisi. */
+    public static function evaluasiKontrakDiputuskan(\App\Models\EvaluasiKontrak $e): void
+    {
+        self::kirim($e->diisi_oleh ? User::find($e->diisi_oleh) : null, 'Evaluasi kontrak diputuskan',
+            ($e->dataPegawai?->nama_lengkap ?? '-') . ': ' . \App\Models\EvaluasiKontrak::labelPilihan($e->keputusan, $e->keputusan_lama_bulan) . '.',
+            route('admin.evaluasi-kontrak.show', $e), Pemberitahuan::JENIS_INFO, 'bi-check-circle');
+    }
+
     public static function interviewDijadwalkan(InterviewJadwal $jadwal): void
     {
         $jadwal->loadMissing('lamaran.dataPelamar', 'lamaran.dataPegawai', 'lamaran.lowongan', 'interviewer');

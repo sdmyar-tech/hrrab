@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\EvaluasiKontrak;
 use App\Models\InterviewJadwal;
 use App\Models\KontrakJadwal;
 use App\Models\PengajuanCuti;
@@ -26,6 +27,7 @@ class TugasNotifikasi
     public const INTERVIEW = 'interview';
     public const ONBOARDING = 'onboarding';
     public const KONTRAK = 'kontrak';
+    public const EVALUASI_KONTRAK = 'evaluasi_kontrak';
 
     /** @var array<string, true> "user:request" yang sudah dirapikan (cukup sekali per request) */
     private static array $sudahDirapikan = [];
@@ -76,6 +78,8 @@ class TugasNotifikasi
             self::INTERVIEW => ! ($j = InterviewJadwal::find($id)) || $j->status !== InterviewJadwal::STATUS_TERJADWAL || $j->hasil_status !== null,
             self::ONBOARDING => self::onboardingSelesai($user, $id),
             self::KONTRAK => ! ($k = KontrakJadwal::find($id)) || $k->status !== KontrakJadwal::STATUS_TERJADWAL,
+            // Atasan: selesai setelah mengisi; Kepala SDM: selesai setelah memutuskan.
+            self::EVALUASI_KONTRAK => ! ($e = EvaluasiKontrak::find($id)) || ! EvaluasiKontrakAlur::tugasUntuk($user, $e),
             default => true, // tipe tak dikenal: perlakukan seperti notifikasi biasa
         };
     }

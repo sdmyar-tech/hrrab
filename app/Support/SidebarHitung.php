@@ -36,6 +36,9 @@ class SidebarHitung
         if (RekrutmenAccess::canReview($user)) {
             $hitung['lamaran'] = Lamaran::where('status', Lamaran::STATUS_MENUNGGU_VERIFIKASI)->count();
         }
+        if (EvaluasiKontrakAlur::bolehMembuka($user)) {
+            $hitung['evaluasi_kontrak'] = EvaluasiKontrakAlur::jumlahTugas($user);
+        }
         if ($user->isStaff()) {
             $hitung['data_kurang'] = count(KelengkapanData::kurang($user->dataPegawai?->loadMissing('kepegawaian', 'kontakDarurat', 'dokumen')));
         }

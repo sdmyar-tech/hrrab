@@ -38,3 +38,10 @@ Artisan::command('log:bersihkan', function () {
 })->purpose('Arsipkan ke Excel lalu hapus log aktivitas yang lewat masa simpan (lihat config/hrrab.php retensi_log)');
 
 Schedule::command('log:bersihkan')->monthlyOn(1, '01:00');
+
+// H-30 sebelum kontrak habis: buat evaluasi kontrak & beri tugas ke atasan (aman dijalankan berulang).
+Artisan::command('kontrak:evaluasi', function () {
+    $baru = App\Support\EvaluasiKontrakAlur::buatJatuhTempo();
+    $this->info("Evaluasi kontrak baru: {$baru}");
+})->purpose('Buat evaluasi kontrak untuk pegawai yang kontraknya habis dalam 30 hari');
+Schedule::command('kontrak:evaluasi')->dailyAt('06:00');

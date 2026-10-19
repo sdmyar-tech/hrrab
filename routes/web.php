@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\PengajuanFormasiController as AdminPengajuanForma
 use App\Http\Controllers\Admin\PengajuanLemburController as AdminPengajuanLemburController;
 use App\Http\Controllers\Admin\PenugasanController as AdminPenugasanController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\EvaluasiKontrakController as AdminEvaluasiKontrakController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -200,6 +201,14 @@ Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function (
             Route::post('/{pengajuanFormasi}/reject', [AdminPengajuanFormasiController::class, 'reject'])->name('reject');
             Route::post('/{pengajuanFormasi}/batalkan', [AdminPengajuanFormasiController::class, 'batalkan'])->name('batalkan');
             Route::delete('/{pengajuanFormasi}', [AdminPengajuanFormasiController::class, 'destroy'])->name('destroy')->middleware('can:kelola-sistem');
+        });
+
+        // Evaluasi kontrak (H-30): atasan mengisi, Kepala SDM memutuskan. Hak akses dicek di controller.
+        Route::prefix('evaluasi-kontrak')->name('evaluasi-kontrak.')->group(function () {
+            Route::get('/', [AdminEvaluasiKontrakController::class, 'index'])->name('index');
+            Route::get('/{evaluasiKontrak}', [AdminEvaluasiKontrakController::class, 'show'])->name('show');
+            Route::post('/{evaluasiKontrak}/isi', [AdminEvaluasiKontrakController::class, 'isi'])->name('isi');
+            Route::post('/{evaluasiKontrak}/putuskan', [AdminEvaluasiKontrakController::class, 'putuskan'])->name('putuskan');
         });
 
         Route::prefix('lowongan')->name('lowongan.')->group(function () {
