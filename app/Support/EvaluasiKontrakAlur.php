@@ -155,6 +155,21 @@ class EvaluasiKontrakAlur
     }
 
     /**
+     * Hapus evaluasi yang belum diisi atasan bila kontraknya sudah tidak berlaku lagi (tanggal habis diubah,
+     * pegawai jadi Tetap/nonaktif). Yang sudah diisi/diputuskan tetap disimpan sebagai riwayat.
+     */
+    public static function bersihkanUsang(int $pegawaiId): int
+    {
+        $k = Kepegawaian::where('data_pegawai_id', $pegawaiId)->first();
+        $berlaku = $k && $k->status_rekrutmen === 'Aktif' && $k->status_kerja !== 'Tetap' ? $k->tanggal_habis_kontrak?->toDateString() : null;
+
+        return EvaluasiKontrak::where('data_pegawai_id', $pegawaiId)
+            ->where('status', EvaluasiKontrak::STATUS_MENUNGGU_ATASAN)
+            ->when($berlaku, fn ($q) => $q->whereDate('tanggal_habis_kontrak', '!=', $berlaku))
+            ->delete();
+    }
+
+    /**
      * Terapkan keputusan ke data kepegawaian — hanya bila kontrak yang dievaluasi masih kontrak yang berlaku
      * (mencegah perpanjangan ganda bila data sudah diubah manual).
      *

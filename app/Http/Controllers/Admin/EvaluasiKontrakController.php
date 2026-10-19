@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /** Evaluasi kontrak: atasan mengisi rekomendasi + penilaian (H-30), Kepala SDM memutuskan. */
@@ -87,26 +88,59 @@ class EvaluasiKontrakController extends Controller
         $e = $evaluasiKontrak;
         abort_unless(EvaluasiKontrakAlur::bisaIsi($user, $e), 403, 'Hanya atasan pegawai ini yang dapat mengisi evaluasi.');
 
+        $butir = EvaluasiKontrak::butir();
         $data = $request->validate([
             'rekomendasi' => ['required', Rule::in(array_keys(EvaluasiKontrak::PILIHAN))],
             'lama_bulan' => ['nullable', 'required_if:rekomendasi,' . EvaluasiKontrak::PERPANJANG, 'integer', Rule::in(EvaluasiKontrak::LAMA_BULAN)],
-            ...array_fill_keys(array_keys(EvaluasiKontrak::ASPEK), ['required', 'integer', 'between:1,5']),
+            'nilai' => ['required', 'array'],
+            'nilai.*' => ['integer', Rule::in(array_keys(config('penilaian_kontrak.skala')))],
+            'periode_mulai' => ['nullable', 'date'],
+            'periode_selesai' => ['nullable', 'date', 'after_or_equal:periode_mulai'],
             'catatan' => ['nullable', 'required_if:rekomendasi,' . EvaluasiKontrak::TIDAK, 'string', 'max:1000'],
         ], [
             'rekomendasi.required' => 'Pilih rekomendasi.',
             'lama_bulan.required_if' => 'Pilih lama perpanjangan.',
+            'nilai.required' => 'Isi penilaian setiap butir.',
+            'nilai.*.in' => 'Nilai hanya 1–4.',
+            'periode_selesai.after_or_equal' => 'Akhir periode penilaian tidak boleh sebelum awalnya.',
             'catatan.required_if' => 'Tulis alasan bila kontrak tidak diperpanjang.',
-            '*.required' => 'Beri nilai 1–5 untuk setiap aspek.',
         ]);
 
+        // Semua butir wajib dinilai (butir di luar formulir diabaikan).
+        $nilai = collect($data['nilai'])->only(array_keys($butir))->map(fn ($n) => (int) $n);
+        $kosong = array_diff(array_keys($butir), $nilai->keys()->all());
+        if ($kosong) {
+            throw ValidationException::withMessages(['nilai' => 'Masih ada ' . count($kosong) . ' butir belum dinilai (no. ' . implode(', ', array_slice($kosong, 0, 10)) . (count($kosong) > 10 ? ', …' : '') . ').']);
+        }
+
+        // Kepala SDM yang menjadi atasan (mis. untuk staf SDM): rekomendasinya langsung menjadi keputusan.
+        $langsungTetapkan = $user->isKepalaSdm();
         $baruDiisi = $e->status === EvaluasiKontrak::STATUS_MENUNGGU_ATASAN;
+        $lama = $data['rekomendasi'] === EvaluasiKontrak::PERPANJANG ? (int) $data['lama_bulan'] : null;
         $e->update([
-            ...$data,
-            'lama_bulan' => $data['rekomendasi'] === EvaluasiKontrak::PERPANJANG ? $data['lama_bulan'] : null,
+            'rekomendasi' => $data['rekomendasi'],
+            'lama_bulan' => $lama,
+            'nilai' => $nilai->sortKeys()->all(),
+            'total_nilai' => $nilai->sum(),
+            'rata_nilai' => round($nilai->avg(), 2),
+            'periode_mulai' => $data['periode_mulai'] ?? null,
+            'periode_selesai' => $data['periode_selesai'] ?? null,
+            'catatan' => $data['catatan'] ?? null,
             'diisi_oleh' => $user->id,
             'diisi_pada' => now(),
-            'status' => $baruDiisi ? EvaluasiKontrak::STATUS_MENUNGGU_SDM : $e->status,
+            'status' => $langsungTetapkan ? EvaluasiKontrak::STATUS_SELESAI : ($baruDiisi ? EvaluasiKontrak::STATUS_MENUNGGU_SDM : $e->status),
+            ...($langsungTetapkan ? [
+                'keputusan' => $data['rekomendasi'],
+                'keputusan_lama_bulan' => $lama,
+                'diputuskan_oleh' => $user->id,
+                'diputuskan_pada' => now(),
+            ] : []),
         ]);
+
+        if ($langsungTetapkan) {
+            return redirect()->route('admin.evaluasi-kontrak.show', $e)
+                ->with('success', 'Evaluasi tersimpan dan langsung ditetapkan (Anda Kepala SDM). ' . EvaluasiKontrakAlur::terapkan($e->load('dataPegawai.kepegawaian')));
+        }
         if ($baruDiisi) {
             Notifikasi::evaluasiKontrakDiisi($e);
         }

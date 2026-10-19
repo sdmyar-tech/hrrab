@@ -44,9 +44,11 @@ class Kepegawaian extends Model
             }
         });
 
-        // Kontrak diubah jadi habis ≤ 30 hari lagi → evaluasi kontrak langsung dibuat (tidak menunggu jadwal harian).
+        // Kontrak berubah: evaluasi lama yang belum diisi & tak berlaku dihapus, lalu evaluasi baru langsung dibuat
+        // bila habis ≤ 30 hari lagi (tidak menunggu jadwal harian).
         static::saved(function (Kepegawaian $k) {
             if ($k->wasChanged(['tanggal_habis_kontrak', 'status_kerja', 'status_rekrutmen']) || $k->wasRecentlyCreated) {
+                \App\Support\EvaluasiKontrakAlur::bersihkanUsang($k->data_pegawai_id);
                 \App\Support\EvaluasiKontrakAlur::buatJatuhTempo($k->data_pegawai_id);
             }
         });
