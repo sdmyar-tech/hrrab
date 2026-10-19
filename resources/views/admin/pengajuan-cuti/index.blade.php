@@ -107,26 +107,25 @@
                                         <small class="text-muted d-block mt-1">{{ $item->catatan_admin }}</small>
                                     @endif
                                 </td>
-                                <td class="text-end">
+                                <td class="text-end kolom-aksi">
                                     <a href="{{ route('admin.pengajuan-cuti.show', $item) }}" class="btn btn-outline-secondary btn-sm mb-1">
                                         <i class="bi bi-eye"></i> Detail
                                     </a>
                                     @if ($item->isPending())
                                         @if (\App\Support\PengajuanWorkflow::canAct(auth()->user(), $item))
                                             @if ($item->current_level === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_DIVISI)
-                                                <form action="{{ route('admin.pengajuan-cuti.approve', $item->id) }}" method="POST" class="form-approve-kepala mb-1">
+                                                {{-- Tahap Kepala Bagian: pilih pengganti tugas, lalu Setujui. Ditumpuk agar tidak terjepit di kolom sempit. --}}
+                                                <form action="{{ route('admin.pengajuan-cuti.approve', $item->id) }}" method="POST" class="form-approve-kepala d-grid gap-1 mb-1">
                                                     @csrf
-                                                    <div class="input-group input-group-sm">
-                                                        <select name="pengganti_nama" class="form-select form-select-sm" required>
-                                                            <option value="">Pilih pengganti...</option>
-                                                            @foreach ($item->substituteOptions() as $nama)
-                                                                <option value="{{ $nama }}">{{ $nama }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                        <button type="submit" class="btn btn-success btn-sm" title="Setujui &amp; teruskan ke Kepala SDM">
-                                                            <i class="bi bi-check-lg"></i>
-                                                        </button>
-                                                    </div>
+                                                    <select name="pengganti_nama" class="form-select form-select-sm" required aria-label="Pengganti tugas">
+                                                        <option value="">Pilih pengganti...</option>
+                                                        @foreach ($item->substituteOptions() as $nama)
+                                                            <option value="{{ $nama }}">{{ $nama }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <button type="submit" class="btn btn-success btn-sm" title="Setujui &amp; teruskan ke Kepala SDM">
+                                                        <i class="bi bi-check-lg"></i> Setujui
+                                                    </button>
                                                 </form>
                                                 <form action="{{ route('admin.pengajuan-cuti.reject', $item->id) }}" method="POST" class="form-reject-cuti">
                                                     @csrf
@@ -192,6 +191,12 @@
     </div>
 </main>
 
+<style>
+    /* Kolom aksi cukup lebar untuk dropdown pengganti + tombol (tidak terjepit). */
+    /* Mengalahkan aturan global .table td (min-width: 0; kolom terakhir width: 1%). */
+    .table tbody td.kolom-aksi { width: 200px; min-width: 200px; }
+    .kolom-aksi .btn-outline-secondary { width: 100%; }
+</style>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('searchInput');
