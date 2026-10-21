@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DataPelamar extends Model
 {
-    use HasFactory, \App\Models\Concerns\DicatatLog;
+    use \App\Models\Concerns\DicatatLog, HasFactory;
 
     protected $table = 'data_pelamars';
 

@@ -33,14 +33,21 @@
         </div>
 
         <section class="panel p-0 overflow-hidden">
-            {{-- Bilah alat: tambah cepat + cari langsung + urutkan --}}
             <div class="jb-bilah">
                 <form action="{{ route('admin.jabatan.store') }}" method="POST" class="jb-tambah">
                     @csrf
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-plus-lg"></i></span>
-                        <input type="text" name="nama" class="form-control @error('nama') is-invalid @enderror" placeholder="Tambah jabatan baru, mis. STAFF IT"
+                        <input type="text" name="nama" class="form-control @error('nama') is-invalid @enderror" placeholder="Tambah jabatan baru, mis. STAFF LEGAL"
                             value="{{ $errors->ubah->any() ? '' : old('nama') }}" maxlength="150" required autocomplete="off">
+                        {{-- Jabatan dibuat langsung di unitnya (unit lain bisa ditambah lewat Ubah). --}}
+                        <select name="unit_id" class="form-select jb-unit-tambah" aria-label="Unit jabatan">
+                            <option value="">-- Pilih unit --</option>
+                            <option value="">Tanpa unit</option>
+                            @foreach ($units as $un)
+                                <option value="{{ $un->id }}" @selected(old('unit_id') == $un->id || (! old('unit_id') && request('unit') === $un->nama))>{{ $un->nama }}</option>
+                            @endforeach
+                        </select>
                         <button type="submit" class="btn btn-primary">Tambah</button>
                     </div>
                     @error('nama')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
@@ -50,6 +57,13 @@
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="search" id="jb-cari" class="form-control" placeholder="Cari jabatan…" value="{{ request('q') }}" autocomplete="off">
                     </div>
+                    <select id="jb-saring-unit" class="form-select" aria-label="Saring per unit">
+                        <option value="">Semua unit</option>
+                        <option value="-">Belum ada unit</option>
+                        @foreach ($units as $un)
+                            <option value="{{ $un->nama }}" @selected(request('unit') === $un->nama)>{{ $un->nama }}</option>
+                        @endforeach
+                    </select>
                     <select id="jb-urut" class="form-select" aria-label="Urutkan">
                         <option value="nama">A – Z</option>
                         <option value="dipakai">Paling banyak dipakai</option>
@@ -59,7 +73,7 @@
 
             <div class="jb-info small text-muted px-3 py-2">
                 Menampilkan <strong id="jb-tampil">{{ $total }}</strong> dari {{ $total }} jabatan.
-                Klik nama atau <strong>Ubah</strong> untuk mengganti nama (semua data ikut diperbarui) · hapus jabatan yang dipakai akan meminta jabatan pengganti.
+                Klik nama atau <strong>Ubah</strong> untuk mengganti nama (semua data ikut diperbarui) atau <strong>unitnya</strong> · jabatan hanya muncul di pilihan unit yang ditautkan · hapus jabatan yang dipakai akan meminta jabatan pengganti.
             </div>
 
             <ul class="jb-daftar list-unstyled mb-0" id="jb-daftar">
@@ -67,9 +81,19 @@
                     @php $n = $dipakai[$j->nama] ?? 0; @endphp
                     <li class="jb-baris {{ session('jabatan_disorot') === $j->id ? 'disorot' : '' }}" id="jabatan-{{ $j->id }}" data-nama="{{ $j->nama }}" data-dipakai="{{ $n }}"
                         data-id="{{ $j->id }}" data-url="{{ route('admin.jabatan.update', $j) }}" data-url-hapus="{{ route('admin.jabatan.destroy', $j) }}"
-                        data-rincian='@json($rincian[$j->nama] ?? (object) [])'>
+                        data-rincian='@json($rincian[$j->nama] ?? (object) [])'
+                        data-units='@json($j->units->pluck('nama'))' data-unit-ids='@json($j->units->pluck('id'))'>
                         <div class="jb-tampil">
-                            <button type="button" class="jb-nama" data-ubah-jabatan title="Klik untuk mengubah nama">{{ $j->nama }}</button>
+                            <span class="jb-nama-wadah">
+                                <button type="button" class="jb-nama" data-ubah-jabatan title="Klik untuk mengubah nama / unit">{{ $j->nama }}</button>
+                                <span class="jb-unit">
+                                    @forelse ($j->units as $un)
+                                        <span class="jb-unit-chip">{{ $un->nama }}</span>
+                                    @empty
+                                        <span class="jb-unit-chip kosong" title="Belum ditautkan ke unit — tidak muncul di daftar jabatan unit mana pun">tanpa unit</span>
+                                    @endforelse
+                                </span>
+                            </span>
                             @if ($n)
                                 <a href="{{ route('admin.pegawai.index', ['q' => $j->nama]) }}" class="jb-pakai" title="Lihat pegawai dengan jabatan ini">
                                     <i class="bi bi-people"></i> {{ $n }} data
@@ -164,6 +188,24 @@
                 </div>
                 @error('nama', 'ubah')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
 
+                {{-- Unit tempat jabatan ini berada: menentukan jabatan yang muncul saat unit dipilih (pegawai, mutasi, formasi, lowongan). --}}
+                <input type="hidden" name="unit_dikirim" value="1">
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label mb-0">Unit</label>
+                        <span class="form-text m-0" data-jumlah-unit></span>
+                    </div>
+                    <input type="search" class="form-control form-control-sm mb-2" placeholder="Cari unit…" data-cari-unit autocomplete="off">
+                    <div class="jb-pilih-unit" data-pilih-unit>
+                        @foreach ($units as $un)
+                            <label class="form-check" data-nama-unit="{{ $un->nama }}">
+                                <input class="form-check-input" type="checkbox" name="unit_ids[]" value="{{ $un->id }}">
+                                <span class="form-check-label">{{ $un->nama }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+
                 {{-- Nama sama dengan jabatan lain → tawarkan penggabungan. --}}
                 <div class="alert alert-warning small mt-3 mb-0" data-kembar hidden>
                     <i class="bi bi-exclamation-triangle me-1"></i>Jabatan <strong data-nama-kembar></strong> sudah ada.
@@ -205,17 +247,27 @@
     .jb-stat:hover { border-color: #e4b0b1; }
     .jb-stat.aktif { border-color: var(--hr-primary); box-shadow: inset 0 0 0 1px var(--hr-primary); }
     .jb-bilah { display: flex; flex-wrap: wrap; gap: .75rem; padding: 1rem; border-bottom: 1px solid var(--admin-border); background: var(--admin-surface-soft); }
-    .jb-tambah { flex: 1 1 320px; margin: 0; }
-    .jb-cari { flex: 1 1 320px; display: flex; gap: .5rem; }
-    .jb-cari .input-group { flex: 1 1 auto; }
-    .jb-cari .form-select { flex: 0 0 auto; width: auto; }
+    .jb-tambah { flex: 1 1 460px; margin: 0; }
+    .jb-tambah input[name=nama] { min-width: 180px; }
+    .jb-cari { flex: 1 1 460px; display: flex; flex-wrap: wrap; gap: .5rem; }
+    .jb-cari .input-group { flex: 1 1 200px; }
+    .jb-cari .form-select { flex: 0 1 auto; width: auto; max-width: 220px; }
     .jb-info { border-bottom: 1px solid var(--admin-border); }
     .jb-daftar { max-height: calc(100vh - 340px); min-height: 240px; overflow-y: auto; }
     .jb-baris { border-bottom: 1px solid var(--admin-border); }
     .jb-baris:last-of-type { border-bottom: 0; }
     .jb-tampil { display: flex; align-items: center; gap: .75rem; padding: .55rem 1rem; min-height: 50px; }
     .jb-baris:hover { background: rgba(136, 15, 18, .03); }
-    .jb-nama { flex: 1 1 auto; min-width: 0; font-weight: 600; font-size: .9rem; overflow-wrap: anywhere; }
+    .jb-nama-wadah { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; }
+    .jb-nama { min-width: 0; font-weight: 600; font-size: .9rem; overflow-wrap: anywhere; }
+    .jb-unit { display: inline-flex; flex-wrap: wrap; gap: .25rem; }
+    .jb-unit-chip { font-size: .7rem; font-weight: 700; letter-spacing: .02em; padding: .12rem .5rem; border-radius: 999px; background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
+    .jb-unit-chip.kosong { background: transparent; color: var(--admin-muted); border-style: dashed; border-color: var(--admin-border); font-weight: 500; }
+    .jb-unit-tambah { flex: 0 0 auto; max-width: 190px; }
+    .jb-pilih-unit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .15rem .75rem; max-height: 190px; overflow-y: auto;
+        padding: .5rem .75rem; border: 1px solid var(--admin-border); border-radius: 10px; }
+    .jb-pilih-unit .form-check { margin: 0; font-size: .85rem; }
+    html[data-theme="dark"] .jb-unit-chip:not(.kosong) { background: rgba(99, 102, 241, .15); color: #c7d2fe; border-color: rgba(99, 102, 241, .35); }
     .jb-pakai { flex: none; font-size: .78rem; font-weight: 600; padding: .2rem .6rem; border-radius: 999px; background: var(--hr-primary-soft); color: var(--hr-primary-dark) !important; text-decoration: none; white-space: nowrap; }
     .jb-pakai:hover { background: var(--hr-primary); color: #fff !important; }
     .jb-pakai.kosong { background: transparent; color: var(--admin-muted) !important; font-weight: 500; }
@@ -245,6 +297,7 @@
         const urut = document.getElementById('jb-urut');
         const tampil = document.getElementById('jb-tampil');
         const kosong = daftar.querySelector('.jb-kosong');
+        const saringUnit = document.getElementById('jb-saring-unit');
         let saring = 'semua';
 
         // Saring, cari, dan urutkan langsung tanpa memuat ulang halaman.
@@ -253,7 +306,9 @@
             let n = 0;
             baris.forEach(function (li) {
                 const dipakai = parseInt(li.dataset.dipakai, 10);
-                const cocok = li.dataset.nama.includes(kata)
+                const units = JSON.parse(li.dataset.units || '[]');
+                const cocokUnit = !saringUnit.value || (saringUnit.value === '-' ? units.length === 0 : units.includes(saringUnit.value));
+                const cocok = li.dataset.nama.includes(kata) && cocokUnit
                     && (saring === 'semua' || (saring === 'dipakai' ? dipakai > 0 : dipakai === 0));
                 li.hidden = ! cocok;
                 n += cocok ? 1 : 0;
@@ -271,6 +326,7 @@
         }
 
         cari.addEventListener('input', perbarui);
+        saringUnit.addEventListener('change', perbarui);
         urut.addEventListener('change', urutkan);
         document.querySelectorAll('.jb-stat').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -281,7 +337,6 @@
             });
         });
 
-        // ---------- Modal Ubah Jabatan ----------
         const modalUbah = document.getElementById('modalUbahJabatan');
         const formUbah = document.getElementById('formUbahJabatan');
         const formGabung = document.getElementById('formGabungJabatan');
@@ -290,6 +345,10 @@
         const pesanNama = formUbah.querySelector('[data-pesan-nama]');
         const kotakKembar = formUbah.querySelector('[data-kembar]');
         const kotakDampak = formUbah.querySelector('[data-dampak]');
+        const centangUnit = Array.from(formUbah.querySelectorAll('[name="unit_ids[]"]'));
+        const cariUnit = formUbah.querySelector('[data-cari-unit]');
+        let unitAwal = '';
+        const unitDipilih = () => centangUnit.filter((c) => c.checked).map((c) => c.value).sort().join(',');
         // Peta nama → id semua jabatan untuk cek nama kembar tanpa memuat ulang.
         const semua = new Map(baris.map((li) => [li.dataset.nama, li.dataset.id]));
         const rapikan = (v) => v.replace(/\s+/g, ' ').trim().toUpperCase();
@@ -302,6 +361,12 @@
             formUbah.kembali_q.value = cari.value;
             modalUbah.querySelector('[data-nama-lama]').textContent = li.dataset.nama;
             inputNama.value = namaAwal ?? li.dataset.nama;
+            // Unit jabatan: centang sesuai data, ingat keadaan awal untuk mendeteksi perubahan.
+            const idUnit = JSON.parse(li.dataset.unitIds || '[]').map(String);
+            centangUnit.forEach((c) => { c.checked = idUnit.includes(c.value); });
+            unitAwal = unitDipilih();
+            cariUnit.value = '';
+            centangUnit.forEach((c) => { c.closest('label').hidden = false; });
             // Rincian dampak: data apa saja yang ikut berganti nama.
             const rincian = JSON.parse(li.dataset.rincian || '{}');
             const total = Object.values(rincian).reduce((a, b) => a + b, 0);
@@ -327,9 +392,11 @@
             kotakKembar.querySelectorAll('[data-nama-kembar]').forEach((e) => { e.textContent = nama; });
             formGabung.pengganti_id.value = kembar ? idKembar : '';
             formGabung.action = aktif.dataset.urlHapus;
-            tombolSimpan.disabled = !nama || nama === lama || kembar;
+            const unitBerubah = unitDipilih() !== unitAwal;
+            formUbah.querySelector('[data-jumlah-unit]').textContent = centangUnit.filter((c) => c.checked).length + ' unit dipilih';
+            tombolSimpan.disabled = !nama || kembar || (nama === lama && !unitBerubah);
             pesanNama.textContent = !nama ? 'Nama jabatan wajib diisi.'
-                : nama === lama ? 'Belum ada perubahan.'
+                : nama === lama ? (unitBerubah ? 'Nama tetap; unit akan diperbarui.' : 'Belum ada perubahan.')
                 : kembar ? 'Nama ini sudah dipakai jabatan lain.'
                 : 'Akan disimpan sebagai: ' + nama;
             pesanNama.classList.toggle('text-danger', !nama || kembar);
@@ -338,6 +405,11 @@
 
         document.querySelectorAll('[data-ubah-jabatan]').forEach((b) => b.addEventListener('click', () => bukaUbah(b.closest('.jb-baris'))));
         inputNama.addEventListener('input', periksa);
+        centangUnit.forEach((c) => c.addEventListener('change', periksa));
+        cariUnit.addEventListener('input', () => {
+            const kata = cariUnit.value.trim().toUpperCase();
+            centangUnit.forEach((c) => { c.closest('label').hidden = !c.closest('label').dataset.namaUnit.includes(kata); });
+        });
         modalUbah.addEventListener('shown.bs.modal', () => { inputNama.focus(); inputNama.select(); });
         formUbah.addEventListener('submit', () => { inputNama.value = rapikan(inputNama.value); });
         kotakKembar.querySelector('[data-gabungkan]').addEventListener('click', function () {
@@ -386,7 +458,7 @@
         modal.addEventListener('shown.bs.modal', function () { cariPengganti.focus(); });
         cariPengganti.addEventListener('input', saringPengganti);
 
-        if (cari.value) perbarui();
+        if (cari.value || saringUnit.value) perbarui();
     });
 </script>
 @endsection

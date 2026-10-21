@@ -70,10 +70,12 @@ class PembacaFileAbsen
 
             if ($id === null) {
                 $hasil['tidak_valid'][] = ['baris' => $nomor, 'alasan' => 'ID mesin tidak valid', 'isi' => $isi];
+
                 continue;
             }
             if ($tanggal === null) {
                 $hasil['tidak_valid'][] = ['baris' => $nomor, 'alasan' => 'Tanggal tidak terbaca', 'isi' => $isi];
+
                 continue;
             }
 
@@ -81,6 +83,7 @@ class PembacaFileAbsen
             $keluar = self::jam($sel[$peta['keluar']] ?? null);
             if ($masuk === null && $keluar === null) {
                 $hasil['kosong']++; // tidak ada scan hari itu → status ditentukan sistem (libur/cuti/alpa)
+
                 continue;
             }
 
@@ -128,11 +131,13 @@ class PembacaFileAbsen
         foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $i => $teks) {
             if (! preg_match('/^\s*(-?\d+)\s+(\d{4}-\d{2}-\d{2})\s+(\d{1,2}:\d{2})/', $teks, $m)) {
                 $hasil['tidak_valid'][] = ['baris' => $i + 1, 'alasan' => 'Format baris tidak dikenal', 'isi' => mb_substr(trim($teks), 0, 80)];
+
                 continue;
             }
             $id = self::normalisasiId($m[1]);
             if ($id === null) {
                 $hasil['tidak_valid'][] = ['baris' => $i + 1, 'alasan' => 'ID mesin tidak valid', 'isi' => mb_substr(trim($teks), 0, 80)];
+
                 continue;
             }
             $jam = str_pad($m[3], 5, '0', STR_PAD_LEFT);

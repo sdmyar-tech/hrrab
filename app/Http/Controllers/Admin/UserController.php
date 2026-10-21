@@ -5,16 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\DataPegawai;
 use App\Models\User;
+use App\Support\ExcelExporter;
 use App\Support\PenugasanService;
 use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use App\Support\ExcelExporter;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class UserController extends Controller
@@ -195,9 +196,9 @@ class UserController extends Controller
     /**
      * Pilihan dropdown "Data Pegawai": nama, NIP, email, unit, dan jumlah akun yang sudah tertaut.
      *
-     * @return \Illuminate\Support\Collection<int, array{id: int, nama: string, nip: ?string, email: ?string, unit: ?string, akun: int}>
+     * @return Collection<int, array{id: int, nama: string, nip: ?string, email: ?string, unit: ?string, akun: int}>
      */
-    private function pegawaiOpsi(): \Illuminate\Support\Collection
+    private function pegawaiOpsi(): Collection
     {
         $akun = User::whereNotNull('data_pegawai_id')->selectRaw('data_pegawai_id, count(*) n')->groupBy('data_pegawai_id')->pluck('n', 'data_pegawai_id');
 

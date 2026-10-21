@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\DatabaseNotification;
@@ -103,6 +104,10 @@ class EditorData
                 'with' => ['dataPegawai:id,nama_lengkap'], 'judul' => fn ($m) => $pegawai($m) . ' — lembur ' . $m->jumlah_jam . ' jam',
                 'kolom' => ['tanggal', 'jam_mulai', 'jam_selesai', 'status'], 'cari' => ['status', 'unit_kerja', 'uraian_tugas'], 'relasi' => ['dataPegawai' => 'nama_lengkap'],
                 'tautan' => fn ($m) => self::rute('admin.pengajuan-lembur.show', $m)],
+            'izin_keluar' => ['grup' => 'Cuti & Lembur', 'label' => 'Izin Keluar', 'ikon' => 'bi-door-open', 'model' => Models\PengajuanIzinKeluar::class,
+                'with' => ['dataPegawai:id,nama_lengkap'], 'judul' => fn ($m) => $pegawai($m) . ' — izin keluar ' . $m->tanggal?->format('d-m-Y'),
+                'kolom' => ['tanggal', 'jam_keluar', 'jam_kembali', 'status', 'kode_tiket'], 'cari' => ['status', 'unit_kerja', 'alasan', 'kode_tiket'], 'relasi' => ['dataPegawai' => 'nama_lengkap'],
+                'tautan' => fn ($m) => self::rute('admin.izin-keluar.show', $m)],
 
             // ---------------- Absensi
             'absensi' => ['grup' => 'Absensi', 'label' => 'Absensi Harian', 'ikon' => 'bi-fingerprint', 'model' => Models\Absensi::class,
@@ -291,7 +296,6 @@ class EditorData
         return array_values(array_unique(array_merge($ada, $tambahan)));
     }
 
-    /** Nilai kolom untuk ditampilkan di input form. */
     public static function nilaiInput(Model $model, array $k): string
     {
         // Data baru: tampilkan nilai bawaan kolom (mis. penting = 0), bukan pilihan pertama dropdown.
@@ -301,7 +305,7 @@ class EditorData
         }
 
         return match ($k['jenis']) {
-            'datetime' => \Carbon\Carbon::parse($mentah)->format('Y-m-d\TH:i:s'),
+            'datetime' => Carbon::parse($mentah)->format('Y-m-d\TH:i:s'),
             'date' => substr((string) $mentah, 0, 10),
             'time' => substr((string) $mentah, 0, 8),
             'json' => json_encode(json_decode((string) $mentah, true), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: (string) $mentah,
@@ -316,8 +320,8 @@ class EditorData
 
         return match (true) {
             $v === null => '–',
-            is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $v) === 1 => \Carbon\Carbon::parse($v)->format('d-m-Y H:i'),
-            is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) === 1 => \Carbon\Carbon::parse($v)->format('d-m-Y'),
+            is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $v) === 1 => Carbon::parse($v)->format('d-m-Y H:i'),
+            is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) === 1 => Carbon::parse($v)->format('d-m-Y'),
             default => Str::limit((string) $v, 40),
         };
     }

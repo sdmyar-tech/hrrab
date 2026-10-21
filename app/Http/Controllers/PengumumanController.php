@@ -5,15 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Pengumuman;
 use App\Models\PengumumanPeserta;
 use App\Models\User;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
-use Illuminate\View\View;
 use App\Support\AbsenAcara;
 use App\Support\ExcelExporter;
 use App\Support\Urutan;
+use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PengumumanController extends Controller
@@ -149,7 +152,7 @@ class PengumumanController extends Controller
         return back()->with('success', 'Semua pengumuman ditandai sudah dibaca.');
     }
 
-private function validasi(Request $request, User $user): array
+    private function validasi(Request $request, User $user): array
     {
         $pilihan = $this->pilihanUnit($user);
 
@@ -190,7 +193,7 @@ private function validasi(Request $request, User $user): array
     /**
      * Data form "Absen Acara" (hanya untuk SDM/Admin/GM).
      *
-     * @return array{kandidat: \Illuminate\Support\Collection, unit: array<string, int>, jabatan: array<string, int>}|null
+     * @return array{kandidat: Collection, unit: array<string, int>, jabatan: array<string, int>}|null
      */
     private function dataFormAbsen(User $user): ?array
     {
@@ -243,18 +246,18 @@ private function validasi(Request $request, User $user): array
             'user' => array_values(array_unique(array_map('intval', $v['absen_user'] ?? []))),
         ];
         if (AbsenAcara::terapkanKriteria($kriteria, $pilihan['kandidat'])->isEmpty()) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['absen_peserta' => 'Pilih peserta absen: semua, per unit, per jabatan, atau nama pegawai.']);
+            throw ValidationException::withMessages(['absen_peserta' => 'Pilih peserta absen: semua, per unit, per jabatan, atau nama pegawai.']);
         }
 
         // Pengumuman harus tetap tampil sampai absen ditutup.
-        $tutup = \Carbon\Carbon::createFromFormat('Y-m-d\TH:i', $v['absen_tutup']);
+        $tutup = Carbon::createFromFormat('Y-m-d\TH:i', $v['absen_tutup']);
         if (! empty($data['tampil_sampai']) && $tutup->toDateString() > $data['tampil_sampai']) {
             $data['tampil_sampai'] = $tutup->toDateString();
         }
 
         return [
             'absen_aktif' => true,
-            'absen_buka' => \Carbon\Carbon::createFromFormat('Y-m-d\TH:i', $v['absen_buka']),
+            'absen_buka' => Carbon::createFromFormat('Y-m-d\TH:i', $v['absen_buka']),
             'absen_tutup' => $tutup,
             'absen_kriteria' => $kriteria,
         ];

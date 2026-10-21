@@ -9,10 +9,13 @@ use App\Notifications\Pemberitahuan;
 use App\Support\AbsenAcara;
 use App\Support\ExcelExporter;
 use App\Support\Notifikasi;
+use App\Support\TugasNotifikasi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -94,11 +97,12 @@ class AbsenAcaraController extends Controller
             ['Diekspor', now()->format('d-m-Y H:i') . ' oleh ' . Auth::user()->name],
         ];
 
-        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('absen-acara-' . \Illuminate\Support\Str::slug($pengumuman->judul)), [
+        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('absen-acara-' . Str::slug($pengumuman->judul)), [
             ['name' => 'Kehadiran', 'headers' => ['No', 'Nama', 'NIP', 'Unit', 'Jabatan', 'Status', 'Waktu Absen', 'Keterangan', 'Diingatkan'], 'rows' => $peserta],
             ['name' => 'Ringkasan', 'headers' => ['Keterangan', 'Nilai'], 'rows' => $ringkasan],
         ]);
     }
+
     /** Layar QR untuk ditampilkan panitia di lokasi (proyektor / HP / tablet). */
     public function qr(Pengumuman $pengumuman): View
     {
@@ -189,7 +193,7 @@ class AbsenAcaraController extends Controller
         $jumlah = Notifikasi::kirim($target->pluck('user')->filter(), "Pengingat absen: {$pengumuman->judul}",
             "Anda belum absen. Waktu absen: {$pengumuman->absenJendelaLabel()}. Scan QR di lokasi acara.",
             route('pengumuman.index') . '#pengumuman-' . $pengumuman->id, Pemberitahuan::JENIS_PENGINGAT, 'bi-qr-code-scan',
-            null, \App\Support\TugasNotifikasi::penanda(\App\Support\TugasNotifikasi::ABSEN_ACARA, $pengumuman->id));
+            null, TugasNotifikasi::penanda(TugasNotifikasi::ABSEN_ACARA, $pengumuman->id));
         PengumumanPeserta::whereIn('id', $target->pluck('id'))->update(['diingatkan_pada' => now()]);
 
         return back()->with('success', "Pengingat dikirim ke {$jumlah} pegawai.");
@@ -285,7 +289,7 @@ class AbsenAcaraController extends Controller
     /**
      * Peserta + filter status, pencarian, dan urutan (dipakai halaman monitoring & ekspor).
      *
-     * @return array{semua: \Illuminate\Support\Collection, baris: \Illuminate\Support\Collection, filter: string, urut: string}
+     * @return array{semua: Collection, baris: Collection, filter: string, urut: string}
      */
     private function saring(Request $request, Pengumuman $pengumuman): array
     {

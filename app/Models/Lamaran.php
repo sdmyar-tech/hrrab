@@ -2,39 +2,52 @@
 
 namespace App\Models;
 
+use App\Support\Notifikasi;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Lamaran extends Model
 {
-    use HasFactory, \App\Models\Concerns\DicatatLog;
+    use \App\Models\Concerns\DicatatLog, HasFactory;
 
     protected static function booted(): void
     {
-        static::updated(fn (self $lamaran) => \App\Support\Notifikasi::lamaranBerubah($lamaran));
+        static::updated(fn (self $lamaran) => Notifikasi::lamaranBerubah($lamaran));
     }
 
     protected $table = 'lamarans';
 
     public const STATUS_MENUNGGU_VERIFIKASI = 'menunggu_verifikasi';
+
     public const STATUS_PROSES = 'proses';
+
     public const STATUS_DITERIMA = 'diterima';
+
     public const STATUS_DITOLAK = 'ditolak';
+
     public const STATUS_DIBATALKAN = 'dibatalkan';
 
     public const TAHAP_VERIFIKASI = 'verifikasi';
+
     public const TAHAP_INTERVIEW = 'interview';
+
     public const TAHAP_SCREENING = 'screening';
+
     public const TAHAP_KONTRAK = 'kontrak';
+
     public const TAHAP_SELESAI = 'selesai';
 
     public const KEPUTUSAN_REKRUT = 'rekrut';
+
     public const KEPUTUSAN_TOLAK_ADMIN = 'tolak_admin';
+
     public const KEPUTUSAN_TOLAK_PELAMAR = 'tolak_pelamar';
 
     public const JALUR_UMUM = 'umum';
+
     public const JALUR_INTERNAL = 'internal';
 
     protected $fillable = [
@@ -120,7 +133,7 @@ class Lamaran extends Model
     public function linkJadwal(): string
     {
         if (! $this->token_jadwal) {
-            $this->forceFill(['token_jadwal' => \Illuminate\Support\Str::random(40)])->save();
+            $this->forceFill(['token_jadwal' => Str::random(40)])->save();
         }
 
         return route('jadwal-kandidat.show', $this->token_jadwal);

@@ -3,25 +3,27 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Jabatan;
 use App\Models\Lowongan;
 use App\Models\PengajuanFormasi;
 use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\Notifikasi;
 use App\Support\RekrutmenAccess;
 use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use App\Support\Notifikasi;
 
 class PengajuanFormasiController extends Controller
 {
     public function index(Request $request): View
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $query = $this->filteredQuery($request, $user);
@@ -43,7 +45,7 @@ class PengajuanFormasiController extends Controller
 
     public function export(Request $request): BinaryFileResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $rows = $this->filteredQuery($request, $user)->orderBy('id')->get()->map(fn (PengajuanFormasi $f) => [
@@ -79,7 +81,7 @@ class PengajuanFormasiController extends Controller
         ], $rows, 'Pengajuan Formasi');
     }
 
-    private function filteredQuery(Request $request, \App\Models\User $user)
+    private function filteredQuery(Request $request, User $user)
     {
         $query = PengajuanFormasi::with(['diajukanOleh.dataPegawai.kepegawaian', 'direviewOleh', 'lowongan', 'gmPenyetuju', 'ownerPenyetuju']);
 
@@ -103,7 +105,7 @@ class PengajuanFormasiController extends Controller
 
     public function create(): View|RedirectResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if (! RekrutmenAccess::bisaAjukanFormasi($user)) {
@@ -117,18 +119,34 @@ class PengajuanFormasiController extends Controller
         return view('admin.pengajuan-formasi.create', [
             'unitOptions' => $units,
             // Jabatan per unit: dropdown jabatan hanya menampilkan jabatan yang ada di unit terpilih.
-            'jabatanPerUnit' => collect($units)->mapWithKeys(fn ($u) => [$u => $user->isAdmin() ? \App\Models\Jabatan::daftar() : RekrutmenAccess::jabatanUnit($u)])->all(),
+            'jabatanPerUnit' => collect($units)->mapWithKeys(fn ($u) => [$u => $user->isAdmin() ? Jabatan::daftar() : RekrutmenAccess::jabatanUnit($u)])->all(),
             // Atasan langsung = pengaju (readonly); Admin memilih dari daftar kepala & GM.
             'atasanBawaan' => $this->namaAtasan($user),
             'pilihanAtasan' => $user->isAdmin() ? $this->pilihanAtasan() : [],
             // Bagan unit (kepala + pegawai per jabatan) untuk memilih pegawai yang digantikan / posisi baru.
-            'baganPerUnit' => collect($units)->mapWithKeys(fn ($u) => [$u => RekrutmenAccess::baganUnit($u)])->all(),
+            'baganPerUnit' => $bagan = collect($units)->mapWithKeys(fn ($u) => [$u => RekrutmenAccess::baganUnit($u)])->all(),
+            // Replacement: klik pegawai di bagan → jabatan terisi otomatis (nama jabatan bagan → nama di Master Jabatan).
+            'jabatanBaganPerUnit' => collect($bagan)->map(fn ($b) => $this->jabatanBagan($b))->all(),
         ]);
+    }
+
+    /**
+     * Jabatan cabang bagan (huruf besar) yang terdaftar di Master Jabatan.
+     *
+     * @param  array{grup: array<string, mixed>}  $bagan
+     * @return array<string, string> jabatan bagan => nama di Master Jabatan
+     */
+    private function jabatanBagan(array $bagan): array
+    {
+        $master = collect(Jabatan::daftar())->keyBy(fn ($j) => mb_strtoupper(trim($j)));
+
+        return collect(array_keys($bagan['grup']))->filter(fn ($j) => $master->has($j))
+            ->mapWithKeys(fn ($j) => [$j => $master[$j]])->all();
     }
 
     public function store(Request $request): RedirectResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if (! RekrutmenAccess::bisaAjukanFormasi($user)) {
@@ -147,7 +165,11 @@ class PengajuanFormasiController extends Controller
         }
         $bagan = in_array($unit, $unitBoleh, true) ? RekrutmenAccess::baganUnit($unit) : ['grup' => []];
         $idBagan = collect($bagan['grup'])->flatten(1)->pluck('id')->all();
-        $jabatanBoleh = $user->isAdmin() ? \App\Models\Jabatan::daftar() : (in_array($unit, $unitBoleh, true) ? RekrutmenAccess::jabatanUnit($unit) : []);
+        $jabatanBoleh = $user->isAdmin() ? Jabatan::daftar() : (in_array($unit, $unitBoleh, true) ? RekrutmenAccess::jabatanUnit($unit) : []);
+        // Replacement: jabatan pegawai yang digantikan (termasuk yang sudah tidak aktif) juga sah.
+        if ($request->input('jenis_kebutuhan') === PengajuanFormasi::JENIS_REPLACEMENT) {
+            $jabatanBoleh = array_values(array_unique([...$jabatanBoleh, ...array_values($this->jabatanBagan($bagan))]));
+        }
 
         $validated = $request->validate([
             'unit_kerja' => ['required', 'string', Rule::in($unitBoleh)],
@@ -166,7 +188,9 @@ class PengajuanFormasiController extends Controller
             'kualifikasi' => ['required', 'string', 'max:2000'],
             'jabatan' => ['required', 'string', Rule::in($jabatanBoleh)],
             'atasan_langsung' => ['required', 'string', 'max:150', ...($user->isAdmin() ? [Rule::in(array_keys($this->pilihanAtasan()))] : [])],
-            'tugas' => ['required', 'string', 'max:3000'],
+            // Daftar tugas (satu baris per tugas dari formulir); disimpan sebagai teks per baris.
+            'tugas' => ['required', 'array', 'min:1', 'max:30'],
+            'tugas.*' => ['nullable', 'string', 'max:500'],
         ], [
             'unit_kerja.required' => 'Pilih unit yang membutuhkan pegawai.',
             'unit_kerja.in' => 'Unit harus unit yang Anda pimpin.',
@@ -181,11 +205,19 @@ class PengajuanFormasiController extends Controller
             'atasan_langsung.required' => 'Isi atasan langsung.',
             'atasan_langsung.in' => 'Atasan langsung harus kepala atau GM yang terdaftar.',
             'tugas.required' => 'Isi tugas dan tanggung jawab.',
+            'tugas.max' => 'Maksimal 30 tugas.',
+            'tugas.*.max' => 'Satu tugas maksimal 500 karakter.',
         ]);
+
+        $tugas = array_values(array_filter(array_map(fn ($t) => trim((string) $t), $validated['tugas']), 'strlen'));
+        if (! $tugas) {
+            throw ValidationException::withMessages(['tugas' => 'Isi minimal satu tugas dan tanggung jawab.']);
+        }
+        $validated['tugas'] = implode("\n", $tugas);
 
         $jumlah = (int) $validated['jumlah_laki'] + (int) $validated['jumlah_perempuan'] + (int) ($validated['jumlah_bebas'] ?? 0);
         if ($jumlah < 1 || $jumlah > 50) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['jumlah_laki' => 'Jumlah kebutuhan (laki-laki + perempuan + bebas) harus 1–50 orang.']);
+            throw ValidationException::withMessages(['jumlah_laki' => 'Jumlah kebutuhan (laki-laki + perempuan + bebas) harus 1–50 orang.']);
         }
 
         // Isi keterangan dari bagan: siapa yang digantikan / keterangan posisi baru.
@@ -195,7 +227,19 @@ class PengajuanFormasiController extends Controller
             $peta = collect($bagan['grup'])->flatMap(fn ($g, $jab) => collect($g)->map(fn ($o) => $o + ['jabatan' => $jab]))->keyBy('id');
             $diganti = collect($validated['diganti'] ?? [])->unique()->map(fn ($id) => $peta[$id])->values()->all();
             if (count($diganti) !== $jumlah) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['diganti' => 'Jumlah pegawai yang digantikan (' . count($diganti) . ") harus sama dengan jumlah kebutuhan ({$jumlah} orang)."]);
+                throw ValidationException::withMessages(['diganti' => 'Jumlah pegawai yang digantikan (' . count($diganti) . ") harus sama dengan jumlah kebutuhan ({$jumlah} orang)."]);
+            }
+            // Satu pengajuan untuk satu jabatan: pegawai yang digantikan sejabatan, dan jabatan pengajuan = jabatan mereka
+            // (bila jabatannya terdaftar di Master Jabatan). Admin bebas menyesuaikan.
+            if (! $user->isAdmin()) {
+                $jabatanDiganti = collect($diganti)->pluck('jabatan')->unique();
+                if ($jabatanDiganti->count() > 1) {
+                    throw ValidationException::withMessages(['diganti' => 'Pegawai yang digantikan harus dari satu jabatan (sekarang: ' . $jabatanDiganti->implode(', ') . ').']);
+                }
+                $namaMaster = $this->jabatanBagan($bagan)[$jabatanDiganti->first()] ?? null;
+                if ($namaMaster && mb_strtoupper($validated['jabatan']) !== mb_strtoupper($namaMaster)) {
+                    throw ValidationException::withMessages(['jabatan' => "Jabatan harus sesuai jabatan pegawai yang digantikan ({$namaMaster})."]);
+                }
             }
         } else {
             $slot = array_slice(array_pad(array_map(fn ($s) => trim((string) $s), $validated['slot_tambahan'] ?? []), $jumlah, ''), 0, $jumlah);
@@ -226,7 +270,7 @@ class PengajuanFormasiController extends Controller
 
     public function approve(PengajuanFormasi $pengajuanFormasi): RedirectResponse
     {
-        /** @var \App\Models\User $reviewer */
+        /** @var User $reviewer */
         $reviewer = Auth::user();
 
         if (! RekrutmenAccess::canReviewFormasi($reviewer, $pengajuanFormasi)) {
@@ -315,9 +359,10 @@ class PengajuanFormasiController extends Controller
 
         return $baris ? implode("\n", $baris) : null;
     }
+
     public function reject(Request $request, PengajuanFormasi $pengajuanFormasi): RedirectResponse
     {
-        /** @var \App\Models\User $reviewer */
+        /** @var User $reviewer */
         $reviewer = Auth::user();
 
         if (! RekrutmenAccess::canReviewFormasi($reviewer, $pengajuanFormasi)) {
@@ -356,7 +401,7 @@ class PengajuanFormasiController extends Controller
 
     public function batalkan(PengajuanFormasi $pengajuanFormasi): RedirectResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if ($pengajuanFormasi->diajukan_oleh !== $user->id && ! $user->isAdmin()) {

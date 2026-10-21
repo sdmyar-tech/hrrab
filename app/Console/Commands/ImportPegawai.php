@@ -12,7 +12,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class ImportPegawai extends Command
 {
@@ -55,7 +54,7 @@ class ImportPegawai extends Command
         return self::SUCCESS;
     }
 
-private function siapkanPegawai(array $sheets): Collection
+    private function siapkanPegawai(array $sheets): Collection
     {
         $keluar = $this->daftarKeluar($sheets[config('import_pegawai.sheet_keluar')] ?? []);
         $hasil = collect();
@@ -336,7 +335,7 @@ private function siapkanPegawai(array $sheets): Collection
         return $hasil->sortBy(fn ($r) => $r['pegawai']['nama_lengkap'])->values();
     }
 
-private function pilihAkun(Collection $pegawai): Collection
+    private function pilihAkun(Collection $pegawai): Collection
     {
         $akun = collect();
         $aktif = $pegawai->filter(fn ($r) => $r['aktif']);
@@ -479,7 +478,7 @@ private function pilihAkun(Collection $pegawai): Collection
         return $tanggalLahir ? Carbon::parse($tanggalLahir)->format('dmY') : null;
     }
 
-private function tulisLaporan(Collection $pegawai, Collection $akun, string $folder): void
+    private function tulisLaporan(Collection $pegawai, Collection $akun, string $folder): void
     {
         $akunPerBaris = $akun->whereNotNull('baris')->keyBy('baris');
 
@@ -538,7 +537,7 @@ private function tulisLaporan(Collection $pegawai, Collection $akun, string $fol
         $this->line('Akun login: ' . $akun->count() . ' ' . json_encode($akun->countBy(fn ($a) => User::roleLabelFor($a['role']))));
     }
 
-private function jalankan(Collection $pegawai, Collection $akun): void
+    private function jalankan(Collection $pegawai, Collection $akun): void
     {
         $emailLama = $akun->pluck('email_lama')->filter()->all();
 

@@ -11,7 +11,7 @@
                 data-confirm="Hapus permanen data ini? Tindakan ini tidak bisa dibatalkan.">
                 @csrf @method('DELETE')
                 <input type="hidden" name="kembali" value="{{ $kembaliKe ?? request()->fullUrl() }}">
-                <button class="btn btn-outline-danger btn-sm" title="Hapus (Admin)"><i class="bi bi-trash"></i></button>
+                <button class="btn btn-outline-danger btn-sm" title="Hapus permanen (Admin)"><i class="bi bi-trash me-1"></i>Hapus</button>
             </form>
         @endif
     </span>

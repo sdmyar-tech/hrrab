@@ -7,7 +7,9 @@
     <label class="form-label" for="data_pegawai_id">Data Pegawai <span class="text-muted fw-normal">(nama, email & NIP terisi otomatis)</span></label>
     <input type="search" class="form-control form-control-sm mb-1" placeholder="Cari nama, NIP, atau unit…" data-cari-pegawai aria-label="Cari pegawai">
     <select name="data_pegawai_id" id="data_pegawai_id" class="form-select @error('data_pegawai_id') is-invalid @enderror">
-        <option value="">— Tidak ditautkan ke pegawai —</option>
+        <option value="">-- Pilih pegawai --</option>
+        {{-- Opsi tersendiri (bukan placeholder): akun sengaja tidak ditautkan, mis. GM dari luar data pegawai. --}}
+        <option value="" @selected($akun && ! $akun->data_pegawai_id && ! old('data_pegawai_id'))>Tidak ditautkan ke pegawai</option>
         @if ($akun?->data_pegawai_id)
             <option value="lepas" @selected(old('data_pegawai_id') === 'lepas')>✕ Lepaskan tautan dari Data Pegawai</option>
         @endif

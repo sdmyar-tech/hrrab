@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AlurPegawai;
 use App\Models\DataPegawai;
 use App\Models\User;
+use App\Support\PengajuanWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -51,8 +52,8 @@ class AlurPegawaiController extends Controller
         ]);
 
         $tahap = array_values(array_intersect(AlurPegawai::URUTAN, $v['tahap']));
-        $pakaiAtasan = in_array(\App\Support\PengajuanWorkflow::LEVEL_KEPALA_DIVISI, $tahap, true);
-        $pakaiGm = in_array(\App\Support\PengajuanWorkflow::LEVEL_GM, $tahap, true);
+        $pakaiAtasan = in_array(PengajuanWorkflow::LEVEL_KEPALA_DIVISI, $tahap, true);
+        $pakaiGm = in_array(PengajuanWorkflow::LEVEL_GM, $tahap, true);
 
         AlurPegawai::updateOrCreate(['data_pegawai_id' => $pegawai->id], [
             'tahap' => $tahap,

@@ -9,12 +9,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Lowongan extends Model
 {
-    use HasFactory, \App\Models\Concerns\DicatatLog;
+    use \App\Models\Concerns\DicatatLog, HasFactory;
 
     protected $table = 'lowongans';
 
     public const STATUS_DRAFT = 'draft';
+
     public const STATUS_DIPUBLIKASIKAN = 'dipublikasikan';
+
     public const STATUS_DITUTUP = 'ditutup';
 
     protected $fillable = [

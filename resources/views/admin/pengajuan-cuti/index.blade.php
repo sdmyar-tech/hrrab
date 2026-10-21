@@ -112,62 +112,16 @@
                                     @endif
                                 </td>
                                 <td class="text-end kolom-aksi">
-                                    <a href="{{ route('admin.pengajuan-cuti.show', $item) }}" class="btn btn-outline-secondary btn-sm mb-1">
-                                        <i class="bi bi-eye"></i> Detail
-                                    </a>
-                                    @if ($item->isPending())
-                                        @if (\App\Support\PengajuanWorkflow::canAct(auth()->user(), $item))
-                                            @if ($item->current_level === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_DIVISI)
-                                                {{-- Tahap Kepala Bagian: pilih pengganti tugas, lalu Setujui. Ditumpuk agar tidak terjepit di kolom sempit. --}}
-                                                <form action="{{ route('admin.pengajuan-cuti.approve', $item->id) }}" method="POST" class="form-approve-kepala d-grid gap-1 mb-1">
-                                                    @csrf
-                                                    <select name="pengganti_nama" class="form-select form-select-sm" required aria-label="Pengganti tugas">
-                                                        <option value="">Pilih pengganti...</option>
-                                                        @foreach ($item->substituteOptions() as $nama)
-                                                            <option value="{{ $nama }}">{{ $nama }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <button type="submit" class="btn btn-success btn-sm" title="Setujui &amp; teruskan ke Kepala SDM">
-                                                        <i class="bi bi-check-lg"></i> Setujui
-                                                    </button>
-                                                </form>
-                                                <form action="{{ route('admin.pengajuan-cuti.reject', $item->id) }}" method="POST" class="form-reject-cuti">
-                                                    @csrf
-                                                    <input type="hidden" name="catatan_admin" value="">
-                                                    <button type="button" class="btn btn-outline-danger btn-sm w-100 btn-reject-cuti">
-                                                        <i class="bi bi-x-lg"></i> Tolak
-                                                    </button>
-                                                </form>
-                                            @else
-                                                <div class="d-flex gap-1 justify-content-end">
-                                                    <form action="{{ route('admin.pengajuan-cuti.approve', $item->id) }}" method="POST">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-success btn-sm"
-                                                            data-confirm="true"
-                                                            data-icon="question"
-                                                            data-title="Setujui Pengajuan Cuti?"
-                                                            data-text="Pengajuan cuti {{ $item->dataPegawai?->nama_lengkap }} akan disetujui pada tahap ini."
-                                                            data-confirm-text="Ya, Setujui"
-                                                            data-confirm-color="#198754"
-                                                            data-cancel-text="Batal">
-                                                            <i class="bi bi-check-lg"></i> Setujui
-                                                        </button>
-                                                    </form>
-                                                    <form action="{{ route('admin.pengajuan-cuti.reject', $item->id) }}" method="POST" class="form-reject-cuti">
-                                                        @csrf
-                                                        <input type="hidden" name="catatan_admin" value="">
-                                                        <button type="button" class="btn btn-outline-danger btn-sm btn-reject-cuti">
-                                                            <i class="bi bi-x-lg"></i> Tolak
-                                                        </button>
-                                                    </form>
-                                                </div>
-                                            @endif
-                                        @else
-                                            <span class="text-muted small">Menunggu: {{ $item->currentLevelLabel() }}</span>
-                                        @endif
-                                    @else
-                                        <span class="text-muted small">Sudah diproses</span>
-                                    @endif
+                                    {{-- Tahap Kepala Bagian: pilih pengganti tugas dulu, lalu Setujui. --}}
+                                    @include('admin.partials.aksi-pengajuan', [
+                                        'detail' => route('admin.pengajuan-cuti.show', $item),
+                                        'setujui' => route('admin.pengajuan-cuti.approve', $item->id),
+                                        'tolak' => route('admin.pengajuan-cuti.reject', $item->id),
+                                        'kelasTolak' => 'btn-reject-cuti',
+                                        'judulSetujui' => 'Setujui Pengajuan Cuti?',
+                                        'teksSetujui' => 'Pengajuan cuti ' . $item->dataPegawai?->nama_lengkap . ' akan disetujui pada tahap ini.',
+                                        ...($item->current_level === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_DIVISI ? ['pengganti' => $item->substituteOptions()] : []),
+                                    ])
                                 </td>
                             </tr>
                         {{-- Rincian untuk penyetuju: tampil sebelum tombol Setujui/Tolak diklik. --}}
@@ -199,8 +153,6 @@
     /* Kolom aksi cukup lebar untuk dropdown pengganti + tombol (tidak terjepit). */
     /* Mengalahkan aturan global .table td (min-width: 0; kolom terakhir width: 1%). */
     .table tbody td.kolom-aksi { width: 200px; min-width: 200px; white-space: normal !important; }
-    .kolom-aksi .btn-outline-secondary { width: 100%; }
-    .kolom-aksi > .text-muted { display: block; text-align: center; }   /* "Menunggu: …" / "Sudah diproses" di bawah tombol */
 </style>
 <script>
     document.addEventListener('DOMContentLoaded', function () {

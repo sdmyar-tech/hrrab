@@ -3,33 +3,33 @@
 namespace App\Providers;
 
 use App\Models\Pengumuman;
+use App\Models\Unit;
 use App\Models\User;
 use App\Support\PencatatLog;
 use App\Support\SidebarHitung;
+use App\Support\TugasNotifikasi;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        //
-    }
+    public function register(): void {}
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
+        // Master Unit menggantikan daftar unit di config: semua dropdown/validasi config('kepegawaian.unit_kerja') ikut master.
+        try {
+            config(['kepegawaian.unit_kerja' => Unit::daftar()]);
+        } catch (\Throwable) {
+            // Basis data belum siap (mis. saat instalasi/migrasi pertama): tetap pakai daftar di config.
+        }
+
         // Log aktivitas: login, logout, dan percobaan login gagal (akun selain superadmin).
         Event::listen(Login::class, fn (Login $e) => $e->user instanceof User
             && PencatatLog::tulis($e->user, 'login', 'Akun', 'Login ke sistem' . (request()->routeIs('google.*') ? ' (Google)' : '')));
@@ -42,12 +42,13 @@ class AppServiceProvider extends ServiceProvider
             ...array_merge(...array_values(User::ABILITIES)),
             User::ABILITY_AJUKAN_CUTI,
             User::ABILITY_AJUKAN_LEMBUR,
+            User::ABILITY_AJUKAN_IZIN_KELUAR,
         ]);
 
         foreach ($abilities as $ability) {
             Gate::define($ability, fn (User $user) => $user->hasAbility($ability));
         }
-        // Menyetujui/menolak cuti & lembur: penyetuju sesuai tahap, atau Admin (boleh di tahap mana pun).
+        // Menyetujui/menolak cuti, lembur & izin keluar: penyetuju sesuai tahap, atau Admin (boleh di tahap mana pun).
         Gate::define('proses-pengajuan', fn (User $user) => $user->hasAbility(User::ABILITY_APPROVE) || $user->isAdmin());
         // Atur alur persetujuan/atasan pegawai & paksa ganti password akun: hanya Kepala SDM dan Admin.
         Gate::define('atur-akun-pegawai', fn (User $user) => $user->isAdmin() || $user->isKepalaSdm());
@@ -60,7 +61,7 @@ class AppServiceProvider extends ServiceProvider
         View::composer('layouts.pelamar.sidebar', function ($view) {
             $user = Auth::user();
             if ($user instanceof User) {
-                \App\Support\TugasNotifikasi::rapikan($user);
+                TugasNotifikasi::rapikan($user);
             }
             $view->with('hitungPelamar', $user instanceof User ? ['notifikasi' => $user->unreadNotifications()->count()] : []);
         });
@@ -68,7 +69,7 @@ class AppServiceProvider extends ServiceProvider
         View::composer('layouts.partials.navbar', function ($view) {
             $user = Auth::user();
             if ($user instanceof User) {
-                \App\Support\TugasNotifikasi::rapikan($user);
+                TugasNotifikasi::rapikan($user);
             }
 
             if (! $user instanceof User) {

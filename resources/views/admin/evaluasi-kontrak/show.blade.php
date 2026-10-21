@@ -46,7 +46,6 @@
 
         <div class="row g-3 align-items-start">
             <div class="col-xl-8">
-                {{-- ===== Identitas & periode ===== --}}
                 <section class="panel mb-3">
                     <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-vcard"></i>Identitas pegawai</h2>
                     <dl class="pk-identitas">
@@ -76,7 +75,6 @@
                     </dl>
                 </section>
 
-                {{-- ===== Data pendukung ===== --}}
                 <section class="panel mb-3">
                     <h2 class="h6 fw-bold mb-1"><i class="bi bi-bar-chart"></i>Data pendukung</h2>
                     <p class="small text-muted mb-3">Absensi {{ $rentangAbsensi[0]->translatedFormat('d M Y') }} – {{ $rentangAbsensi[1]->translatedFormat('d M Y') }}, cuti tahun {{ now()->year }}.</p>
@@ -99,7 +97,6 @@
                     @endunless
                 </section>
 
-                {{-- ===== Surat peringatan selama masa kontrak terakhir ===== --}}
                 <section class="panel mb-3">
                     <h2 class="h6 fw-bold mb-1"><i class="bi bi-exclamation-octagon"></i>Surat peringatan selama kontrak</h2>
                     <p class="small text-muted mb-2">Periode {{ $periodeMulai?->translatedFormat('d M Y') ?? 'awal' }} – {{ $periodeSelesai?->translatedFormat('d M Y') }}.</p>
@@ -115,7 +112,6 @@
                     @endforelse
                 </section>
 
-                {{-- ===== Penilaian 50 butir ===== --}}
                 <section class="panel" id="penilaian">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                         <h2 class="h6 fw-bold mb-0"><i class="bi bi-list-check"></i>Penilaian</h2>
@@ -175,7 +171,6 @@
                             <div class="ek-kartu"><span>Total nilai</span><strong data-total>{{ $e->total_nilai ?? array_sum($nilai) }}</strong><small data-predikat>{{ $e->total_nilai !== null ? EK::predikat($e->total_nilai) : 'maks. ' . $jumlahButir * 4 }}</small></div>
                             <div class="ek-kartu"><span>Rata-rata</span><strong data-rata>{{ $e->rata_nilai ?? '-' }}</strong><small>skala 1–4</small></div>
                         </div>
-                        {{-- Keterangan skor: predikat dari total nilai (jumlah seluruh butir). --}}
                         <div class="pk-skor mt-3">
                             <div class="small fw-semibold mb-1">Keterangan skor <span class="fw-normal text-muted">(total nilai = jumlah seluruh butir)</span></div>
                             @foreach (EK::rentangPredikat() as [$min, $maks, $label])
@@ -186,7 +181,6 @@
                         </div>
                     </section>
 
-                    {{-- ===== Penilai: catatan & kirim nilai ===== --}}
                     <section class="panel mb-3">
                         <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-check"></i>Penilaian</h2>
                         @if ($bisaIsi)
@@ -282,7 +276,11 @@
     .pk-hasil { min-width: 2rem; text-align: center; font-weight: 700; border-radius: 6px; padding: .1rem .4rem; background: var(--admin-surface-soft); }
     .pk-hasil.n4 { background: #dcfce7; color: #166534; } .pk-hasil.n3 { background: #e0f2fe; color: #075985; }
     .pk-hasil.n2 { background: #fef3c7; color: #92400e; } .pk-hasil.n1 { background: #fee2e2; color: #991b1b; }
-    @media (min-width: 1200px) { .pk-lengket { position: sticky; top: 80px; } }
+    /* Kolom kanan lengket & dibatasi setinggi layar (gulir sendiri) agar tombol simpan selalu terjangkau
+       walau penilaian di kiri sangat panjang. */
+    @media (min-width: 1200px) {
+        .pk-lengket { position: sticky; top: 80px; max-height: calc(100vh - 96px); overflow-y: auto; scrollbar-width: thin; padding-right: 2px; }
+    }
     @media (max-width: 575.98px) {
         .pk-identitas { grid-template-columns: 1fr; gap: 0; }
         .pk-identitas dd { margin-bottom: .45rem; }
@@ -314,7 +312,6 @@
                 document.querySelectorAll('.pk-skor-baris').forEach((b) => b.classList.toggle('aktif', lengkap && total >= +b.dataset.min && total <= +b.dataset.maks));
             };
             isi.addEventListener('change', (ev) => { if (ev.target.name?.startsWith('nilai[')) { ev.target.closest('.pk-butir').classList.remove('belum'); hitung(); } });
-            // "Isi semua" per bagian.
             isi.querySelectorAll('[data-isi-semua]').forEach((btn) => btn.addEventListener('click', () => {
                 isi.querySelectorAll(`.pk-bagian[data-bagian="${btn.dataset.isiSemua}"] input[value="${btn.dataset.nilai}"]`).forEach((r) => { r.checked = true; r.closest('.pk-butir').classList.remove('belum'); });
                 hitung();

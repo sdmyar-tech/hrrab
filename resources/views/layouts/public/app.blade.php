@@ -434,6 +434,7 @@
     </footer>
 
     <script src="{{ asset('assets-admin/js/bootstrap.bundle.min.js') }}"></script>
+    @include('layouts.partials.placeholder-dropdown')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @include('layouts.partials.sweetalert')
 @include('layouts.partials.tanpa-spasi')

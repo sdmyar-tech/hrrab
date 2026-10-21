@@ -4,17 +4,20 @@ namespace App\Support;
 
 use App\Models\AlurPegawai;
 use App\Models\PengajuanCuti;
+use App\Models\PengajuanIzinKeluar;
 use App\Models\PengajuanLembur;
 use App\Models\Penugasan;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
-/** Menentukan tingkatan pengaju & alur persetujuan berjenjang untuk pengajuan cuti/lembur. */
+/** Menentukan tingkatan pengaju & alur persetujuan berjenjang untuk pengajuan cuti/lembur/izin keluar. */
 class PengajuanWorkflow
 {
     public const LEVEL_KEPALA_DIVISI = 'kepala_divisi';
+
     public const LEVEL_KEPALA_SDM = 'kepala_sdm';
+
     public const LEVEL_GM = 'gm';
 
     public const LEVEL_LABELS = [
@@ -79,7 +82,6 @@ class PengajuanWorkflow
         };
     }
 
-    /** Apakah pegawai $pegawaiId sedang menjabat kepala di $unit. */
     public static function memimpin(?int $pegawaiId, ?string $unit): bool
     {
         return $pegawaiId && $unit
@@ -137,7 +139,7 @@ class PengajuanWorkflow
             ->get());
     }
 
-    /** Pesan error bila rute approval pengajuan baru tidak punya approver (mis. */
+    /** Pesan error bila salah satu tahap rute approval pengajuan baru tidak punya approver; null bila lengkap. */
     public static function cekApprover(User $user, ?string $unit, bool $lembur = false): ?string
     {
         foreach (self::rute($user, $unit, $lembur) as $tahap) {
@@ -189,7 +191,7 @@ class PengajuanWorkflow
     }
 
     /** Cari akun User pemilik/pengaju pengajuan (lewat relasi data_pegawai_id). */
-    public static function submitterUser(PengajuanCuti|PengajuanLembur $pengajuan): ?User
+    public static function submitterUser(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): ?User
     {
         if (! $pengajuan->data_pegawai_id) {
             return null;
@@ -198,14 +200,14 @@ class PengajuanWorkflow
         return User::where('data_pegawai_id', $pengajuan->data_pegawai_id)->first();
     }
 
-    /** Unit pengajuan = snapshot saat diajukan (cuti. */
-    public static function unitPengajuan(PengajuanCuti|PengajuanLembur $pengajuan): ?string
+    /** Unit pengajuan = snapshot saat diajukan; data lama tanpa snapshot memakai unit pegawai sekarang. */
+    public static function unitPengajuan(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): ?string
     {
         return $pengajuan->unit_kerja ?? $pengajuan->dataPegawai?->kepegawaian?->unit_kerja;
     }
 
     /** Apakah $approver berwenang menyetujui/menolak pengajuan ini pada tahap saat ini. */
-    public static function canAct(User $approver, PengajuanCuti|PengajuanLembur $pengajuan): bool
+    public static function canAct(User $approver, PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): bool
     {
         // Admin boleh memproses pengajuan yang masih menunggu di tahap mana pun (bertindak sebagai penyetuju tahap itu).
         if ($approver->isAdmin()) {
@@ -235,7 +237,7 @@ class PengajuanWorkflow
     }
 
     /** Kolom yang di-update saat $approver menyetujui tahap saat ini (sudah lolos canAct()). */
-    public static function approvalUpdates(User $approver, PengajuanCuti|PengajuanLembur $pengajuan): array
+    public static function approvalUpdates(User $approver, PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): array
     {
         $current = $pengajuan->current_level;
         $updates = [];
@@ -271,7 +273,7 @@ class PengajuanWorkflow
      * Kolom status yang di-set Admin secara langsung (tanpa tahapan).
      * Disetujui/ditolak = final atas nama Admin; menunggu = dikembalikan ke tahap $level.
      */
-    public static function statusAdmin(PengajuanCuti|PengajuanLembur $pengajuan, string $status, ?string $level, User $admin): array
+    public static function statusAdmin(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan, string $status, ?string $level, User $admin): array
     {
         return match ($status) {
             $pengajuan::STATUS_PENDING => ['current_level' => $level, 'approved_by' => null, 'approved_at' => null],
@@ -306,13 +308,13 @@ class PengajuanWorkflow
     }
 
     /** $gm menangani pengajuan di luar bidang utamanya (menggantikan GM lain). */
-    public static function isGmPengganti(User $gm, PengajuanCuti|PengajuanLembur $pengajuan): bool
+    public static function isGmPengganti(User $gm, PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): bool
     {
         return ! $gm->memegangDivisi(self::unitPengajuan($pengajuan));
     }
 
-    /** Nama GM utama untuk unit pemohon, mis. */
-    public static function gmUtamaLabel(PengajuanCuti|PengajuanLembur $pengajuan): string
+    /** Nama GM utama untuk unit pemohon (beberapa dipisah " / "), atau "GM bidang lain" bila tidak ada. */
+    public static function gmUtamaLabel(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): string
     {
         $names = User::gmUtamaUntuk(self::unitPengajuan($pengajuan))->pluck('name');
 
@@ -332,9 +334,9 @@ class PengajuanWorkflow
     }
 
     /**
-     * Jumlah pengajuan yang menunggu approval GM per tab, mis.
+     * Jumlah pengajuan yang menunggu approval GM per tab ("saya" = bidangnya, "lain" = di luar bidang); null bila GM tanpa bidang.
      *
-     * @param  class-string<PengajuanCuti|PengajuanLembur>  $model
+     * @param  class-string<PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar>  $model
      */
     public static function gmTabCounts(string $model, User $viewer): ?array
     {
@@ -387,7 +389,7 @@ class PengajuanWorkflow
                 $q->whereIn('unit_kerja', $units)
                     ->orWhere('data_pegawai_id', $viewer->data_pegawai_id ?? 0)
                     ->orWhereIn('data_pegawai_id', self::pegawaiDenganAtasan($viewer));
-                if ($q->getModel() instanceof PengajuanCuti) {
+                if ($q->getModel() instanceof PengajuanCuti || $q->getModel() instanceof PengajuanIzinKeluar) {
                     $q->orWhereIn('data_pegawai_id', Penugasan::aktif()->whereIn('unit_kerja', $units)->select('data_pegawai_id'));
                 }
             }),

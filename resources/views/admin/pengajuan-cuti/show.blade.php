@@ -56,7 +56,7 @@
                             @else
                                 <form action="{{ route('admin.pengajuan-cuti.approve', $pengajuanCuti->id) }}" method="POST" class="mb-2">
                                     @csrf
-                                    <button type="submit" class="btn btn-success"
+                                    <button type="submit" class="btn btn-success w-100"
                                         data-confirm="true"
                                         data-icon="question"
                                         data-title="Setujui Pengajuan Cuti?"
@@ -72,7 +72,7 @@
                             <form action="{{ route('admin.pengajuan-cuti.reject', $pengajuanCuti->id) }}" method="POST" class="form-reject-cuti">
                                 @csrf
                                 <input type="hidden" name="catatan_admin" value="">
-                                <button type="button" class="btn btn-outline-danger btn-reject-cuti">
+                                <button type="button" class="btn btn-outline-danger w-100 btn-reject-cuti">
                                     <i class="bi bi-x-lg"></i> Tolak
                                 </button>
                             </form>

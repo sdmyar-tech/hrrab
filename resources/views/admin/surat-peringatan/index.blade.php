@@ -156,7 +156,6 @@
         tanggal.addEventListener('change', pratinjau);
         pratinjau();
 
-        // Cari pegawai: saring opsi menurut nama.
         form.querySelector('[data-cari-sp]').addEventListener('input', (e) => {
             const kata = e.target.value.trim().toLowerCase();
             [...pilih.options].forEach((o) => { if (o.value) o.hidden = kata && !o.textContent.toLowerCase().includes(kata); });

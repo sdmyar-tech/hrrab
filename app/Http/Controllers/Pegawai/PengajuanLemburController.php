@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Pegawai;
 
 use App\Http\Controllers\Controller;
 use App\Models\PengajuanLembur;
+use App\Models\User;
+use App\Support\Notifikasi;
 use App\Support\PengajuanWorkflow;
 use App\Support\Urutan;
 use Carbon\Carbon;
@@ -12,13 +14,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use App\Support\Notifikasi;
 
 class PengajuanLemburController extends Controller
 {
     public function index(): View
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
         $pegawai = $user->dataPegawai;
 
@@ -40,7 +41,7 @@ class PengajuanLemburController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
         $pegawai = $user->dataPegawai;
 

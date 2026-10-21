@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Pegawai;
 
 use App\Http\Controllers\Controller;
 use App\Models\DataPegawai;
+use App\Models\User;
 use App\Support\PenugasanService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,8 +26,11 @@ class ProfilController extends Controller
     ];
 
     public const AGAMA = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu'];
+
     public const GOLONGAN_DARAH = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Belum Diketahui'];
+
     public const STATUS_PERNIKAHAN = ['Belum Menikah', 'Menikah', 'Cerai Hidup', 'Cerai Mati'];
+
     public const HUBUNGAN_KERABAT = ['Ayah/Ibu', 'Istri/Suami', 'Anak', 'Adik/Kakak Kandung', 'Saudara', 'Lainnya'];
 
     private array $requiredFields = [
@@ -37,7 +41,7 @@ class ProfilController extends Controller
 
     public function dataPegawai(): View|RedirectResponse
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
 
         if (! $user || ! $user->isStaff()) {
@@ -56,7 +60,7 @@ class ProfilController extends Controller
 
     public function pengkinianData(): View|RedirectResponse
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
 
         if (! $user || ! $user->isStaff()) {
@@ -81,7 +85,7 @@ class ProfilController extends Controller
 
     public function storePengkinianData(Request $request): RedirectResponse
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
 
         if (! $user || ! $user->isStaff()) {
@@ -101,42 +105,42 @@ class ProfilController extends Controller
         }
 
         $validated = $request->validate([
-            'nama_lengkap'            => ['sometimes', 'required', 'string', 'max:255'],
-            'nik'                     => ['sometimes', 'required', 'string', 'size:16'],
-            'npwp'                    => ['nullable', 'string', 'max:25'],
-            'no_kk'                   => ['sometimes', 'required', 'string', 'max:20'],
-            'no_hp'                   => ['sometimes', 'required', 'string', 'max:20'],
-            'tempat_lahir'            => ['sometimes', 'required', 'string', 'max:255'],
-            'tanggal_lahir'           => ['sometimes', 'required', 'date', 'before:today'],
-            'jenis_kelamin'           => ['sometimes', 'required', Rule::in(['Laki-laki', 'Perempuan'])],
-            'agama'                   => ['sometimes', 'required', 'string', 'max:50'],
-            'golongan_darah'          => ['nullable', Rule::in(self::GOLONGAN_DARAH)],
-            'alamat_ktp'              => ['sometimes', 'required', 'string'],
-            'alamat_domisili'         => ['nullable', 'string'],
-            'status_pernikahan'       => ['sometimes', 'required', Rule::in(self::STATUS_PERNIKAHAN)],
-            'jumlah_tanggungan'       => ['nullable', 'integer', 'min:0', 'max:20'],
-            'nama_ibu_kandung'        => ['sometimes', 'required', 'string', 'max:255'],
-            'pendidikan_terakhir'     => ['sometimes', 'required', 'string', 'max:100'],
+            'nama_lengkap' => ['sometimes', 'required', 'string', 'max:255'],
+            'nik' => ['sometimes', 'required', 'string', 'size:16'],
+            'npwp' => ['nullable', 'string', 'max:25'],
+            'no_kk' => ['sometimes', 'required', 'string', 'max:20'],
+            'no_hp' => ['sometimes', 'required', 'string', 'max:20'],
+            'tempat_lahir' => ['sometimes', 'required', 'string', 'max:255'],
+            'tanggal_lahir' => ['sometimes', 'required', 'date', 'before:today'],
+            'jenis_kelamin' => ['sometimes', 'required', Rule::in(['Laki-laki', 'Perempuan'])],
+            'agama' => ['sometimes', 'required', 'string', 'max:50'],
+            'golongan_darah' => ['nullable', Rule::in(self::GOLONGAN_DARAH)],
+            'alamat_ktp' => ['sometimes', 'required', 'string'],
+            'alamat_domisili' => ['nullable', 'string'],
+            'status_pernikahan' => ['sometimes', 'required', Rule::in(self::STATUS_PERNIKAHAN)],
+            'jumlah_tanggungan' => ['nullable', 'integer', 'min:0', 'max:20'],
+            'nama_ibu_kandung' => ['sometimes', 'required', 'string', 'max:255'],
+            'pendidikan_terakhir' => ['sometimes', 'required', 'string', 'max:100'],
 
-            'jabatan'                 => ['sometimes', 'required', 'string', 'max:255', 'not_in:Lainnya'],
-            'unit_kerja'              => ['sometimes', 'required', 'string', 'max:255'],
-            'lokasi_kerja'            => ['sometimes', 'required', 'string', 'max:255'],
-            'tanggal_masuk'           => ['sometimes', 'required', 'date'],
+            'jabatan' => ['sometimes', 'required', 'string', 'max:255', 'not_in:Lainnya'],
+            'unit_kerja' => ['sometimes', 'required', 'string', 'max:255'],
+            'lokasi_kerja' => ['sometimes', 'required', 'string', 'max:255'],
+            'tanggal_masuk' => ['sometimes', 'required', 'date'],
 
-            'no_hp_kerabat'           => ['sometimes', 'required', 'string', 'max:20'],
-            'nama_kerabat'            => ['sometimes', 'required', 'string', 'max:255'],
-            'hubungan_kerabat'        => ['sometimes', 'required', 'string', 'max:100', 'not_in:Lainnya'],
+            'no_hp_kerabat' => ['sometimes', 'required', 'string', 'max:20'],
+            'nama_kerabat' => ['sometimes', 'required', 'string', 'max:255'],
+            'hubungan_kerabat' => ['sometimes', 'required', 'string', 'max:100', 'not_in:Lainnya'],
 
             'no_bpjs_ketenagakerjaan' => ['nullable', 'string', 'max:30'],
-            'no_bpjs_kesehatan'       => ['nullable', 'string', 'max:30'],
-            'faskes_tingkat_1'        => ['nullable', 'string', 'max:255'],
+            'no_bpjs_kesehatan' => ['nullable', 'string', 'max:30'],
+            'faskes_tingkat_1' => ['nullable', 'string', 'max:255'],
 
-            'upload_ktp'              => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
-            'upload_kk'               => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
-            'upload_cv'               => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
-            'upload_ijazah_terakhir'  => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
-            'upload_buku_tabungan'    => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
-            'pas_foto'                => ['nullable', 'file', 'mimes:jpg,jpeg,png', 'max:2048'],
+            'upload_ktp' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'upload_kk' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'upload_cv' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'upload_ijazah_terakhir' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'upload_buku_tabungan' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'pas_foto' => ['nullable', 'file', 'mimes:jpg,jpeg,png', 'max:2048'],
         ], [
             'nik.size' => 'NIK harus 16 digit.',
             'tanggal_lahir.before' => 'Tanggal lahir tidak boleh hari ini atau masa depan.',
@@ -164,7 +168,7 @@ class ProfilController extends Controller
 
                 if (! $pegawai) {
                     $biodata['email'] = $user->email;
-                    $biodata['nip']   = $user->nip ?? '-';
+                    $biodata['nip'] = $user->nip ?? '-';
 
                     $pegawai = DataPegawai::create($biodata);
 

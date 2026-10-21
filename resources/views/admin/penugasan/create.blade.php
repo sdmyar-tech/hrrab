@@ -55,7 +55,7 @@
 
                             <div class="col-12">
                                 <label class="form-label">Jabatan {{ $mutasi ? 'Baru' : 'di Unit Rangkap' }} @unless ($mutasi)<span class="text-muted">(opsional)</span>@endunless</label>
-                                <input type="text" name="jabatan" list="daftarJabatan" class="form-control @error('jabatan') is-invalid @enderror"
+                                <input type="text" name="jabatan" list="daftarJabatan" data-jabatan-unit="[name=unit_kerja]" class="form-control @error('jabatan') is-invalid @enderror"
                                     value="{{ old('jabatan', $mutasi ? $utama?->jabatan : '') }}" {{ $mutasi ? 'required' : '' }} autocomplete="off">
                                 <datalist id="daftarJabatan">
                                     @foreach (\App\Models\Jabatan::daftar() as $j)
@@ -163,4 +163,5 @@
         </div>
     </div>
 </main>
+@include('partials.jabatan-ikut-unit')
 @endsection

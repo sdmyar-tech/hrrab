@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Absensi;
 use App\Models\AbsensiImport;
 use App\Models\User;
 use App\Support\Absensi\ImportAbsensi;
@@ -10,6 +11,7 @@ use App\Support\Absensi\PembacaFileAbsen;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -116,12 +118,12 @@ class AbsensiImportController extends Controller
      * Admin: batalkan satu batch import — baris absensi dari file itu dihapus,
      * kecuali yang sudah dikoreksi manual (dipertahankan, hanya dilepas dari batch).
      */
-    public function hapus(\App\Models\AbsensiImport $import): RedirectResponse
+    public function hapus(AbsensiImport $import): RedirectResponse
     {
-        abort_unless(\Illuminate\Support\Facades\Auth::user()?->isAdmin(), 403);
+        abort_unless(Auth::user()?->isAdmin(), 403);
 
-        [$hapus, $simpan] = \Illuminate\Support\Facades\DB::transaction(function () use ($import) {
-            $baris = \App\Models\Absensi::where('absensi_import_id', $import->id);
+        [$hapus, $simpan] = DB::transaction(function () use ($import) {
+            $baris = Absensi::where('absensi_import_id', $import->id);
             $simpan = (clone $baris)->where('dikoreksi', true)->update(['absensi_import_id' => null]);
             $hapus = (clone $baris)->delete();
             $import->delete();

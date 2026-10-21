@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Pelamar;
 
 use App\Http\Controllers\Controller;
 use App\Models\DataPelamar;
+use App\Models\User;
 use App\Support\RiwayatPelamar;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ class DataPelamarController extends Controller
 {
     public function edit(): View
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         return view('pelamar.data-pelamar', [
@@ -24,7 +25,7 @@ class DataPelamarController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $validated = $request->validate([

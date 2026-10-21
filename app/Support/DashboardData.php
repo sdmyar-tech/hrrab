@@ -4,11 +4,13 @@ namespace App\Support;
 
 use App\Models\DataPegawai;
 use App\Models\InterviewJadwal;
+use App\Models\Kepegawaian;
 use App\Models\KontrakJadwal;
 use App\Models\Lamaran;
 use App\Models\Lowongan;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanFormasi;
+use App\Models\PengajuanIzinKeluar;
 use App\Models\PengajuanLembur;
 use App\Models\Pengumuman;
 use App\Models\Penugasan;
@@ -61,7 +63,7 @@ class DashboardData
         ];
     }
 
-public static function pilihanUnit(User $user): array
+    public static function pilihanUnit(User $user): array
     {
         $dasar = self::lingkupDasar($user);
         $berpegawai = Penugasan::aktif()->distinct()->pluck('unit_kerja')->all();
@@ -109,7 +111,7 @@ public static function pilihanUnit(User $user): array
             : implode(', ', $daftar);
     }
 
-private static function kartu(User $user, Collection $aktif, Collection $kontrakHabis, int $approvalCuti, int $approvalLembur, int $interviewSaya, Collection $cutiHariIni, ?string $unit = null): array
+    private static function kartu(User $user, Collection $aktif, Collection $kontrakHabis, int $approvalCuti, int $approvalLembur, int $interviewSaya, Collection $cutiHariIni, ?string $unit = null): array
     {
         $tetap = $aktif->where('kepegawaian.status_kerja', 'Tetap')->count();
         $kartu = [[
@@ -146,6 +148,7 @@ private static function kartu(User $user, Collection $aktif, Collection $kontrak
         if ($user->can(User::ABILITY_APPROVE)) {
             $tugas[] = ['label' => 'Approve pengajuan cuti', 'jumlah' => $approvalCuti, 'url' => route('admin.pengajuan-cuti.index'), 'ikon' => 'bi-calendar2-check'];
             $tugas[] = ['label' => 'Approve pengajuan lembur', 'jumlah' => $approvalLembur, 'url' => route('admin.pengajuan-lembur.index'), 'ikon' => 'bi-clock-history'];
+            $tugas[] = ['label' => 'Approve izin keluar', 'jumlah' => self::menungguSaya(PengajuanIzinKeluar::class, $user), 'url' => route('admin.izin-keluar.index'), 'ikon' => 'bi-door-open'];
         }
         if (RekrutmenAccess::canReview($user) || $user->isPembina()) {
             $formasi = PengajuanFormasi::where('status', PengajuanFormasi::STATUS_PENDING)->get()->filter(fn ($f) => RekrutmenAccess::canReviewFormasi($user, $f))->count();
@@ -180,7 +183,7 @@ private static function kartu(User $user, Collection $aktif, Collection $kontrak
     }
 
     /**
-     * @param  class-string<PengajuanCuti|PengajuanLembur>  $model
+     * @param  class-string<PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar>  $model
      */
     public static function menungguSaya(string $model, User $user, ?array $lingkup = null): int
     {
@@ -202,7 +205,7 @@ private static function kartu(User $user, Collection $aktif, Collection $kontrak
             ->count();
     }
 
-private static function agenda(User $user): Collection
+    private static function agenda(User $user): Collection
     {
         $sampai = now()->addDays(14)->endOfDay();
         $agenda = collect();
@@ -252,7 +255,7 @@ private static function agenda(User $user): Collection
             ->sortBy(fn ($p) => $p->kepegawaian->tanggal_habis_kontrak)->values();
     }
 
-private static function anggota(Collection $aktif, Collection $cutiHariIni): Collection
+    private static function anggota(Collection $aktif, Collection $cutiHariIni): Collection
     {
         $sedangCuti = $cutiHariIni->pluck('data_pegawai_id')->all();
 
@@ -283,7 +286,7 @@ private static function anggota(Collection $aktif, Collection $cutiHariIni): Col
         return $selisih->y ? "{$selisih->y} th {$selisih->m} bln" : "{$selisih->m} bln";
     }
 
-private static function ringkasanUnit(User $user, Collection $aktif): Collection
+    private static function ringkasanUnit(User $user, Collection $aktif): Collection
     {
         $bulanIni = [now()->startOfMonth(), now()->endOfMonth()];
         $lembur = PengajuanLembur::where('status', PengajuanLembur::STATUS_APPROVED)->whereBetween('tanggal', $bulanIni)
@@ -367,7 +370,7 @@ private static function ringkasanUnit(User $user, Collection $aktif): Collection
     {
         $bulan = collect(range(11, 0))->map(fn ($i) => now()->startOfMonth()->subMonths($i));
         $dari = $bulan->first()->copy();
-        $dasar = fn () => \App\Models\Kepegawaian::query()->when($lingkup, fn ($q) => $q->whereIn('unit_kerja', $lingkup));
+        $dasar = fn () => Kepegawaian::query()->when($lingkup, fn ($q) => $q->whereIn('unit_kerja', $lingkup));
         $perBulan = fn (string $kolom) => $dasar()->whereBetween($kolom, [$dari, now()->endOfDay()])
             ->selectRaw("DATE_FORMAT({$kolom}, '%Y-%m') b, count(*) n")->groupBy('b')->pluck('n', 'b');
         $masuk = $perBulan('tanggal_masuk');
@@ -391,7 +394,7 @@ private static function ringkasanUnit(User $user, Collection $aktif): Collection
         ];
     }
 
-private static function komposisi(Collection $aktif, ?string $unit = null): array
+    private static function komposisi(Collection $aktif, ?string $unit = null): array
     {
         // Setiap batang/potongan bisa diklik → Data Pegawai dengan filter yang sama (lihat KelompokPegawai::terapkan).
         $tautan = fn (string $kunci) => fn (array $item) => $item + ['url' => route('admin.pegawai.index', array_filter([
@@ -406,6 +409,7 @@ private static function komposisi(Collection $aktif, ?string $unit = null): arra
             'pendidikan' => array_map($tautan('pendidikan'), self::hitung($aktif->map(fn ($p) => KelompokPegawai::jenjang($p->pendidikan_terakhir)), KelompokPegawai::PENDIDIKAN)),
         ];
     }
+
     private static function hitung(Collection $nilai, array $urutan): array
     {
         $jumlah = $nilai->countBy();

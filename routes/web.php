@@ -1,15 +1,16 @@
 <?php
 
 use App\Http\Controllers\AbsenAcaraController;
-use App\Http\Controllers\Admin\AlurPegawaiController;
-use App\Http\Controllers\WajibPasswordController;
 use App\Http\Controllers\AbsensiSayaController;
 use App\Http\Controllers\Admin\AbsensiController as AdminAbsensiController;
 use App\Http\Controllers\Admin\AbsensiImportController as AdminAbsensiImportController;
 use App\Http\Controllers\Admin\AbsensiPengaturanController as AdminAbsensiPengaturanController;
-use App\Http\Controllers\Admin\IzinAbsensiController as AdminIzinAbsensiController;
+use App\Http\Controllers\Admin\AlurPegawaiController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EditorDataController as AdminEditorDataController;
+use App\Http\Controllers\Admin\EvaluasiKontrakController as AdminEvaluasiKontrakController;
+use App\Http\Controllers\Admin\IzinAbsensiController as AdminIzinAbsensiController;
+use App\Http\Controllers\Admin\IzinKeluarController as AdminIzinKeluarController;
 use App\Http\Controllers\Admin\JabatanController as AdminJabatanController;
 use App\Http\Controllers\Admin\KandidatInternalController;
 use App\Http\Controllers\Admin\LamaranController as AdminLamaranController;
@@ -20,9 +21,9 @@ use App\Http\Controllers\Admin\PengajuanCutiController as AdminPengajuanCutiCont
 use App\Http\Controllers\Admin\PengajuanFormasiController as AdminPengajuanFormasiController;
 use App\Http\Controllers\Admin\PengajuanLemburController as AdminPengajuanLemburController;
 use App\Http\Controllers\Admin\PenugasanController as AdminPenugasanController;
-use App\Http\Controllers\Admin\UserController as AdminUserController;
-use App\Http\Controllers\Admin\EvaluasiKontrakController as AdminEvaluasiKontrakController;
 use App\Http\Controllers\Admin\SuratPeringatanController as AdminSuratPeringatanController;
+use App\Http\Controllers\Admin\UnitController as AdminUnitController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -30,14 +31,16 @@ use App\Http\Controllers\EksporController;
 use App\Http\Controllers\InterviewJadwalController;
 use App\Http\Controllers\JadwalKandidatController;
 use App\Http\Controllers\NotifikasiController;
-use App\Http\Controllers\PengumumanController;
 use App\Http\Controllers\Pegawai\DashboardController as PegawaiDashboardController;
+use App\Http\Controllers\Pegawai\IzinKeluarController as PegawaiIzinKeluarController;
 use App\Http\Controllers\Pegawai\PengajuanCutiController as PegawaiPengajuanCutiController;
 use App\Http\Controllers\Pegawai\PengajuanLemburController as PegawaiPengajuanLemburController;
 use App\Http\Controllers\Pegawai\ProfilController;
 use App\Http\Controllers\Pelamar\DataPelamarController;
 use App\Http\Controllers\Pelamar\LamaranController as PelamarLamaranController;
+use App\Http\Controllers\PengumumanController;
 use App\Http\Controllers\Public\LowonganController as PublicLowonganController;
+use App\Http\Controllers\WajibPasswordController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -148,6 +151,17 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::delete('/{entitas}/{id}', [AdminEditorDataController::class, 'destroy'])->name('destroy')->where('entitas', '[a-z_]+');
         });
 
+        // Master Unit: Kepala SDM & Admin mengatur koordinator (terhubung ke rangkap); tambah/ubah/hapus unit khusus Admin.
+        Route::prefix('unit')->name('unit.')->middleware('can:kelola-penugasan')->group(function () {
+            Route::get('/', [AdminUnitController::class, 'index'])->name('index');
+            Route::post('/{unit}/koordinator', [AdminUnitController::class, 'koordinator'])->name('koordinator');
+            Route::middleware('can:kelola-sistem')->group(function () {
+                Route::post('/', [AdminUnitController::class, 'store'])->name('store');
+                Route::put('/{unit}', [AdminUnitController::class, 'update'])->name('update');
+                Route::delete('/{unit}', [AdminUnitController::class, 'destroy'])->name('destroy');
+            });
+        });
+
         Route::prefix('jabatan')->name('jabatan.')->middleware('can:kelola-sistem')->group(function () {
             Route::get('/', [AdminJabatanController::class, 'index'])->name('index');
             Route::get('/export', [AdminJabatanController::class, 'export'])->name('export');
@@ -156,7 +170,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::delete('/{jabatan}', [AdminJabatanController::class, 'destroy'])->name('destroy');
         });
 
-Route::middleware('can:kelola-penugasan')->group(function () {
+        Route::middleware('can:kelola-penugasan')->group(function () {
             Route::get('/penugasan', [AdminPenugasanController::class, 'index'])->name('penugasan.index');
             Route::get('/penugasan/export', [AdminPenugasanController::class, 'export'])->name('penugasan.export');
             Route::get('/pegawai/{pegawai}/penugasan/create', [AdminPenugasanController::class, 'create'])->name('penugasan.create');
@@ -181,6 +195,19 @@ Route::middleware('can:kelola-penugasan')->group(function () {
             });
         });
 
+        // Izin keluar saat jam kerja: alur persetujuan sama dengan cuti (atasan langsung → Kepala SDM).
+        Route::prefix('izin-keluar')->name('izin-keluar.')->middleware('can:lihat-laporan')->group(function () {
+            Route::get('/', [AdminIzinKeluarController::class, 'index'])->name('index');
+            Route::get('/export', [AdminIzinKeluarController::class, 'export'])->name('export');
+            Route::get('/{izinKeluar}', [AdminIzinKeluarController::class, 'show'])->name('show');
+            Route::post('/{izinKeluar}/approve', [AdminIzinKeluarController::class, 'approve'])->name('approve')->middleware('can:proses-pengajuan');
+            Route::post('/{izinKeluar}/reject', [AdminIzinKeluarController::class, 'reject'])->name('reject')->middleware('can:proses-pengajuan');
+            Route::middleware('can:kelola-sistem')->group(function () {
+                Route::put('/{izinKeluar}/ubah-admin', [AdminIzinKeluarController::class, 'ubahAdmin'])->name('ubah-admin');
+                Route::delete('/{izinKeluar}', [AdminIzinKeluarController::class, 'destroy'])->name('destroy');
+            });
+        });
+
         Route::prefix('pengajuan-cuti')->name('pengajuan-cuti.')->middleware('can:lihat-laporan')->group(function () {
             Route::get('/', [AdminPengajuanCutiController::class, 'index'])->name('index');
             Route::get('/export', [AdminPengajuanCutiController::class, 'export'])->name('export');
@@ -193,7 +220,7 @@ Route::middleware('can:kelola-penugasan')->group(function () {
             });
         });
 
-Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function () {
+        Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function () {
             Route::get('/', [AdminPengajuanFormasiController::class, 'index'])->name('index');
             Route::get('/export', [AdminPengajuanFormasiController::class, 'export'])->name('export');
             Route::get('/create', [AdminPengajuanFormasiController::class, 'create'])->name('create');
@@ -238,6 +265,7 @@ Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function (
             Route::get('/export-jadwal', [AdminLamaranController::class, 'exportJadwal'])->name('export-jadwal');
 
             Route::get('/internal/create', [KandidatInternalController::class, 'create'])->name('internal.create');
+            Route::get('/internal/bagan', [KandidatInternalController::class, 'bagan'])->name('internal.bagan');
             Route::post('/internal', [KandidatInternalController::class, 'store'])->name('internal.store');
 
             Route::get('/{lamaran}', [AdminLamaranController::class, 'show'])->name('show');
@@ -269,20 +297,25 @@ Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function (
             Route::post('/pengajuan-lembur', [PegawaiPengajuanLemburController::class, 'store'])->name('pengajuan-lembur.store');
         });
 
+        Route::middleware('can:ajukan-izin-keluar')->group(function () {
+            Route::get('/izin-keluar', [PegawaiIzinKeluarController::class, 'index'])->name('izin-keluar');
+            Route::post('/izin-keluar', [PegawaiIzinKeluarController::class, 'store'])->name('izin-keluar.store');
+        });
+
         Route::middleware('can:ajukan-cuti')->group(function () {
             Route::get('/pengajuan-cuti', [PegawaiPengajuanCutiController::class, 'index'])->name('pengajuan-cuti');
             Route::post('/pengajuan-cuti', [PegawaiPengajuanCutiController::class, 'store'])->name('pengajuan-cuti.store');
         });
     });
 
-Route::prefix('pegawai')->name('pegawai.')->middleware('pegawai')->group(function () {
+    Route::prefix('pegawai')->name('pegawai.')->middleware('pegawai')->group(function () {
         Route::get('/dashboard', [PegawaiDashboardController::class, 'index'])->name('dashboard');
         Route::get('/data-pegawai', [ProfilController::class, 'dataPegawai'])->name('data-pegawai');
         Route::get('/pengkinian-data', [ProfilController::class, 'pengkinianData'])->name('pengkinian-data');
         Route::post('/pengkinian-data', [ProfilController::class, 'storePengkinianData'])->name('pengkinian-data.store');
     });
 
-Route::prefix('pelamar')->name('pelamar.')->middleware('pelamar')->group(function () {
+    Route::prefix('pelamar')->name('pelamar.')->middleware('pelamar')->group(function () {
         Route::get('/data-pelamar', [DataPelamarController::class, 'edit'])->name('data-pelamar.edit');
         Route::post('/data-pelamar', [DataPelamarController::class, 'update'])->name('data-pelamar.update');
 
@@ -293,6 +326,8 @@ Route::prefix('pelamar')->name('pelamar.')->middleware('pelamar')->group(functio
     });
 
     Route::get('/absensi-saya', [AbsensiSayaController::class, 'index'])->name('absensi.saya')->middleware('internal');
+    // Tiket izin keluar: pemilik, atau penyetuju/Admin yang berhak melihat (dicek di controller).
+    Route::get('/izin-keluar/{izin}/tiket', [PegawaiIzinKeluarController::class, 'tiket'])->name('pegawai.izin-keluar.tiket')->middleware('internal');
     Route::get('/interview-saya', [InterviewJadwalController::class, 'milikSaya'])->name('interview.saya');
     Route::get('/interview-saya/export', [EksporController::class, 'jadwalInterviewSaya'])->name('interview.saya.export');
     Route::get('/pegawai/pengajuan-cuti/export', [EksporController::class, 'riwayatCuti'])->name('pegawai.pengajuan-cuti.export');

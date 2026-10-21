@@ -9,17 +9,21 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PengajuanFormasi extends Model
 {
-    use HasFactory, \App\Models\Concerns\DicatatLog;
+    use \App\Models\Concerns\DicatatLog, HasFactory;
 
     protected $table = 'pengajuan_formasis';
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_REJECTED = 'rejected';
+
     public const STATUS_DIBATALKAN = 'dibatalkan';
 
     /** Kebutuhan karyawan karena: */
     public const JENIS_REPLACEMENT = 'replacement';
+
     public const JENIS_PENAMBAHAN = 'penambahan';
 
     public const JENIS_LABEL = [

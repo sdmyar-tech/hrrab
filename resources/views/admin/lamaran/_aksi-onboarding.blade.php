@@ -3,7 +3,7 @@
     - Batalkan: Kepala SDM/GM saat berjalan; Admin kapan saja.
     - Ubah (tanggal, durasi, pengawas, kepala, status, lokasi, arahan) & Hapus: khusus Admin.
 --}}
-<div class="d-flex flex-wrap gap-2 mt-2">
+<div class="d-flex flex-wrap gap-2 mt-2 justify-content-end">
     @if ($admin)
         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#ubah-onboarding-{{ $screening->id }}">
             <i class="bi bi-pencil me-1"></i> Ubah Onboarding
@@ -13,13 +13,13 @@
         <form action="{{ route('admin.lamaran.screening.cancel', [$lamaran, $screening]) }}" method="POST" class="form-batal-alasan" data-judul="Batalkan onboarding ini?">
             @csrf
             <input type="hidden" name="catatan" value="">
-            <button type="button" class="btn btn-outline-danger btn-sm btn-batal-alasan">Batalkan</button>
+            <button type="button" class="btn btn-outline-danger btn-sm btn-batal-alasan"><i class="bi bi-x-lg me-1"></i> Batalkan</button>
         </form>
     @endif
     @if ($admin)
         <form action="{{ route('admin.lamaran.screening.destroy', [$lamaran, $screening]) }}" method="POST" data-confirm="Hapus permanen data onboarding ini?">
             @csrf @method('DELETE')
-            <button type="submit" class="btn btn-outline-secondary btn-sm" title="Hapus (Admin)"><i class="bi bi-trash"></i></button>
+            <button type="submit" class="btn btn-outline-secondary btn-sm" title="Hapus (Admin)"><i class="bi bi-trash me-1"></i> Hapus</button>
         </form>
     @endif
 </div>

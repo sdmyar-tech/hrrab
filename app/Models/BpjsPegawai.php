@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BpjsPegawai extends Model
 {
-    use HasFactory, \App\Models\Concerns\DicatatLog;
+    use \App\Models\Concerns\DicatatLog, HasFactory;
 
     protected $table = 'bpjs_pegawais';
 

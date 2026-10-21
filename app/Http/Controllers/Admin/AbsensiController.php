@@ -8,11 +8,13 @@ use App\Models\DataPegawai;
 use App\Models\User;
 use App\Support\Absensi\AksesAbsensi;
 use App\Support\Absensi\PenilaianAbsensi;
+use App\Support\Absensi\TampilanAbsensi;
 use App\Support\Absensi\TanggalAbsensi;
 use App\Support\ExcelExporter;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -31,11 +33,30 @@ class AbsensiController extends Controller
         'perlu_cek' => [self::class, 'kPerluCek'],
     ];
 
-    public static function kOnTime(array $h): bool { return $h['status'] === 'on_time' || $h['status'] === 'hadir'; }
-    public static function kTelat(array $h): bool { return $h['status'] === 'telat'; }
-    public static function kTelatIzin(array $h): bool { return $h['status'] === 'telat_izin'; }
-    public static function kAlpa(array $h): bool { return $h['status'] === 'alpa'; }
-    public static function kCutiIzin(array $h): bool { return in_array($h['status'], ['cuti', 'izin', 'sakit', 'dinas_luar'], true); }
+    public static function kOnTime(array $h): bool
+    {
+        return $h['status'] === 'on_time' || $h['status'] === 'hadir';
+    }
+
+    public static function kTelat(array $h): bool
+    {
+        return $h['status'] === 'telat';
+    }
+
+    public static function kTelatIzin(array $h): bool
+    {
+        return $h['status'] === 'telat_izin';
+    }
+
+    public static function kAlpa(array $h): bool
+    {
+        return $h['status'] === 'alpa';
+    }
+
+    public static function kCutiIzin(array $h): bool
+    {
+        return in_array($h['status'], ['cuti', 'izin', 'sakit', 'dinas_luar'], true);
+    }
 
     /** Perlu ditindak SDM: tidak scan pulang, lembur belum terverifikasi, pulang cepat tanpa izin. */
     public static function kPerluCek(array $h): bool
@@ -107,7 +128,7 @@ class AbsensiController extends Controller
             'unitOpsi' => $this->unitOpsi($user),
             'bisaKelola' => $bisaKelola,
             'dataTerakhir' => $dataTerakhir,
-            'setup' => $bisaKelola ? \App\Support\Absensi\TampilanAbsensi::langkahSetup() : null,
+            'setup' => $bisaKelola ? TampilanAbsensi::langkahSetup() : null,
         ]);
     }
 
@@ -207,7 +228,7 @@ class AbsensiController extends Controller
     {
         $v = $request->validate([
             // Admin boleh mengisi tanggal ke depan (mis. dinas luar/izin yang sudah diketahui).
-            'tanggal' => ['required', 'date', ...(\Illuminate\Support\Facades\Auth::user()->isAdmin() ? [] : ['before_or_equal:today'])],
+            'tanggal' => ['required', 'date', ...(Auth::user()->isAdmin() ? [] : ['before_or_equal:today'])],
             'aksi' => ['nullable', Rule::in(['simpan', 'reset'])],
             'jam_masuk' => ['nullable', 'date_format:H:i'],
             'jam_keluar' => ['nullable', 'date_format:H:i'],
@@ -291,7 +312,7 @@ class AbsensiController extends Controller
     /**
      * Baris rekap per pegawai yang sudah difilter & diurutkan.
      *
-     * @return array{0: \Illuminate\Support\Collection, 1: string, 2: array}
+     * @return array{0: Collection, 1: string, 2: array}
      */
     private function barisRekap(Request $request, User $user, Carbon $dari, Carbon $sampai): array
     {
@@ -316,7 +337,7 @@ class AbsensiController extends Controller
      * Urutkan dengan beberapa kunci: [[fn ($baris) => nilai, 'asc'|'desc'], ...]. Urutan stabil.
      * (Collection::sortBy([...]) milik Laravel memperlakukan closure sebagai pembanding 2 argumen, jadi tidak dipakai.)
      */
-    private static function urutBanyak(\Illuminate\Support\Collection $baris, array $kunci): \Illuminate\Support\Collection
+    private static function urutBanyak(Collection $baris, array $kunci): Collection
     {
         $daftar = $baris->values()->all();
         $indeks = array_keys($daftar);
@@ -336,7 +357,7 @@ class AbsensiController extends Controller
     }
 
     /** Urutkan baris Harian. Pegawai tanpa scan selalu di bawah untuk urutan berdasarkan jam. */
-    private static function urutkanHarian(\Illuminate\Support\Collection $baris, string $urut): \Illuminate\Support\Collection
+    private static function urutkanHarian(Collection $baris, string $urut): Collection
     {
         $menit = fn ($b) => PenilaianAbsensi::menit($b['h']['masuk']);
         $nama = [fn ($b) => $b['pegawai']->nama_lengkap, 'asc'];

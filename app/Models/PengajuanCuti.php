@@ -3,21 +3,27 @@
 namespace App\Models;
 
 use App\Models\Concerns\SnapshotUnitKerja;
+use App\Support\PengajuanWorkflow;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Collection;
 
 class PengajuanCuti extends Model
 {
-    use HasFactory, SnapshotUnitKerja, \App\Models\Concerns\DicatatLog;
+    use \App\Models\Concerns\DicatatLog, HasFactory, SnapshotUnitKerja;
 
     protected $table = 'pengajuan_cutis';
 
     public const JENIS_TAHUNAN = 'tahunan';
+
     public const JENIS_BESAR = 'besar';
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_REJECTED = 'rejected';
 
     public const ANNUAL_QUOTA = 12;
@@ -67,7 +73,6 @@ class PengajuanCuti extends Model
         'bencana',
         'panggilan_pengadilan',
     ];
-
 
     public static function isDadakan(?string $jenis, ?string $kategori): bool
     {
@@ -196,8 +201,8 @@ class PengajuanCuti extends Model
             return false;
         }
 
-        $mulai = \Carbon\Carbon::parse($mulai);
-        $selesai = \Carbon\Carbon::parse($selesai);
+        $mulai = Carbon::parse($mulai);
+        $selesai = Carbon::parse($selesai);
 
         return $pegawai->pengajuanCutis()
             ->whereIn('status', [self::STATUS_PENDING, self::STATUS_APPROVED])
@@ -208,10 +213,10 @@ class PengajuanCuti extends Model
 
     public function currentLevelLabel(): string
     {
-        return \App\Support\PengajuanWorkflow::levelLabel($this->current_level);
+        return PengajuanWorkflow::levelLabel($this->current_level);
     }
 
-    public function substituteOptions(): \Illuminate\Support\Collection
+    public function substituteOptions(): Collection
     {
         $unitKerja = $this->unit_kerja ?? $this->dataPegawai?->kepegawaian?->unit_kerja;
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Models\Lamaran;
 use App\Models\Lowongan;
+use App\Models\User;
 use App\Support\Urutan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -55,7 +56,7 @@ class LowonganController extends Controller
             abort(404);
         }
 
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
 
         $siapMelamar = $user?->isPelamar() && $user->dataPelamar?->isLengkap();

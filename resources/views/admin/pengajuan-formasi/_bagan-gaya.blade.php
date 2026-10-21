@@ -9,7 +9,6 @@
     .bagan-legenda span { display: inline-flex; align-items: center; gap: .35rem; }
     .bagan-legenda i.kotak { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 
-    /* Alat: cari + zoom */
     .bagan-alat { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; padding: .45rem .55rem; border-bottom: 1px solid var(--admin-border); background: var(--admin-surface); }
     .bagan-alat input[type=search] { flex: 1 1 180px; max-width: 320px; }
     .bagan-alat .btn { --bs-btn-padding-y: .2rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem; }

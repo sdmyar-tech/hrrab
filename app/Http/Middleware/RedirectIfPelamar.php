@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +14,7 @@ class RedirectIfPelamar
     {
         $user = Auth::user();
 
-        if ($user instanceof \App\Models\User && $user->isPelamar()) {
+        if ($user instanceof User && $user->isPelamar()) {
             if ($tujuan = $request->session()->pull('lowongan_tujuan')) {
                 return redirect($tujuan);
             }

@@ -2,17 +2,18 @@
 
 namespace App\Models;
 
+use App\Support\Notifikasi;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ScreeningOnboarding extends Model
 {
-    use HasFactory, \App\Models\Concerns\DicatatLog;
+    use \App\Models\Concerns\DicatatLog, HasFactory;
 
     protected static function booted(): void
     {
-        static::created(fn (self $jadwal) => \App\Support\Notifikasi::jadwalKandidat($jadwal));
+        static::created(fn (self $jadwal) => Notifikasi::jadwalKandidat($jadwal));
     }
 
     protected $table = 'screening_onboardings';
@@ -20,10 +21,13 @@ class ScreeningOnboarding extends Model
     public const DURASI_HARI = 3;
 
     public const STATUS_BERJALAN = 'berjalan';
+
     public const STATUS_SELESAI = 'selesai';
+
     public const STATUS_DIBATALKAN = 'dibatalkan';
 
     public const HASIL_LULUS = 'lulus';
+
     public const HASIL_TIDAK_LULUS = 'tidak_lulus';
 
     protected $fillable = [

@@ -5,10 +5,12 @@ namespace App\Support;
 use App\Models\DataPegawai;
 use App\Models\InterviewJadwal;
 use App\Models\PengajuanCuti;
+use App\Models\PengajuanIzinKeluar;
 use App\Models\PengajuanLembur;
 use App\Models\Penugasan;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -16,6 +18,7 @@ use Illuminate\Validation\ValidationException;
 class PenugasanService
 {
     public const PENDING_LANJUT = 'lanjut';
+
     public const PENDING_TOLAK = 'tolak';
 
     /** Penempatan awal pegawai baru (tambah pegawai, rekrut pelamar, import). */
@@ -153,18 +156,18 @@ class PenugasanService
         });
     }
 
+    /** Admin bebas dari aturan urutan penugasan (koreksi data). */
+    private static function admin(): bool
+    {
+        return (bool) Auth::user()?->isAdmin();
+    }
+
     /**
      * Hapus mutasi/rangkap (terjadwal, berlaku, maupun selesai) — untuk pembatalan atau koreksi salah input.
      * Mutasi hanya bisa dihapus bila merupakan mutasi terakhir; penugasan utama sebelumnya dibuka kembali.
      *
      * @return list<string>
      */
-    /** Admin bebas dari aturan urutan penugasan (koreksi data). */
-    private static function admin(): bool
-    {
-        return (bool) \Illuminate\Support\Facades\Auth::user()?->isAdmin();
-    }
-
     public static function hapus(Penugasan $penugasan, bool $bebas = false): array
     {
         if ($penugasan->jenis === Penugasan::JENIS_AWAL && ! $bebas) {
@@ -262,6 +265,78 @@ class PenugasanService
     }
 
     /**
+     * Tetapkan koordinator (kepala) satu unit dari Master Unit; $baru & $gm null = kosongkan.
+     * Koordinator lama dilepas (unit utamanya → jadi anggota; rangkap kepala → diakhiri kemarin, atau dihapus bila baru dibuat hari ini),
+     * termasuk GM tanpa data pegawai yang memegang unit ini.
+     * Koordinator baru berupa pegawai (termasuk GM yang punya data pegawai): bila sudah bertugas di unit itu cukup dinaikkan jadi kepala;
+     * bila belum, dicatat sebagai RANGKAP kepala (tampil di Mutasi & Rangkap). Role akun ikut disinkronkan (Kepala Bagian / Staff).
+     * Koordinator baru berupa GM tanpa data pegawai ($gm): unit dicatat di akunnya (kepala_unit_gm), seperti di Kelola Akun.
+     *
+     * @return list<string> peringatan
+     */
+    public static function tetapkanKoordinator(string $unit, ?DataPegawai $baru, ?string $jabatan = null, ?User $oleh = null, ?User $gm = null): array
+    {
+        return DB::transaction(function () use ($unit, $baru, $jabatan, $oleh, $gm) {
+            $hariIni = now()->toDateString();
+            $terdampak = collect($baru ? [$baru] : []);
+
+            // GM tanpa data pegawai: lepas unit ini dari GM lain, tambahkan ke GM terpilih.
+            foreach (User::gmKepalaTanpaPegawai($unit)->get() as $lainGm) {
+                if (! $gm || $lainGm->id !== $gm->id) {
+                    $sisa = array_values(array_diff((array) $lainGm->kepala_unit_gm, [$unit]));
+                    $lainGm->forceFill(['kepala_unit_gm' => $sisa ?: null])->save();
+                }
+            }
+            if ($gm) {
+                $gm->forceFill(['kepala_unit_gm' => array_values(array_unique([...(array) $gm->kepala_unit_gm, $unit]))])->save();
+            }
+
+            foreach (Penugasan::aktif()->kepala()->where('unit_kerja', $unit)->with('dataPegawai')->get() as $p) {
+                if ($baru && $p->data_pegawai_id === $baru->id) {
+                    continue;
+                }
+                match (true) {
+                    $p->is_utama => $p->update(['peran' => Penugasan::PERAN_ANGGOTA]),
+                    $p->tanggal_mulai->toDateString() === $hariIni => $p->delete(),
+                    default => $p->update(['tanggal_selesai' => now()->subDay()->toDateString()]),
+                };
+                $terdampak->push($p->dataPegawai);
+            }
+
+            if ($baru) {
+                $sekarang = $baru->penugasans()->aktif()->where('unit_kerja', $unit)->orderByDesc('is_utama')->first();
+                if ($sekarang) {
+                    $sekarang->update(['peran' => Penugasan::PERAN_KEPALA] + ($jabatan ? ['jabatan' => $jabatan] : []));
+                } else {
+                    $baru->penugasans()->create([
+                        'unit_kerja' => $unit,
+                        'jabatan' => $jabatan ?: 'KEPALA ' . $unit,
+                        'peran' => Penugasan::PERAN_KEPALA,
+                        'is_utama' => false,
+                        'jenis' => Penugasan::JENIS_RANGKAP,
+                        'tanggal_mulai' => $hariIni,
+                        'keterangan' => 'Ditetapkan sebagai koordinator dari Master Unit.',
+                        'dibuat_oleh' => $oleh?->id,
+                    ]);
+                }
+            }
+
+            $peringatan = [];
+            foreach ($terdampak->filter()->unique('id') as $pegawai) {
+                array_push($peringatan, ...self::sinkron($pegawai));
+            }
+            if ($gm && ($jumlah = self::sinkronInterviewer()) > 0) {
+                $peringatan[] = "{$jumlah} jadwal interview tahap 2 dialihkan ke kepala unit yang baru.";
+            }
+            if (! $baru && ! $gm && self::unitTanpaKepala($unit)) {
+                $peringatan[] = "Unit {$unit} sekarang tidak punya koordinator. Pengajuan pegawai unit ini diteruskan ke GM.";
+            }
+
+            return array_values(array_unique($peringatan));
+        });
+    }
+
+    /**
      * Samakan turunan penugasan.
      *
      * @return list<string>
@@ -298,7 +373,7 @@ class PenugasanService
         return $peringatan;
     }
 
-    /** Jalankan sinkron() untuk penugasan yang mulai/berakhir dalam seminggu terakhir (scheduler harian. */
+    /** Jalankan sinkron() untuk penugasan yang mulai/berakhir dalam seminggu terakhir (dipanggil scheduler harian). */
     public static function sinkronTerjadwal(): int
     {
         $hariIni = now()->toDateString();
@@ -363,7 +438,7 @@ class PenugasanService
     {
         $jumlah = 0;
 
-        foreach ([PengajuanCuti::class, PengajuanLembur::class] as $model) {
+        foreach ([PengajuanCuti::class, PengajuanLembur::class, PengajuanIzinKeluar::class] as $model) {
             $jumlah += $model::where('data_pegawai_id', $pegawai->id)
                 ->where('unit_kerja', $unit)
                 ->where('status', $model::STATUS_PENDING)

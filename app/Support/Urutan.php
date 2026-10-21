@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
  * Pengurutan daftar yang dipilih pengguna lewat parameter ?urut=... (tanggal terbaru/terlama, A–Z/Z–A).
@@ -16,7 +18,7 @@ class Urutan
     /**
      * Terapkan urutan ke query dan kembalikan data untuk partial `partials.urut`.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Eloquent\Relations\Relation  $query
+     * @param  Builder|Relation  $query
      * @param  array<string, array{0: string, 1: string|Closure, 2: string}>  $opsi
      * @return array{urutOpsi: array<string, string>, urutAktif: string}
      */

@@ -6,6 +6,7 @@ use App\Models\InterviewJadwal;
 use App\Models\Lamaran;
 use App\Models\Penugasan;
 use App\Models\User;
+use Illuminate\Support\Collection;
 
 /** Alur interview rekrutmen — minimal 2 interview Lulus. */
 class InterviewFlow
@@ -30,7 +31,6 @@ class InterviewFlow
         return User::gmUtamaUntuk($unit)->first();
     }
 
-    /** Kepala sebuah unit: akun pimpinan. */
     public static function kepalaUnit(?string $unit): ?User
     {
         if ($unit === null) {
@@ -73,7 +73,7 @@ class InterviewFlow
     }
 
     /** Pilihan interviewer Interview Lanjutan: Kepala SDM, GM & Kepala Bagian — kecuali kandidat sendiri. */
-    public static function opsiInterviewerLanjutan(Lamaran $lamaran): \Illuminate\Support\Collection
+    public static function opsiInterviewerLanjutan(Lamaran $lamaran): Collection
     {
         return User::whereIn('role', [User::ROLE_KEPALA_SDM, User::ROLE_GM, User::ROLE_KEPALA_BAGIAN])
             ->when($lamaran->data_pegawai_id, fn ($q) => $q->where(fn ($w) => $w->whereNull('data_pegawai_id')->orWhere('data_pegawai_id', '!=', $lamaran->data_pegawai_id)))
@@ -125,7 +125,7 @@ class InterviewFlow
     }
 
     /** Pilihan interviewer untuk Admin: semua akun internal (Admin bebas memilih siapa pun). */
-    public static function opsiInterviewerAdmin(): \Illuminate\Support\Collection
+    public static function opsiInterviewerAdmin(): Collection
     {
         return User::whereIn('role', User::INTERNAL_ROLES)->orderBy('name')->get(['id', 'name', 'role']);
     }

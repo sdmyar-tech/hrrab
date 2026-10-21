@@ -67,6 +67,14 @@
         </section>
     </div>
 
+    @if (isset($r['bagan']))
+        {{-- Formasi: bagan unit seperti di formulir pengajuan (yang digantikan / posisi baru ditandai). --}}
+        <section>
+            <h3 class="rk-h">Bagan unit {{ $r['formasi']->unit_kerja }}</h3>
+            @include('admin.pengajuan-formasi._bagan-statis', ['bagan' => $r['bagan'], 'unit' => $r['formasi']->unit_kerja])
+        </section>
+    @endif
+
     <section>
         <h3 class="rk-h">{{ $r['riwayatJudul'] }}</h3>
         @forelse ($r['riwayat'] as $h)

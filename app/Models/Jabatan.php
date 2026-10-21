@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DicatatLog;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -10,16 +12,56 @@ use Illuminate\Support\Facades\Schema;
 /** Master daftar jabatan: sumber semua dropdown & validasi jabatan. */
 class Jabatan extends Model
 {
-    use \App\Models\Concerns\DicatatLog;
+    use DicatatLog;
 
     private const CACHE_KEY = 'master.jabatan';
+
+    public const CACHE_PER_UNIT = 'master.jabatan-per-unit';
 
     protected $fillable = ['nama'];
 
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget(self::CACHE_KEY));
-        static::deleted(fn () => Cache::forget(self::CACHE_KEY));
+        $lupakan = function () {
+            Cache::forget(self::CACHE_KEY);
+            Cache::forget(self::CACHE_PER_UNIT);
+        };
+        static::saved($lupakan);
+        static::deleted($lupakan);
+    }
+
+    /** Unit tempat jabatan ini berada (satu jabatan boleh di beberapa unit, mis. guru di SMA/SMP/SMK). */
+    public function units(): BelongsToMany
+    {
+        return $this->belongsToMany(Unit::class)->orderBy('urutan')->orderBy('nama');
+    }
+
+    /** Simpan daftar unit jabatan ini (id unit) dan segarkan cache jabatan per unit. */
+    public function aturUnit(array $unitIds): void
+    {
+        $this->units()->sync(array_values(array_unique(array_map('intval', $unitIds))));
+        Cache::forget(self::CACHE_PER_UNIT);
+    }
+
+    /**
+     * Jabatan per unit dari Master Jabatan (dipakai dropdown jabatan yang mengikuti unit & aturan formasi).
+     *
+     * @return array<string, list<string>> nama unit => nama jabatan (A–Z)
+     */
+    public static function perUnit(): array
+    {
+        if (! Schema::hasTable('jabatan_unit')) {
+            return [];
+        }
+
+        return Cache::rememberForever(self::CACHE_PER_UNIT, fn () => DB::table('jabatan_unit')
+            ->join('jabatans', 'jabatans.id', '=', 'jabatan_unit.jabatan_id')
+            ->join('units', 'units.id', '=', 'jabatan_unit.unit_id')
+            ->orderBy('jabatans.nama')
+            ->get(['units.nama as unit', 'jabatans.nama as jabatan'])
+            ->groupBy('unit')
+            ->map(fn ($g) => $g->pluck('jabatan')->all())
+            ->all());
     }
 
     /** @return list<string> */

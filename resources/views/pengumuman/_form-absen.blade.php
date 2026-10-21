@@ -27,7 +27,6 @@
     <div data-absen-isi class="mt-3" @if (! $aktif) hidden @endif>
         @error('absen_peserta')<div class="alert alert-danger small py-2">{{ $message }}</div>@enderror
 
-        {{-- 1. Waktu --}}
         <p class="fw-semibold small mb-2"><span class="langkah-no">1</span>Kapan absen bisa dilakukan?</p>
         <div class="row g-2 mb-2">
             <div class="col-sm-6">
@@ -48,7 +47,6 @@
             <span class="form-text m-0">Buka 30 menit sebelum acara, tutup saat selesai. Di luar waktu ini absen tidak bisa (status "Kedaluwarsa").</span>
         </div>
 
-        {{-- 2. Peserta --}}
         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
             <p class="fw-semibold small mb-0"><span class="langkah-no">2</span>Siapa yang wajib absen?</p>
             <span class="badge text-bg-primary ms-auto fs-6" data-total-peserta>0 pegawai</span>
@@ -115,7 +113,6 @@
         const kandidat = @json($kandidatJs);
         const el = (s) => panel.querySelector(s);
 
-        // ---------- Waktu ----------
         el('[data-isi-jam-acara]').addEventListener('click', function () {
             const tgl = form.querySelector('[name=tanggal]').value;
             const mulai = form.querySelector('[name=jam_mulai]').value;
@@ -128,7 +125,6 @@
             el('[name=absen_tutup]').value = fmt(tutup);
         });
 
-        // ---------- Peserta ----------
         const semua = document.getElementById('absen_semua');
         const terpilih = (k) => Array.from(panel.querySelectorAll('[name="absen_' + k + '[]"]:checked')).map((c) => c.value);
         function hitung() {
@@ -148,7 +144,6 @@
             panel.querySelectorAll('[data-daftar="' + cari.dataset.cariDaftar + '"] [data-teks]').forEach((b) => { b.hidden = kata && !b.dataset.teks.includes(kata); });
         }));
 
-        // ---------- Sakelar ----------
         function sinkronSakelar() {
             isi.hidden = !sakelar.checked;
         }

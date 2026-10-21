@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Support\EvaluasiKontrakAlur;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Kepegawaian extends Model
 {
-    use HasFactory, \App\Models\Concerns\DicatatLog;
+    use \App\Models\Concerns\DicatatLog, HasFactory;
 
     protected $table = 'kepegawaians';
 
@@ -48,8 +49,8 @@ class Kepegawaian extends Model
         // bila habis ≤ 30 hari lagi (tidak menunggu jadwal harian).
         static::saved(function (Kepegawaian $k) {
             if ($k->wasChanged(['tanggal_habis_kontrak', 'status_kerja', 'status_rekrutmen']) || $k->wasRecentlyCreated) {
-                \App\Support\EvaluasiKontrakAlur::bersihkanUsang($k->data_pegawai_id);
-                \App\Support\EvaluasiKontrakAlur::buatJatuhTempo($k->data_pegawai_id);
+                EvaluasiKontrakAlur::bersihkanUsang($k->data_pegawai_id);
+                EvaluasiKontrakAlur::buatJatuhTempo($k->data_pegawai_id);
             }
         });
     }

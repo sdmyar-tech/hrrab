@@ -2,20 +2,21 @@
 
 namespace App\Models;
 
+use App\Support\Notifikasi;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InterviewJadwal extends Model
 {
-    use HasFactory, \App\Models\Concerns\DicatatLog;
+    use \App\Models\Concerns\DicatatLog, HasFactory;
 
     protected static function booted(): void
     {
-        static::created(fn (self $jadwal) => \App\Support\Notifikasi::jadwalKandidat($jadwal));
+        static::created(fn (self $jadwal) => Notifikasi::jadwalKandidat($jadwal));
         static::updated(function (self $jadwal) {
             if ($jadwal->wasChanged(['tanggal', 'waktu_mulai', 'lokasi']) && $jadwal->status === self::STATUS_TERJADWAL) {
-                \App\Support\Notifikasi::jadwalKandidat($jadwal);
+                Notifikasi::jadwalKandidat($jadwal);
             }
         });
     }
@@ -23,15 +24,21 @@ class InterviewJadwal extends Model
     protected $table = 'interview_jadwals';
 
     public const STATUS_TERJADWAL = 'terjadwal';
+
     public const STATUS_SELESAI = 'selesai';
+
     public const STATUS_DIBATALKAN = 'dibatalkan';
 
     public const HASIL_LULUS = 'lulus';
+
     public const HASIL_DIPERTIMBANGKAN = 'dipertimbangkan';
+
     public const HASIL_TIDAK_LULUS = 'tidak_lulus';
 
     public const TAHAP_KEPALA_SDM = 1;
+
     public const TAHAP_KEPALA_BAGIAN = 2;
+
     public const TAHAP_LANJUTAN = 3;
 
     protected $fillable = [

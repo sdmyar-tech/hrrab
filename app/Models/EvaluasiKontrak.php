@@ -2,20 +2,26 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DicatatLog;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /** Evaluasi kontrak pegawai menjelang habis: rekomendasi atasan → keputusan Kepala SDM. */
 class EvaluasiKontrak extends Model
 {
-    use \App\Models\Concerns\DicatatLog;
+    use DicatatLog;
 
     public const STATUS_MENUNGGU_ATASAN = 'menunggu_atasan';
+
     public const STATUS_MENUNGGU_SDM = 'menunggu_sdm';
+
     public const STATUS_SELESAI = 'selesai';
 
     public const PERPANJANG = 'perpanjang';
+
     public const TETAP = 'tetap';
+
     public const TIDAK = 'tidak';
 
     public const PILIHAN = [
@@ -183,13 +189,13 @@ class EvaluasiKontrak extends Model
     /**
      * Periode penilaian bawaan: sejak kontrak dinilai terakhir (atau TMT) sampai tanggal habis kontrak ini.
      *
-     * @return array{0: ?\Carbon\Carbon, 1: \Carbon\Carbon}
+     * @return array{0: ?Carbon, 1: Carbon}
      */
     public function periodeBawaan(): array
     {
         $sebelumnya = self::where('data_pegawai_id', $this->data_pegawai_id)->whereKeyNot($this->id)
             ->whereDate('tanggal_habis_kontrak', '<', $this->tanggal_habis_kontrak)->max('tanggal_habis_kontrak');
-        $mulai = $sebelumnya ? \Carbon\Carbon::parse($sebelumnya)->addDay() : $this->dataPegawai?->kepegawaian?->tanggal_masuk;
+        $mulai = $sebelumnya ? Carbon::parse($sebelumnya)->addDay() : $this->dataPegawai?->kepegawaian?->tanggal_masuk;
 
         return [$mulai, $this->tanggal_habis_kontrak];
     }

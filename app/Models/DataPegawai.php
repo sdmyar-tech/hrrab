@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DicatatLog;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DataPegawai extends Model
 {
-    use HasFactory, \App\Models\Concerns\DicatatLog;
+    use DicatatLog, HasFactory;
 
     protected $table = 'data_pegawais';
 
@@ -40,7 +41,7 @@ class DataPegawai extends Model
         'ikut_absensi' => 'boolean',
     ];
 
-    // finger_id & ikut_absensi sengaja tidak di illable: hanya diubah lewat modul Absensi (SDM/Admin).
+    // finger_id & ikut_absensi sengaja tidak di $fillable: hanya diubah lewat modul Absensi (SDM/Admin).
 
     public function jadwalKerja(): HasOne
     {
@@ -90,5 +91,10 @@ class DataPegawai extends Model
     public function pengajuanCutis(): HasMany
     {
         return $this->hasMany(PengajuanCuti::class);
+    }
+
+    public function pengajuanIzinKeluars(): HasMany
+    {
+        return $this->hasMany(PengajuanIzinKeluar::class);
     }
 }

@@ -4,12 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Jabatan;
+use App\Models\Unit;
+use App\Support\ExcelExporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use App\Support\ExcelExporter;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class JabatanController extends Controller
@@ -20,8 +21,9 @@ class JabatanController extends Controller
         $rincian = $this->rincianPemakaian();
 
         return view('admin.jabatan.index', [
-            'jabatans' => Jabatan::orderBy('nama')->get(),
+            'jabatans' => Jabatan::with('units:id,nama')->orderBy('nama')->get(),
             'semuaJabatan' => Jabatan::orderBy('nama')->get(['id', 'nama']),
+            'units' => Unit::orderBy('urutan')->orderBy('nama')->get(['id', 'nama']),
             'dipakai' => array_map('array_sum', $rincian),
             'rincian' => $rincian,
         ]);
@@ -30,35 +32,47 @@ class JabatanController extends Controller
     public function export(): BinaryFileResponse
     {
         $dipakai = $this->hitungPemakaian();
-        $rows = Jabatan::orderBy('nama')->get()->map(fn (Jabatan $j, $i) => [$i + 1, $j->nama, $dipakai[$j->nama] ?? 0]);
+        $rows = Jabatan::with('units:id,nama')->orderBy('nama')->get()
+            ->map(fn (Jabatan $j, $i) => [$i + 1, $j->nama, $j->units->pluck('nama')->implode(', '), $dipakai[$j->nama] ?? 0]);
 
-        return ExcelExporter::download(ExcelExporter::namaFile('master-jabatan'), ['No', 'Nama Jabatan', 'Dipakai'], $rows, 'Master Jabatan');
+        return ExcelExporter::download(ExcelExporter::namaFile('master-jabatan'), ['No', 'Nama Jabatan', 'Unit', 'Dipakai'], $rows, 'Master Jabatan');
     }
 
     public function store(Request $request): RedirectResponse
     {
         $nama = $this->validasiNama($request);
+        $unitId = $request->validate(['unit_id' => ['nullable', 'integer', Rule::exists('units', 'id')]])['unit_id'] ?? null;
 
         $jabatan = Jabatan::create(['nama' => $nama]);
+        $jabatan->aturUnit($unitId ? [$unitId] : []);
 
-        return $this->kembali($jabatan)->with('success', "Jabatan {$nama} ditambahkan.");
+        return $this->kembali($jabatan)->with('success', "Jabatan {$nama} ditambahkan" . ($unitId ? ' di unit ' . Unit::find($unitId)?->nama : ' (belum ditautkan ke unit)') . '.');
     }
 
     public function update(Request $request, Jabatan $jabatan): RedirectResponse
     {
         // Galat form ubah memakai bag "ubah" supaya modal yang benar dibuka lagi (bukan form tambah).
         $nama = $this->validasiNama($request, $jabatan->id, 'ubah');
+        $unitIds = $request->validateWithBag('ubah', [
+            'unit_ids' => ['nullable', 'array'],
+            'unit_ids.*' => ['integer', Rule::exists('units', 'id')],
+        ])['unit_ids'] ?? [];
         $lama = $jabatan->nama;
+        $unitLama = $jabatan->units()->pluck('units.id')->sort()->values()->all();
 
-        if ($nama === $lama) {
-            return $this->kembali($jabatan)->with('info', 'Nama jabatan tidak berubah.');
+        $pesan = [];
+        if ($nama !== $lama) {
+            $dipakai = $jabatan->jumlahDipakai();
+            $jabatan->ubahNama($nama);
+            $pesan[] = "Jabatan {$lama} diubah menjadi {$nama}." . ($dipakai ? " {$dipakai} data (pegawai, mutasi, lowongan, formasi, lamaran) ikut diperbarui." : '');
+        }
+        // Unit hanya disinkronkan bila bagian unit ikut dikirim dari form ubah.
+        if ($request->boolean('unit_dikirim') && collect($unitIds)->map('intval')->sort()->values()->all() !== $unitLama) {
+            $jabatan->aturUnit($unitIds);
+            $pesan[] = 'Unit jabatan ' . $jabatan->nama . ': ' . ($jabatan->units()->pluck('nama')->implode(', ') ?: 'tidak ada') . '.';
         }
 
-        $dipakai = $jabatan->jumlahDipakai();
-        $jabatan->ubahNama($nama);
-
-        return $this->kembali($jabatan)->with('success', "Jabatan {$lama} diubah menjadi {$nama}."
-            . ($dipakai ? " {$dipakai} data (pegawai, mutasi, lowongan, formasi, lamaran) ikut diperbarui." : ''));
+        return $this->kembali($jabatan)->with($pesan ? 'success' : 'info', $pesan ? implode(' ', $pesan) : 'Tidak ada perubahan.');
     }
 
     /** Kembali ke daftar, menyorot & menggulir ke jabatan yang baru diubah, dengan pencarian sebelumnya. */

@@ -217,7 +217,7 @@ return [
         'YAYASAN',
     ],
 
-'unit_tanpa_pengajuan' => [
+    'unit_tanpa_pengajuan' => [
         'SMA',
         'SMP',
         'SMK',

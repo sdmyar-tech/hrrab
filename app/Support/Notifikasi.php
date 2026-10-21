@@ -2,13 +2,16 @@
 
 namespace App\Support;
 
+use App\Models\EvaluasiKontrak;
 use App\Models\InterviewJadwal;
 use App\Models\KontrakJadwal;
 use App\Models\Lamaran;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanFormasi;
+use App\Models\PengajuanIzinKeluar;
 use App\Models\PengajuanLembur;
 use App\Models\ScreeningOnboarding;
+use App\Models\SuratPeringatan;
 use App\Models\User;
 use App\Notifications\Pemberitahuan;
 use Illuminate\Support\Collection;
@@ -35,10 +38,10 @@ class Notifikasi
         return $users->count();
     }
 
-public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajuan): void
+    public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): void
     {
         $pengajuan->loadMissing('dataPegawai.kepegawaian');
-        [$jenis, $route] = self::jenisPengajuan($pengajuan);
+        [$jenis, $route, $ikon, $tugas] = self::jenisPengajuan($pengajuan);
 
         self::kirim(
             self::approver($pengajuan),
@@ -46,13 +49,13 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
             "{$pengajuan->dataPegawai?->nama_lengkap} ({$pengajuan->unit_kerja}) — tahap {$pengajuan->currentLevelLabel()}.",
             route($route, $pengajuan),
             Pemberitahuan::JENIS_TUGAS,
-            $pengajuan instanceof PengajuanCuti ? 'bi-calendar2-check' : 'bi-clock-history',
+            $ikon,
             null,
-            TugasNotifikasi::penanda($pengajuan instanceof PengajuanCuti ? TugasNotifikasi::CUTI : TugasNotifikasi::LEMBUR, $pengajuan->id),
+            TugasNotifikasi::penanda($tugas, $pengajuan->id),
         );
     }
 
-    public static function pengajuanDiproses(PengajuanCuti|PengajuanLembur $pengajuan): void
+    public static function pengajuanDiproses(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): void
     {
         $pengajuan->refresh()->loadMissing('dataPegawai.kepegawaian');
 
@@ -65,19 +68,28 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
         [$jenis] = self::jenisPengajuan($pengajuan);
         $disetujui = $pengajuan->status === $pengajuan::STATUS_APPROVED;
         $pengaju = User::where('data_pegawai_id', $pengajuan->data_pegawai_id)->get();
-        $url = route($pengajuan instanceof PengajuanCuti ? 'pegawai.pengajuan-cuti' : 'pegawai.pengajuan-lembur');
+        $izinKeluar = $pengajuan instanceof PengajuanIzinKeluar;
+        // Izin keluar disetujui: langsung ke tiket yang ditunjukkan ke security.
+        $url = match (true) {
+            $izinKeluar && $disetujui => route('pegawai.izin-keluar.tiket', $pengajuan),
+            $izinKeluar => route('pegawai.izin-keluar'),
+            $pengajuan instanceof PengajuanCuti => route('pegawai.pengajuan-cuti'),
+            default => route('pegawai.pengajuan-lembur'),
+        };
 
         self::kirim(
             $pengaju,
             "{$jenis} Anda " . ($disetujui ? 'disetujui' : 'ditolak'),
-            $disetujui ? 'Pengajuan sudah disetujui sampai tahap akhir.' : 'Alasan: ' . ($pengajuan->catatan_admin ?: '-'),
+            $disetujui
+                ? ($izinKeluar ? 'Tiket keluar sudah terbit. Tunjukkan ke security di gerbang saat keluar.' : 'Pengajuan sudah disetujui sampai tahap akhir.')
+                : 'Alasan: ' . ($pengajuan->catatan_admin ?: '-'),
             $url,
             Pemberitahuan::JENIS_INFO,
             $disetujui ? 'bi-check-circle' : 'bi-x-circle',
         );
     }
 
-    public static function approver(PengajuanCuti|PengajuanLembur $pengajuan): Collection
+    public static function approver(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): Collection
     {
         return User::with('dataPegawai.penugasanAktif')
             ->whereIn('role', [User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM, User::ROLE_GM])
@@ -92,12 +104,14 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
             ->values();
     }
 
-    /** @return array{0: string, 1: string} label & route detail admin */
-    private static function jenisPengajuan(PengajuanCuti|PengajuanLembur $pengajuan): array
+    /** @return array{0: string, 1: string, 2: string, 3: string} label, route detail admin, ikon, tipe tugas */
+    private static function jenisPengajuan(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): array
     {
-        return $pengajuan instanceof PengajuanCuti
-            ? ['Pengajuan cuti', 'admin.pengajuan-cuti.show']
-            : ['Pengajuan lembur', 'admin.pengajuan-lembur.show'];
+        return match (true) {
+            $pengajuan instanceof PengajuanCuti => ['Pengajuan cuti', 'admin.pengajuan-cuti.show', 'bi-calendar2-check', TugasNotifikasi::CUTI],
+            $pengajuan instanceof PengajuanIzinKeluar => ['Izin keluar', 'admin.izin-keluar.show', 'bi-door-open', TugasNotifikasi::IZIN_KELUAR],
+            default => ['Pengajuan lembur', 'admin.pengajuan-lembur.show', 'bi-clock-history', TugasNotifikasi::LEMBUR],
+        };
     }
 
     /** Ke semua yang bisa mereview formasi saat ini (penambahan: hanya pemegang tahap berjalan, GM lalu Owner). */
@@ -120,7 +134,7 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
     }
 
     /** H-30: tugas untuk penilai memberi nilai evaluasi kontrak. */
-    public static function evaluasiKontrakBaru(\App\Models\EvaluasiKontrak $e, ?iterable $penerima = null): void
+    public static function evaluasiKontrakBaru(EvaluasiKontrak $e, ?iterable $penerima = null): void
     {
         $e->loadMissing('dataPegawai.kepegawaian');
         self::kirim($penerima ?? EvaluasiKontrakAlur::penilai($e->dataPegawai, $e->unit_kerja), 'Evaluasi kontrak: beri penilaian',
@@ -130,18 +144,18 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
     }
 
     /** Nilai sudah masuk → pemutus (Kepala SDM, atau GM untuk kontrak Kepala SDM) memutuskan. */
-    public static function evaluasiKontrakDiisi(\App\Models\EvaluasiKontrak $e, ?iterable $penerima = null): void
+    public static function evaluasiKontrakDiisi(EvaluasiKontrak $e, ?iterable $penerima = null): void
     {
         $e->loadMissing('dataPegawai.kepegawaian');
         $pemutus = $penerima ?? EvaluasiKontrakAlur::pemutus($e->dataPegawai, $e->unit_kerja)->filter(fn (User $u) => EvaluasiKontrakAlur::bisaPutuskan($u, $e));
         self::kirim($pemutus, 'Evaluasi kontrak menunggu keputusan',
-            ($e->dataPegawai?->nama_lengkap ?? '-') . " — total nilai {$e->total_nilai} (" . \App\Models\EvaluasiKontrak::predikat($e->total_nilai) . ').',
+            ($e->dataPegawai?->nama_lengkap ?? '-') . " — total nilai {$e->total_nilai} (" . EvaluasiKontrak::predikat($e->total_nilai) . ').',
             route('admin.evaluasi-kontrak.show', $e), Pemberitahuan::JENIS_TUGAS, 'bi-clipboard-check', null,
             TugasNotifikasi::penanda(TugasNotifikasi::EVALUASI_KONTRAK, $e->id));
     }
 
     /** Keputusan dikabarkan ke penilai; pegawai yang bersangkutan menerima jadwal & lokasi TTD kontrak. */
-    public static function evaluasiKontrakDiputuskan(\App\Models\EvaluasiKontrak $e): void
+    public static function evaluasiKontrakDiputuskan(EvaluasiKontrak $e): void
     {
         self::kirim($e->diisi_oleh ? User::find($e->diisi_oleh) : null, 'Evaluasi kontrak diputuskan',
             ($e->dataPegawai?->nama_lengkap ?? '-') . ': ' . $e->labelKeputusan() . '.',
@@ -150,7 +164,7 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
     }
 
     /** Jadwal tanda tangan kontrak ke akun pegawai yang bersangkutan (bila sudah dijadwalkan). */
-    public static function evaluasiKontrakJadwalTtd(\App\Models\EvaluasiKontrak $e): void
+    public static function evaluasiKontrakJadwalTtd(EvaluasiKontrak $e): void
     {
         if (! $e->labelTtd()) {
             return;
@@ -159,8 +173,9 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
             'Kontrak Anda: ' . $e->labelKeputusan() . '. Silakan tanda tangan kontrak pada ' . $e->labelTtd() . '.',
             null, Pemberitahuan::JENIS_PENGINGAT, 'bi-pen', 'SDM');
     }
+
     /** SP baru: dikabarkan ke pegawai yang bersangkutan dan Kepala SDM. */
-    public static function spDiberikan(\App\Models\SuratPeringatan $sp): void
+    public static function spDiberikan(SuratPeringatan $sp): void
     {
         $sp->loadMissing('dataPegawai');
         $teks = "{$sp->label()} tanggal " . $sp->tanggal->translatedFormat('d M Y') . ": {$sp->alasan}.";
@@ -209,16 +224,11 @@ public static function pengajuanMenunggu(PengajuanCuti|PengajuanLembur $pengajua
         $posisi = $lamaran->lowongan?->judul ?? $lamaran->jabatan_tujuan ?? 'posisi yang dilamar';
 
         [$judul, $pesan, $ikon] = match (true) {
-            $lamaran->wasChanged('status') && $lamaran->status === Lamaran::STATUS_DITERIMA
-                => ['Selamat, Anda diterima!', "Anda resmi diterima sebagai {$posisi}.", 'bi-trophy'],
-            $lamaran->wasChanged('status') && $lamaran->status === Lamaran::STATUS_DITOLAK
-                => ['Lamaran tidak dilanjutkan', "Terima kasih telah melamar {$posisi}. Lamaran Anda belum dapat kami lanjutkan.", 'bi-x-circle'],
-            $lamaran->wasChanged('tahap') && $lamaran->tahap === Lamaran::TAHAP_INTERVIEW
-                => ['Lamaran lolos verifikasi', "Data Anda untuk {$posisi} sudah diverifikasi. Tunggu jadwal interview.", 'bi-check-circle'],
-            $lamaran->wasChanged('tahap') && $lamaran->tahap === Lamaran::TAHAP_SCREENING
-                => ['Interview selesai', "Anda lolos tahap interview {$posisi}. Berikutnya masa onboarding.", 'bi-check2-all'],
-            $lamaran->wasChanged('tahap') && $lamaran->tahap === Lamaran::TAHAP_KONTRAK
-                => ['Onboarding lulus', "Anda lulus masa onboarding {$posisi}. Tunggu jadwal tanda tangan kontrak.", 'bi-clipboard-check'],
+            $lamaran->wasChanged('status') && $lamaran->status === Lamaran::STATUS_DITERIMA => ['Selamat, Anda diterima!', "Anda resmi diterima sebagai {$posisi}.", 'bi-trophy'],
+            $lamaran->wasChanged('status') && $lamaran->status === Lamaran::STATUS_DITOLAK => ['Lamaran tidak dilanjutkan', "Terima kasih telah melamar {$posisi}. Lamaran Anda belum dapat kami lanjutkan.", 'bi-x-circle'],
+            $lamaran->wasChanged('tahap') && $lamaran->tahap === Lamaran::TAHAP_INTERVIEW => ['Lamaran lolos verifikasi', "Data Anda untuk {$posisi} sudah diverifikasi. Tunggu jadwal interview.", 'bi-check-circle'],
+            $lamaran->wasChanged('tahap') && $lamaran->tahap === Lamaran::TAHAP_SCREENING => ['Interview selesai', "Anda lolos tahap interview {$posisi}. Berikutnya masa onboarding.", 'bi-check2-all'],
+            $lamaran->wasChanged('tahap') && $lamaran->tahap === Lamaran::TAHAP_KONTRAK => ['Onboarding lulus', "Anda lulus masa onboarding {$posisi}. Tunggu jadwal tanda tangan kontrak.", 'bi-clipboard-check'],
             default => [null, null, null],
         };
 

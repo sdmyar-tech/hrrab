@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\DataPegawai;
 use App\Models\IzinAbsensi;
+use App\Support\Absensi\TanggalAbsensi;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,10 +20,10 @@ class IzinAbsensiController extends Controller
     public function index(Request $request): View
     {
         // Bulan tidak valid (mis. 2026-00 / 2026-13) → bulan ini, bukan meloncat ke tahun lain.
-        $bulan = \App\Support\Absensi\TanggalAbsensi::bulan($request->query('bulan')) ?? now()->startOfMonth();
+        $bulan = TanggalAbsensi::bulan($request->query('bulan')) ?? now()->startOfMonth();
 
         // Dibuka dari halaman Harian: tanggal izin otomatis = tanggal yang sedang dilihat.
-        $tanggalAwal = \App\Support\Absensi\TanggalAbsensi::tanggal($request->query('tanggal'))?->toDateString() ?? now()->toDateString();
+        $tanggalAwal = TanggalAbsensi::tanggal($request->query('tanggal'))?->toDateString() ?? now()->toDateString();
 
         return view('admin.absensi.izin', [
             'layout' => $request->user()->panelLayout(),

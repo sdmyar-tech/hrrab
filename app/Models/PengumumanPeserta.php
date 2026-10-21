@@ -11,12 +11,18 @@ class PengumumanPeserta extends Model
     protected $table = 'pengumuman_pesertas';
 
     public const STATUS_BELUM = 'belum';
+
     public const STATUS_HADIR = 'hadir';   // absen sendiri: scan QR yang sah
+
     public const STATUS_MANUAL = 'manual'; // ditandai hadir oleh SDM/Admin/GM
+
     // Berhalangan: tidak hadir dengan keterangan (tidak dihitung "belum absen" dan tidak diingatkan).
     public const STATUS_IZIN = 'izin';
+
     public const STATUS_SAKIT = 'sakit';
+
     public const STATUS_DINAS = 'dinas';
+
     public const STATUS_CUTI = 'cuti';
 
     public const BERHALANGAN = [self::STATUS_IZIN, self::STATUS_SAKIT, self::STATUS_DINAS, self::STATUS_CUTI];
@@ -25,7 +31,9 @@ class PengumumanPeserta extends Model
     public const BISA_DITETAPKAN = [self::STATUS_IZIN => 'Izin', self::STATUS_SAKIT => 'Sakit', self::STATUS_DINAS => 'Dinas luar'];
 
     public const SUMBER_MANUAL = 'manual';
+
     public const SUMBER_CUTI = 'cuti';
+
     public const SUMBER_ABSENSI = 'absensi';
 
     protected $fillable = [

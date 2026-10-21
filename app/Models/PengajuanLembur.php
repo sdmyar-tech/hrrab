@@ -3,18 +3,21 @@
 namespace App\Models;
 
 use App\Models\Concerns\SnapshotUnitKerja;
+use App\Support\PengajuanWorkflow;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PengajuanLembur extends Model
 {
-    use HasFactory, SnapshotUnitKerja, \App\Models\Concerns\DicatatLog;
+    use \App\Models\Concerns\DicatatLog, HasFactory, SnapshotUnitKerja;
 
     protected $table = 'pengajuan_lemburs';
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_REJECTED = 'rejected';
 
     protected $fillable = [
@@ -92,6 +95,6 @@ class PengajuanLembur extends Model
 
     public function currentLevelLabel(): string
     {
-        return \App\Support\PengajuanWorkflow::levelLabel($this->current_level);
+        return PengajuanWorkflow::levelLabel($this->current_level);
     }
 }

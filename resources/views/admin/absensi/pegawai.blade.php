@@ -38,7 +38,6 @@
             <div class="alert alert-warning small py-2 d-flex gap-2 align-items-center"><i class="bi bi-exclamation-triangle-fill"></i><span>{{ $p }}</span></div>
         @endforeach
 
-        {{-- Periode --}}
         <form method="GET" class="panel p-2 p-md-3 mb-3 d-flex flex-wrap align-items-end gap-2">
             <div>
                 <label class="form-label small mb-1" for="dari">Dari</label>

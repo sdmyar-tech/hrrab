@@ -31,7 +31,6 @@
                                 @method('PUT')
                             @endif
 
-                            <!-- Indicator Step / Tab Navigation -->
                             <ul class="nav nav-pills nav-justified mb-4" id="pegawaiFormTab" role="tablist">
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link active" id="pribadi-tab" data-bs-toggle="tab" data-bs-target="#pribadi" type="button" role="tab">
@@ -55,10 +54,8 @@
                                 </li>
                             </ul>
 
-                            <!-- Tab Content -->
                             <div class="tab-content" id="pegawaiFormTabContent">
 
-                                <!-- TAB 1: DATA PRIBADI -->
                                 <div class="tab-pane fade show active" id="pribadi" role="tabpanel">
                                     <div class="row g-3">
                                         <div class="col-md-6">
@@ -164,7 +161,6 @@
                                     </div>
                                 </div>
 
-                                <!-- TAB 2: KEPEGAWAIAN -->
                                 <div class="tab-pane fade" id="kepegawaian" role="tabpanel">
                                     <div class="row g-3">
                                         <div class="col-md-6">
@@ -185,7 +181,7 @@
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label required">Jabatan Utama</label>
-                                            <select name="jabatan" class="form-select @error('jabatan') is-invalid @enderror" required>
+                                            <select name="jabatan" class="form-select @error('jabatan') is-invalid @enderror" required data-jabatan-unit="[name=unit_kerja]">
                                                 <option value="">-- Pilih Jabatan --</option>
                                                 @foreach (\App\Models\Jabatan::daftar() as $j)
                                                     <option value="{{ $j }}" {{ old('jabatan', $pegawai->kepegawaian->jabatan ?? '') == $j ? 'selected' : '' }}>{{ $j }}</option>
@@ -195,7 +191,7 @@
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Jabatan Tambahan <span class="text-muted">(silahkan diisi bagi yang memiliki jabatan lebih dari 1)</span></label>
-                                            <select name="jabatan_tambahan" class="form-select">
+                                            <select name="jabatan_tambahan" class="form-select" data-jabatan-unit="[name=unit_kerja]">
                                                 <option value="">-- Tidak Ada --</option>
                                                 @foreach (\App\Models\Jabatan::daftar() as $j)
                                                     <option value="{{ $j }}" {{ old('jabatan_tambahan', $pegawai->kepegawaian->jabatan_tambahan ?? '') == $j ? 'selected' : '' }}>{{ $j }}</option>
@@ -269,7 +265,6 @@
                                     </div>
                                 </div>
 
-                                <!-- TAB 3: KONTAK DARURAT & BPJS -->
                                 <div class="tab-pane fade" id="kontak" role="tabpanel">
                                     <div class="row g-3">
                                         <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-telephone me-2"></i>Kontak Darurat (Kerabat)</h6>
@@ -322,7 +317,6 @@
                                     </div>
                                 </div>
 
-                                <!-- TAB 4: DOKUMEN -->
                                 <div class="tab-pane fade" id="dokumen" role="tabpanel">
                                     <div class="row g-3">
                                         <div class="col-md-6">
@@ -378,7 +372,6 @@
 
                             </div>
 
-                            <!-- Wizard Navigasi (Back, Next & Submit) -->
                             <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center">
                                 <button type="button" class="btn btn-outline-secondary" id="btnPrev" disabled>
                                     <i class="bi bi-chevron-left me-1"></i> Sebelumnya
@@ -401,7 +394,6 @@
             </div>
         </main>
 
-        <!-- JavaScript Navigasi Wizard -->
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 const form = document.getElementById('wizardPegawaiForm');
@@ -548,4 +540,5 @@
         });
     </script>
 @endif
+@include('partials.jabatan-ikut-unit')
 @endsection

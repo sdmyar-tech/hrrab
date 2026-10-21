@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\DataPegawai;
 use App\Models\DataPelamar;
+use App\Models\Jabatan;
 use App\Models\Lamaran;
 use App\Models\Lowongan;
+use App\Models\PengajuanFormasi;
 use App\Models\User;
+use App\Support\BaganStatis;
 use App\Support\RekrutmenAccess;
 use App\Support\RiwayatPelamar;
 use Illuminate\Http\RedirectResponse;
@@ -21,6 +24,7 @@ use Illuminate\View\View;
 class KandidatInternalController extends Controller
 {
     public const JENIS_LUAR = 'luar';
+
     public const JENIS_PEGAWAI = 'pegawai';
 
     public function create(): View
@@ -32,7 +36,45 @@ class KandidatInternalController extends Controller
             'lowongans' => Lowongan::where('status', '!=', Lowongan::STATUS_DRAFT)
                 ->whereColumn('jumlah_terisi', '<', 'jumlah_dibutuhkan')
                 ->latest()->get(['id', 'judul', 'unit_kerja', 'status', 'jumlah_terisi', 'jumlah_dibutuhkan']),
+            'jabatanPerUnit' => $this->jabatanPerUnit(),
         ]);
+    }
+
+    /**
+     * Gambaran posisi kandidat di bagan unit tujuan (HTML, dimuat formulir lewat fetch).
+     * Dari lowongan: unit & jabatan lowongan; lowongan hasil formasi replacement ikut menandai pegawai yang digantikan.
+     */
+    public function bagan(Request $request): View
+    {
+        $this->authorizeReview();
+
+        $lowongan = $request->filled('lowongan_id') ? Lowongan::with('pengajuanFormasi')->find($request->integer('lowongan_id')) : null;
+        $unit = (string) ($lowongan?->unit_kerja ?? $request->query('unit', ''));
+        $jabatan = (string) ($lowongan?->jabatan ?? $request->query('jabatan', ''));
+        abort_if($unit === '' || $jabatan === '', 404);
+
+        $formasi = $lowongan?->pengajuanFormasi;
+        $diganti = $formasi?->jenis_kebutuhan === PengajuanFormasi::JENIS_REPLACEMENT ? ($formasi->diganti ?? []) : [];
+
+        return view('admin.lamaran._bagan-kandidat', [
+            'unit' => $unit,
+            'jabatan' => $jabatan,
+            'diganti' => $diganti,
+            'bagan' => BaganStatis::susun(RekrutmenAccess::baganUnit($unit), $jabatan, $diganti, [
+                ['nama' => 'Kandidat', 'judul' => 'Posisi yang akan diisi kandidat', 'kelas' => 'kosong slot kandidat'],
+            ]),
+        ]);
+    }
+
+    /**
+     * Jabatan di tiap unit menurut Master Jabatan.
+     * Dipakai formulir "Tanpa lowongan": pilih unit dulu, jabatan unit itu tampil paling atas.
+     *
+     * @return array<string, list<string>> unit => nama jabatan (sesuai Master Jabatan)
+     */
+    private function jabatanPerUnit(): array
+    {
+        return Jabatan::perUnit();
     }
 
     public function store(Request $request): RedirectResponse
@@ -43,7 +85,7 @@ class KandidatInternalController extends Controller
             'jenis' => ['required', Rule::in([self::JENIS_LUAR, self::JENIS_PEGAWAI])],
             'posisi' => ['required', Rule::in(['lowongan', 'manual'])],
             'lowongan_id' => ['required_if:posisi,lowongan', 'nullable', 'exists:lowongans,id'],
-            'jabatan_tujuan' => ['required_if:posisi,manual', 'nullable', Rule::in(\App\Models\Jabatan::daftar())],
+            'jabatan_tujuan' => ['required_if:posisi,manual', 'nullable', Rule::in(Jabatan::daftar())],
             'unit_kerja_tujuan' => ['required_if:posisi,manual', 'nullable', Rule::in(config('kepegawaian.unit_kerja'))],
             'lokasi_kerja_tujuan' => ['nullable', Rule::in(config('kepegawaian.lokasi_kerja'))],
             'direkomendasikan_oleh' => ['nullable', 'string', 'max:150'],
@@ -60,7 +102,7 @@ class KandidatInternalController extends Controller
         $lowongan = $validated['posisi'] === 'lowongan' ? Lowongan::find($validated['lowongan_id']) : null;
 
         // Admin bebas dari batas kuota, lamaran ganda, dan jabatan sama.
-        $admin = (bool) \Illuminate\Support\Facades\Auth::user()?->isAdmin();
+        $admin = (bool) Auth::user()?->isAdmin();
 
         if ($lowongan?->isKuotaPenuh() && ! $admin) {
             return back()->withInput()->with('error', 'Kuota lowongan ini sudah terpenuhi.');
@@ -152,7 +194,7 @@ class KandidatInternalController extends Controller
             return $pelamar;
         });
 
-        if (Lamaran::where('data_pelamar_id', $pelamar->id)->where('status', Lamaran::STATUS_PROSES)->exists() && ! \Illuminate\Support\Facades\Auth::user()?->isAdmin()) {
+        if (Lamaran::where('data_pelamar_id', $pelamar->id)->where('status', Lamaran::STATUS_PROSES)->exists() && ! Auth::user()?->isAdmin()) {
             return back()->withInput()->with('error', "{$pelamar->nama_lengkap} masih punya lamaran yang sedang berjalan.");
         }
 
@@ -163,14 +205,14 @@ class KandidatInternalController extends Controller
     {
         $pegawai = DataPegawai::with('kepegawaian')->findOrFail($validated['data_pegawai_id']);
 
-        if (Lamaran::where('data_pegawai_id', $pegawai->id)->where('status', Lamaran::STATUS_PROSES)->exists() && ! \Illuminate\Support\Facades\Auth::user()?->isAdmin()) {
+        if (Lamaran::where('data_pegawai_id', $pegawai->id)->where('status', Lamaran::STATUS_PROSES)->exists() && ! Auth::user()?->isAdmin()) {
             return back()->withInput()->with('error', "{$pegawai->nama_lengkap} masih punya proses seleksi yang sedang berjalan.");
         }
 
         $jabatan = $lowongan?->jabatan ?? $validated['jabatan_tujuan'] ?? null;
         $unit = $lowongan?->unit_kerja ?? $validated['unit_kerja_tujuan'] ?? null;
 
-        if ($pegawai->kepegawaian?->jabatan === $jabatan && $pegawai->kepegawaian?->unit_kerja === $unit && ! \Illuminate\Support\Facades\Auth::user()?->isAdmin()) {
+        if ($pegawai->kepegawaian?->jabatan === $jabatan && $pegawai->kepegawaian?->unit_kerja === $unit && ! Auth::user()?->isAdmin()) {
             return back()->withInput()->with('error', "{$pegawai->nama_lengkap} sudah menjabat {$jabatan} di {$unit}.");
         }
 

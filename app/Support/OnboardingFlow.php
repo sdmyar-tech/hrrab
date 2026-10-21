@@ -13,9 +13,11 @@ use Illuminate\Support\Facades\DB;
 class OnboardingFlow
 {
     public const SISI_SDM = 'sdm';
+
     public const SISI_KEPALA = 'kepala';
 
     public const DURASI_MIN = 1;
+
     public const DURASI_MAX = 30;
 
     /** Kepala Bagian yang wajib ikut konfirmasi (null = cukup sisi SDM). */

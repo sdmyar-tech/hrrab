@@ -2,20 +2,29 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, \App\Models\Concerns\DicatatLog;
+    use \App\Models\Concerns\DicatatLog, HasFactory, Notifiable;
 
     public const ROLE_PEMBINA = 'pembina';
+
     public const ROLE_GM = 'gm';
+
     public const ROLE_KEPALA_BAGIAN = 'kepala_bagian';
+
     public const ROLE_KEPALA_SDM = 'kepala_sdm';
+
     public const ROLE_STAFF = 'staff';
+
     public const ROLE_ADMIN = 'admin';
+
     public const ROLE_PELAMAR = 'guest';
 
     public const INTERNAL_ROLES = [
@@ -28,21 +37,34 @@ class User extends Authenticatable
     ];
 
     public const ABILITY_LIHAT_DASHBOARD = 'lihat-dashboard';
+
     public const ABILITY_LIHAT_TABEL_KARYAWAN = 'lihat-tabel-karyawan';
+
     public const ABILITY_LIHAT_LAPORAN = 'lihat-laporan';
+
     public const ABILITY_APPROVE = 'approve';
+
     public const ABILITY_MENGAJUKAN = 'mengajukan';
+
     public const ABILITY_KELOLA_SISTEM = 'kelola-sistem';
+
     public const ABILITY_KELOLA_PENUGASAN = 'kelola-penugasan';
+
     public const ABILITY_KELOLA_PEGAWAI = 'kelola-pegawai';
+
     public const ABILITY_KELOLA_PENGUMUMAN = 'kelola-pengumuman';
+
     public const ABILITY_KIRIM_NOTIFIKASI = 'kirim-notifikasi';
 
     public const ABILITY_KELOLA_ABSENSI = 'kelola-absensi'; // import, koreksi, pengaturan absensi
+
     public const ABILITY_LIHAT_ABSENSI = 'lihat-absensi';   // melihat absensi (Kepala Bagian: unitnya saja)
 
     public const ABILITY_AJUKAN_CUTI = 'ajukan-cuti';
+
     public const ABILITY_AJUKAN_LEMBUR = 'ajukan-lembur';
+
+    public const ABILITY_AJUKAN_IZIN_KELUAR = 'ajukan-izin-keluar';
 
     public const ABILITIES = [
         self::ROLE_PEMBINA => [
@@ -131,12 +153,14 @@ class User extends Authenticatable
         ];
     }
 
-public function hasAbility(string $ability): bool
+    public function hasAbility(string $ability): bool
     {
         return match ($ability) {
             self::ABILITY_AJUKAN_CUTI => $this->hasAbility(self::ABILITY_MENGAJUKAN)
                 && ! ($this->isStaff() && in_array($this->unitKerja(), config('kepegawaian.unit_tanpa_pengajuan', []), true)),
             self::ABILITY_AJUKAN_LEMBUR => $this->hasAbility(self::ABILITY_MENGAJUKAN) && $this->unitsLembur() !== [],
+            // Izin keluar saat jam kerja: siapa pun yang boleh mengajukan cuti (unit sama, alur sama).
+            self::ABILITY_AJUKAN_IZIN_KELUAR => $this->hasAbility(self::ABILITY_AJUKAN_CUTI),
             self::ABILITY_KELOLA_PEGAWAI => $this->punyaDiMatriks($ability) || ($this->isStaff() && in_array('SDM', $this->unitsAktif(), true)),
             self::ABILITY_LIHAT_TABEL_KARYAWAN => $this->punyaDiMatriks($ability) || $this->hasAbility(self::ABILITY_KELOLA_PEGAWAI),
             // Staf unit SDM ikut mengelola absensi (sama seperti kelola pegawai).
@@ -233,7 +257,7 @@ public function hasAbility(string $ability): bool
     {
         $path = $this->dataPegawai?->dokumen?->pas_foto ?? $this->dataPelamar?->foto_path;
 
-        return $path && \Illuminate\Support\Facades\Storage::disk('public')->exists($path)
+        return $path && Storage::disk('public')->exists($path)
             ? asset('storage/' . $path)
             : asset('assets-admin/images/avatar/avatar-fallback.jpg');
     }
@@ -262,9 +286,9 @@ public function hasAbility(string $ability): bool
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, Penugasan>
+     * @return Collection<int, Penugasan>
      */
-    public function penugasanAktif(): \Illuminate\Support\Collection
+    public function penugasanAktif(): Collection
     {
         return $this->dataPegawai?->penugasanAktif ?? collect();
     }
@@ -341,7 +365,7 @@ public function hasAbility(string $ability): bool
     /**
      * Akun GM tanpa Data Pegawai yang memimpin $unit (atau semua unit yang dipimpin akun seperti itu bila $unit null).
      */
-    public static function gmKepalaTanpaPegawai(?string $unit = null): \Illuminate\Database\Eloquent\Builder
+    public static function gmKepalaTanpaPegawai(?string $unit = null): Builder
     {
         return self::query()->where('role', self::ROLE_GM)->whereNull('data_pegawai_id')->whereNotNull('kepala_unit_gm')
             ->when($unit !== null, fn ($q) => $q->whereJsonContains('kepala_unit_gm', $unit));
@@ -353,7 +377,7 @@ public function hasAbility(string $ability): bool
         return self::gmKepalaTanpaPegawai()->pluck('kepala_unit_gm')->flatten()->unique()->values()->all();
     }
 
-    public static function gmUtamaUntuk(?string $unit): \Illuminate\Support\Collection
+    public static function gmUtamaUntuk(?string $unit): Collection
     {
         static $gms = null;
         $gms ??= self::where('role', self::ROLE_GM)->orderBy('name')->get();

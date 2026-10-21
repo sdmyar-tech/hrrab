@@ -7,12 +7,13 @@ use App\Models\Kepegawaian;
 use App\Models\Lowongan;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanFormasi;
+use App\Models\PengajuanIzinKeluar;
 use App\Models\PengajuanLembur;
 use App\Models\User;
 use Carbon\CarbonInterface;
 
 /**
- * Ringkasan untuk penyetuju (cuti, lembur, formasi): detail pengajuan, angka penting, peringatan,
+ * Ringkasan untuk penyetuju (cuti, lembur, izin keluar, formasi): detail pengajuan, angka penting, peringatan,
  * riwayat singkat, dan alur persetujuan. Semua tipe memakai bentuk array yang sama agar satu partial
  * (admin.pengajuan._ringkasan) bisa menampilkannya.
  *
@@ -179,11 +180,73 @@ class RingkasanPengajuan
             ])->all(),
             'alur' => self::alurFormasi($f),
             'formasi' => $f,   // untuk bagan mini (digantikan / posisi baru)
+            'bagan' => self::baganFormasi($bagan, $f),
         ];
     }
 
-    /** Alur cuti/lembur: diajukan → tahap rute (Kepala Bagian / GM / Kepala SDM) lengkap dengan status tiap tahap. */
-    private static function alurBerjenjang(PengajuanCuti|PengajuanLembur $p, bool $lembur): array
+    /** Bagan unit untuk rincian formasi (hanya baca): yang digantikan & posisi baru (dengan jenis kelamin) ditandai. */
+    private static function baganFormasi(array $bagan, PengajuanFormasi $f): array
+    {
+        // Jenis kelamin posisi baru mengikuti urutan isian: laki-laki, perempuan, lalu bebas.
+        $jkSlot = fn (int $i) => $i < $f->jumlah_laki ? 'L' : ($i < $f->jumlah_laki + $f->jumlah_perempuan ? 'P' : 'L/P');
+        $baru = collect($f->slot_tambahan ?? [])->map(fn ($ket, $i) => [
+            'nama' => ($ket ?: 'Posisi baru #' . ($i + 1)) . ' · ' . $jkSlot($i), 'judul' => 'Posisi baru yang diajukan',
+        ])->values()->all();
+
+        return BaganStatis::susun($bagan, $f->jabatan, $f->diganti ?? [], $baru);
+    }
+
+    public static function izinKeluar(PengajuanIzinKeluar $i): array
+    {
+        $i->loadMissing('dataPegawai.kepegawaian', 'kepalaApprovedBy', 'gmApprovedBy', 'approvedBy');
+        $unit = PengajuanWorkflow::unitPengajuan($i);
+        $bulan = $i->tanggal->copy()->startOfMonth();
+        $milikPegawai = PengajuanIzinKeluar::where('data_pegawai_id', $i->data_pegawai_id)->whereKeyNot($i->id);
+        $disetujuiBulanIni = (clone $milikPegawai)->where('status', PengajuanIzinKeluar::STATUS_APPROVED)
+            ->whereBetween('tanggal', [$bulan->toDateString(), $bulan->copy()->endOfMonth()->toDateString()])->count();
+        $namaBulan = $bulan->translatedFormat('F');
+
+        $peringatan = [];
+        $hariSama = (clone $milikPegawai)->whereDate('tanggal', $i->tanggal)->where('status', '!=', PengajuanIzinKeluar::STATUS_REJECTED)->get();
+        if ($hariSama->isNotEmpty()) {
+            $peringatan[] = 'Ada izin keluar lain di tanggal yang sama: ' . $hariSama->map(fn ($h) => $h->jamLabel() . ' (' . $h->statusLabel() . ')')->implode(', ') . '.';
+        }
+        if ($i->tidakKembali()) {
+            $peringatan[] = 'Pegawai tidak kembali lagi ke tempat kerja setelah keluar hari itu.';
+        }
+        // Rekan satu unit yang juga izin keluar di hari yang sama (menunggu/disetujui).
+        $rekan = PengajuanIzinKeluar::with('dataPegawai:id,nama_lengkap')->where('unit_kerja', $unit)
+            ->where('data_pegawai_id', '!=', $i->data_pegawai_id)->whereDate('tanggal', $i->tanggal)
+            ->where('status', '!=', PengajuanIzinKeluar::STATUS_REJECTED)->get();
+
+        return [
+            'judul' => 'Izin keluar · ' . $i->jamLabel(),
+            'orang' => self::orang($i->dataPegawai, $unit),
+            'detail' => array_filter([
+                ['Tanggal', $i->tanggal->translatedFormat('l, d M Y')],
+                ['Jam', $i->jamLabel()],
+                ['Keperluan', $i->keperluanLabel()],
+                ['Alasan', $i->alasan ?: '-'],
+                $i->kode_tiket ? ['Kode tiket', $i->kode_tiket] : null,
+                ['Diajukan', self::waktu($i->created_at)],
+            ]),
+            'angka' => [
+                ['label' => "Izin keluar {$namaBulan}", 'nilai' => $disetujuiBulanIni . ' kali', 'catatan' => 'disetujui, selain ini', 'nada' => $disetujuiBulanIni >= 4 ? 'waspada' : null],
+                ['label' => 'Rekan unit keluar hari itu', 'nilai' => $rekan->count() . ' orang', 'catatan' => $rekan->pluck('dataPegawai.nama_lengkap')->take(2)->implode(', ') ?: null, 'nada' => $rekan->isNotEmpty() ? 'waspada' : null],
+            ],
+            'peringatan' => $peringatan,
+            'riwayatJudul' => 'Riwayat izin keluar terakhir',
+            'riwayat' => (clone $milikPegawai)->latest('tanggal')->limit(5)->get()->map(fn (PengajuanIzinKeluar $r) => [
+                'utama' => $r->tanggal->translatedFormat('d M Y') . ' · ' . $r->jamLabel(),
+                'sub' => $r->keperluanLabel() . ($r->alasan ? ' · ' . str($r->alasan)->limit(40) : ''),
+                'status' => $r->statusLabel(), 'kelas' => $r->badgeClass(),
+            ])->all(),
+            'alur' => self::alurBerjenjang($i, false),
+        ];
+    }
+
+    /** Alur cuti/lembur/izin keluar: diajukan → tahap rute (Kepala Bagian / GM / Kepala SDM) lengkap dengan status tiap tahap. */
+    private static function alurBerjenjang(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $p, bool $lembur): array
     {
         $langkah = [['label' => 'Diajukan', 'oleh' => $p->dataPegawai?->nama_lengkap, 'waktu' => self::waktu($p->created_at), 'catatan' => null, 'status' => 'selesai']];
 

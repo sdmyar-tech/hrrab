@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Absensi;
+use App\Models\PengajuanCuti;
 use App\Models\Pengumuman;
 use App\Models\PengumumanPeserta;
 use App\Models\User;
@@ -133,7 +135,6 @@ class AbsenAcara
         $target = self::terapkanKriteria($pengumuman->absen_kriteria ?? [], self::kandidat($pembuat))->keyBy('id');
         $ada = $pengumuman->peserta()->get(['id', 'user_id', 'status', 'sumber'])->keyBy('user_id');
 
-        // Hapus yang tidak lagi termasuk & belum absen.
         // Yang dihapus hanya yang belum absen atau berhalangan otomatis (bukan yang hadir / ditetapkan panitia).
         $hapus = $ada->reject(fn ($p, $uid) => $target->has($uid)
             || ! ($p->status === PengumumanPeserta::STATUS_BELUM || $p->otomatis()))->pluck('id');
@@ -264,15 +265,15 @@ class AbsenAcara
         }
         $ids = $peserta->pluck('data_pegawai_id')->unique()->all();
 
-        $cuti = \App\Models\PengajuanCuti::where('status', \App\Models\PengajuanCuti::STATUS_APPROVED)->whereIn('data_pegawai_id', $ids)
+        $cuti = PengajuanCuti::where('status', PengajuanCuti::STATUS_APPROVED)->whereIn('data_pegawai_id', $ids)
             ->whereDate('tanggal_mulai', '<=', $sampai)->whereDate('tanggal_selesai', '>=', $dari)
             ->orderBy('id')->get()->keyBy('data_pegawai_id');
         $petaAbsensi = [
-            \App\Models\Absensi::MANUAL_IZIN => PengumumanPeserta::STATUS_IZIN,
-            \App\Models\Absensi::MANUAL_SAKIT => PengumumanPeserta::STATUS_SAKIT,
-            \App\Models\Absensi::MANUAL_DINAS_LUAR => PengumumanPeserta::STATUS_DINAS,
+            Absensi::MANUAL_IZIN => PengumumanPeserta::STATUS_IZIN,
+            Absensi::MANUAL_SAKIT => PengumumanPeserta::STATUS_SAKIT,
+            Absensi::MANUAL_DINAS_LUAR => PengumumanPeserta::STATUS_DINAS,
         ];
-        $absensi = \App\Models\Absensi::whereIn('data_pegawai_id', $ids)->whereIn('status_manual', array_keys($petaAbsensi))
+        $absensi = Absensi::whereIn('data_pegawai_id', $ids)->whereIn('status_manual', array_keys($petaAbsensi))
             ->whereBetween('tanggal', [$dari, $sampai])->orderBy('tanggal')->get()->keyBy('data_pegawai_id');
 
         $berubah = 0;
@@ -283,7 +284,7 @@ class AbsenAcara
                 (bool) $c => ['status' => PengumumanPeserta::STATUS_CUTI, 'sumber' => PengumumanPeserta::SUMBER_CUTI, 'sumber_id' => $c->id,
                     'catatan' => $c->jenisLabel() . ' ' . $c->tanggal_mulai->translatedFormat('d M') . ' – ' . $c->tanggal_selesai->translatedFormat('d M Y')],
                 (bool) $a => ['status' => $petaAbsensi[$a->status_manual], 'sumber' => PengumumanPeserta::SUMBER_ABSENSI, 'sumber_id' => $a->id,
-                    'catatan' => trim(\App\Models\Absensi::STATUS_MANUAL[$a->status_manual] . ' di absensi harian ' . $a->tanggal->translatedFormat('d M') . ($a->alasan_koreksi ? " — {$a->alasan_koreksi}" : ''))],
+                    'catatan' => trim(Absensi::STATUS_MANUAL[$a->status_manual] . ' di absensi harian ' . $a->tanggal->translatedFormat('d M') . ($a->alasan_koreksi ? " — {$a->alasan_koreksi}" : ''))],
                 // Sumbernya hilang (cuti dibatalkan / koreksi dihapus) → kembali belum absen.
                 default => ['status' => PengumumanPeserta::STATUS_BELUM, 'sumber' => null, 'sumber_id' => null, 'catatan' => null],
             };

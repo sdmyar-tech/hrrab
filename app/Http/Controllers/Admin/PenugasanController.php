@@ -7,16 +7,17 @@ use App\Models\DataPegawai;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanLembur;
 use App\Models\Penugasan;
+use App\Support\ExcelExporter;
 use App\Support\Notifikasi;
 use App\Support\PenugasanService;
 use App\Support\Urutan;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use App\Support\ExcelExporter;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PenugasanController extends Controller
@@ -136,14 +137,14 @@ class PenugasanController extends Controller
             : PenugasanService::tambahRangkap($pegawai, $validated, Auth::user());
 
         $pesan = $jenis === 'mutasi'
-            ? "{$pegawai->nama_lengkap} dimutasi ke {$validated['unit_kerja']} mulai " . \Carbon\Carbon::parse($validated['tanggal_efektif'])->format('d-m-Y') . '.'
+            ? "{$pegawai->nama_lengkap} dimutasi ke {$validated['unit_kerja']} mulai " . Carbon::parse($validated['tanggal_efektif'])->format('d-m-Y') . '.'
             : "Rangkap tugas {$pegawai->nama_lengkap} di {$validated['unit_kerja']} ditambahkan.";
 
         Notifikasi::penugasanBerubah($pegawai->id,
             $jenis === 'mutasi' ? "Anda dimutasi ke {$validated['unit_kerja']}" : "Rangkap tugas di {$validated['unit_kerja']}",
             $jenis === 'mutasi'
-                ? 'Berlaku mulai ' . \Carbon\Carbon::parse($validated['tanggal_efektif'])->translatedFormat('d F Y') . ($validated['jabatan'] ? " sebagai {$validated['jabatan']}." : '.')
-                : 'Mulai ' . \Carbon\Carbon::parse($validated['tanggal_mulai'])->translatedFormat('d F Y') . '. Lembur di unit ini diajukan dengan memilih unit tersebut.');
+                ? 'Berlaku mulai ' . Carbon::parse($validated['tanggal_efektif'])->translatedFormat('d F Y') . ($validated['jabatan'] ? " sebagai {$validated['jabatan']}." : '.')
+                : 'Mulai ' . Carbon::parse($validated['tanggal_mulai'])->translatedFormat('d F Y') . '. Lembur di unit ini diajukan dengan memilih unit tersebut.');
 
         return $this->kembali($pegawai, $pesan, $peringatan);
     }

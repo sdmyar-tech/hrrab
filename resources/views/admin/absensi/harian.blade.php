@@ -39,7 +39,6 @@
         @include('admin.absensi._nav')
         @include('admin.absensi._langkah', ['setup' => $setup])
 
-        {{-- Pilih tanggal --}}
         <form method="GET" class="panel p-2 p-md-3 mb-3 d-flex flex-wrap align-items-center gap-2" id="formTanggal">
             @foreach (request()->only(['unit', 'q', 'status', 'urut']) as $k => $v)<input type="hidden" name="{{ $k }}" value="{{ $v }}">@endforeach
             <div class="d-flex align-items-center gap-1">

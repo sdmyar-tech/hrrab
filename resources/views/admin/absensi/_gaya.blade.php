@@ -108,7 +108,6 @@
     .abs-tab-geser { scrollbar-width: none; }
     .abs-tab-geser::-webkit-scrollbar { display: none; }
 
-    /* ---------- Lain-lain ---------- */
     .text-bg-purple { background: #6f42c1 !important; color: #fff !important; }
     .absensi-angka { font-variant-numeric: tabular-nums; white-space: nowrap; }
     .absensi-nol { color: var(--admin-muted, #9ca3af); }

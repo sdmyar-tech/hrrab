@@ -8,10 +8,11 @@ use App\Models\DataPegawai;
 use App\Models\JadwalKerjaPegawai;
 use App\Support\Absensi\AksesAbsensi;
 use App\Support\Absensi\ImportAbsensi;
+use App\Support\Urutan;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -23,9 +24,9 @@ class AbsensiPengaturanController extends Controller
     {
         $query = $this->filter($request);
         $daftar = (clone $query)->with(['kepegawaian', 'jadwalKerja']);
-        $urut = \App\Support\Urutan::terapkan($daftar, [
+        $urut = Urutan::terapkan($daftar, [
             'ikut' => ['Yang diabsen dulu', fn ($q, $arah) => $q->orderByDesc('data_pegawais.ikut_absensi')->orderBy('data_pegawais.nama_lengkap'), 'asc'],
-            ...\App\Support\Urutan::abjad('nama', 'Nama', 'data_pegawais.nama_lengkap'),
+            ...Urutan::abjad('nama', 'Nama', 'data_pegawais.nama_lengkap'),
             'unit' => ['Unit A–Z', fn ($q, $arah) => $q->orderByRaw('(select unit_kerja from kepegawaians where kepegawaians.data_pegawai_id = data_pegawais.id limit 1) asc')->orderBy('data_pegawais.nama_lengkap'), 'asc'],
             'finger' => ['ID mesin terkecil', fn ($q, $arah) => $q->orderByRaw('data_pegawais.finger_id is null')->orderByRaw('cast(data_pegawais.finger_id as unsigned) asc'), 'asc'],
         ]);
@@ -61,7 +62,7 @@ class AbsensiPengaturanController extends Controller
      * Tebak pegawai dari nama di mesin (nama di mesin sering disingkat, mis. "Devy Putri" → "Devy Putri Syahriani Lubis").
      * Hanya disarankan bila cukup yakin; SDM tetap memilih/menyetujui.
      */
-    private static function saranPegawai(?string $namaMesin, \Illuminate\Support\Collection $kandidat): ?int
+    private static function saranPegawai(?string $namaMesin, Collection $kandidat): ?int
     {
         $bersih = fn ($s) => trim(preg_replace('/\s+/', ' ', preg_replace('/[^\p{L}\s]/u', ' ', mb_strtolower(preg_replace('/,.*$/', '', (string) $s)))));
         $mesin = $bersih($namaMesin);
@@ -198,6 +199,7 @@ class AbsensiPengaturanController extends Controller
                 $p = $kandidat->count() === 1 ? $kandidat->first() : null;
                 if ($kandidat->count() > 1) {
                     $gagal[] = "{$baris} (nama ganda)";
+
                     continue;
                 }
             }
@@ -260,8 +262,8 @@ class AbsensiPengaturanController extends Controller
         ];
     }
 
-    /** @param \Illuminate\Support\Collection<int, int> $ids */
-    private function simpanJadwal(\Illuminate\Support\Collection $ids, array $v): void
+    /** @param Collection<int, int> $ids */
+    private function simpanJadwal(Collection $ids, array $v): void
     {
         $hari = array_values(array_unique(array_map('intval', $v['hari_kerja'] ?? config('hrrab.hari_kerja', [1, 2, 3, 4, 5]))));
         sort($hari);

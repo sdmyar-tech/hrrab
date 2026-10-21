@@ -98,6 +98,7 @@ class EditorDataController extends Controller
                 if ($kol['wajib']) {
                     $galat["d.{$nama}"] = "Kolom {$nama} wajib diisi.";
                 }
+
                 continue; // kosong: pakai bawaan database / NULL
             }
             try {
@@ -141,13 +142,14 @@ class EditorDataController extends Controller
             $lama = EditorData::nilaiInput($model, $kol);
             $baru = isset($kosongkan[$nama]) ? null : (string) ($masukan[$nama] ?? '');
             if ($baru === $lama || ($baru === null && $lama === '')) {
-                continue; // tidak berubah
+                continue;
             }
 
             try {
                 $nilai = $this->konversi($model, $kol, $baru);
             } catch (\InvalidArgumentException $e) {
                 $galat["d.{$nama}"] = $e->getMessage();
+
                 continue;
             }
             // Bandingkan setelah dinormalkan (mis. 08:00 = 08:00:00, JSON beda spasi) agar yang tidak berubah tidak ikut tersimpan.
@@ -212,8 +214,6 @@ class EditorDataController extends Controller
         return ($tujuan ? redirect($tujuan) : redirect()->route('admin.data.daftar', $entitas))
             ->with('success', "{$k['label']} #{$id} dihapus.");
     }
-
-    // ------------------------------------------------------------------
 
     /** Ubah teks dari form ke nilai kolom. Melempar InvalidArgumentException bila tidak valid. */
     private function konversi(Model $model, array $kol, ?string $v): mixed

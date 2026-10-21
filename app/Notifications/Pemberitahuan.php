@@ -7,7 +7,9 @@ use Illuminate\Notifications\Notification;
 class Pemberitahuan extends Notification
 {
     public const JENIS_TUGAS = 'tugas';
+
     public const JENIS_INFO = 'info';
+
     public const JENIS_PENGINGAT = 'pengingat';
 
     public function __construct(

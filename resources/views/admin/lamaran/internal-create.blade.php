@@ -172,18 +172,8 @@
 
                         <div data-posisi="manual">
                             <div class="mb-3">
-                                <label class="form-label">Jabatan Tujuan</label>
-                                <select name="jabatan_tujuan" class="form-select @error('jabatan_tujuan') is-invalid @enderror">
-                                    <option value="">-- Pilih Jabatan --</option>
-                                    @foreach (\App\Models\Jabatan::daftar() as $j)
-                                        <option value="{{ $j }}" {{ old('jabatan_tujuan') === $j ? 'selected' : '' }}>{{ $j }}</option>
-                                    @endforeach
-                                </select>
-                                @error('jabatan_tujuan')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Unit Kerja Tujuan</label>
-                                <select name="unit_kerja_tujuan" class="form-select @error('unit_kerja_tujuan') is-invalid @enderror">
+                                <label class="form-label" for="unit-tujuan">Unit Kerja Tujuan</label>
+                                <select name="unit_kerja_tujuan" id="unit-tujuan" class="form-select @error('unit_kerja_tujuan') is-invalid @enderror">
                                     <option value="">-- Pilih Unit Kerja --</option>
                                     @foreach (config('kepegawaian.unit_kerja') as $u)
                                         <option value="{{ $u }}" {{ old('unit_kerja_tujuan') === $u ? 'selected' : '' }}>{{ $u }}</option>
@@ -192,10 +182,17 @@
                                 @error('unit_kerja_tujuan')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 <div class="form-text">Interview 2 otomatis dengan Kepala Bagian unit ini.</div>
                             </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="jabatan-tujuan">Jabatan Tujuan</label>
+                                {{-- Diisi skrip sesuai unit: jabatan yang ada di unit itu dulu, lalu jabatan lainnya. --}}
+                                <select name="jabatan_tujuan" id="jabatan-tujuan" class="form-select @error('jabatan_tujuan') is-invalid @enderror"></select>
+                                @error('jabatan_tujuan')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
                             <div>
                                 <label class="form-label">Lokasi Kerja <span class="text-muted">(opsional)</span></label>
                                 <select name="lokasi_kerja_tujuan" class="form-select">
                                     <option value="">-- Pilih Lokasi --</option>
+                                    <option value="">Tidak ditentukan</option>
                                     @foreach (config('kepegawaian.lokasi_kerja') as $lk)
                                         <option value="{{ $lk }}" {{ old('lokasi_kerja_tujuan') === $lk ? 'selected' : '' }}>{{ $lk }}</option>
                                     @endforeach
@@ -223,6 +220,15 @@
                         </button>
                     </div>
                 </div>
+
+                <div class="col-12">
+                    <section class="panel p-4">
+                        <h2 class="h6 fw-bold mb-3"><i class="bi bi-diagram-3 me-1"></i>Gambaran Posisi di Bagan</h2>
+                        <div data-bagan-kandidat>
+                            <p class="small text-muted mb-0">Pilih lowongan, atau unit kerja & jabatan tujuan, untuk melihat posisi yang akan diisi kandidat.</p>
+                        </div>
+                    </section>
+                </div>
             </div>
         </form>
     </div>
@@ -245,6 +251,77 @@
             });
             sinkron(pasangan[0], pasangan[1]);
         });
+
+        // Posisi tanpa lowongan: pilih unit dulu, lalu jabatan (yang ada di unit itu tampil paling atas).
+        const unit = document.getElementById('unit-tujuan');
+        const jabatan = document.getElementById('jabatan-tujuan');
+        const semuaJabatan = @json(\App\Models\Jabatan::daftar());
+        const jabatanPerUnit = @json($jabatanPerUnit);
+        const jabatanLama = @json(old('jabatan_tujuan'));
+
+        function isiJabatan() {
+            const nilai = jabatan.value || jabatanLama;
+            jabatan.innerHTML = '';
+            if (!unit.value) {
+                jabatan.add(new Option('-- Pilih unit kerja dulu --', ''));
+                return;
+            }
+            jabatan.add(new Option('-- Pilih Jabatan --', ''));
+            const diUnit = jabatanPerUnit[unit.value] || [];
+            const grup = (label, daftar) => {
+                if (!daftar.length) return;
+                const g = document.createElement('optgroup');
+                g.label = label;
+                daftar.forEach((j) => g.append(new Option(j, j, false, j === nilai)));
+                jabatan.append(g);
+            };
+            grup('Jabatan di unit ' + unit.value, diUnit);
+            grup(diUnit.length ? 'Jabatan lainnya' : 'Semua jabatan', semuaJabatan.filter((j) => !diUnit.includes(j)));
+        }
+
+        unit.addEventListener('change', isiJabatan);
+        isiJabatan();
+
+        // Gambaran posisi di bagan: dimuat ulang tiap lowongan / unit / jabatan berubah; kotak merah diberi nama kandidat.
+        const wadahBagan = document.querySelector('[data-bagan-kandidat]');
+        const lowongan = document.querySelector('[name="lowongan_id"]');
+        const pegawai = document.querySelector('[name="data_pegawai_id"]');
+        const namaLuar = document.querySelector('[name="nama_lengkap"]');
+        const petunjukAwal = wadahBagan.innerHTML;
+        let permintaan = 0;
+
+        function namaKandidat() {
+            const jenis = document.querySelector('input[name="jenis"]:checked').value;
+            const nama = jenis === 'pegawai'
+                ? (pegawai.value ? pegawai.selectedOptions[0].text.split(' — ')[0].trim() : '')
+                : namaLuar.value.trim();
+            return 'Kandidat' + (nama ? ': ' + nama : '');
+        }
+        function tulisNama() {
+            wadahBagan.querySelectorAll('.bagan-node.kandidat .nm').forEach((nm) => { nm.textContent = namaKandidat(); });
+        }
+
+        function muatBagan() {
+            const posisi = document.querySelector('input[name="posisi"]:checked').value;
+            const param = posisi === 'lowongan'
+                ? (lowongan.value ? { lowongan_id: lowongan.value } : null)
+                : (unit.value && jabatan.value ? { unit: unit.value, jabatan: jabatan.value } : null);
+            const ke = ++permintaan;   // abaikan jawaban lama bila pilihan sudah berubah lagi
+            if (!param) { wadahBagan.innerHTML = petunjukAwal; return; }
+            wadahBagan.innerHTML = '<p class="small text-muted mb-0"><span class="spinner-border spinner-border-sm me-1"></span>Memuat bagan…</p>';
+            fetch(@json(route('admin.lamaran.internal.bagan')) + '?' + new URLSearchParams(param), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); })
+                .then((html) => { if (ke !== permintaan) return; wadahBagan.innerHTML = html; tulisNama(); })
+                .catch(() => { if (ke === permintaan) wadahBagan.innerHTML = '<p class="small text-danger mb-0">Bagan gagal dimuat.</p>'; });
+        }
+
+        [lowongan, unit, jabatan].forEach((el) => el.addEventListener('change', muatBagan));
+        document.querySelectorAll('input[name="posisi"]').forEach((r) => r.addEventListener('change', muatBagan));
+        document.querySelectorAll('input[name="jenis"]').forEach((r) => r.addEventListener('change', tulisNama));
+        pegawai.addEventListener('change', tulisNama);
+        namaLuar.addEventListener('input', tulisNama);
+        muatBagan();
     });
 </script>
+@include('admin.pengajuan-formasi._bagan-statis-aset')
 @endsection

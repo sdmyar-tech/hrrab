@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Pegawai;
 
 use App\Http\Controllers\Controller;
 use App\Models\PengajuanCuti;
+use App\Models\User;
+use App\Support\Kalender;
+use App\Support\Notifikasi;
 use App\Support\PengajuanWorkflow;
 use App\Support\Urutan;
 use Carbon\Carbon;
@@ -11,7 +14,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
-use App\Support\Notifikasi;
 
 class PengajuanCutiController extends Controller
 {
@@ -19,7 +21,7 @@ class PengajuanCutiController extends Controller
 
     public function index(): View
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
         $pegawai = $user->dataPegawai()->with('kepegawaian')->first();
         $kepegawaian = $pegawai?->kepegawaian;
@@ -57,7 +59,7 @@ class PengajuanCutiController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
         $pegawai = $user->dataPegawai()->with('kepegawaian')->first();
         $kepegawaian = $pegawai?->kepegawaian;
@@ -178,6 +180,6 @@ class PengajuanCutiController extends Controller
 
     private function hitungHariKerja(Carbon $mulai, Carbon $selesai): int
     {
-        return \App\Support\Kalender::jumlahHariKerja($mulai, $selesai);
+        return Kalender::jumlahHariKerja($mulai, $selesai);
     }
 }

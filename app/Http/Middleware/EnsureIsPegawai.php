@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,14 +14,14 @@ class EnsureIsPegawai
     {
         $user = Auth::user();
 
-        if (! $user instanceof \App\Models\User || ! $user->isStaff()) {
-            if ($user instanceof \App\Models\User && in_array($user->role, \App\Models\User::INTERNAL_ROLES, true)) {
+        if (! $user instanceof User || ! $user->isStaff()) {
+            if ($user instanceof User && in_array($user->role, User::INTERNAL_ROLES, true)) {
                 return redirect()
                     ->route('admin.dashboard')
                     ->with('error', 'Anda tidak berhak mengakses halaman pegawai.');
             }
 
-            abort_if(! $user instanceof \App\Models\User || $user->isPelamar(), 404);
+            abort_if(! $user instanceof User || $user->isPelamar(), 404);
 
             abort(403, 'Akses hanya untuk pegawai.');
         }

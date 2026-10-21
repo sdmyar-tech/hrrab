@@ -21,9 +21,13 @@ use Illuminate\View\View;
 class NotifikasiController extends Controller
 {
     public const TARGET_BELUM_LENGKAP = 'belum_lengkap';
+
     public const TARGET_UNIT = 'unit';
+
     public const TARGET_ROLE = 'role';
+
     public const TARGET_PEGAWAI = 'pegawai';
+
     public const TARGET_SEMUA = 'semua';
 
     public function index(Request $request): View
@@ -94,7 +98,7 @@ class NotifikasiController extends Controller
         ]);
     }
 
-public function kirimForm(): View
+    public function kirimForm(): View
     {
         $user = $this->user();
         abort_unless($user->can(User::ABILITY_KIRIM_NOTIFIKASI), 403);

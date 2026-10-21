@@ -120,6 +120,7 @@ class FormatTeks
         foreach ($bagian as $segmen) {
             if ($g = self::gelarBelakang(str_replace(' ', '', $segmen), true)) {
                 array_push($belakang, ...$g);
+
                 continue;
             }
             foreach (preg_split('/\s+/', $segmen) as $sub) {
@@ -332,7 +333,7 @@ class FormatTeks
 
         foreach ($jenjang as $pola => $label) {
             if (preg_match($pola, $v, $m)) {
-                $jurusan = trim(preg_replace($pola, '', $v, 1), " -/,.");
+                $jurusan = trim(preg_replace($pola, '', $v, 1), ' -/,.');
 
                 return self::rapikanSpasi($label . ($jurusan !== '' ? ' ' . self::judul($jurusan) : ''));
             }

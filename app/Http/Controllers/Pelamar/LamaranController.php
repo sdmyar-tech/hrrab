@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Pelamar;
 use App\Http\Controllers\Controller;
 use App\Models\Lamaran;
 use App\Models\Lowongan;
+use App\Models\User;
 use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,7 @@ class LamaranController extends Controller
 {
     public function index(): View
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $urut = ['urutOpsi' => [], 'urutAktif' => null];
@@ -35,7 +36,7 @@ class LamaranController extends Controller
 
     public function apply(Lowongan $lowongan): RedirectResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if (! $user->dataPelamar || ! $user->dataPelamar->isLengkap()) {
@@ -80,7 +81,7 @@ class LamaranController extends Controller
 
     public function show(Lamaran $lamaran): View
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if ($lamaran->data_pelamar_id !== $user->data_pelamar_id) {
@@ -94,7 +95,7 @@ class LamaranController extends Controller
 
     public function tolak(Lamaran $lamaran): RedirectResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if ($lamaran->data_pelamar_id !== $user->data_pelamar_id) {

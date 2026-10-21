@@ -2,20 +2,21 @@
 
 namespace App\Models;
 
+use App\Support\Notifikasi;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class KontrakJadwal extends Model
 {
-    use HasFactory, \App\Models\Concerns\DicatatLog;
+    use \App\Models\Concerns\DicatatLog, HasFactory;
 
     protected static function booted(): void
     {
-        static::created(fn (self $jadwal) => \App\Support\Notifikasi::jadwalKandidat($jadwal));
+        static::created(fn (self $jadwal) => Notifikasi::jadwalKandidat($jadwal));
         static::updated(function (self $jadwal) {
             if ($jadwal->wasChanged(['tanggal', 'waktu', 'lokasi'])) {
-                \App\Support\Notifikasi::jadwalKandidat($jadwal);
+                Notifikasi::jadwalKandidat($jadwal);
             }
         });
     }
@@ -23,7 +24,9 @@ class KontrakJadwal extends Model
     protected $table = 'kontrak_jadwals';
 
     public const STATUS_TERJADWAL = 'terjadwal';
+
     public const STATUS_SELESAI = 'selesai';
+
     public const STATUS_DIBATALKAN = 'dibatalkan';
 
     protected $fillable = [

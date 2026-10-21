@@ -135,44 +135,39 @@
                                     @endif
                                 </td>
                                 <td class="text-end">
-                                    @if (($item->isPending() || auth()->user()->isAdmin()) && \App\Support\RekrutmenAccess::canReviewFormasi(auth()->user(), $item))
-                                        <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                    {{-- Tumpukan sama lebar seperti daftar cuti/lembur/izin keluar (.aksi-pengajuan di hrrab.css). --}}
+                                    <div class="aksi-pengajuan">
+                                        @if (($item->isPending() || auth()->user()->isAdmin()) && \App\Support\RekrutmenAccess::canReviewFormasi(auth()->user(), $item))
                                             <form action="{{ route('admin.pengajuan-formasi.approve', $item) }}" method="POST"
                                                 data-confirm="Setujui pengajuan formasi ini?">
                                                 @csrf
-                                                <button type="submit" class="btn btn-success btn-sm">
-                                                    <i class="bi bi-check-lg"></i> Setujui
-                                                </button>
+                                                <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check-lg"></i> Setujui</button>
                                             </form>
-                                            <form action="{{ route('admin.pengajuan-formasi.reject', $item) }}" method="POST"
-                                                class="form-reject-formasi">
+                                            <form action="{{ route('admin.pengajuan-formasi.reject', $item) }}" method="POST" class="form-reject-formasi">
                                                 @csrf
                                                 <input type="hidden" name="catatan_admin" value="">
-                                                <button type="button" class="btn btn-outline-danger btn-sm btn-reject-formasi">
-                                                    <i class="bi bi-x-lg"></i> Tolak
-                                                </button>
+                                                <button type="button" class="btn btn-outline-danger btn-sm btn-reject-formasi"><i class="bi bi-x-lg"></i> Tolak</button>
                                             </form>
                                             @if (auth()->user()->isAdmin())
-                                                @include('admin.editor-data._tombol', ['entitas' => 'formasi', 'id' => $item->id, 'teks' => '', 'hapus' => false])
+                                                <a href="{{ route('admin.data.edit', ['formasi', $item->id, 'kembali' => request()->fullUrl()]) }}" class="btn btn-outline-warning btn-sm"
+                                                    title="Ubah langsung semua kolom (Admin)"><i class="bi bi-shield-lock"></i> Ubah (Admin)</a>
                                                 <form action="{{ route('admin.pengajuan-formasi.destroy', $item) }}" method="POST"
                                                     data-confirm="Hapus permanen pengajuan formasi {{ $item->jabatan }}?">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-secondary btn-sm" title="Hapus"><i class="bi bi-trash"></i></button>
+                                                    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-trash"></i> Hapus</button>
                                                 </form>
                                             @endif
-                                        </div>
-                                    @elseif ($item->diajukan_oleh === auth()->id() && $item->isPending())
-                                        <form action="{{ route('admin.pengajuan-formasi.batalkan', $item) }}" method="POST"
-                                            data-confirm="Batalkan pengajuan formasi ini?">
-                                            @csrf
-                                            <button type="submit" class="btn btn-outline-secondary btn-sm">
-                                                <i class="bi bi-x-lg"></i> Batalkan
-                                            </button>
-                                        </form>
-                                    @else
-                                        <span class="text-muted small">-</span>
-                                    @endif
+                                        @elseif ($item->diajukan_oleh === auth()->id() && $item->isPending())
+                                            <form action="{{ route('admin.pengajuan-formasi.batalkan', $item) }}" method="POST"
+                                                data-confirm="Batalkan pengajuan formasi ini?">
+                                                @csrf
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i> Batalkan</button>
+                                            </form>
+                                        @else
+                                            <span class="aksi-status">{{ $item->isPending() ? 'Menunggu review' : 'Sudah diproses' }}</span>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         {{-- Rincian untuk penyetuju: tampil sebelum tombol Setujui/Tolak diklik. --}}

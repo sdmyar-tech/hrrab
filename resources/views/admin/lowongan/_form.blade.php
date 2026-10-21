@@ -26,7 +26,7 @@
 
     <div class="col-md-6">
         <label class="form-label">Jabatan</label>
-        <select name="jabatan" class="form-select @error('jabatan') is-invalid @enderror" required>
+        <select name="jabatan" class="form-select @error('jabatan') is-invalid @enderror" required data-jabatan-unit="[name=unit_kerja]">
             <option value="">-- Pilih Jabatan --</option>
             @foreach (\App\Models\Jabatan::daftar() as $j)
                 <option value="{{ $j }}" {{ old('jabatan', $lowongan->jabatan ?? '') == $j ? 'selected' : '' }}>{{ $j }}</option>
@@ -39,6 +39,7 @@
         <label class="form-label">Lokasi Kerja <span class="text-muted">(opsional)</span></label>
         <select name="lokasi_kerja" class="form-select">
             <option value="">-- Pilih Lokasi Kerja --</option>
+            <option value="" @selected(isset($lowongan) && $lowongan->exists && ! old('lokasi_kerja', $lowongan->lokasi_kerja))>Tidak ditentukan</option>
             @foreach (config('kepegawaian.lokasi_kerja') as $lokasi)
                 <option value="{{ $lokasi }}" {{ old('lokasi_kerja', $lowongan->lokasi_kerja ?? '') == $lokasi ? 'selected' : '' }}>{{ $lokasi }}</option>
             @endforeach
@@ -49,6 +50,7 @@
         <label class="form-label">Tipe Kerja <span class="text-muted">(opsional)</span></label>
         <select name="tipe_kerja" class="form-select">
             <option value="">-- Pilih --</option>
+            <option value="" @selected(isset($lowongan) && $lowongan->exists && ! old('tipe_kerja', $lowongan->tipe_kerja))>Tidak ditentukan</option>
             @foreach (['Full Time', 'Part Time', 'Kontrak', 'Magang'] as $opt)
                 <option value="{{ $opt }}" {{ old('tipe_kerja', $lowongan->tipe_kerja ?? '') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
             @endforeach
@@ -75,3 +77,5 @@
         <small class="text-muted">Deskripsi & kualifikasi wajib diisi sebelum lowongan bisa dipublikasikan.</small>
     </div>
 </div>
+
+@include('partials.jabatan-ikut-unit')

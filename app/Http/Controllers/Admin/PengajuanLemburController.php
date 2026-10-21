@@ -4,16 +4,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PengajuanLembur;
+use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\Notifikasi;
 use App\Support\PengajuanWorkflow;
 use App\Support\Urutan;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use App\Support\Notifikasi;
 
 class PengajuanLemburController extends Controller
 {
@@ -33,7 +35,7 @@ class PengajuanLemburController extends Controller
 
     public function show(PengajuanLembur $pengajuanLembur): View
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $visible = PengajuanLembur::whereKey($pengajuanLembur->id);
@@ -108,7 +110,7 @@ class PengajuanLemburController extends Controller
 
     public function approve(PengajuanLembur $pengajuanLembur): RedirectResponse
     {
-        /** @var \App\Models\User $approver */
+        /** @var User $approver */
         $approver = Auth::user();
 
         if (! PengajuanWorkflow::canAct($approver, $pengajuanLembur)) {
@@ -128,7 +130,7 @@ class PengajuanLemburController extends Controller
 
     public function reject(Request $request, PengajuanLembur $pengajuanLembur): RedirectResponse
     {
-        /** @var \App\Models\User $approver */
+        /** @var User $approver */
         $approver = Auth::user();
 
         if (! PengajuanWorkflow::canAct($approver, $pengajuanLembur)) {
@@ -172,7 +174,7 @@ class PengajuanLemburController extends Controller
         $statusLama = $pengajuanLembur->status;
         $pengajuanLembur->update([
             ...$v,
-            'hari' => \Carbon\Carbon::parse($v['tanggal'])->translatedFormat('l'),
+            'hari' => Carbon::parse($v['tanggal'])->translatedFormat('l'),
             ...PengajuanWorkflow::statusAdmin($pengajuanLembur, $v['status'], $v['current_level'] ?? null, Auth::user()),
         ]);
 

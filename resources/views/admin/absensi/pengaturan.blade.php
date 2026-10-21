@@ -257,7 +257,7 @@
     </div>
 </div>
 
-{{-- Modal: ubah satu pegawai --}}<div class="modal fade" id="modalPegawai" tabindex="-1" aria-labelledby="modalPegawaiJudul" aria-hidden="true">
+<div class="modal fade" id="modalPegawai" tabindex="-1" aria-labelledby="modalPegawaiJudul" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <form method="POST" class="modal-content" id="formPegawai">
             @csrf
@@ -295,7 +295,6 @@
     </div>
 </div>
 
-{{-- Modal: ubah beberapa pegawai sekaligus --}}
 <div class="modal fade" id="modalMassal" tabindex="-1" aria-labelledby="modalMassalJudul" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <form action="{{ route('admin.absensi.pengaturan.massal') }}" method="POST" class="modal-content" id="formMassal">
@@ -367,7 +366,6 @@
             bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDaftar')).show();
         }
 
-        // ---- Modal satu pegawai ----
         const modalP = document.getElementById('modalPegawai');
         const formP = document.getElementById('formPegawai');
         const hariBawaan = @json($hariBawaan);

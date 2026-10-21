@@ -40,14 +40,14 @@ class UserRoleSeeder extends Seeder
         DB::table('users')->updateOrInsert(
             ['email' => 'superadmin@example.com'],
             [
-                'name'            => 'Administrator',
-                'email'           => 'superadmin@example.com',
-                'password'        => Hash::make('password123'),
-                'role'            => 'admin',
-                'nip'             => null,
+                'name' => 'Administrator',
+                'email' => 'superadmin@example.com',
+                'password' => Hash::make('password123'),
+                'role' => 'admin',
+                'nip' => null,
                 'data_pegawai_id' => null,
-                'created_at'      => now(),
-                'updated_at'      => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]
         );
         $this->command->info('✅ Admin      : superadmin@example.com / password123');
@@ -58,15 +58,15 @@ class UserRoleSeeder extends Seeder
             DB::table('users')->updateOrInsert(
                 ['email' => $email],
                 [
-                    'name'            => $i === 0 ? 'Ahmad Wildan' : $bidang,
-                    'email'           => $email,
-                    'password'        => Hash::make('password123'),
-                    'role'            => 'gm',
-                    'divisi'          => json_encode(config("kepegawaian.gm_bidang.{$bidang}")),
-                    'nip'             => null,
+                    'name' => $i === 0 ? 'Ahmad Wildan' : $bidang,
+                    'email' => $email,
+                    'password' => Hash::make('password123'),
+                    'role' => 'gm',
+                    'divisi' => json_encode(config("kepegawaian.gm_bidang.{$bidang}")),
+                    'nip' => null,
                     'data_pegawai_id' => null,
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]
             );
             $this->command->info("✅ {$bidang} : {$email} / password123");
@@ -76,14 +76,14 @@ class UserRoleSeeder extends Seeder
             DB::table('users')->updateOrInsert(
                 ['email' => $kepala->email],
                 [
-                    'name'            => $kepala->nama_lengkap,
-                    'email'           => $kepala->email,
-                    'password'        => Hash::make('password123'),
-                    'role'            => 'kepala_bagian',
-                    'nip'             => $kepala->nip,
+                    'name' => $kepala->nama_lengkap,
+                    'email' => $kepala->email,
+                    'password' => Hash::make('password123'),
+                    'role' => 'kepala_bagian',
+                    'nip' => $kepala->nip,
                     'data_pegawai_id' => $kepala->id,
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]
             );
             $this->command->info("✅ Kepala Bagian : {$kepala->email} / password123");
@@ -96,14 +96,14 @@ class UserRoleSeeder extends Seeder
             DB::table('users')->updateOrInsert(
                 ['email' => $staff->email],
                 [
-                    'name'            => $staff->nama_lengkap,
-                    'email'           => $staff->email,
-                    'password'        => Hash::make('password123'),
-                    'role'            => 'staff',
-                    'nip'             => $staff->nip,
+                    'name' => $staff->nama_lengkap,
+                    'email' => $staff->email,
+                    'password' => Hash::make('password123'),
+                    'role' => 'staff',
+                    'nip' => $staff->nip,
                     'data_pegawai_id' => $staff->id,
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]
             );
             $this->command->info("✅ Staff      : {$staff->email} / password123");

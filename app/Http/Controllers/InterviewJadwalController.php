@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InterviewJadwal;
+use App\Models\User;
 use App\Support\Urutan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -28,7 +29,7 @@ class InterviewJadwalController extends Controller
         ]);
         $jadwals = $query->get();
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
         $layout = $user->panelLayout();
 

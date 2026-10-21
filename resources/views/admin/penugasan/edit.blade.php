@@ -34,7 +34,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Jabatan</label>
-                        <select name="jabatan" class="form-select">
+                        <select name="jabatan" class="form-select" data-jabatan-unit="[name=unit_kerja]">
                             <option value="">-</option>
                             @foreach (\App\Models\Jabatan::daftar() as $j)
                                 <option value="{{ $j }}" @selected(old('jabatan', $penugasan->jabatan) === $j)>{{ $j }}</option>
@@ -80,4 +80,5 @@
         </section>
     </div>
 </main>
+@include('partials.jabatan-ikut-unit')
 @endsection

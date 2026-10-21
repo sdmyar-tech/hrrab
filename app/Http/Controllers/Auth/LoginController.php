@@ -35,13 +35,13 @@ class LoginController extends Controller
     private function attempt(Request $request, bool $staffPortal): RedirectResponse
     {
         $request->validate([
-            'email'    => ['required', 'email'],
+            'email' => ['required', 'email'],
             'password' => ['required', 'string', 'min:6'],
         ], [
-            'email.required'    => 'Email wajib diisi.',
-            'email.email'       => 'Format email tidak valid.',
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
             'password.required' => 'Password wajib diisi.',
-            'password.min'      => 'Password minimal 6 karakter.',
+            'password.min' => 'Password minimal 6 karakter.',
         ]);
 
         $user = User::where('email', $request->email)->first();
@@ -68,8 +68,6 @@ class LoginController extends Controller
 
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
-        // Halaman pertama setelah login: submenu sidebar dimulai dalam keadaan tertutup.
-        $request->session()->put('baru_masuk', true);
 
         // Datang dari scan QR absen acara sebelum login → kembali ke halaman absen itu.
         if (! $isGuest && ($tujuanAcara = $request->session()->pull('acara_tujuan'))) {
@@ -100,7 +98,7 @@ class LoginController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
         $isGuest = (bool) $user?->isPelamar();
 
@@ -119,7 +117,7 @@ class LoginController extends Controller
             return redirect()->route('login');
         }
 
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
 
         if (! $user) {

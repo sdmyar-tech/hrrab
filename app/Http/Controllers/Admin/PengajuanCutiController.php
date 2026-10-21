@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PengajuanCuti;
+use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\Notifikasi;
 use App\Support\PengajuanWorkflow;
 use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
@@ -13,7 +15,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use App\Support\Notifikasi;
 
 class PengajuanCutiController extends Controller
 {
@@ -33,7 +34,7 @@ class PengajuanCutiController extends Controller
 
     public function show(PengajuanCuti $pengajuanCuti): View
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $visible = PengajuanCuti::whereKey($pengajuanCuti->id);
@@ -119,7 +120,7 @@ class PengajuanCutiController extends Controller
 
     public function approve(Request $request, PengajuanCuti $pengajuanCuti): RedirectResponse
     {
-        /** @var \App\Models\User $approver */
+        /** @var User $approver */
         $approver = Auth::user();
 
         if (! PengajuanWorkflow::canAct($approver, $pengajuanCuti)) {
@@ -154,7 +155,7 @@ class PengajuanCutiController extends Controller
 
     public function reject(Request $request, PengajuanCuti $pengajuanCuti): RedirectResponse
     {
-        /** @var \App\Models\User $approver */
+        /** @var User $approver */
         $approver = Auth::user();
 
         if (! PengajuanWorkflow::canAct($approver, $pengajuanCuti)) {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\EditorData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -73,7 +74,7 @@ class WajibPasswordController extends Controller
             $user->isAdmin() && ! $pengatur->isAdmin() => 'Hanya Admin yang bisa mengatur akun Admin.',
             default => null,
         };
-        $kembali = \App\Support\EditorData::kembaliAman($request->input('kembali'));
+        $kembali = EditorData::kembaliAman($request->input('kembali'));
         $balik = $kembali ? redirect()->to($kembali) : back();
 
         if ($tolak) {

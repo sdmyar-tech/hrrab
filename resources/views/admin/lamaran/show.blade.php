@@ -165,6 +165,8 @@
             </div>
 
             <div class="col-lg-7">
+                @include('admin.lamaran._tahapan')
+
                 @if (! $canReview)
                     <div class="alert alert-secondary small">
                         Anda hanya bisa melihat data lamaran ini, kecuali mengisi hasil interview yang ditugaskan kepada Anda.
@@ -173,10 +175,11 @@
                 @endif
 
                 @if ($lamaran->isMenungguVerifikasi())
-                    <div class="panel p-4 mb-3">
+                    <div class="panel p-4 mb-3" id="bagian-verifikasi">
                         <h2 class="h6 fw-bold mb-3">Verifikasi Data Pelamar</h2>
                         @if ($canReview)
-                            <div class="d-flex gap-2">
+                            <p class="text-muted small mb-3">Periksa data &amp; berkas pelamar di kolom kiri, lalu putuskan.</p>
+                            <div class="aksi-sejajar">
                                 <form action="{{ route('admin.lamaran.verifikasi.terima', $lamaran) }}" method="POST"
                                     data-confirm="Terima pelamar ini dan lanjutkan ke tahap interview?">
                                     @csrf
@@ -199,7 +202,7 @@
                 @endif
 
                 @if ($lamaran->isProses() || $lamaran->interviewJadwals->isNotEmpty() || $admin)
-                    <div class="panel p-4 mb-3">
+                    <div class="panel p-4 mb-3" id="bagian-interview">
                         <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                             <h2 class="h6 fw-bold mb-0">Interview</h2>
                             <span class="badge {{ $jumlahInterviewLulus >= \App\Support\InterviewFlow::MIN_LULUS ? 'text-bg-success' : 'text-bg-light border' }}">
@@ -232,22 +235,29 @@
                                 @endif
 
                                 @if (($jadwal->isTerjadwal() && $lamaran->isProses()) || $admin)
-                                    <div class="mt-2 d-flex flex-wrap gap-2 align-items-start">
-                                        @if (\App\Support\InterviewFlow::bisaIsiHasil(auth()->user(), $jadwal))
-                                            <form action="{{ route('admin.lamaran.interview.hasil', [$lamaran, $jadwal]) }}" method="POST" class="d-flex flex-wrap gap-1 align-items-center"
-                                                data-confirm="{{ $admin ? 'Simpan hasil ' . $jadwal->tahapLabel() . '? (Mode Admin: hasil bisa diubah lagi kapan saja. Tidak Lulus menolak lamaran; mengubah Tidak Lulus membuka lamaran kembali.)' : 'Simpan hasil ' . $jadwal->tahapLabel() . '? Hasil final tidak bisa diubah, dan Tidak Lulus langsung menolak lamaran.' }}">
-                                                @csrf
-                                                <select name="hasil_status" class="form-select form-select-sm" style="width:auto;" required>
+                                    {{-- Baris 1: isi hasil (aksi utama). Baris 2: aksi pendukung, rata kanan, ukuran sama. --}}
+                                    @if (\App\Support\InterviewFlow::bisaIsiHasil(auth()->user(), $jadwal))
+                                        <form action="{{ route('admin.lamaran.interview.hasil', [$lamaran, $jadwal]) }}" method="POST" class="row g-2 align-items-center mt-1"
+                                            data-confirm="{{ $admin ? 'Simpan hasil ' . $jadwal->tahapLabel() . '? (Mode Admin: hasil bisa diubah lagi kapan saja. Tidak Lulus menolak lamaran; mengubah Tidak Lulus membuka lamaran kembali.)' : 'Simpan hasil ' . $jadwal->tahapLabel() . '? Hasil final tidak bisa diubah, dan Tidak Lulus langsung menolak lamaran.' }}">
+                                            @csrf
+                                            <div class="col-sm-4">
+                                                <select name="hasil_status" class="form-select form-select-sm" required aria-label="Hasil interview">
                                                     <option value="">Isi Hasil...</option>
                                                     <option value="lulus" @selected($jadwal->hasil_status === 'lulus')>Lulus</option>
                                                     <option value="dipertimbangkan" @selected($jadwal->hasil_status === 'dipertimbangkan')>Dipertimbangkan</option>
                                                     <option value="tidak_lulus" @selected($jadwal->hasil_status === 'tidak_lulus')>Tidak Lulus</option>
                                                 </select>
-                                                <input type="text" name="catatan_hasil" class="form-control form-control-sm" placeholder="Catatan (opsional)" style="width:180px;" value="{{ $jadwal->catatan_hasil }}">
-                                                <button type="submit" class="btn btn-outline-success btn-sm">{{ $jadwal->hasil_status ? 'Ubah Hasil' : 'Simpan Hasil' }}</button>
-                                            </form>
-                                        @endif
+                                            </div>
+                                            <div class="col-sm-5">
+                                                <input type="text" name="catatan_hasil" class="form-control form-control-sm" placeholder="Catatan (opsional)" aria-label="Catatan hasil" value="{{ $jadwal->catatan_hasil }}">
+                                            </div>
+                                            <div class="col-sm-3 d-grid">
+                                                <button type="submit" class="btn btn-success btn-sm">{{ $jadwal->hasil_status ? 'Ubah Hasil' : 'Simpan Hasil' }}</button>
+                                            </div>
+                                        </form>
+                                    @endif
 
+                                    <div class="mt-2 d-flex flex-wrap gap-2 justify-content-end">
                                         @if (\App\Support\InterviewFlow::bisaUbahJadwal(auth()->user(), $jadwal))
                                             <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse"
                                                 data-bs-target="#ubah-jadwal-{{ $jadwal->id }}" aria-expanded="false">
@@ -259,14 +269,14 @@
                                             <form action="{{ route('admin.lamaran.interview.cancel', [$lamaran, $jadwal]) }}" method="POST" class="form-cancel-interview">
                                                 @csrf
                                                 <input type="hidden" name="catatan" value="">
-                                                <button type="button" class="btn btn-outline-danger btn-sm btn-cancel-interview">Batalkan</button>
+                                                <button type="button" class="btn btn-outline-danger btn-sm btn-cancel-interview"><i class="bi bi-x-lg me-1"></i> Batalkan</button>
                                             </form>
                                         @endif
                                         @if ($admin)
                                             <form action="{{ route('admin.lamaran.interview.destroy', [$lamaran, $jadwal]) }}" method="POST"
                                                 data-confirm="Hapus permanen {{ $jadwal->tahapLabel() }} ini?">
                                                 @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Hapus (Admin)"><i class="bi bi-trash"></i></button>
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Hapus (Admin)"><i class="bi bi-trash me-1"></i> Hapus</button>
                                             </form>
                                         @endif
                                     </div>
@@ -463,7 +473,7 @@
                 @endif
 
                 @if ($lamaran->isProses() || $admin)
-                    <div class="panel p-4 mb-3">
+                    <div class="panel p-4 mb-3" id="bagian-onboarding">
                         @php $bisaMulaiOnboarding = $canReview && ($admin || ($lamaran->tahap === \App\Models\Lamaran::TAHAP_SCREENING && $lamaran->screeningOnboardings->where('status', \App\Models\ScreeningOnboarding::STATUS_BERJALAN)->isEmpty())); @endphp
                         <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
                             <h2 class="h6 fw-bold mb-0">Screening / Onboarding</h2>
@@ -658,7 +668,7 @@
                                         @if ($admin)
                                             <form action="{{ route('admin.lamaran.kontrak.destroy', [$lamaran, $jadwal]) }}" method="POST" data-confirm="Hapus jadwal kontrak ini?">
                                                 @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Hapus (Admin)"><i class="bi bi-trash"></i></button>
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Hapus (Admin)"><i class="bi bi-trash me-1"></i> Hapus</button>
                                             </form>
                                         @endif
                                     </span>
@@ -738,7 +748,7 @@
                     </div>
 
                     @if ($canReview)
-                        <div class="panel p-4">
+                        <div class="panel p-4" id="bagian-keputusan">
                             <h2 class="h6 fw-bold mb-3">{{ $lamaran->isSelesai() ? 'Ubah Keputusan (Admin)' : 'Keputusan Akhir' }}</h2>
 
                             <form action="{{ route('admin.lamaran.rekrut', $lamaran) }}" method="POST" class="row g-2 mb-3" id="form-rekrut"

@@ -44,7 +44,7 @@ class EvaluasiKontrakAlur
         $unit ??= $pegawai->kepegawaian?->unit_kerja;
         $alur = AlurPegawai::with(['atasan', 'gm'])->where('data_pegawai_id', $pegawai->id)->first();
         $peran = User::where('data_pegawai_id', $pegawai->id)->pluck('role');
-        $pimpinan = $peran->contains(User::ROLE_GM) || $peran->contains(User::ROLE_KEPALA_SDM);   // GM / Kepala SDM
+        $pimpinan = $peran->contains(User::ROLE_GM) || $peran->contains(User::ROLE_KEPALA_SDM);
         $kepala = $peran->contains(User::ROLE_KEPALA_BAGIAN) || self::memimpinUnit($pegawai);
 
         // Tahap awal (seperti initialLevel).
@@ -80,6 +80,7 @@ class EvaluasiKontrakAlur
 
         return $tahap ?: [['level' => PengajuanWorkflow::LEVEL_KEPALA_SDM, 'penyetuju' => PengajuanWorkflow::kepalaSdmTersedia($pegawai->id)]];
     }
+
     /** GM yang memegang bagian/unit pegawai (bukan dirinya); bila tak ada, semua GM. */
     private static function gmBagian(DataPegawai $pegawai, ?string $unit): Collection
     {
@@ -192,6 +193,7 @@ class EvaluasiKontrakAlur
             default => false,
         };
     }
+
     public static function jumlahTugas(User $user): int
     {
         if (! self::bolehMembuka($user)) {

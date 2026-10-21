@@ -8,9 +8,11 @@ use App\Models\Lamaran;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanLembur;
 use App\Models\Pengumuman;
+use App\Models\User;
 use App\Support\DashboardData;
 use App\Support\InterviewFlow;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -18,7 +20,7 @@ class DashboardController extends Controller
 {
     public function index(): View
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
         $user->load(['dataPegawai.kepegawaian', 'dataPegawai.kontakDarurat', 'dataPegawai.dokumen', 'dataPegawai.penugasanAktif']);
 
@@ -127,7 +129,7 @@ class DashboardController extends Controller
         ];
     }
 
-    private function pengajuanTerbaru(?DataPegawai $pegawai): \Illuminate\Support\Collection
+    private function pengajuanTerbaru(?DataPegawai $pegawai): Collection
     {
         if (! $pegawai) {
             return collect();

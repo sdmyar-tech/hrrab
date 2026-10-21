@@ -1,9 +1,6 @@
-
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-
     if (typeof Swal === 'undefined') {
-        console.warn('SweetAlert2 belum di-load!');
         return;
     }
 

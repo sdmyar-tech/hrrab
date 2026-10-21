@@ -14,7 +14,7 @@ class XlsxReader
      */
     public static function baca(string $path): array
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($path) !== true) {
             throw new RuntimeException("Tidak bisa membuka file Excel: {$path}");
         }
@@ -55,6 +55,7 @@ class XlsxReader
         foreach (simplexml_load_string($xml)->si as $si) {
             if (isset($si->t)) {
                 $shared[] = (string) $si->t;
+
                 continue;
             }
             $teks = '';

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DicatatLog;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** Surat peringatan bulanan: tingkat 1–3 bertahap dalam satu bulan kalender; bulan berikutnya mulai lagi dari SP1. */
 class SuratPeringatan extends Model
 {
-    use \App\Models\Concerns\DicatatLog;
+    use DicatatLog;
 
     public const MAKS_PER_BULAN = 3;
 

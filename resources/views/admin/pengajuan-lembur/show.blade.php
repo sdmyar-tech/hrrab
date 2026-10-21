@@ -39,7 +39,7 @@
 
                             <form action="{{ route('admin.pengajuan-lembur.approve', $pengajuanLembur->id) }}" method="POST" class="mb-2">
                                 @csrf
-                                <button type="submit" class="btn btn-success"
+                                <button type="submit" class="btn btn-success w-100"
                                     data-confirm="true"
                                     data-icon="question"
                                     data-title="Setujui Pengajuan Lembur?"
@@ -54,7 +54,7 @@
                             <form action="{{ route('admin.pengajuan-lembur.reject', $pengajuanLembur->id) }}" method="POST" class="form-reject-lembur">
                                 @csrf
                                 <input type="hidden" name="catatan_admin" value="">
-                                <button type="button" class="btn btn-outline-danger btn-reject-lembur">
+                                <button type="button" class="btn btn-outline-danger w-100 btn-reject-lembur">
                                     <i class="bi bi-x-lg"></i> Tolak
                                 </button>
                             </form>

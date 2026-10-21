@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AlurPegawai;
 use App\Models\DataPegawai;
 use App\Models\DokumenPegawai;
+use App\Models\Jabatan;
 use App\Models\User;
 use App\Support\ExcelExporter;
 use App\Support\KelompokPegawai;
@@ -145,7 +147,7 @@ class PegawaiController extends Controller
     {
         $query = DataPegawai::with(['kepegawaian', 'kontakDarurat', 'bpjs', 'dokumen', 'penugasanAktif']);
 
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
 
         if ($user?->isKepalaBagian()) {
@@ -219,17 +221,17 @@ class PegawaiController extends Controller
 
     private function authorizeManage(): void
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
 
-        if (! $user?->hasAbility(\App\Models\User::ABILITY_KELOLA_PEGAWAI)) {
+        if (! $user?->hasAbility(User::ABILITY_KELOLA_PEGAWAI)) {
             abort(403, 'Hanya Admin, Kepala SDM, dan Staff SDM yang bisa mengubah data pegawai.');
         }
     }
 
     private function authorizeDivisi(DataPegawai $pegawai): void
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
 
         if (! $user || ! $user->isKepalaBagian()) {
@@ -294,7 +296,7 @@ class PegawaiController extends Controller
             'semuaAkun' => $semuaAkun,
             'alurApproval' => $alur,
             'unitsDisetujui' => $unitsDisetujui,
-            'alurKhusus' => \App\Models\AlurPegawai::with(['atasan', 'gm', 'pengubah'])->where('data_pegawai_id', $pegawai->id)->first(),
+            'alurKhusus' => AlurPegawai::with(['atasan', 'gm', 'pengubah'])->where('data_pegawai_id', $pegawai->id)->first(),
             'bolehAturAkun' => $bolehAtur,
             'pilihanAlur' => $bolehAtur ? AlurPegawaiController::pilihan($pegawai) : null,
         ];
@@ -425,8 +427,8 @@ class PegawaiController extends Controller
             'pendidikan_terakhir' => ['required', 'string', 'max:100'],
             'alamat_ktp' => ['required', 'string'],
             'alamat_domisili' => ['nullable', 'string'],
-            'jabatan' => ['required', 'string', Rule::in(\App\Models\Jabatan::daftar())],
-            'jabatan_tambahan' => ['nullable', 'string', Rule::in(\App\Models\Jabatan::daftar())],
+            'jabatan' => ['required', 'string', Rule::in(Jabatan::daftar())],
+            'jabatan_tambahan' => ['nullable', 'string', Rule::in(Jabatan::daftar())],
             'unit_kerja' => [$ignoreId ? 'nullable' : 'required', 'string', Rule::in(config('kepegawaian.unit_kerja'))],
             'lokasi_kerja' => ['required', 'string', Rule::in(config('kepegawaian.lokasi_kerja'))],
             'tanggal_masuk' => ['required', 'date'],

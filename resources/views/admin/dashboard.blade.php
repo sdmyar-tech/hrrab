@@ -72,18 +72,30 @@
                                 <p class="text-muted mb-0">Pekerjaan yang menunggu Anda.</p>
                             </div>
                         </div>
+                        @php
+                            // Yang ada antreannya tampil di atas; yang kosong diringkas agar tugas nyata tidak tenggelam.
+                            [$tugasAda, $tugasKosong] = collect($tugas)->partition(fn ($t) => $t['jumlah'] > 0);
+                        @endphp
                         <div class="list-group list-group-flush">
-                            @foreach ($tugas as $t)
+                            @forelse ($tugasAda as $t)
                                 <a href="{{ $t['url'] }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0">
                                     <span><i class="bi {{ $t['ikon'] }} me-2 text-muted"></i>{{ $t['label'] }}</span>
-                                    @if ($t['jumlah'] > 0)
-                                        <span class="badge rounded-pill text-bg-warning">{{ $t['jumlah'] }}</span>
-                                    @else
-                                        <span class="badge rounded-pill text-bg-light border" title="Tidak ada"><i class="bi bi-check2"></i></span>
-                                    @endif
+                                    <span class="badge rounded-pill text-bg-warning">{{ $t['jumlah'] }}</span>
                                 </a>
-                            @endforeach
+                            @empty
+                                <div class="list-group-item px-0 text-success"><i class="bi bi-check2-circle me-2"></i>Semua beres — tidak ada pekerjaan yang menunggu.</div>
+                            @endforelse
                         </div>
+                        @if ($tugasKosong->isNotEmpty())
+                            <details class="tugas-kosong mt-2">
+                                <summary class="small text-muted">{{ $tugasKosong->count() }} jenis tugas lain tanpa antrean</summary>
+                                <div class="d-flex flex-wrap gap-1 mt-2">
+                                    @foreach ($tugasKosong as $t)
+                                        <a href="{{ $t['url'] }}" class="badge rounded-pill text-bg-light border text-decoration-none fw-normal"><i class="bi {{ $t['ikon'] }} me-1"></i>{{ $t['label'] }}</a>
+                                    @endforeach
+                                </div>
+                            </details>
+                        @endif
                     </div>
                 </div>
             @endif

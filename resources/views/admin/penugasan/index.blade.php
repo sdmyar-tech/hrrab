@@ -109,7 +109,7 @@
                                 </td>
                                 <td class="text-end">
                                     @if (auth()->user()->isAdmin())
-                                        <a href="{{ route('admin.penugasan.edit', $p) }}" class="btn btn-outline-secondary btn-sm" title="Ubah langsung (Admin)"><i class="bi bi-pencil"></i></a>
+                                        <a href="{{ route('admin.penugasan.edit', $p) }}" class="btn btn-outline-secondary btn-sm" title="Ubah langsung (Admin)"><i class="bi bi-pencil"></i> Ubah</a>
                                     @endif
                                     <form action="{{ route('admin.penugasan.destroy', $p) }}" method="POST" class="d-inline">
                                         @csrf

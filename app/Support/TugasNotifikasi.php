@@ -7,8 +7,10 @@ use App\Models\InterviewJadwal;
 use App\Models\KontrakJadwal;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanFormasi;
+use App\Models\PengajuanIzinKeluar;
 use App\Models\PengajuanLembur;
 use App\Models\Pengumuman;
+use App\Models\PengumumanPeserta;
 use App\Models\ScreeningOnboarding;
 use App\Models\User;
 use Illuminate\Notifications\DatabaseNotification;
@@ -21,12 +23,21 @@ use Illuminate\Notifications\DatabaseNotification;
 class TugasNotifikasi
 {
     public const ABSEN_ACARA = 'absen_acara';
+
     public const CUTI = 'cuti';
+
     public const LEMBUR = 'lembur';
+
+    public const IZIN_KELUAR = 'izin_keluar';
+
     public const FORMASI = 'formasi';
+
     public const INTERVIEW = 'interview';
+
     public const ONBOARDING = 'onboarding';
+
     public const KONTRAK = 'kontrak';
+
     public const EVALUASI_KONTRAK = 'evaluasi_kontrak';
 
     /** @var array<string, true> "user:request" yang sudah dirapikan (cukup sekali per request) */
@@ -59,12 +70,6 @@ class TugasNotifikasi
             ->each->markAsRead();
     }
 
-    /** Untuk uji / setelah perubahan data di request yang sama. */
-    public static function lupakan(): void
-    {
-        self::$sudahDirapikan = [];
-    }
-
     public static function selesai(User $user, array $tugas): bool
     {
         $id = (int) ($tugas['id'] ?? 0);
@@ -73,6 +78,7 @@ class TugasNotifikasi
             self::ABSEN_ACARA => self::absenSelesai($user, $id),
             self::CUTI => ! ($p = PengajuanCuti::find($id)) || ! PengajuanWorkflow::canAct($user, $p),
             self::LEMBUR => ! ($p = PengajuanLembur::find($id)) || ! PengajuanWorkflow::canAct($user, $p),
+            self::IZIN_KELUAR => ! ($p = PengajuanIzinKeluar::find($id)) || ! PengajuanWorkflow::canAct($user, $p),
             self::FORMASI => ! ($f = PengajuanFormasi::find($id)) || $f->status !== PengajuanFormasi::STATUS_PENDING
                 || ! RekrutmenAccess::canReviewFormasi($user, $f),
             self::INTERVIEW => ! ($j = InterviewJadwal::find($id)) || $j->status !== InterviewJadwal::STATUS_TERJADWAL || $j->hasil_status !== null,
@@ -94,7 +100,7 @@ class TugasNotifikasi
         AbsenAcara::sinkronBerhalangan($p); // cuti / izin di absensi harian juga menyelesaikan tugas ini
         $peserta = $p->peserta()->where('user_id', $user->id)->first();
 
-        return ! $peserta || $peserta->status !== \App\Models\PengumumanPeserta::STATUS_BELUM;
+        return ! $peserta || $peserta->status !== PengumumanPeserta::STATUS_BELUM;
     }
 
     private static function onboardingSelesai(User $user, int $id): bool

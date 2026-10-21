@@ -2,9 +2,14 @@
 
 namespace App\Support;
 
+use App\Models\DataPegawai;
+use App\Models\Jabatan;
+use App\Models\Kepegawaian;
 use App\Models\PengajuanFormasi;
+use App\Models\Penugasan;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 /** Hak akses modul rekrutmen: Kepala SDM, GM & Admin bisa approve/aksi di semua divisi. */
 class RekrutmenAccess
@@ -58,26 +63,31 @@ class RekrutmenAccess
      * Data bagan unit untuk formulir formasi: kepala di atas, pegawai dikelompokkan per jabatan.
      * aktif = pegawai aktif (hijau), tidak aktif = pernah di unit ini tapi sudah nonaktif (abu).
      *
-     * @return array{kepala: list<string>, grup: array<string, list<array{id: int, nama: string, aktif: bool}>>}
+     * jk = 'L' / 'P' / null (belum diisi), dipakai untuk mengisi jumlah laki-laki/perempuan pengganti.
+     *
+     * @return array{kepala: list<string>, grup: array<string, list<array{id: int, nama: string, aktif: bool, jk: ?string}>>}
      */
     public static function baganUnit(string $unit): array
     {
-        $kepalaIds = \App\Models\Penugasan::aktif()->kepala()->where('unit_kerja', $unit)->pluck('data_pegawai_id')->all();
+        $kepalaIds = Penugasan::aktif()->kepala()->where('unit_kerja', $unit)->pluck('data_pegawai_id')->all();
         $orang = [];
+        $jk = fn ($pegawai) => match ($pegawai->jenis_kelamin) {
+            'Laki-laki' => 'L', 'Perempuan' => 'P', default => null
+        };
 
         // Aktif: penugasan aktif di unit ini (termasuk rangkap).
-        \App\Models\Penugasan::aktif()->where('unit_kerja', $unit)->with('dataPegawai:id,nama_lengkap')
+        Penugasan::aktif()->where('unit_kerja', $unit)->with('dataPegawai:id,nama_lengkap,jenis_kelamin')
             ->whereHas('dataPegawai.kepegawaian', fn ($q) => $q->where('status_rekrutmen', 'Aktif'))->get()
-            ->each(function ($p) use (&$orang, $kepalaIds) {
+            ->each(function ($p) use (&$orang, $kepalaIds, $jk) {
                 if ($p->dataPegawai && ! in_array($p->data_pegawai_id, $kepalaIds, true)) {
-                    $orang[$p->data_pegawai_id] = ['id' => $p->data_pegawai_id, 'nama' => $p->dataPegawai->nama_lengkap, 'aktif' => true, 'jabatan' => mb_strtoupper((string) $p->jabatan) ?: 'LAINNYA'];
+                    $orang[$p->data_pegawai_id] = ['id' => $p->data_pegawai_id, 'nama' => $p->dataPegawai->nama_lengkap, 'aktif' => true, 'jk' => $jk($p->dataPegawai), 'jabatan' => mb_strtoupper((string) $p->jabatan) ?: 'LAINNYA'];
                 }
             });
         // Tidak aktif: unit terakhirnya unit ini.
-        \App\Models\Kepegawaian::where('unit_kerja', $unit)->where('status_rekrutmen', 'Tidak Aktif')->with('dataPegawai:id,nama_lengkap')->get()
-            ->each(function ($k) use (&$orang) {
+        Kepegawaian::where('unit_kerja', $unit)->where('status_rekrutmen', 'Tidak Aktif')->with('dataPegawai:id,nama_lengkap,jenis_kelamin')->get()
+            ->each(function ($k) use (&$orang, $jk) {
                 if ($k->dataPegawai && ! isset($orang[$k->data_pegawai_id])) {
-                    $orang[$k->data_pegawai_id] = ['id' => $k->data_pegawai_id, 'nama' => $k->dataPegawai->nama_lengkap, 'aktif' => false, 'jabatan' => mb_strtoupper((string) $k->jabatan) ?: 'LAINNYA'];
+                    $orang[$k->data_pegawai_id] = ['id' => $k->data_pegawai_id, 'nama' => $k->dataPegawai->nama_lengkap, 'aktif' => false, 'jk' => $jk($k->dataPegawai), 'jabatan' => mb_strtoupper((string) $k->jabatan) ?: 'LAINNYA'];
                 }
             });
 
@@ -85,28 +95,24 @@ class RekrutmenAccess
             ->map(fn ($g) => $g->map(fn ($o) => collect($o)->except('jabatan')->all())->values()->all())->all();
 
         return [
-            'kepala' => \App\Models\DataPegawai::whereIn('id', $kepalaIds)->pluck('nama_lengkap')->all(),
+            'kepala' => DataPegawai::whereIn('id', $kepalaIds)->pluck('nama_lengkap')->all(),
             'grup' => $grup,
         ];
     }
 
     /**
-     * Jabatan yang boleh diajukan untuk $unit: jabatan yang memang ada di unit itu (penugasan aktif & data kepegawaian),
-     * dan terdaftar di Master Jabatan. Mencegah Kepala Keuangan memilih mis. "STAFF STCH".
+     * Jabatan yang boleh diajukan untuk $unit: jabatan yang di Master Jabatan ditautkan ke unit itu
+     * (diatur Admin di Master Jabatan). Mencegah Kepala Keuangan memilih mis. "STAFF STCH".
      *
      * @return list<string>
      */
     public static function jabatanUnit(string $unit): array
     {
-        $dipakai = \App\Models\Penugasan::aktif()->where('unit_kerja', $unit)->pluck('jabatan')
-            ->merge(\App\Models\Kepegawaian::where('unit_kerja', $unit)->where('status_rekrutmen', 'Aktif')->pluck('jabatan'))
-            ->filter()->map(fn ($j) => mb_strtoupper(trim($j)))->unique();
-
-        return array_values(array_filter(\App\Models\Jabatan::daftar(), fn ($j) => $dipakai->contains(mb_strtoupper($j))));
+        return Jabatan::perUnit()[$unit] ?? [];
     }
 
     /** GM unit: GM yang memegang divisi itu; bila tak ada, GM tanpa batas divisi. Bisa kosong. */
-    public static function gmFormasi(PengajuanFormasi $formasi): \Illuminate\Support\Collection
+    public static function gmFormasi(PengajuanFormasi $formasi): Collection
     {
         $utama = User::gmUtamaUntuk($formasi->unit_kerja);
 

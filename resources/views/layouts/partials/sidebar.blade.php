@@ -2,6 +2,7 @@
     Sidebar bersama untuk semua panel. Variabel:
     $menu    = [['bagian' => ?string, 'item' => [[label, ikon, route, polaAktif, tampil, badge, (opsional) badgePeringatan, (opsional) eksternal]]]]
     $beranda = nama route tujuan logo
+    Semua bagian selalu terbuka (tanpa dropdown): judul bagian kecil + daftar menu, supaya tugas langsung terlihat.
 --}}
 @php $pengguna = Auth::user(); @endphp
 <aside class="admin-sidebar" id="adminSidebar" aria-label="Navigasi utama">
@@ -17,38 +18,15 @@
 
     <nav class="sidebar-nav">
         @foreach ($menu as $grup)
-            @php
-                $tampil = array_values(array_filter($grup['item'], fn ($i) => $i[4]));
-                // Bagian bernama dengan ≥ 2 menu → dropdown; menu tunggal cukup tampil sebagai link biasa.
-                $dropdown = $grup['bagian'] && count($tampil) > 1;
-            @endphp
+            @php $tampil = array_values(array_filter($grup['item'], fn ($i) => $i[4])); @endphp
             @continue(! $tampil)
 
-            @if ($dropdown)
-                @php
-                    $kunci = \Illuminate\Support\Str::slug($grup['bagian']);
-                    $grupAktif = collect($tampil)->contains(fn ($i) => ! ($i[7] ?? false) && request()->routeIs($i[3]));
-                    $totalBadge = collect($tampil)->sum(fn ($i) => (int) $i[5]);
-                    $adaPeringatan = collect($tampil)->contains(fn ($i) => $i[5] && ($i[6] ?? false));
-                @endphp
-                <div class="nav-grup {{ $grupAktif ? 'terbuka berisi-aktif' : '' }}" data-nav-grup="{{ $kunci }}">
-                    <button type="button" class="nav-link nav-grup-toggle" aria-expanded="{{ $grupAktif ? 'true' : 'false' }}"
-                        aria-controls="navsub-{{ $kunci }}" title="{{ $grup['bagian'] }}">
-                        <span class="nav-icon"><i class="bi {{ $grup['ikon'] ?? 'bi-folder2' }}" aria-hidden="true"></i></span>
-                        <span class="nav-text">{{ $grup['bagian'] }}</span>
-                        @if ($totalBadge)
-                            <span class="nav-badge nav-badge-grup {{ $adaPeringatan ? 'is-warning' : '' }}" aria-label="{{ $totalBadge }} perlu perhatian">{{ $totalBadge > 99 ? '99+' : $totalBadge }}</span>
-                        @endif
-                        <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
-                    </button>
-                    <div class="nav-sub" id="navsub-{{ $kunci }}">
-                        <div class="nav-sub-isi">
-                            <div class="nav-sub-judul" aria-hidden="true">{{ $grup['bagian'] }}</div>
-                            @foreach ($tampil as $item)
-                                @include('layouts.partials.sidebar-link', ['item' => $item])
-                            @endforeach
-                        </div>
-                    </div>
+            @if ($grup['bagian'])
+                <div class="nav-bagian" role="group" aria-label="{{ $grup['bagian'] }}">
+                    <div class="nav-bagian-judul">{{ $grup['bagian'] }}</div>
+                    @foreach ($tampil as $item)
+                        @include('layouts.partials.sidebar-link', ['item' => $item])
+                    @endforeach
                 </div>
             @else
                 @foreach ($tampil as $item)

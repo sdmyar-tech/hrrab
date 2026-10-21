@@ -40,7 +40,7 @@ class JadwalKerjaPegawai extends Model
     /**
      * Jam masuk & pulang pada tanggal tertentu (null bila bukan hari kerjanya).
      *
-     * @return array{masuk: string, pulang: string}|null  format H:i
+     * @return array{masuk: string, pulang: string}|null format H:i
      */
     public function jamPada(CarbonInterface $tanggal): ?array
     {

@@ -36,7 +36,6 @@
                 </div>
             </section>
         @else
-            {{-- Pilih bulan --}}
             <div class="panel p-2 p-md-3 mb-3 d-flex align-items-center gap-2">
                 <a href="{{ route('absensi.saya', ['bulan' => $bulan->copy()->subMonth()->format('Y-m')]) }}" class="btn btn-light" aria-label="Bulan sebelumnya"><i class="bi bi-chevron-left"></i></a>
                 <div class="text-center flex-grow-1">

@@ -45,7 +45,7 @@ class PenilaianAbsensi
      * Nilai absensi beberapa pegawai pada rentang tanggal.
      *
      * @param  Collection<int, DataPegawai>  $pegawais
-     * @return array<int, array<string, array>>  [pegawai_id][Y-m-d] => hasil
+     * @return array<int, array<string, array>> [pegawai_id][Y-m-d] => hasil
      */
     public static function rentang(Collection $pegawais, CarbonInterface $dari, CarbonInterface $sampai): array
     {
@@ -88,7 +88,6 @@ class PenilaianAbsensi
         return $hasil;
     }
 
-    /** Nilai satu hari. */
     /** @param array{0: ?string, 1: ?string} $cakupan  tanggal data mesin paling awal & paling akhir */
     public static function nilai(DataPegawai $p, CarbonInterface $tanggal, ?Absensi $a, ?PengajuanCuti $cuti, Collection $lembur, Collection $izin, array $cakupan = [null, null]): array
     {

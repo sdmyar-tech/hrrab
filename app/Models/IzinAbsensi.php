@@ -14,6 +14,7 @@ class IzinAbsensi extends Model
     use Concerns\DicatatLog;
 
     public const JENIS_TELAT = 'telat';
+
     public const JENIS_PULANG_CEPAT = 'pulang_cepat';
 
     public const JENIS = [
@@ -43,7 +44,6 @@ class IzinAbsensi extends Model
         return $this->dataPegawai?->nama_lengkap ?? ($this->unit_kerja ? 'Unit ' . $this->unit_kerja : 'Semua pegawai');
     }
 
-    /** Apakah izin ini berlaku untuk pegawai di unit tersebut. */
     public function berlakuUntuk(int $pegawaiId, ?string $unit): bool
     {
         return $this->data_pegawai_id

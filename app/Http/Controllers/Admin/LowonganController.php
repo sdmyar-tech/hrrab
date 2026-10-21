@@ -3,22 +3,25 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Jabatan;
 use App\Models\Lowongan;
+use App\Models\User;
+use App\Support\ExcelExporter;
 use App\Support\RekrutmenAccess;
 use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use App\Support\ExcelExporter;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class LowonganController extends Controller
 {
     public function index(Request $request): View
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         Lowongan::tutupYangKedaluwarsa();
@@ -37,7 +40,7 @@ class LowonganController extends Controller
 
     public function export(Request $request): BinaryFileResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $rows = $this->filteredQuery($request, $user)->with('dipublikasikanOleh')->orderBy('id')->get()->map(fn (Lowongan $l) => [
@@ -60,7 +63,7 @@ class LowonganController extends Controller
         ], $rows, 'Lowongan');
     }
 
-    private function filteredQuery(Request $request, \App\Models\User $user)
+    private function filteredQuery(Request $request, User $user)
     {
         $query = Lowongan::with('pengajuanFormasi')->withCount('lamarans');
         RekrutmenAccess::scopeUnitKerja($query, $user);
@@ -201,12 +204,12 @@ class LowonganController extends Controller
 
     private function tanggalTutupLewat($tanggalTutup): bool
     {
-        return $tanggalTutup && \Illuminate\Support\Carbon::parse($tanggalTutup)->lt(now()->startOfDay());
+        return $tanggalTutup && Carbon::parse($tanggalTutup)->lt(now()->startOfDay());
     }
 
     private function authorizeAccess(Lowongan $lowongan): void
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if (RekrutmenAccess::canKelolaSemuaLowongan($user)) {
@@ -232,7 +235,7 @@ class LowonganController extends Controller
         return $request->validate([
             'judul' => ['required', 'string', 'max:150'],
             'unit_kerja' => ['required', 'string', Rule::in(config('kepegawaian.unit_kerja'))],
-            'jabatan' => ['required', 'string', Rule::in(\App\Models\Jabatan::daftar())],
+            'jabatan' => ['required', 'string', Rule::in(Jabatan::daftar())],
             'jumlah_dibutuhkan' => ['required', 'integer', 'min:1', 'max:50'],
             'deskripsi' => ['nullable', 'string', 'max:5000'],
             'kualifikasi' => ['nullable', 'string', 'max:5000'],

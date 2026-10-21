@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DicatatLog;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -9,13 +11,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Penugasan extends Model
 {
-    use \App\Models\Concerns\DicatatLog;
+    use DicatatLog;
 
     public const PERAN_ANGGOTA = 'anggota';
+
     public const PERAN_KEPALA = 'kepala';
 
     public const JENIS_AWAL = 'awal';
+
     public const JENIS_MUTASI = 'mutasi';
+
     public const JENIS_RANGKAP = 'rangkap';
 
     protected $fillable = [
@@ -50,7 +55,7 @@ class Penugasan extends Model
 
     public function scopeAktif(Builder $query, CarbonInterface|string|null $tanggal = null): Builder
     {
-        $tanggal = $tanggal ? \Carbon\Carbon::parse($tanggal)->toDateString() : now()->toDateString();
+        $tanggal = $tanggal ? Carbon::parse($tanggal)->toDateString() : now()->toDateString();
 
         return $query->where('tanggal_mulai', '<=', $tanggal)
             ->where(fn ($q) => $q->whereNull('tanggal_selesai')->orWhere('tanggal_selesai', '>=', $tanggal));

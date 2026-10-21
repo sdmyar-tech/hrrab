@@ -11,9 +11,13 @@ class Absensi extends Model
     use Concerns\DicatatLog;
 
     public const MANUAL_HADIR = 'hadir';
+
     public const MANUAL_IZIN = 'izin';
+
     public const MANUAL_SAKIT = 'sakit';
+
     public const MANUAL_DINAS_LUAR = 'dinas_luar';
+
     public const MANUAL_ALPA = 'alpa';
 
     public const STATUS_MANUAL = [

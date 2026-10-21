@@ -19,7 +19,7 @@ class XlsxWriter
     public static function tulis(array $sheets): string
     {
         $path = tempnam(sys_get_temp_dir(), 'xlsx');
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
 
         if ($zip->open($path, ZipArchive::OVERWRITE) !== true) {
             throw new RuntimeException('Gagal membuat file Excel.');

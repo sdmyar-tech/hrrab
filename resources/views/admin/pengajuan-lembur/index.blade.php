@@ -103,39 +103,14 @@
                                     @endif
                                 </td>
                                 <td class="text-end">
-                                    <a href="{{ route('admin.pengajuan-lembur.show', $item) }}" class="btn btn-outline-secondary btn-sm mb-1">
-                                        <i class="bi bi-eye"></i> Detail
-                                    </a>
-                                    @if ($item->isPending())
-                                        @if (\App\Support\PengajuanWorkflow::canAct(auth()->user(), $item))
-                                            <div class="d-flex gap-1 justify-content-end">
-                                                <form action="{{ route('admin.pengajuan-lembur.approve', $item->id) }}" method="POST">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-success btn-sm"
-                                                        data-confirm="true"
-                                                        data-icon="question"
-                                                        data-title="Setujui Pengajuan Lembur?"
-                                                        data-text="Pengajuan lembur {{ $item->dataPegawai?->nama_lengkap }} pada {{ optional($item->tanggal)->translatedFormat('d M Y') }} akan disetujui."
-                                                        data-confirm-text="Ya, Setujui"
-                                                        data-confirm-color="#198754"
-                                                        data-cancel-text="Batal">
-                                                        <i class="bi bi-check-lg"></i> Setujui
-                                                    </button>
-                                                </form>
-                                                <form action="{{ route('admin.pengajuan-lembur.reject', $item->id) }}" method="POST" class="form-reject-lembur">
-                                                    @csrf
-                                                    <input type="hidden" name="catatan_admin" value="">
-                                                    <button type="button" class="btn btn-outline-danger btn-sm btn-reject-lembur">
-                                                        <i class="bi bi-x-lg"></i> Tolak
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        @else
-                                            <span class="text-muted small">Menunggu: {{ $item->currentLevelLabel() }}</span>
-                                        @endif
-                                    @else
-                                        <span class="text-muted small">Sudah diproses</span>
-                                    @endif
+                                    @include('admin.partials.aksi-pengajuan', [
+                                        'detail' => route('admin.pengajuan-lembur.show', $item),
+                                        'setujui' => route('admin.pengajuan-lembur.approve', $item->id),
+                                        'tolak' => route('admin.pengajuan-lembur.reject', $item->id),
+                                        'kelasTolak' => 'btn-reject-lembur',
+                                        'judulSetujui' => 'Setujui Pengajuan Lembur?',
+                                        'teksSetujui' => 'Pengajuan lembur ' . $item->dataPegawai?->nama_lengkap . ' pada ' . optional($item->tanggal)->translatedFormat('d M Y') . ' akan disetujui.',
+                                    ])
                                 </td>
                             </tr>
                         {{-- Rincian untuk penyetuju: tampil sebelum tombol Setujui/Tolak diklik. --}}

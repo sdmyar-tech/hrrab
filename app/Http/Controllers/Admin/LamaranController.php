@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\EksporController;
 use App\Models\DataPegawai;
 use App\Models\InterviewJadwal;
 use App\Models\KontrakJadwal;
@@ -11,11 +12,12 @@ use App\Models\Lowongan;
 use App\Models\Penugasan;
 use App\Models\ScreeningOnboarding;
 use App\Models\User;
+use App\Support\ExcelExporter;
 use App\Support\InterviewFlow;
 use App\Support\Kalender;
+use App\Support\Notifikasi;
 use App\Support\OnboardingFlow;
 use App\Support\PenugasanService;
-use App\Support\ExcelExporter;
 use App\Support\RekrutmenAccess;
 use App\Support\Urutan;
 use Carbon\Carbon;
@@ -27,13 +29,12 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use App\Support\Notifikasi;
 
 class LamaranController extends Controller
 {
     public function index(Request $request): View
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $query = $this->filteredQuery($request, $user);
@@ -58,7 +59,7 @@ class LamaranController extends Controller
 
     public function export(Request $request): BinaryFileResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $lamarans = $this->filteredQuery($request, $user)
@@ -100,13 +101,13 @@ class LamaranController extends Controller
     /** Semua jadwal rekrutmen (interview, onboarding, kontrak) dari lamaran sesuai filter aktif, satu sheet per jenis. */
     public function exportJadwal(Request $request): BinaryFileResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $lamarans = $this->filteredQuery($request, $user)
             ->with(['interviewJadwals.interviewer', 'screeningOnboardings', 'kontrakJadwals'])->orderBy('id')->get();
 
-        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('jadwal-rekrutmen'), \App\Http\Controllers\EksporController::sheetJadwal($lamarans));
+        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('jadwal-rekrutmen'), EksporController::sheetJadwal($lamarans));
     }
 
     private function filteredQuery(Request $request, User $user)
@@ -156,7 +157,7 @@ class LamaranController extends Controller
         $lamaran->load(['dataPelamar.riwayatPekerjaan', 'dataPelamar.riwayatPendidikan', 'dataPegawai.kepegawaian', 'lowongan', 'interviewJadwals.interviewer',
             'screeningOnboardings.pengawas', 'screeningOnboardings.kepala', 'screeningOnboardings.konfirmasiSdmOleh', 'screeningOnboardings.konfirmasiKepalaOleh', 'kontrakJadwals']);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         $tahapBerikutnya = InterviewFlow::tahapBerikutnya($lamaran);
@@ -951,7 +952,7 @@ class LamaranController extends Controller
 
     private function authorizeAccess(Lamaran $lamaran): void
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if (RekrutmenAccess::canLihatSemua($user)) {
@@ -970,7 +971,7 @@ class LamaranController extends Controller
 
     private function authorizeReview(): void
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if (! RekrutmenAccess::canReview($user)) {
