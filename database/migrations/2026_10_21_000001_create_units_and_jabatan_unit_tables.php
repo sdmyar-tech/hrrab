@@ -9,8 +9,8 @@ return new class extends Migration
 {
     /**
      * Master Unit (sebelumnya daftar tetap di config kepegawaian.unit_kerja) + hubungan jabatan ↔ unit.
-     * Isi awal: urutan unit dari config, ditambah unit yang sudah terpakai di data; pasangan jabatan–unit dari
-     * pegawai & penugasan aktif (sama dengan aturan lama "jabatan yang ada di unit itu").
+     * Isi awal hanya dari data yang sudah ada (instalasi baru = kosong): unit yang terpakai di data; pasangan
+     * jabatan–unit dari pegawai & penugasan aktif (sama dengan aturan lama "jabatan yang ada di unit itu").
      */
     public function up(): void
     {
@@ -29,8 +29,7 @@ return new class extends Migration
         });
 
         $sekarang = now();
-        $nama = collect(config('kepegawaian.unit_kerja', []))
-            ->merge(DB::table('kepegawaians')->whereNotNull('unit_kerja')->distinct()->pluck('unit_kerja'))
+        $nama = DB::table('kepegawaians')->whereNotNull('unit_kerja')->distinct()->pluck('unit_kerja')
             ->merge(DB::table('penugasans')->whereNotNull('unit_kerja')->distinct()->pluck('unit_kerja'))
             ->map(fn ($u) => trim((string) $u))->filter()->unique(fn ($u) => mb_strtoupper($u))->values();
         DB::table('units')->insert($nama->map(fn ($u, $i) => ['nama' => $u, 'urutan' => $i + 1, 'created_at' => $sekarang, 'updated_at' => $sekarang])->all());

@@ -118,16 +118,23 @@ SESSION_SECURE_COOKIE=true
 php artisan migrate --force --seed
 ```
 
-Migrasi sudah mengisi data referensi (unit, jabatan, tanggal merah). Seeder hanya membuat 2 akun awal,
-belum tertaut ke data pegawai:
+Migrasi hanya membuat struktur tabel — semua tabel kosong (termasuk unit, jabatan, tanggal merah).
+Seeder hanya membuat 2 akun awal, belum tertaut ke data pegawai:
 
 | Akun | Email | Password awal |
 |---|---|---|
 | Super Admin | `superadmin@example.com` | `password123` |
 | Kepala SDM | `kepala.sdm@example.com` | `password123` |
 
-Keduanya **wajib ganti password** saat login pertama. Setelah itu Super Admin mengisi data pegawai, GM,
-dan akun lain dari menu aplikasi; email kedua akun bisa diganti lewat menu User.
+Keduanya **wajib ganti password** saat login pertama. Urutan penyiapan oleh Super Admin:
+
+1. **Master Unit** — tambah semua unit kerja.
+2. **Master Jabatan** — tambah jabatan dan centang unitnya (dropdown jabatan mengikuti unit).
+3. **Data Pegawai** (input/impor Excel) → akun pegawai, GM, koordinator unit.
+4. **Kalender** — tanggal merah terisi otomatis dari API saat halaman internal pertama dibuka
+   (atau tekan *Sinkronkan sekarang*); tambahkan libur yayasan secara manual.
+
+Email kedua akun awal bisa diganti lewat menu User.
 Seeder aman dijalankan ulang (akun yang sudah ada dilewati), tetapi tidak perlu dijalankan di server yang
 sudah berisi data.
 

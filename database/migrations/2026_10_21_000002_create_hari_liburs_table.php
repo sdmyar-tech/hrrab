@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -25,19 +24,6 @@ return new class extends Migration
             $table->foreignId('dibuat_oleh')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
-
-        // Isi awal = libur bertanggal tetap yang dulu ada di config, ditandai "api" agar sinkron pertama menyempurnakan namanya.
-        $nama = ['01-01' => 'Tahun Baru Masehi', '05-01' => 'Hari Buruh Internasional', '06-01' => 'Hari Lahir Pancasila',
-            '08-17' => 'Hari Kemerdekaan R.I.', '12-25' => 'Hari Raya Natal'];
-        $sekarang = now();
-        $baris = [];
-        foreach (range(2026, 2030) as $tahun) {
-            foreach ($nama as $md => $n) {
-                $baris[] = ['tanggal' => "{$tahun}-{$md}", 'nama' => $n, 'jenis' => 'nasional', 'sumber' => 'api', 'aktif' => true,
-                    'created_at' => $sekarang, 'updated_at' => $sekarang];
-            }
-        }
-        DB::table('hari_liburs')->insert($baris);
     }
 
     public function down(): void
