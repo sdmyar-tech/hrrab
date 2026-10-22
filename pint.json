@@ -8,8 +8,5 @@
     "exclude": [
         "storage",
         "bootstrap/cache"
-    ],
-    "notPath": [
-        "seed_gm.php"
     ]
 }
