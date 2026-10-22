@@ -1,0 +1,5 @@
+@extends('errors.layout')
+@section('kode', isset($exception) && method_exists($exception, 'getStatusCode') ? $exception->getStatusCode() : '4xx')
+@section('ikon', 'bi-exclamation-circle')
+@section('judul', 'Permintaan tidak dapat diproses')
+@section('pesan', 'Ada yang tidak sesuai dengan permintaan Anda. Kembali ke halaman sebelumnya lalu coba lagi.')

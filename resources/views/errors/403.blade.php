@@ -1,0 +1,6 @@
+@extends('errors.layout')
+@section('kode', '403')
+@section('ikon', 'bi-shield-lock')
+@section('judul', 'Akses ditolak')
+@section('pesan', 'Akun Anda tidak memiliki izin untuk membuka halaman atau melakukan tindakan ini.')
+@section('catatan', 'Merasa seharusnya punya akses? Hubungi admin sistem agar hak akses akun Anda diperiksa.')
