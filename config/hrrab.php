@@ -17,7 +17,15 @@ return [
     'hari_kerja' => [1, 2, 3, 4, 5],
 
     // Tanggal libur (format Y-m-d) yang tidak dihitung sebagai hari kerja.
+    // Saat aplikasi berjalan diganti daftar tanggal merah aktif dari menu Kalender (tabel hari_liburs); daftar ini hanya cadangan.
     'hari_libur' => $liburTetap,
+
+    // Sumber sinkronisasi otomatis tanggal merah (dicoba berurutan; API hanya dipakai untuk sinkron, bukan dibaca langsung).
+    'libur_api' => [
+        'google_ics' => env('LIBUR_ICS_URL', 'https://calendar.google.com/calendar/ical/id.indonesian%23holiday%40group.v.calendar.google.com/public/basic.ics'),
+        'nager' => env('LIBUR_NAGER_URL', 'https://date.nager.at/api/v3/PublicHolidays/{tahun}/ID'),
+        'interval_hari' => 30,   // sinkron otomatis bila sinkron berhasil terakhir lebih lama dari ini
+    ],
 
     // Masa simpan log aktivitas (hari). Lewat masa ini log diarsipkan ke Excel di storage lalu dihapus dari database.
     'retensi_log' => [

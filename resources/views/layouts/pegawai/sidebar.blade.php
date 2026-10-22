@@ -8,6 +8,7 @@
     $menu = [
         ['bagian' => null, 'item' => [
             ['Dashboard', 'bi-speedometer2', 'pegawai.dashboard', 'pegawai.dashboard', true, null],
+            ['Kalender', 'bi-calendar3', 'kalender.index', 'kalender.*', true, null],
         ]],
         ['bagian' => 'Pengajuan Saya', 'item' => [
             ['Cuti', 'bi-calendar-plus', 'pegawai.pengajuan-cuti', 'pegawai.pengajuan-cuti*', $u?->can('ajukan-cuti'), null],

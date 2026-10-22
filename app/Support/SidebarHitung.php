@@ -11,6 +11,7 @@ use App\Models\PengajuanLembur;
 use App\Models\Pengumuman;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /** Angka badge di sidebar: pekerjaan yang menunggu user (approval, review, interview) & yang belum dibaca. */
 class SidebarHitung
@@ -44,6 +45,16 @@ class SidebarHitung
         if (Cache::add('evaluasi-kontrak:harian:v2:' . now()->toDateString(), true, now()->endOfDay())) {
             EvaluasiKontrakAlur::buatJatuhTempo();
             EvaluasiKontrakAlur::kirimTugasTertunda();
+        }
+        // Sinkron tanggal merah otomatis tanpa cron: dicek sekali sehari; bila perlu, dijalankan setelah halaman terkirim.
+        if (Cache::add('kalender:cek-sinkron:' . now()->toDateString(), true, now()->endOfDay()) && SinkronLibur::perluOtomatis()) {
+            dispatch(function () {
+                try {
+                    SinkronLibur::jalankan();
+                } catch (\Throwable $e) {
+                    Log::warning($e->getMessage());
+                }
+            })->afterResponse();
         }
         if (EvaluasiKontrakAlur::bolehMembuka($user)) {
             $hitung['evaluasi_kontrak'] = EvaluasiKontrakAlur::jumlahTugas($user);

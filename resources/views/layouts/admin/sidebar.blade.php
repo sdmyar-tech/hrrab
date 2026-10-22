@@ -8,6 +8,7 @@
     $menu = [
         ['bagian' => null, 'item' => [
             ['Dashboard', 'bi-speedometer2', 'admin.dashboard', 'admin.dashboard', true, null],
+            ['Kalender', 'bi-calendar3', 'kalender.index', 'kalender.*', true, null],
         ]],
         // Penyetuju: antrean tugasnya di paling atas. Admin & Pembina: rekap data pengajuan.
         ['bagian' => $penyetuju ? 'Tugas Saya' : 'Data Pengajuan', 'item' => [

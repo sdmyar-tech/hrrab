@@ -5,6 +5,7 @@ use App\Support\ArsipLog;
 use App\Support\EvaluasiKontrakAlur;
 use App\Support\Notifikasi;
 use App\Support\PenugasanService;
+use App\Support\SinkronLibur;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -49,3 +50,10 @@ Artisan::command('kontrak:evaluasi', function () {
     $this->info("Evaluasi kontrak baru: {$baru}; penilai/pemutus dikabari ulang: {$dikabari}");
 })->purpose('Buat evaluasi kontrak untuk pegawai yang kontraknya habis dalam 30 hari');
 Schedule::command('kontrak:evaluasi')->dailyAt('06:00');
+
+Artisan::command('kalender:sinkron-libur {tahun?*}', function (array $tahun = []) {
+    $hasil = SinkronLibur::jalankan(array_map('intval', $tahun) ?: null);
+    $this->info("Sumber {$hasil['sumber']} (" . implode(', ', $hasil['tahun']) . "): {$hasil['tambah']} baru, {$hasil['ubah']} diperbarui, "
+        . "{$hasil['hapus']} dihapus, {$hasil['dilewati']} dilewati karena diatur manual.");
+})->purpose('Sinkronkan tanggal merah (libur nasional & cuti bersama) dari API; bawaan tahun ini & tahun depan');
+Schedule::command('kalender:sinkron-libur')->monthlyOn(1, '01:15');

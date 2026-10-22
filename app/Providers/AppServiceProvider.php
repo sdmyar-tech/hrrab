@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\HariLibur;
 use App\Models\Pengumuman;
 use App\Models\Unit;
 use App\Models\User;
@@ -23,9 +24,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Master Unit menggantikan daftar unit di config: semua dropdown/validasi config('kepegawaian.unit_kerja') ikut master.
+        // Master Unit & Kalender menggantikan daftar di config: semua pemakai config('kepegawaian.unit_kerja') dan
+        // config('hrrab.hari_libur') (hari kerja, absensi, cuti, jadwal rekrutmen) ikut data di database.
         try {
-            config(['kepegawaian.unit_kerja' => Unit::daftar()]);
+            config(['kepegawaian.unit_kerja' => Unit::daftar(), 'hrrab.hari_libur' => HariLibur::daftarTanggal()]);
         } catch (\Throwable) {
             // Basis data belum siap (mis. saat instalasi/migrasi pertama): tetap pakai daftar di config.
         }
@@ -52,6 +54,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('proses-pengajuan', fn (User $user) => $user->hasAbility(User::ABILITY_APPROVE) || $user->isAdmin());
         // Atur alur persetujuan/atasan pegawai & paksa ganti password akun: hanya Kepala SDM dan Admin.
         Gate::define('atur-akun-pegawai', fn (User $user) => $user->isAdmin() || $user->isKepalaSdm());
+        // Kalender (tanggal merah): hanya Super Admin & Kepala SDM yang mengubah; akun lain hanya melihat.
+        Gate::define('kelola-kalender', fn (User $user) => $user->isAdmin() || $user->isKepalaSdm());
 
         View::composer(['layouts.admin.sidebar', 'layouts.pegawai.sidebar'], function ($view) {
             $user = Auth::user();

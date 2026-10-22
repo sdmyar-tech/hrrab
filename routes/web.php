@@ -30,6 +30,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\EksporController;
 use App\Http\Controllers\InterviewJadwalController;
 use App\Http\Controllers\JadwalKandidatController;
+use App\Http\Controllers\KalenderController;
 use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\Pegawai\DashboardController as PegawaiDashboardController;
 use App\Http\Controllers\Pegawai\IzinKeluarController as PegawaiIzinKeluarController;
@@ -335,6 +336,16 @@ Route::middleware(['auth', 'nocache'])->group(function () {
     Route::get('/pelamar/lamaran-export', [EksporController::class, 'lamaranSaya'])->name('pelamar.lamaran.export')->middleware('pelamar');
 
     Route::middleware('internal')->group(function () {
+        // Kalender pegawai: semua akun internal melihat; tanggal merah hanya diatur Super Admin & Kepala SDM.
+        Route::get('/kalender', [KalenderController::class, 'index'])->name('kalender.index');
+        Route::middleware('can:kelola-kalender')->prefix('kalender')->name('kalender.')->group(function () {
+            Route::post('/sinkron', [KalenderController::class, 'sinkron'])->name('sinkron');
+            Route::post('/', [KalenderController::class, 'store'])->name('store');
+            Route::put('/{hariLibur}', [KalenderController::class, 'update'])->name('update');
+            Route::post('/{hariLibur}/alih', [KalenderController::class, 'alih'])->name('alih');
+            Route::delete('/{hariLibur}', [KalenderController::class, 'destroy'])->name('destroy');
+        });
+
         Route::get('/pengumuman', [PengumumanController::class, 'index'])->name('pengumuman.index');
         Route::post('/pengumuman/baca-semua', [PengumumanController::class, 'bacaSemua'])->name('pengumuman.baca-semua');
 
