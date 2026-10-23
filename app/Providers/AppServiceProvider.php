@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\HariLibur;
+use App\Models\LokasiKerja;
 use App\Models\Pengumuman;
 use App\Models\Unit;
 use App\Models\User;
@@ -24,10 +25,14 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Master Unit & Kalender menggantikan daftar di config: semua pemakai config('kepegawaian.unit_kerja') dan
-        // config('hrrab.hari_libur') (hari kerja, absensi, cuti, jadwal rekrutmen) ikut data di database.
+        // Master Unit, Lokasi Kerja & Kalender menggantikan daftar di config: semua pemakai config('kepegawaian.unit_kerja'),
+        // config('kepegawaian.lokasi_kerja') dan config('hrrab.hari_libur') (hari kerja, absensi, cuti, jadwal rekrutmen) ikut database.
         try {
-            config(['kepegawaian.unit_kerja' => Unit::daftar(), 'hrrab.hari_libur' => HariLibur::daftarTanggal()]);
+            config([
+                'kepegawaian.unit_kerja' => Unit::daftar(),
+                'kepegawaian.lokasi_kerja' => LokasiKerja::daftar(),
+                'hrrab.hari_libur' => HariLibur::daftarTanggal(),
+            ]);
         } catch (\Throwable) {
             // Basis data belum siap (mis. saat instalasi/migrasi pertama): tetap pakai daftar di config.
         }

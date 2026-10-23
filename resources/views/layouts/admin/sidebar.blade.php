@@ -50,6 +50,7 @@
         ['bagian' => 'Sistem', 'item' => [
             ['Kelola Akun', 'bi-person-lock', 'admin.users.index', 'admin.users.*', $u->can('kelola-sistem'), null],
             ['Master Jabatan', 'bi-diagram-3', 'admin.jabatan.index', 'admin.jabatan.*', $u->can('kelola-sistem'), null],
+            ['Master Lokasi Kerja', 'bi-geo-alt', 'admin.lokasi-kerja.index', 'admin.lokasi-kerja.*', $u->can('kelola-sistem'), null],
             ['Editor Data', 'bi-database-gear', 'admin.data.index', 'admin.data.*', $u->isAdmin(), null],
             ['Log Aktivitas', 'bi-journal-text', 'admin.log.index', 'admin.log.*', $u->can('kelola-sistem'), null],
         ]],

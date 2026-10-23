@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\JabatanController as AdminJabatanController;
 use App\Http\Controllers\Admin\KandidatInternalController;
 use App\Http\Controllers\Admin\LamaranController as AdminLamaranController;
 use App\Http\Controllers\Admin\LogAktivitasController as AdminLogAktivitasController;
+use App\Http\Controllers\Admin\LokasiKerjaController as AdminLokasiKerjaController;
 use App\Http\Controllers\Admin\LowonganController as AdminLowonganController;
 use App\Http\Controllers\Admin\PegawaiController as AdminPegawaiController;
 use App\Http\Controllers\Admin\PengajuanCutiController as AdminPengajuanCutiController;
@@ -169,6 +170,13 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::post('/', [AdminJabatanController::class, 'store'])->name('store');
             Route::put('/{jabatan}', [AdminJabatanController::class, 'update'])->name('update');
             Route::delete('/{jabatan}', [AdminJabatanController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::prefix('lokasi-kerja')->name('lokasi-kerja.')->middleware('can:kelola-sistem')->group(function () {
+            Route::get('/', [AdminLokasiKerjaController::class, 'index'])->name('index');
+            Route::post('/', [AdminLokasiKerjaController::class, 'store'])->name('store');
+            Route::put('/{lokasiKerja}', [AdminLokasiKerjaController::class, 'update'])->name('update');
+            Route::delete('/{lokasiKerja}', [AdminLokasiKerjaController::class, 'destroy'])->name('destroy');
         });
 
         Route::middleware('can:kelola-penugasan')->group(function () {

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\DataPegawai;
+use App\Models\LokasiKerja;
 use App\Models\User;
 use App\Support\Import\FormatTeks as F;
 use App\Support\Import\XlsxReader;
@@ -576,6 +577,8 @@ class ImportPegawai extends Command
             foreach ($akun as $a) {
                 $this->simpanAkun($a, $idPerBaris);
             }
+
+            LokasiKerja::daftarkan($pegawai->pluck('kepegawaian.lokasi_kerja'));
         });
 
         $this->newLine();

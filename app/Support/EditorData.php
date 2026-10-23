@@ -140,6 +140,8 @@ class EditorData
                 'tautan' => fn ($m) => self::rute('admin.users.edit', $m)],
             'jabatan' => ['grup' => 'Sistem', 'label' => 'Master Jabatan', 'ikon' => 'bi-diagram-3', 'model' => Models\Jabatan::class,
                 'judul' => fn ($m) => $m->nama, 'kolom' => ['updated_at'], 'cari' => ['nama']],
+            'lokasi_kerja' => ['grup' => 'Sistem', 'label' => 'Master Lokasi Kerja', 'ikon' => 'bi-geo-alt', 'model' => Models\LokasiKerja::class,
+                'judul' => fn ($m) => $m->nama, 'kolom' => ['urutan', 'updated_at'], 'cari' => ['nama', 'keterangan']],
         ];
     }
 

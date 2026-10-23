@@ -130,8 +130,9 @@ Keduanya **wajib ganti password** saat login pertama. Urutan penyiapan oleh Supe
 
 1. **Master Unit** — tambah semua unit kerja.
 2. **Master Jabatan** — tambah jabatan dan centang unitnya (dropdown jabatan mengikuti unit).
-3. **Data Pegawai** (input/impor Excel) → akun pegawai, GM, koordinator unit.
-4. **Kalender** — tanggal merah terisi otomatis dari API saat halaman internal pertama dibuka
+3. **Master Lokasi Kerja** — tambah tempat/area kerja (pilihan lokasi di pegawai & lowongan).
+4. **Data Pegawai** (input/impor Excel) → akun pegawai, GM, koordinator unit.
+5. **Kalender** — tanggal merah terisi otomatis dari API saat halaman internal pertama dibuka
    (atau tekan *Sinkronkan sekarang*); tambahkan libur yayasan secara manual.
 
 Email kedua akun awal bisa diganti lewat menu User.
