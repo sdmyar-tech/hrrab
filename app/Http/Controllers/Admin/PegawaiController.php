@@ -420,7 +420,7 @@ class PegawaiController extends Controller
             'tanggal_lahir' => ['required', 'date', 'before:today'],
             'jenis_kelamin' => ['required', Rule::in(['Laki-laki', 'Perempuan'])],
             'agama' => ['required', 'string', 'max:50'],
-            'golongan_darah' => ['nullable', Rule::in(['O+', 'A+', 'B+', 'AB+', 'O-', 'A-', 'B-', 'AB-', 'Rh-Null', 'Belum Diketahui'])],
+            'golongan_darah' => ['nullable', Rule::in(DataPegawai::GOLONGAN_DARAH)],
             'status_pernikahan' => ['required', Rule::in(['Belum Menikah', 'Menikah', 'Cerai Hidup', 'Cerai Mati'])],
             'jumlah_tanggungan' => ['nullable', 'integer', 'min:0', 'max:20'],
             'nama_ibu_kandung' => ['required', 'string', 'max:255'],

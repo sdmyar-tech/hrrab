@@ -117,7 +117,7 @@
                                     <div class="col-md-3">
                                         <label class="form-label">Golongan Darah</label>
                                         <select name="golongan_darah" class="form-select">
-                                            @foreach(['Belum Diketahui', 'A', 'B', 'AB', 'O'] as $gol)
+                                            @foreach(\App\Models\DataPegawai::GOLONGAN_DARAH as $gol)
                                                 <option value="{{ $gol }}" {{ old('golongan_darah', $pegawai->golongan_darah) == $gol ? 'selected' : '' }}>{{ $gol }}</option>
                                             @endforeach
                                         </select>
@@ -403,7 +403,8 @@
         document.addEventListener("DOMContentLoaded", function () {
             const form = document.getElementById('wizardPegawaiForm');
             const tabs = Array.from(document.querySelectorAll('#pegawaiFormTab button[data-bs-toggle="tab"]'));
-            const panes = Array.from(document.querySelectorAll('.tab-pane'));
+            // Hanya pane form ini (navbar juga punya .tab-pane) agar indeks pane = indeks tab.
+            const panes = Array.from(document.querySelectorAll('#pegawaiFormTabContent > .tab-pane'));
             const btnPrev = document.getElementById('btnPrev');
             const btnNext = document.getElementById('btnNext');
             const btnSubmit = document.getElementById('btnSubmit');
@@ -533,6 +534,19 @@
             });
 
             @if ($errors->any())
+                // Tandai juga field yang ditolak server tapi belum diberi kelas is-invalid di Blade, agar tab-nya ikut ditandai & dibuka.
+                Object.entries(@json($errors->toArray())).forEach(([nama, pesan]) => {
+                    const el = form.querySelector(`[name="${nama}"], [name="${nama}[]"]`);
+                    if (!el || el.classList.contains('is-invalid')) return;
+                    el.classList.add('is-invalid');
+                    if (!el.parentElement.querySelector('.invalid-feedback')) {
+                        const umpan = document.createElement('div');
+                        umpan.className = 'invalid-feedback';
+                        umpan.textContent = pesan[0];
+                        el.after(umpan);
+                    }
+                });
+
                 panes.forEach((pane, index) => {
                     if (pane.querySelector('.is-invalid')) {
                         const numberBadge = tabs[index].querySelector('.badge');
@@ -546,13 +560,15 @@
                     }
                 });
 
-                const firstError = document.querySelector('.is-invalid');
+                const firstError = form.querySelector('.is-invalid');
                 if (firstError) {
                     const errorPane = firstError.closest('.tab-pane');
                     if (errorPane) {
                         const errorIndex = panes.indexOf(errorPane);
                         activateStep(errorIndex);
                     }
+                    firstError.focus({ preventScroll: true });
+                    firstError.scrollIntoView({ block: 'center' });
                 }
             @endif
         });

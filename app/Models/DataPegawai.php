@@ -14,6 +14,9 @@ class DataPegawai extends Model
 
     protected $table = 'data_pegawais';
 
+    /** Nilai golongan darah yang diterima kolom ENUM data_pegawais.golongan_darah. */
+    public const GOLONGAN_DARAH = ['Belum Diketahui', 'A', 'A+', 'A-', 'B', 'B+', 'B-', 'AB', 'AB+', 'AB-', 'O', 'O+', 'O-'];
+
     protected $fillable = [
         'email',
         'nip',
