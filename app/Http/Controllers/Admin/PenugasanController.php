@@ -41,10 +41,6 @@ class PenugasanController extends Controller
             'unitsTanpaKepala' => PenugasanService::unitsTanpaKepala(),
             'jumlahRangkapAktif' => Penugasan::aktif()->where('is_utama', false)->count(),
             'jumlahTerjadwal' => Penugasan::where('tanggal_mulai', '>', $hariIni)->count(),
-            // Pilihan pegawai untuk dialog "Tambah Mutasi / Rangkap" (tanpa pindah ke Data Pegawai).
-            'pegawaiOpsi' => DataPegawai::with('kepegawaian:id,data_pegawai_id,unit_kerja,jabatan')
-                ->whereHas('kepegawaian', fn ($q) => $q->where('status_rekrutmen', 'Aktif'))
-                ->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip']),
         ]);
     }
 

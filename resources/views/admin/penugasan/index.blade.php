@@ -159,16 +159,9 @@
                     <input type="radio" class="btn-check" name="jenis" id="pj-rangkap" value="rangkap">
                     <label class="btn btn-outline-primary" for="pj-rangkap"><i class="bi bi-diagram-3 me-1"></i>Rangkap Tugas</label>
                 </div>
-                <label class="form-label" for="pj-cari">Pegawai</label>
-                <input type="search" class="form-control form-control-sm mb-2" id="pj-cari" placeholder="Cari nama / NIP / unit / jabatan…" autocomplete="off">
-                <select name="pegawai" class="form-select" size="10" required aria-label="Pilih pegawai">
-                    @foreach ($pegawaiOpsi as $pg)
-                        <option value="{{ $pg->id }}" data-cari="{{ mb_strtolower($pg->nama_lengkap . ' ' . $pg->nip . ' ' . $pg->kepegawaian?->unit_kerja . ' ' . $pg->kepegawaian?->jabatan) }}">
-                            {{ $pg->nama_lengkap }} — {{ $pg->kepegawaian?->jabatan ?? '-' }} ({{ $pg->kepegawaian?->unit_kerja ?? '-' }})
-                        </option>
-                    @endforeach
-                </select>
-                <div class="form-text" data-pj-info>{{ $pegawaiOpsi->count() }} pegawai aktif. Mutasi = pindah unit utama; Rangkap = tugas tambahan di unit lain.</div>
+                <label class="form-label" for="pj-pegawai">Pegawai</label>
+                @include('partials.pilih-pegawai', ['name' => 'pegawai', 'id' => 'pj-pegawai', 'wajib' => true])
+                <div class="form-text">{{ \App\Models\DataPegawai::opsiPilihan()->count() }} pegawai aktif. Mutasi = pindah unit utama; Rangkap = tugas tambahan di unit lain.</div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
@@ -178,22 +171,13 @@
     </div>
 </div>
 
-<style>
-    #modalPilihPegawai select[size] { font-size: .86rem; }
-</style>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const modal = document.getElementById('modalPilihPegawai');
         const form = document.getElementById('formPilihPegawai');
-        const cari = document.getElementById('pj-cari');
+        const cari = form.querySelector('[data-saring-pilihan]');
         const pilih = form.pegawai;
 
-        cari.addEventListener('input', () => {
-            const kata = cari.value.trim().toLowerCase();
-            Array.from(pilih.options).forEach((o) => { o.hidden = !o.dataset.cari.includes(kata); });
-        });
-        // Klik ganda pada nama = langsung lanjut.
-        pilih.addEventListener('dblclick', () => pilih.value && form.requestSubmit());
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             if (!pilih.value) { pilih.focus(); return; }
