@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\PortalStaf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,8 +13,15 @@ use Illuminate\View\View;
 
 class LoginController extends Controller
 {
-    public function showLoginForm(): View
+    public function showLoginForm(): View|RedirectResponse
     {
+        // Sudah login: langsung ke panelnya (akun wajib ganti password tetap dihadang PaksaGantiPassword).
+        /** @var User|null $user */
+        $user = Auth::user();
+        if ($user) {
+            return redirect()->route($user->dashboardRoute());
+        }
+
         return view('auth.login');
     }
 
@@ -74,16 +82,14 @@ class LoginController extends Controller
             return redirect($tujuanAcara)->with('success', 'Selamat datang, ' . $user->name . '! Lanjutkan absen acara.');
         }
 
-        if ($user->isStaff()) {
-            return redirect()
-                ->route('pegawai.dashboard')
-                ->with('success', 'Selamat datang, ' . $user->name . '! Anda login sebagai Staff.');
-        }
-
         if (in_array($user->role, User::INTERNAL_ROLES, true)) {
-            return redirect()
-                ->route('admin.dashboard')
-                ->with('success', 'Selamat datang, ' . $user->name . '! Anda login sebagai ' . $user->roleLabel() . '.');
+            PortalStaf::tandai();
+            // Kembali ke halaman internal yang tadi dibuka saat sesi habis (bukan area pelamar).
+            $tujuan = $request->session()->pull('url.intended');
+            $tujuan = $tujuan && ! str_starts_with(trim((string) parse_url($tujuan, PHP_URL_PATH), '/'), 'pelamar') ? $tujuan : route($user->dashboardRoute());
+
+            return redirect()->to($tujuan)
+                ->with('success', 'Selamat datang, ' . $user->name . '! Anda login sebagai ' . ($user->isStaff() ? 'Staff' : $user->roleLabel()) . '.');
         }
 
         if ($isGuest) {
@@ -100,15 +106,18 @@ class LoginController extends Controller
     {
         /** @var User|null $user */
         $user = Auth::user();
-        $isGuest = (bool) $user?->isPelamar();
+        // Sesi sudah habis (tidak ada user): tujuan ditebak dari penanda portal/halaman asal.
+        $tujuan = match (true) {
+            $user === null => PortalStaf::halamanLogin($request),
+            $user->isPelamar() => route('pelamar.login'),
+            default => route('login'),
+        };
 
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()
-            ->route($isGuest ? 'pelamar.login' : 'login')
-            ->with('success', 'Anda telah berhasil logout.');
+        return redirect()->to($tujuan)->with('success', 'Anda telah berhasil logout.');
     }
 
     public function profile(): View|RedirectResponse

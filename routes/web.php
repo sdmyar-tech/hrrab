@@ -43,21 +43,28 @@ use App\Http\Controllers\Pelamar\LamaranController as PelamarLamaranController;
 use App\Http\Controllers\PengumumanController;
 use App\Http\Controllers\Public\LowonganController as PublicLowonganController;
 use App\Http\Controllers\WajibPasswordController;
+use App\Support\PortalStaf;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('lowongan.index');
 });
 
-// Tujuan tombol "Beranda" di halaman error: dashboard sesuai role bila login, selain itu halaman lowongan.
+// Tujuan tombol "Beranda" di halaman error: dashboard sesuai role bila login, portal SDM bila dikenali staf, selain itu lowongan.
 Route::get('/beranda', function () {
     $user = auth()->user();
 
-    return redirect()->route($user ? $user->dashboardRoute() : 'lowongan.index');
+    return match (true) {
+        (bool) $user => redirect()->route($user->dashboardRoute()),
+        PortalStaf::dikenali(request()) => redirect()->route('login'),
+        default => redirect()->route('lowongan.index'),
+    };
 })->name('beranda');
 
 Route::get('/' . config('hrrab.staff_login_path'), [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/' . config('hrrab.staff_login_path'), [LoginController::class, 'login'])->name('login.submit')->middleware('throttle:6,1');
+// Di luar grup auth: menekan Keluar setelah sesi habis tetap diarahkan ke halaman login (bukan 404).
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::middleware('bukan-pelamar')->group(function () {
     Route::get('/pelamar/login', [LoginController::class, 'showPelamarLoginForm'])->name('pelamar.login');
@@ -388,7 +395,6 @@ Route::middleware(['auth', 'nocache'])->group(function () {
     Route::get('/notifikasi/{id}', [NotifikasiController::class, 'buka'])->name('notifikasi.buka');
 
     Route::get('/profile', [LoginController::class, 'profile'])->name('profile');
-    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
     // Wajib ganti password (satu-satunya halaman yang terbuka selama penanda aktif).
     Route::get('/akun/ganti-password', [WajibPasswordController::class, 'halaman'])->name('akun.ganti-password');
