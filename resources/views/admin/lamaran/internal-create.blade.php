@@ -203,9 +203,11 @@
 
                     <section class="panel p-4 mb-3">
                         <h2 class="h6 fw-bold mb-3">3. Pengusul <span class="text-muted fw-normal small">(opsional)</span></h2>
-                        <label class="form-label">Diusulkan oleh</label>
-                        <input type="text" name="direkomendasikan_oleh" class="form-control" value="{{ old('direkomendasikan_oleh') }}"
-                            placeholder="mis. Kepala Bagian Keuangan">
+                        <label class="form-label" for="pengusul">Diusulkan oleh</label>
+                        @include('partials.pilih-pegawai', [
+                            'name' => 'direkomendasikan_oleh', 'id' => 'pengusul', 'nilai' => 'nama',
+                            'terpilih' => old('direkomendasikan_oleh'), 'kosong' => 'Tidak ada pengusul',
+                        ])
                     </section>
 
                     <div class="alert alert-secondary small">

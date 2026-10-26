@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\DataPegawai;
 use App\Models\PengajuanCuti;
 use App\Models\User;
 use App\Support\ExcelExporter;
@@ -193,10 +194,12 @@ class PengajuanCutiController extends Controller
             'tanggal_mulai' => ['required', 'date'],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
             'lama_cuti' => ['required', 'integer', 'min:1', 'max:365'],
-            'pengganti_nama' => ['nullable', 'string', 'max:150'],
+            // Dipilih dari daftar pegawai aktif (nilai lama tetap boleh dipertahankan).
+            'pengganti_nama' => ['nullable', 'string', 'max:150',
+                Rule::in([...DataPegawai::opsiPilihan()->pluck('nama'), $pengajuanCuti->pengganti_nama])],
             'keterangan' => ['nullable', 'string', 'max:1000'],
             'catatan_admin' => ['nullable', 'string', 'max:1000'],
-        ]);
+        ], ['pengganti_nama.in' => 'Pilih pengganti tugas dari daftar pegawai.']);
 
         $statusLama = $pengajuanCuti->status;
         $pengajuanCuti->update([

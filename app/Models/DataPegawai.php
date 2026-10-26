@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 class DataPegawai extends Model
 {
@@ -16,6 +17,26 @@ class DataPegawai extends Model
 
     /** Nilai golongan darah yang diterima kolom ENUM data_pegawais.golongan_darah. */
     public const GOLONGAN_DARAH = ['Belum Diketahui', 'A', 'A+', 'A-', 'B', 'B+', 'B-', 'AB', 'AB+', 'AB-', 'O', 'O+', 'O-'];
+
+    /**
+     * Pegawai aktif untuk dropdown pemilihan pegawai (urut nama); dihitung sekali per request.
+     *
+     * @return Collection<int, array{id: int, nama: string, nip: ?string, jabatan: ?string, unit: ?string, label: string}>
+     */
+    public static function opsiPilihan(): Collection
+    {
+        return once(fn () => self::with('kepegawaian:id,data_pegawai_id,unit_kerja,jabatan')
+            ->whereHas('kepegawaian', fn ($q) => $q->where('status_rekrutmen', 'Aktif'))
+            ->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip'])
+            ->map(fn (self $p) => [
+                'id' => $p->id,
+                'nama' => $p->nama_lengkap,
+                'nip' => $p->nip,
+                'jabatan' => $p->kepegawaian?->jabatan,
+                'unit' => $p->kepegawaian?->unit_kerja,
+                'label' => $p->nama_lengkap . ' — ' . ($p->kepegawaian?->jabatan ?: '-') . ' (' . ($p->kepegawaian?->unit_kerja ?: '-') . ')',
+            ]));
+    }
 
     protected $fillable = [
         'email',

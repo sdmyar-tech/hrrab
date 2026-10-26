@@ -37,8 +37,12 @@
                 <input type="number" name="lama_cuti" min="1" max="365" class="form-control form-control-sm" value="{{ old('lama_cuti', $pengajuanCuti->lama_cuti) }}" required>
             </div>
             <div class="col-md-6">
-                <label class="form-label small mb-1">Pengganti Tugas</label>
-                <input type="text" name="pengganti_nama" class="form-control form-control-sm" maxlength="150" value="{{ old('pengganti_nama', $pengajuanCuti->pengganti_nama) }}">
+                <label class="form-label small mb-1" for="ubah-pengganti">Pengganti Tugas</label>
+                @include('partials.pilih-pegawai', [
+                    'name' => 'pengganti_nama', 'id' => 'ubah-pengganti', 'nilai' => 'nama', 'kelas' => 'form-select-sm',
+                    'terpilih' => old('pengganti_nama', $pengajuanCuti->pengganti_nama), 'kosong' => 'Belum ditentukan',
+                    'utama' => $pengajuanCuti->substituteOptions()->all(), 'labelUtama' => 'Satu unit', 'kecuali' => [$pengajuanCuti->data_pegawai_id],
+                ])
             </div>
             <div class="col-md-6">
                 <label class="form-label small mb-1">Catatan / Alasan</label>

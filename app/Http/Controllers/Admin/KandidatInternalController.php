@@ -88,7 +88,7 @@ class KandidatInternalController extends Controller
             'jabatan_tujuan' => ['required_if:posisi,manual', 'nullable', Rule::in(Jabatan::daftar())],
             'unit_kerja_tujuan' => ['required_if:posisi,manual', 'nullable', Rule::in(config('kepegawaian.unit_kerja'))],
             'lokasi_kerja_tujuan' => ['nullable', Rule::in(config('kepegawaian.lokasi_kerja'))],
-            'direkomendasikan_oleh' => ['nullable', 'string', 'max:150'],
+            'direkomendasikan_oleh' => ['nullable', 'string', 'max:150', Rule::in(DataPegawai::opsiPilihan()->pluck('nama'))],
             'data_pegawai_id' => ['required_if:jenis,pegawai', 'nullable', 'exists:data_pegawais,id'],
             ...$this->biodataRules($request),
         ], [
@@ -96,6 +96,7 @@ class KandidatInternalController extends Controller
             'jabatan_tujuan.required_if' => 'Jabatan tujuan wajib diisi.',
             'unit_kerja_tujuan.required_if' => 'Unit kerja tujuan wajib diisi.',
             'data_pegawai_id.required_if' => 'Pilih pegawai yang akan diikutkan seleksi.',
+            'direkomendasikan_oleh.in' => 'Pilih pengusul dari daftar pegawai.',
             ...RiwayatPelamar::messages(),
         ]);
 

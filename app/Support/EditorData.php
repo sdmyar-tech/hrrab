@@ -24,6 +24,9 @@ class EditorData
     /** Kolom yang hanya ditampilkan. */
     private const KOLOM_BACA = ['id', 'created_at', 'updated_at'];
 
+    /** Kolom teks yang menyimpan nama pegawai (dipilih dari daftar pegawai, bukan diketik). */
+    private const KOLOM_NAMA_PEGAWAI = ['pengganti_nama', 'direkomendasikan_oleh', 'atasan_langsung'];
+
     /** Kolom teks yang diberi daftar saran (nilai yang sudah ada di tabel). */
     private const KOLOM_SARAN = ['status', 'tahap', 'hasil_status', 'hasil_sdm', 'hasil_kepala', 'keputusan', 'jalur', 'role', 'jenis',
         'jenis_cuti', 'kategori_cuti_besar', 'current_level', 'kategori', 'jadwal', 'tipe_kerja', 'status_manual', 'unit_kerja',
@@ -205,7 +208,8 @@ class EditorData
                     in_array($tipe, ['text', 'mediumtext', 'longtext'], true) => 'teks_panjang',
                     default => 'teks',
                 };
-                $fk = self::fk($nama, $model);
+                // Kunci asing selalu kolom angka (kolom teks berakhiran _oleh, mis. direkomendasikan_oleh, berisi nama).
+                $fk = $jenis === 'angka' ? self::fk($nama, $model) : null;
                 $pilihan = $fk ? [] : self::pilihan($model, $nama);
 
                 return [
@@ -236,7 +240,7 @@ class EditorData
             'absensi_import_id' => ['absensi_imports', 'nama_file'],
             'lamaran_id' => ['lamarans', null],
         ];
-        $keUser = str_ends_with($nama, '_oleh') || str_ends_with($nama, '_by')
+        $keUser = str_ends_with($nama, '_oleh') || str_ends_with($nama, '_by') || str_ends_with($nama, '_user_id')
             || in_array($nama, ['user_id', 'interviewer_id', 'pengawas_id', 'kepala_id', 'notifiable_id'], true);
 
         [$tabel, $label] = $peta[$nama] ?? ($keUser ? ['users', 'name'] : [null, null]);
@@ -245,6 +249,11 @@ class EditorData
         }
         if ($label === null || DB::table($tabel)->count() > 1500) {
             return ['tabel' => $tabel, 'opsi' => null]; // terlalu banyak: isi ID manual
+        }
+        // Akun diberi keterangan role agar akun bernama sama (mis. pegawai & pelamar) bisa dibedakan.
+        if ($tabel === 'users') {
+            return ['tabel' => $tabel, 'opsi' => DB::table('users')->orderBy('name')->get(['id', 'name', 'role'])
+                ->mapWithKeys(fn ($u) => [$u->id => "{$u->name} — " . Models\User::roleLabelFor($u->role) . " (#{$u->id})"])->all()];
         }
 
         return ['tabel' => $tabel, 'opsi' => DB::table($tabel)->orderBy($label)->pluck($label, 'id')->map(fn ($v, $id) => "{$v} (#{$id})")->all()];
@@ -257,6 +266,18 @@ class EditorData
      */
     private static function pilihan(Model $model, string $kolom): array
     {
+        // Kolom teks berisi nama pegawai → dropdown pegawai aktif (nilai lama di luar daftar tetap ditampilkan view).
+        if (in_array($kolom, self::KOLOM_NAMA_PEGAWAI, true)) {
+            $pilihan = Models\DataPegawai::opsiPilihan()->mapWithKeys(fn ($p) => [$p['nama'] => $p['label']]);
+            // Atasan langsung formasi bisa GM yang tidak punya data pegawai.
+            if ($kolom === 'atasan_langsung') {
+                $pilihan = $pilihan->union(Models\User::where('role', Models\User::ROLE_GM)->whereNull('data_pegawai_id')->orderBy('name')
+                    ->pluck('name')->mapWithKeys(fn ($n) => [$n => "{$n} — GM"]));
+            }
+
+            return $pilihan->all();
+        }
+
         $awalan = [
             'status' => 'STATUS_', 'hasil_status' => 'HASIL_', 'hasil_sdm' => 'HASIL_', 'hasil_kepala' => 'HASIL_',
             'tahap' => 'TAHAP_', 'tahap_interview' => 'TAHAP_', 'keputusan' => 'KEPUTUSAN_', 'jalur' => 'JALUR_',
