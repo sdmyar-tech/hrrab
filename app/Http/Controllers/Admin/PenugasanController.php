@@ -92,18 +92,32 @@ class PenugasanController extends Controller
         return $query;
     }
 
+    /** Dari detail pegawai: pegawai sudah tetap. */
     public function create(Request $request, DataPegawai $pegawai): View
     {
-        $jenis = in_array($request->query('jenis'), self::JENIS_FORM, true) ? $request->query('jenis') : 'mutasi';
-        $pegawai->load(['kepegawaian', 'penugasanAktif']);
+        return $this->formulir($request, $pegawai, $request->query('asal') === 'daftar');
+    }
 
-        $pending = fn (string $model) => $model::where('data_pegawai_id', $pegawai->id)->where('status', $model::STATUS_PENDING)->count();
+    /** Dari halaman Mutasi & Rangkap: pegawai dipilih lewat dropdown di form itu sendiri (?pegawai=ID). */
+    public function tambah(Request $request): View
+    {
+        $pegawai = DataPegawai::whereKey((int) $request->query('pegawai'))->first();
+
+        return $this->formulir($request, $pegawai, true);
+    }
+
+    private function formulir(Request $request, ?DataPegawai $pegawai, bool $dariDaftar): View
+    {
+        $jenis = in_array($request->query('jenis'), self::JENIS_FORM, true) ? $request->query('jenis') : 'mutasi';
+        $pegawai?->load(['kepegawaian', 'penugasanAktif']);
+
+        $pending = fn (string $model) => $pegawai ? $model::where('data_pegawai_id', $pegawai->id)->where('status', $model::STATUS_PENDING)->count() : 0;
 
         return view('admin.penugasan.create', [
             'pegawai' => $pegawai,
             'jenis' => $jenis,
-            'dariDaftar' => $request->query('asal') === 'daftar',
-            'utama' => $pegawai->penugasanAktif->firstWhere('is_utama', true),
+            'dariDaftar' => $dariDaftar,
+            'utama' => $pegawai?->penugasanAktif->firstWhere('is_utama', true),
             'jumlahPending' => $pending(PengajuanCuti::class) + $pending(PengajuanLembur::class),
         ]);
     }

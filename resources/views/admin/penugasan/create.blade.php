@@ -4,8 +4,10 @@
 @php
     $mutasi = $jenis === 'mutasi';
     $hariIni = now()->format('Y-m-d');
-    // Dibuka dari halaman Mutasi & Rangkap: navigasi & tujuan setelah simpan tetap di modul ini.
-    $asal = $dariDaftar ? ['asal' => 'daftar'] : [];
+    // Dari halaman Mutasi & Rangkap: pegawai dipilih lewat dropdown di form ini; tujuan setelah simpan/batal tetap di modul ini.
+    $urlJenis = fn (string $j) => $dariDaftar
+        ? route('admin.penugasan.tambah', array_filter(['pegawai' => $pegawai?->id, 'jenis' => $j]))
+        : route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => $j]);
     $urlKembali = $dariDaftar ? route('admin.penugasan.index') : route('admin.pegawai.show', ['pegawai' => $pegawai, 'tab' => 'penugasan']);
 @endphp
 <main class="dashboard-content">
@@ -14,26 +16,36 @@
             <div class="page-heading-copy">
                 <span class="page-icon"><i class="bi {{ $mutasi ? 'bi-arrow-left-right' : 'bi-diagram-3' }}"></i></span>
                 <div>
-                    <p class="eyebrow mb-1">Penugasan</p>
+                    <p class="eyebrow mb-1">Mutasi &amp; Rangkap Tugas</p>
                     <h1 class="h3 mb-1">{{ $mutasi ? 'Mutasi Pegawai' : 'Tambah Rangkap Tugas' }}</h1>
-                    <p class="text-muted mb-0">{{ $pegawai->nama_lengkap }} &middot; NIP {{ $pegawai->nip ?? '-' }}</p>
+                    <p class="text-muted mb-0">{{ $pegawai ? $pegawai->nama_lengkap . ' · NIP ' . ($pegawai->nip ?? '-') : 'Pilih pegawai, lalu isi data penugasannya.' }}</p>
                 </div>
             </div>
-            @if ($dariDaftar)
-                <div class="heading-actions">
-                    <a href="{{ route('admin.penugasan.index', ['pilih' => $jenis]) }}" class="btn btn-outline-secondary"><i class="bi bi-person-gear me-1"></i> Ganti Pegawai</a>
-                </div>
-            @endif
         </div>
 
         <div class="row g-3">
             <div class="col-12 col-lg-7">
                 <section class="panel p-4">
-                    <ul class="nav nav-pills mb-3">
-                        <li class="nav-item"><a class="nav-link {{ $mutasi ? 'active' : '' }}" href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'mutasi', ...$asal]) }}">Mutasi (pindah unit utama)</a></li>
-                        <li class="nav-item"><a class="nav-link {{ $mutasi ? '' : 'active' }}" href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'rangkap', ...$asal]) }}">Rangkap Tugas</a></li>
-                    </ul>
+                    {{-- Dua pilihan jenis, sama lebar. --}}
+                    <div class="pn-jenis mb-3" role="group" aria-label="Jenis penugasan">
+                        <a href="{{ $urlJenis('mutasi') }}" class="btn {{ $mutasi ? 'btn-primary' : 'btn-outline-primary' }}" @if ($mutasi) aria-current="page" @endif>
+                            <span><i class="bi bi-arrow-left-right me-1"></i>Mutasi</span><small>Pindah unit utama</small>
+                        </a>
+                        <a href="{{ $urlJenis('rangkap') }}" class="btn {{ $mutasi ? 'btn-outline-primary' : 'btn-primary' }}" @unless ($mutasi) aria-current="page" @endunless>
+                            <span><i class="bi bi-diagram-3 me-1"></i>Rangkap Tugas</span><small>Tugas tambahan di unit lain</small>
+                        </a>
+                    </div>
 
+                    @if ($dariDaftar)
+                        <div class="mb-3">
+                            <label class="form-label" for="pn-pegawai">Pegawai</label>
+                            @include('partials.pilih-pegawai', ['name' => 'pegawai', 'id' => 'pn-pegawai', 'terpilih' => $pegawai?->id, 'wajib' => true])
+                        </div>
+                    @endif
+
+                    @if (! $pegawai)
+                        <div class="alert alert-light border small mb-0"><i class="bi bi-person-check me-1"></i>Pilih pegawai di atas untuk mengisi data {{ $mutasi ? 'mutasi' : 'rangkap tugas' }}.</div>
+                    @else
                     <form action="{{ route('admin.penugasan.store', $pegawai) }}" method="POST"
                         data-confirm="{{ $mutasi ? 'Simpan mutasi pegawai ini?' : 'Tambahkan rangkap tugas ini?' }}">
                         @csrf
@@ -134,13 +146,14 @@
                             <a href="{{ $urlKembali }}" class="btn btn-outline-secondary">Batal</a>
                         </div>
                     </form>
+                    @endif
                 </section>
             </div>
 
             <div class="col-12 col-lg-5">
                 <section class="panel p-4">
                     <h2 class="h6 fw-bold mb-3">Penugasan Saat Ini</h2>
-                    @forelse ($pegawai->penugasanAktif as $p)
+                    @forelse ($pegawai?->penugasanAktif ?? [] as $p)
                         <div class="border rounded p-2 mb-2">
                             <div class="d-flex justify-content-between">
                                 <span class="fw-semibold">{{ $p->unit_kerja }}</span>
@@ -152,7 +165,7 @@
                             <small class="text-muted">{{ $p->jabatan ?? '-' }} &middot; sejak {{ $p->tanggal_mulai->format('d-m-Y') }}</small>
                         </div>
                     @empty
-                        <p class="text-muted small mb-0">Belum ada penugasan tercatat.</p>
+                        <p class="text-muted small mb-0">{{ $pegawai ? 'Belum ada penugasan tercatat.' : 'Pilih pegawai untuk melihat penugasannya.' }}</p>
                     @endforelse
 
                     <hr>
@@ -172,5 +185,22 @@
         </div>
     </div>
 </main>
+
+<style>
+    .pn-jenis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+    .pn-jenis .btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .1rem; padding: .6rem .5rem; font-weight: 600; }
+    .pn-jenis .btn small { font-weight: 400; font-size: .75rem; opacity: .85; }
+</style>
+@if ($dariDaftar)
+    <script>
+        // Ganti pegawai = muat ulang form untuk pegawai itu (penugasan saat ini & jabatan bawaan ikut berubah).
+        document.getElementById('pn-pegawai').addEventListener('change', function () {
+            const url = new URL(@json(route('admin.penugasan.tambah')), location.origin);
+            if (this.value) url.searchParams.set('pegawai', this.value);
+            url.searchParams.set('jenis', @json($jenis));
+            location.assign(url);
+        });
+    </script>
+@endif
 @include('partials.jabatan-ikut-unit')
 @endsection

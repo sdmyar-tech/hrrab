@@ -189,6 +189,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         Route::middleware('can:kelola-penugasan')->group(function () {
             Route::get('/penugasan', [AdminPenugasanController::class, 'index'])->name('penugasan.index');
             Route::get('/penugasan/export', [AdminPenugasanController::class, 'export'])->name('penugasan.export');
+            Route::get('/penugasan/tambah', [AdminPenugasanController::class, 'tambah'])->name('penugasan.tambah');
             Route::get('/pegawai/{pegawai}/penugasan/create', [AdminPenugasanController::class, 'create'])->name('penugasan.create');
             Route::post('/pegawai/{pegawai}/penugasan', [AdminPenugasanController::class, 'store'])->name('penugasan.store');
             Route::post('/penugasan/{penugasan}/akhiri', [AdminPenugasanController::class, 'akhiri'])->name('penugasan.akhiri');
