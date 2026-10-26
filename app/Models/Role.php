@@ -37,6 +37,26 @@ class Role extends Model
         User::ABILITY_KELOLA_SISTEM => ['Kelola sistem', 'Kelola akun, master data, log & editor data.'],
     ];
 
+    /** Pengelompokan hak akses untuk tampilan (matriks & form): judul => [ikon, daftar hak]. */
+    public const GRUP_HAK = [
+        'Umum' => ['bi-grid', [User::ABILITY_LIHAT_DASHBOARD, User::ABILITY_MENGAJUKAN]],
+        'Pengajuan' => ['bi-check2-square', [User::ABILITY_APPROVE, User::ABILITY_LIHAT_LAPORAN]],
+        'Kepegawaian' => ['bi-people', [User::ABILITY_LIHAT_TABEL_KARYAWAN, User::ABILITY_KELOLA_PEGAWAI, User::ABILITY_KELOLA_PENUGASAN]],
+        'Absensi' => ['bi-fingerprint', [User::ABILITY_LIHAT_ABSENSI, User::ABILITY_KELOLA_ABSENSI]],
+        'Informasi' => ['bi-megaphone', [User::ABILITY_KELOLA_PENGUMUMAN, User::ABILITY_KIRIM_NOTIFIKASI]],
+        'Sistem' => ['bi-gear', [User::ABILITY_KELOLA_SISTEM]],
+    ];
+
+    /** Ikon per jenis dasar role. */
+    public const IKON_DASAR = [
+        User::ROLE_PEMBINA => 'bi-award',
+        User::ROLE_GM => 'bi-briefcase',
+        User::ROLE_KEPALA_BAGIAN => 'bi-person-badge',
+        User::ROLE_KEPALA_SDM => 'bi-person-gear',
+        User::ROLE_STAFF => 'bi-person',
+        User::ROLE_ADMIN => 'bi-shield-lock',
+    ];
+
     /** Hak akses yang tidak bisa dicabut (mencegah Admin terkunci di luar sistem). */
     public const DIKUNCI = [User::ROLE_ADMIN => [User::ABILITY_KELOLA_SISTEM]];
 

@@ -37,7 +37,8 @@
             @unless ($baru) @method('PUT') @endunless
             <div class="row g-3">
                 <div class="col-12 col-lg-5">
-                    <section class="panel p-4 h-100">
+                    {{-- Identitas role tetap terlihat saat menggulir daftar hak akses (layar lebar). --}}
+                    <section class="panel p-4 rl-identitas">
                         <div class="mb-3">
                             <label class="form-label" for="rl-nama">Nama role</label>
                             <input type="text" name="nama" id="rl-nama" class="form-control @error('nama') is-invalid @enderror" maxlength="100" required
@@ -68,25 +69,39 @@
 
                 <div class="col-12 col-lg-7">
                     <section class="panel p-4 h-100">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h2 class="h6 fw-bold mb-0">Hak akses</h2>
-                            @unless ($bawaan)
-                                <button type="button" class="btn btn-link btn-sm p-0" data-isi-dasar>Samakan dengan jenis dasar</button>
-                            @endunless
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                            <div>
+                                <h2 class="h6 fw-bold mb-0">Hak akses</h2>
+                                <small class="text-muted"><strong data-jumlah-hak>0</strong> dari {{ count(\App\Models\Role::HAK_AKSES) }} dipilih</small>
+                            </div>
+                            <div class="d-flex gap-2">
+                                @unless ($bawaan)
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-isi-dasar><i class="bi bi-magic me-1"></i>Samakan dengan jenis dasar</button>
+                                @endunless
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-kosongkan-hak>Kosongkan</button>
+                            </div>
                         </div>
-                        <div class="rl-hak">
-                            @foreach (\App\Models\Role::HAK_AKSES as $kode => [$label, $ket])
-                                @php $dikunci = in_array($kode, $kunci, true); @endphp
-                                <label class="rl-hak-item {{ $dikunci ? 'terkunci' : '' }}">
-                                    <input type="checkbox" class="form-check-input" name="hak_akses[]" value="{{ $kode }}"
-                                        @checked($dikunci || in_array($kode, $dipilih, true)) @disabled($dikunci)>
-                                    <span>
-                                        <strong>{{ $label }}</strong>@if ($dikunci) <i class="bi bi-lock-fill text-warning" title="Tidak bisa dicabut"></i>@endif
-                                        <small class="d-block text-muted">{{ $ket }}</small>
-                                    </span>
-                                </label>
-                            @endforeach
-                        </div>
+                        @foreach (\App\Models\Role::GRUP_HAK as $judul => [$ikon, $hakGrup])
+                            <fieldset class="rl-grup" data-grup>
+                                <legend class="rl-grup-judul">
+                                    <span><i class="bi {{ $ikon }} me-1"></i>{{ $judul }}</span>
+                                    <button type="button" class="btn btn-link btn-sm p-0" data-semua-grup>Pilih semua</button>
+                                </legend>
+                                <div class="rl-hak">
+                                    @foreach ($hakGrup as $kode)
+                                        @php [$label, $ket] = \App\Models\Role::HAK_AKSES[$kode]; $dikunci = in_array($kode, $kunci, true); @endphp
+                                        <label class="rl-hak-item {{ $dikunci ? 'terkunci' : '' }}">
+                                            <input type="checkbox" class="form-check-input" name="hak_akses[]" value="{{ $kode }}"
+                                                @checked($dikunci || in_array($kode, $dipilih, true)) @disabled($dikunci)>
+                                            <span>
+                                                <strong>{{ $label }}</strong>@if ($dikunci) <i class="bi bi-lock-fill text-warning" title="Tidak bisa dicabut"></i>@endif
+                                                <small class="d-block text-muted">{{ $ket }}</small>
+                                            </span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </fieldset>
+                        @endforeach
                         <p class="form-text mb-0 mt-2">Beberapa hak tetap mengikuti aturan khusus sistem, mis. staf unit SDM otomatis boleh mengelola pegawai & absensi.</p>
                     </section>
                 </div>
@@ -107,18 +122,52 @@
     .rl-hak-item:has(input:checked) { border-color: var(--hr-primary); background: rgba(139, 18, 21, .04); }
     .rl-hak-item.terkunci { cursor: not-allowed; }
     .rl-hak-item .form-check-input { margin-top: .2rem; flex-shrink: 0; }
+    @media (min-width: 992px) { .rl-identitas { position: sticky; top: 1rem; } }
+    .rl-grup { border: 0; padding: 0; margin: 0 0 1rem; }
+    .rl-grup:last-of-type { margin-bottom: .25rem; }
+    .rl-grup-judul { display: flex; justify-content: space-between; align-items: center; width: 100%; float: none; font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--admin-muted); margin-bottom: .45rem; }
+    .rl-grup-judul .btn-link { font-size: .74rem; text-transform: none; letter-spacing: 0; font-weight: 600; }
 </style>
-@unless ($bawaan)
-    <script>
-        // "Samakan dengan jenis dasar": centang hak akses persis seperti role bawaan yang dipilih.
-        document.addEventListener('DOMContentLoaded', function () {
-            const hakDasar = @json(collect(\App\Models\Role::JENIS_DASAR_KUSTOM)->mapWithKeys(fn ($d) => [$d => \App\Models\Role::hakAksesBawaan($d)]));
-            const dasar = document.getElementById('rl-dasar');
-            document.querySelector('[data-isi-dasar]').addEventListener('click', () => {
-                const hak = hakDasar[dasar.value] || [];
-                document.querySelectorAll('[name="hak_akses[]"]:not(:disabled)').forEach((c) => { c.checked = hak.includes(c.value); });
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const kotak = () => Array.from(document.querySelectorAll('[name="hak_akses[]"]'));
+        const bisaDiubah = () => kotak().filter((c) => !c.disabled);
+        const jumlah = document.querySelector('[data-jumlah-hak]');
+
+        // Penghitung + label tombol "Pilih semua / Kosongkan" per kelompok.
+        function perbarui() {
+            jumlah.textContent = kotak().filter((c) => c.checked).length;
+            document.querySelectorAll('[data-grup]').forEach((g) => {
+                const isi = Array.from(g.querySelectorAll('input:not(:disabled)'));
+                const tombol = g.querySelector('[data-semua-grup]');
+                tombol.hidden = !isi.length;
+                tombol.textContent = isi.length && isi.every((c) => c.checked) ? 'Kosongkan' : 'Pilih semua';
+            });
+        }
+        document.querySelectorAll('[data-grup]').forEach((g) => {
+            g.querySelector('[data-semua-grup]').addEventListener('click', () => {
+                const isi = Array.from(g.querySelectorAll('input:not(:disabled)'));
+                const centang = !isi.every((c) => c.checked);
+                isi.forEach((c) => { c.checked = centang; });
+                perbarui();
             });
         });
-    </script>
-@endunless
+        document.querySelector('[data-kosongkan-hak]').addEventListener('click', () => { bisaDiubah().forEach((c) => { c.checked = false; }); perbarui(); });
+
+        // "Samakan dengan jenis dasar": centang hak akses persis seperti role bawaan yang dipilih.
+        const tombolDasar = document.querySelector('[data-isi-dasar]');
+        if (tombolDasar) {
+            const hakDasar = @json(collect(\App\Models\Role::JENIS_DASAR_KUSTOM)->mapWithKeys(fn ($d) => [$d => \App\Models\Role::hakAksesBawaan($d)]));
+            const dasar = document.getElementById('rl-dasar');
+            tombolDasar.addEventListener('click', () => {
+                const hak = hakDasar[dasar.value] || [];
+                bisaDiubah().forEach((c) => { c.checked = hak.includes(c.value); });
+                perbarui();
+            });
+        }
+
+        kotak().forEach((c) => c.addEventListener('change', perbarui));
+        perbarui();
+    });
+</script>
 @endsection

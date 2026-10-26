@@ -23,19 +23,43 @@ class RoleController extends Controller
         $jumlahBawaan = User::whereNull('role_id')->whereIn('role', User::INTERNAL_ROLES)->selectRaw('role, count(*) n')->groupBy('role')->pluck('n', 'role');
         $jumlahKustom = User::whereNotNull('role_id')->selectRaw('role_id, count(*) n')->groupBy('role_id')->pluck('n', 'role_id');
 
-        $bawaan = collect(User::INTERNAL_ROLES)->map(fn (string $kode) => (object) [
-            'kode' => $kode,
+        // Satu bentuk data untuk kartu & kolom matriks: role bawaan lebih dulu, lalu role kustom.
+        $roles = collect(User::INTERNAL_ROLES)->map(fn (string $kode) => (object) [
+            'jenis' => Role::penyesuaian($kode) ? 'disesuaikan' : 'bawaan',
             'nama' => User::roleLabelFor($kode),
             'namaAsli' => User::LABEL_ROLE[$kode],
+            'dasar' => $kode,
             'keterangan' => Role::penyesuaian($kode)?->keterangan,
-            'hakAkses' => Role::hakAksesBawaan($kode),
-            'disesuaikan' => (bool) Role::penyesuaian($kode),
+            'hak' => Role::hakAksesBawaan($kode),
+            'kunci' => Role::DIKUNCI[$kode] ?? [],
             'jumlah' => (int) ($jumlahBawaan[$kode] ?? 0),
-        ]);
+            'urlUbah' => route('admin.role.bawaan.edit', $kode),
+            'urlAkun' => route('admin.users.index', ['role' => $kode]),
+            'urlReset' => Role::penyesuaian($kode) ? route('admin.role.bawaan.reset', $kode) : null,
+            'urlHapus' => null,
+        ])->concat(Role::kustom()->map(fn (Role $r) => (object) [
+            'jenis' => 'kustom',
+            'nama' => $r->nama,
+            'namaAsli' => null,
+            'dasar' => $r->jenis_dasar,
+            'keterangan' => $r->keterangan,
+            'hak' => $r->hakAksesEfektif(),
+            'kunci' => [],
+            'jumlah' => (int) ($jumlahKustom[$r->id] ?? 0),
+            'urlUbah' => route('admin.role.edit', $r),
+            'urlAkun' => route('admin.users.index', ['role' => 'kustom:' . $r->id]),
+            'urlReset' => null,
+            'urlHapus' => route('admin.role.destroy', $r),
+        ]));
 
         return view('admin.role.index', [
-            'bawaan' => $bawaan,
-            'kustom' => Role::kustom()->map(fn (Role $r) => tap($r, fn ($r) => $r->jumlah = (int) ($jumlahKustom[$r->id] ?? 0))),
+            'roles' => $roles,
+            'ringkas' => [
+                'role' => $roles->count(),
+                'kustom' => $roles->where('jenis', 'kustom')->count(),
+                'disesuaikan' => $roles->where('jenis', 'disesuaikan')->count(),
+                'akun' => $roles->sum('jumlah'),
+            ],
         ]);
     }
 
