@@ -143,6 +143,8 @@ class EditorData
                 'tautan' => fn ($m) => self::rute('admin.users.edit', $m)],
             'jabatan' => ['grup' => 'Sistem', 'label' => 'Master Jabatan', 'ikon' => 'bi-diagram-3', 'model' => Models\Jabatan::class,
                 'judul' => fn ($m) => $m->nama, 'kolom' => ['updated_at'], 'cari' => ['nama']],
+            'role' => ['grup' => 'Sistem', 'label' => 'Master Role', 'ikon' => 'bi-shield-check', 'model' => Models\Role::class,
+                'judul' => fn ($m) => $m->nama, 'kolom' => ['jenis_dasar', 'bawaan', 'updated_at'], 'cari' => ['nama', 'kode']],
             'lokasi_kerja' => ['grup' => 'Sistem', 'label' => 'Master Lokasi Kerja', 'ikon' => 'bi-geo-alt', 'model' => Models\LokasiKerja::class,
                 'judul' => fn ($m) => $m->nama, 'kolom' => ['urutan', 'updated_at'], 'cari' => ['nama', 'keterangan']],
         ];
@@ -239,6 +241,7 @@ class EditorData
             'pengajuan_formasi_id' => ['pengajuan_formasis', 'jabatan'],
             'absensi_import_id' => ['absensi_imports', 'nama_file'],
             'lamaran_id' => ['lamarans', null],
+            'role_id' => ['roles', 'nama'],
         ];
         $keUser = str_ends_with($nama, '_oleh') || str_ends_with($nama, '_by') || str_ends_with($nama, '_user_id')
             || in_array($nama, ['user_id', 'interviewer_id', 'pengawas_id', 'kepala_id', 'notifiable_id'], true);

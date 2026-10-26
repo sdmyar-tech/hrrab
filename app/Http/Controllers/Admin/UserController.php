@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DataPegawai;
+use App\Models\Role;
 use App\Models\User;
 use App\Support\ExcelExporter;
 use App\Support\PenugasanService;
@@ -35,6 +36,7 @@ class UserController extends Controller
         return view('admin.users.index', [
             'users' => $query->paginate(15)->withQueryString(),
             'roles' => self::ROLES,
+            'rolesKustom' => Role::kustom(),
             ...$urut,
         ]);
     }
@@ -70,8 +72,11 @@ class UserController extends Controller
             });
         }
 
+        // "kustom:<id>" = role kustom; role bawaan = akun yang tidak memakai role kustom.
         if ($role = $request->query('role')) {
-            $query->where('role', $role);
+            str_starts_with($role, 'kustom:')
+                ? $query->where('role_id', (int) substr($role, 7))
+                : $query->where('role', $role)->whereNull('role_id');
         }
 
         return $query;
@@ -84,6 +89,7 @@ class UserController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $roleId = $this->uraiRole($request);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
@@ -100,6 +106,7 @@ class UserController extends Controller
 
         unset($validated['password_confirmation']);
         $validated['wajib_ganti_password'] = $request->boolean('wajib_ganti_password');
+        $validated['role_id'] = $roleId;
         $validated = $this->normalizeDivisi($validated);
         [$validated, $kepalaUnit] = $this->pisahkanKepalaUnit($validated);
 
@@ -120,6 +127,7 @@ class UserController extends Controller
         if ($lepasTautan) {
             $request->merge(['data_pegawai_id' => null]);
         }
+        $roleId = $this->uraiRole($request);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
@@ -143,6 +151,7 @@ class UserController extends Controller
         $validated['wajib_ganti_password'] = $user->id === Auth::id()
             ? $user->wajib_ganti_password
             : $request->boolean('wajib_ganti_password');
+        $validated['role_id'] = $roleId;
         $validated = $this->normalizeDivisi($validated);
 
         if ($user->isAdmin() && $validated['role'] !== User::ROLE_ADMIN && User::where('role', User::ROLE_ADMIN)->count() <= 1) {
@@ -183,10 +192,30 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with('success', 'Akun user berhasil dihapus.');
     }
 
+    /**
+     * Pilihan role "kustom:<id>" → role diganti jenis dasarnya (alur & panel), id role kustom dikembalikan untuk role_id.
+     * Role bawaan → null.
+     */
+    private function uraiRole(Request $request): ?int
+    {
+        $nilai = (string) $request->input('role');
+        if (! str_starts_with($nilai, 'kustom:')) {
+            return null;
+        }
+        $kustom = Role::kustom()->firstWhere('id', (int) substr($nilai, 7));
+        if (! $kustom) {
+            throw ValidationException::withMessages(['role' => 'Role kustom tidak ditemukan.']);
+        }
+        $request->merge(['role' => $kustom->jenis_dasar]);
+
+        return $kustom->id;
+    }
+
     private function formOptions(): array
     {
         return [
             'roles' => self::ROLES,
+            'rolesKustom' => Role::kustom(),
             'divisiOptions' => config('kepegawaian.unit_kerja'),
             'gmBidang' => config('kepegawaian.gm_bidang'),
             'pegawaiOpsi' => $this->pegawaiOpsi(),

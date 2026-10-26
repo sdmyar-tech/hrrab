@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DicatatLog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
-    use \App\Models\Concerns\DicatatLog, HasFactory, Notifiable;
+    use DicatatLog, HasFactory, Notifiable;
 
     public const ROLE_PEMBINA = 'pembina';
 
@@ -127,6 +128,7 @@ class User extends Authenticatable
         'google_id',
         'password',
         'role',
+        'role_id',
         'divisi',
         'kepala_unit_gm',
         'nip',
@@ -140,6 +142,22 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    protected static function booted(): void
+    {
+        // Role kustom hanya berlaku selama jenis dasarnya sama (mis. Staff dinaikkan jadi Kepala Bagian → role kustom berbasis Staff dilepas).
+        static::saving(function (self $user) {
+            if ($user->role_id && $user->isDirty('role') && $user->roleKustom()?->jenis_dasar !== $user->role) {
+                $user->role_id = null;
+            }
+        });
+    }
+
+    /** Role kustom akun ini (Master Role), atau null bila memakai role bawaan. */
+    public function roleKustom(): ?Role
+    {
+        return $this->role_id ? Role::semua()->firstWhere('id', $this->role_id) : null;
+    }
 
     protected function casts(): array
     {
@@ -172,9 +190,12 @@ class User extends Authenticatable
         };
     }
 
+    /** Hak akses dari Master Role: role kustom bila ada, selain itu role bawaan (penyesuaian atau bawaan kode). */
     private function punyaDiMatriks(string $ability): bool
     {
-        return in_array($ability, self::ABILITIES[$this->role] ?? [], true);
+        $kustom = $this->roleKustom();
+
+        return in_array($ability, $kustom ? $kustom->hakAksesEfektif() : Role::hakAksesBawaan((string) $this->role), true);
     }
 
     public function diUnitTanpaPengajuan(): bool
@@ -396,21 +417,23 @@ class User extends Authenticatable
 
     public function roleLabel(): string
     {
-        return self::roleLabelFor($this->role);
+        return $this->roleKustom()?->nama ?? self::roleLabelFor($this->role);
     }
+
+    /** Nama role bawaan menurut kode (sebelum disesuaikan di Master Role). */
+    public const LABEL_ROLE = [
+        self::ROLE_PEMBINA => 'Pembina (Owner)',
+        self::ROLE_GM => 'GM',
+        self::ROLE_KEPALA_BAGIAN => 'Kepala Bagian',
+        self::ROLE_KEPALA_SDM => 'Kepala SDM',
+        self::ROLE_STAFF => 'Staff',
+        self::ROLE_ADMIN => 'Admin',
+        self::ROLE_PELAMAR => 'Pelamar',
+    ];
 
     public static function roleLabelFor(?string $role): string
     {
-        return match ($role) {
-            self::ROLE_PEMBINA => 'Pembina (Owner)',
-            self::ROLE_GM => 'GM',
-            self::ROLE_KEPALA_BAGIAN => 'Kepala Bagian',
-            self::ROLE_KEPALA_SDM => 'Kepala SDM',
-            self::ROLE_STAFF => 'Staff',
-            self::ROLE_ADMIN => 'Admin',
-            self::ROLE_PELAMAR => 'Pelamar',
-            default => ucfirst($role ?? 'User'),
-        };
+        return Role::penyesuaian($role)?->nama ?? self::LABEL_ROLE[$role] ?? ucfirst($role ?? 'User');
     }
 
     public function dataPegawai()

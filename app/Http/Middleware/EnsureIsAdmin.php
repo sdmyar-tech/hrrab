@@ -14,6 +14,10 @@ class EnsureIsAdmin
     {
         $user = Auth::user();
 
+        if ($user instanceof User && $this->staffBerhakLewatRoleKustom($user, $request)) {
+            return $next($request);
+        }
+
         if (! $user instanceof User || ! in_array($user->role, User::INTERNAL_ROLES, true) || $user->isStaff()) {
             if ($user instanceof User && $user->isStaff()) {
                 return redirect()
@@ -32,5 +36,21 @@ class EnsureIsAdmin
         }
 
         return $next($request);
+    }
+
+    /**
+     * Staff dengan role kustom (Master Role) boleh membuka halaman admin yang dijaga hak akses (middleware can:...)
+     * bila semua hak itu dimilikinya. Halaman admin tanpa penjaga hak akses tetap tertutup untuk Staff.
+     */
+    private function staffBerhakLewatRoleKustom(User $user, Request $request): bool
+    {
+        if (! $user->isStaff() || ! $user->roleKustom()) {
+            return false;
+        }
+        $hak = collect($request->route()?->gatherMiddleware() ?? [])
+            ->filter(fn ($m) => is_string($m) && str_starts_with($m, 'can:'))
+            ->map(fn ($m) => explode(',', substr($m, 4))[0]);
+
+        return $hak->isNotEmpty() && $hak->every(fn ($a) => $user->can($a));
     }
 }

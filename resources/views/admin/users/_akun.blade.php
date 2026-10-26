@@ -68,13 +68,24 @@
 <div class="row g-3">
     <div class="col-sm-6">
         <label class="form-label">Role</label>
+        {{-- Nilai: kode role bawaan, atau "kustom:<id>" untuk role kustom (jenis dasarnya ada di data-dasar). --}}
+        @php $roleTerpilih = old('role', $akun ? ($akun->role_id ? 'kustom:' . $akun->role_id : $akun->role) : null); @endphp
         <select name="role" class="form-select @error('role') is-invalid @enderror" required>
             @if (! $akun)
                 <option value="">-- Pilih Role --</option>
             @endif
-            @foreach ($roles as $role)
-                <option value="{{ $role }}" @selected(old('role', $akun?->role) == $role)>{{ App\Models\User::roleLabelFor($role) }}</option>
-            @endforeach
+            <optgroup label="Role bawaan">
+                @foreach ($roles as $role)
+                    <option value="{{ $role }}" data-dasar="{{ $role }}" @selected($roleTerpilih == $role)>{{ App\Models\User::roleLabelFor($role) }}</option>
+                @endforeach
+            </optgroup>
+            @if ($rolesKustom->isNotEmpty())
+                <optgroup label="Role kustom">
+                    @foreach ($rolesKustom as $rk)
+                        <option value="kustom:{{ $rk->id }}" data-dasar="{{ $rk->jenis_dasar }}" @selected($roleTerpilih === 'kustom:' . $rk->id)>{{ $rk->nama }} (dasar {{ App\Models\User::roleLabelFor($rk->jenis_dasar) }})</option>
+                    @endforeach
+                </optgroup>
+            @endif
         </select>
         @error('role')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
@@ -115,7 +126,7 @@
         const infoGm = form.querySelector('[data-info-gm]');
         let dibukaManual = !!pilih.value;
         function aturGm() {
-            const gm = role && role.value === 'gm';
+            const gm = role?.selectedOptions[0]?.dataset.dasar === 'gm';
             const tampil = !gm || dibukaManual;
             wadah.hidden = !tampil;
             pilih.disabled = !tampil;

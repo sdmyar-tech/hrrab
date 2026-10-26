@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\PengajuanCutiController as AdminPengajuanCutiCont
 use App\Http\Controllers\Admin\PengajuanFormasiController as AdminPengajuanFormasiController;
 use App\Http\Controllers\Admin\PengajuanLemburController as AdminPengajuanLemburController;
 use App\Http\Controllers\Admin\PenugasanController as AdminPenugasanController;
+use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\SuratPeringatanController as AdminSuratPeringatanController;
 use App\Http\Controllers\Admin\UnitController as AdminUnitController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -177,6 +178,18 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::post('/', [AdminJabatanController::class, 'store'])->name('store');
             Route::put('/{jabatan}', [AdminJabatanController::class, 'update'])->name('update');
             Route::delete('/{jabatan}', [AdminJabatanController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::prefix('role')->name('role.')->middleware('can:kelola-sistem')->group(function () {
+            Route::get('/', [AdminRoleController::class, 'index'])->name('index');
+            Route::get('/tambah', [AdminRoleController::class, 'create'])->name('create');
+            Route::post('/', [AdminRoleController::class, 'store'])->name('store');
+            Route::get('/bawaan/{kode}/edit', [AdminRoleController::class, 'editBawaan'])->name('bawaan.edit');
+            Route::put('/bawaan/{kode}', [AdminRoleController::class, 'updateBawaan'])->name('bawaan.update');
+            Route::delete('/bawaan/{kode}', [AdminRoleController::class, 'resetBawaan'])->name('bawaan.reset');
+            Route::get('/{role}/edit', [AdminRoleController::class, 'edit'])->name('edit');
+            Route::put('/{role}', [AdminRoleController::class, 'update'])->name('update');
+            Route::delete('/{role}', [AdminRoleController::class, 'destroy'])->name('destroy');
         });
 
         Route::prefix('lokasi-kerja')->name('lokasi-kerja.')->middleware('can:kelola-sistem')->group(function () {

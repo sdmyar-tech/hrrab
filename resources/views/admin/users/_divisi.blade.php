@@ -62,8 +62,10 @@
         // Tampilkan kartu sesuai role; input di kartu tersembunyi dinonaktifkan agar tidak ikut terkirim.
         function aturKartu() {
             let tampil = 0;
+            // Role kustom memakai pengaturan jenis dasarnya.
+            const dasar = pilihRole.selectedOptions[0]?.dataset.dasar || pilihRole.value;
             kartu.forEach(function (k) {
-                const cocok = k.dataset.untukRole.split(' ').includes(pilihRole.value);
+                const cocok = k.dataset.untukRole.split(' ').includes(dasar);
                 k.hidden = ! cocok;
                 k.querySelectorAll('input, select').forEach(function (el) { el.disabled = ! cocok; });
                 tampil += cocok ? 1 : 0;

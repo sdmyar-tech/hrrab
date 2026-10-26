@@ -35,6 +35,9 @@
                                     {{ App\Models\User::roleLabelFor($role) }}
                                 </option>
                             @endforeach
+                            @foreach ($rolesKustom as $rk)
+                                <option value="kustom:{{ $rk->id }}" @selected(request('role') === 'kustom:' . $rk->id)>{{ $rk->nama }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div class="col-md-1">
