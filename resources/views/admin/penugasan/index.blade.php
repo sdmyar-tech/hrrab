@@ -9,14 +9,14 @@
                 <div>
                     <p class="eyebrow mb-1">Kepegawaian</p>
                     <h1 class="h3 mb-1">Mutasi & Rangkap Tugas</h1>
-                    <p class="text-muted mb-0">Riwayat perpindahan unit dan rangkap tugas pegawai. Mutasi/rangkap baru dibuat dari halaman detail pegawai.</p>
+                    <p class="text-muted mb-0">Riwayat perpindahan unit dan rangkap tugas pegawai. Mutasi/rangkap baru dibuat langsung dari halaman ini.</p>
                 </div>
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.penugasan.export', 'eksporUkuran' => ''])
-                <a href="{{ route('admin.pegawai.index') }}" class="btn btn-primary">
-                    <i class="bi bi-people me-1"></i> Pilih Pegawai
-                </a>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalPilihPegawai">
+                    <i class="bi bi-plus-lg me-1"></i> Tambah Mutasi / Rangkap
+                </button>
             </div>
         </div>
 
@@ -144,4 +144,72 @@
         </section>
     </div>
 </main>
+
+<div class="modal fade" id="modalPilihPegawai" tabindex="-1" aria-labelledby="judulPilihPegawai" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" id="formPilihPegawai" data-url="{{ route('admin.penugasan.create', ['pegawai' => '__ID__']) }}">
+            <div class="modal-header">
+                <h5 class="modal-title" id="judulPilihPegawai">Tambah Mutasi / Rangkap</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <div class="btn-group w-100 mb-3" role="group" aria-label="Jenis penugasan">
+                    <input type="radio" class="btn-check" name="jenis" id="pj-mutasi" value="mutasi" checked>
+                    <label class="btn btn-outline-primary" for="pj-mutasi"><i class="bi bi-arrow-left-right me-1"></i>Mutasi</label>
+                    <input type="radio" class="btn-check" name="jenis" id="pj-rangkap" value="rangkap">
+                    <label class="btn btn-outline-primary" for="pj-rangkap"><i class="bi bi-diagram-3 me-1"></i>Rangkap Tugas</label>
+                </div>
+                <label class="form-label" for="pj-cari">Pegawai</label>
+                <input type="search" class="form-control form-control-sm mb-2" id="pj-cari" placeholder="Cari nama / NIP / unit / jabatan…" autocomplete="off">
+                <select name="pegawai" class="form-select" size="10" required aria-label="Pilih pegawai">
+                    @foreach ($pegawaiOpsi as $pg)
+                        <option value="{{ $pg->id }}" data-cari="{{ mb_strtolower($pg->nama_lengkap . ' ' . $pg->nip . ' ' . $pg->kepegawaian?->unit_kerja . ' ' . $pg->kepegawaian?->jabatan) }}">
+                            {{ $pg->nama_lengkap }} — {{ $pg->kepegawaian?->jabatan ?? '-' }} ({{ $pg->kepegawaian?->unit_kerja ?? '-' }})
+                        </option>
+                    @endforeach
+                </select>
+                <div class="form-text" data-pj-info>{{ $pegawaiOpsi->count() }} pegawai aktif. Mutasi = pindah unit utama; Rangkap = tugas tambahan di unit lain.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-primary">Lanjut <i class="bi bi-arrow-right ms-1"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    #modalPilihPegawai select[size] { font-size: .86rem; }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('modalPilihPegawai');
+        const form = document.getElementById('formPilihPegawai');
+        const cari = document.getElementById('pj-cari');
+        const pilih = form.pegawai;
+
+        cari.addEventListener('input', () => {
+            const kata = cari.value.trim().toLowerCase();
+            Array.from(pilih.options).forEach((o) => { o.hidden = !o.dataset.cari.includes(kata); });
+        });
+        // Klik ganda pada nama = langsung lanjut.
+        pilih.addEventListener('dblclick', () => pilih.value && form.requestSubmit());
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!pilih.value) { pilih.focus(); return; }
+            const url = new URL(form.dataset.url.replace('__ID__', pilih.value), location.origin);
+            url.searchParams.set('jenis', form.jenis.value);
+            url.searchParams.set('asal', 'daftar');
+            location.assign(url);
+        });
+        modal.addEventListener('shown.bs.modal', () => cari.focus());
+
+        // "Ganti pegawai" dari form mutasi/rangkap membuka dialog ini lagi (dengan jenis yang sama).
+        const q = new URLSearchParams(location.search);
+        if (q.has('pilih')) {
+            if (q.get('pilih') === 'rangkap') document.getElementById('pj-rangkap').checked = true;
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        }
+    });
+</script>
 @endsection

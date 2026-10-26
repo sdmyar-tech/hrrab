@@ -4,6 +4,9 @@
 @php
     $mutasi = $jenis === 'mutasi';
     $hariIni = now()->format('Y-m-d');
+    // Dibuka dari halaman Mutasi & Rangkap: navigasi & tujuan setelah simpan tetap di modul ini.
+    $asal = $dariDaftar ? ['asal' => 'daftar'] : [];
+    $urlKembali = $dariDaftar ? route('admin.penugasan.index') : route('admin.pegawai.show', ['pegawai' => $pegawai, 'tab' => 'penugasan']);
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
@@ -16,20 +19,26 @@
                     <p class="text-muted mb-0">{{ $pegawai->nama_lengkap }} &middot; NIP {{ $pegawai->nip ?? '-' }}</p>
                 </div>
             </div>
+            @if ($dariDaftar)
+                <div class="heading-actions">
+                    <a href="{{ route('admin.penugasan.index', ['pilih' => $jenis]) }}" class="btn btn-outline-secondary"><i class="bi bi-person-gear me-1"></i> Ganti Pegawai</a>
+                </div>
+            @endif
         </div>
 
         <div class="row g-3">
             <div class="col-12 col-lg-7">
                 <section class="panel p-4">
                     <ul class="nav nav-pills mb-3">
-                        <li class="nav-item"><a class="nav-link {{ $mutasi ? 'active' : '' }}" href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'mutasi']) }}">Mutasi (pindah unit utama)</a></li>
-                        <li class="nav-item"><a class="nav-link {{ $mutasi ? '' : 'active' }}" href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'rangkap']) }}">Rangkap Tugas</a></li>
+                        <li class="nav-item"><a class="nav-link {{ $mutasi ? 'active' : '' }}" href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'mutasi', ...$asal]) }}">Mutasi (pindah unit utama)</a></li>
+                        <li class="nav-item"><a class="nav-link {{ $mutasi ? '' : 'active' }}" href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'rangkap', ...$asal]) }}">Rangkap Tugas</a></li>
                     </ul>
 
                     <form action="{{ route('admin.penugasan.store', $pegawai) }}" method="POST"
                         data-confirm="{{ $mutasi ? 'Simpan mutasi pegawai ini?' : 'Tambahkan rangkap tugas ini?' }}">
                         @csrf
                         <input type="hidden" name="jenis" value="{{ $jenis }}">
+                        @if ($dariDaftar)<input type="hidden" name="asal" value="daftar">@endif
 
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -122,7 +131,7 @@
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-check-lg me-1"></i> {{ $mutasi ? 'Simpan Mutasi' : 'Simpan Rangkap' }}
                             </button>
-                            <a href="{{ route('admin.pegawai.show', ['pegawai' => $pegawai, 'tab' => 'penugasan']) }}" class="btn btn-outline-secondary">Batal</a>
+                            <a href="{{ $urlKembali }}" class="btn btn-outline-secondary">Batal</a>
                         </div>
                     </form>
                 </section>

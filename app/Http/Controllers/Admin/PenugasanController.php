@@ -41,6 +41,10 @@ class PenugasanController extends Controller
             'unitsTanpaKepala' => PenugasanService::unitsTanpaKepala(),
             'jumlahRangkapAktif' => Penugasan::aktif()->where('is_utama', false)->count(),
             'jumlahTerjadwal' => Penugasan::where('tanggal_mulai', '>', $hariIni)->count(),
+            // Pilihan pegawai untuk dialog "Tambah Mutasi / Rangkap" (tanpa pindah ke Data Pegawai).
+            'pegawaiOpsi' => DataPegawai::with('kepegawaian:id,data_pegawai_id,unit_kerja,jabatan')
+                ->whereHas('kepegawaian', fn ($q) => $q->where('status_rekrutmen', 'Aktif'))
+                ->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip']),
         ]);
     }
 
@@ -102,6 +106,7 @@ class PenugasanController extends Controller
         return view('admin.penugasan.create', [
             'pegawai' => $pegawai,
             'jenis' => $jenis,
+            'dariDaftar' => $request->query('asal') === 'daftar',
             'utama' => $pegawai->penugasanAktif->firstWhere('is_utama', true),
             'jumlahPending' => $pending(PengajuanCuti::class) + $pending(PengajuanLembur::class),
         ]);
@@ -145,6 +150,11 @@ class PenugasanController extends Controller
             $jenis === 'mutasi'
                 ? 'Berlaku mulai ' . Carbon::parse($validated['tanggal_efektif'])->translatedFormat('d F Y') . ($validated['jabatan'] ? " sebagai {$validated['jabatan']}." : '.')
                 : 'Mulai ' . Carbon::parse($validated['tanggal_mulai'])->translatedFormat('d F Y') . '. Lembur di unit ini diajukan dengan memilih unit tersebut.');
+
+        // Dibuat dari halaman Mutasi & Rangkap: kembali ke daftar, peringatan digabung ke pesan.
+        if ($request->input('asal') === 'daftar') {
+            return redirect()->route('admin.penugasan.index')->with('success', trim($pesan . ' ' . implode(' ', $peringatan)));
+        }
 
         return $this->kembali($pegawai, $pesan, $peringatan);
     }
