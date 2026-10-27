@@ -135,6 +135,8 @@ class PencatatLog
         'admin.role.destroy' => ['hapus', 'Master Role', 'Menghapus role kustom'],
         'admin.role.bawaan.update' => ['ubah', 'Master Role', 'Menyesuaikan role bawaan'],
         'admin.role.bawaan.reset' => ['ubah', 'Master Role', 'Mengembalikan role bawaan'],
+        'admin.role.bawaan.hapus' => ['hapus', 'Master Role', 'Menghapus role bawaan'],
+        'admin.role.bawaan.pulihkan' => ['ubah', 'Master Role', 'Memulihkan role bawaan'],
         'admin.lokasi-kerja.store' => ['tambah', 'Master Lokasi Kerja', 'Menambah lokasi kerja'],
         'admin.lokasi-kerja.update' => ['ubah', 'Master Lokasi Kerja', 'Mengubah lokasi kerja'],
         'admin.lokasi-kerja.destroy' => ['hapus', 'Master Lokasi Kerja', 'Menghapus lokasi kerja'],

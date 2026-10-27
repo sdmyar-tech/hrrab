@@ -63,9 +63,15 @@ class Role extends Model
     /** Jenis dasar yang boleh dipakai role kustom (Admin tidak: banyak hak Admin diperiksa langsung dari jenis rolenya). */
     public const JENIS_DASAR_KUSTOM = [User::ROLE_STAFF, User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM, User::ROLE_GM, User::ROLE_PEMBINA];
 
-    protected $fillable = ['kode', 'nama', 'keterangan', 'jenis_dasar', 'hak_akses', 'bawaan'];
+    /** Role bawaan yang tidak bisa dihapus (dinonaktifkan). */
+    public const TIDAK_BISA_DIHAPUS = [User::ROLE_ADMIN];
 
-    protected $casts = ['hak_akses' => 'array', 'bawaan' => 'boolean'];
+    /** Role bawaan yang juga dipasang otomatis oleh sistem (pegawai baru, kepala unit) → wajib punya pengganti bila dihapus. */
+    public const DIPASANG_OTOMATIS = [User::ROLE_STAFF, User::ROLE_KEPALA_BAGIAN];
+
+    protected $fillable = ['kode', 'nama', 'keterangan', 'jenis_dasar', 'hak_akses', 'bawaan', 'aktif', 'pengganti'];
+
+    protected $casts = ['hak_akses' => 'array', 'bawaan' => 'boolean', 'aktif' => 'boolean'];
 
     /** Memo per proses (hak akses dicek berkali-kali tiap request); dikosongkan bersama cache saat role berubah. */
     private static ?Collection $memo = null;
@@ -107,6 +113,71 @@ class Role extends Model
     public static function kustom(): Collection
     {
         return self::semua()->reject(fn (self $r) => $r->bawaan)->values();
+    }
+
+    /** @return list<string> kode role bawaan yang sudah dihapus (dinonaktifkan) */
+    public static function bawaanNonaktif(): array
+    {
+        return self::semua()->filter(fn (self $r) => $r->bawaan && $r->aktif === false)->pluck('kode')->values()->all();
+    }
+
+    /** @return list<string> kode role bawaan internal yang masih aktif (urutan seperti User::INTERNAL_ROLES) */
+    public static function bawaanAktif(): array
+    {
+        return array_values(array_diff(User::INTERNAL_ROLES, self::bawaanNonaktif()));
+    }
+
+    /**
+     * Urai pilihan role ("<kode bawaan>" atau "kustom:<id>") yang masih aktif.
+     *
+     * @return array{role: string, role_id: ?int}|null
+     */
+    public static function urai(?string $nilai): ?array
+    {
+        $nilai = (string) $nilai;
+        if (str_starts_with($nilai, 'kustom:')) {
+            $kustom = self::kustom()->firstWhere('id', (int) substr($nilai, 7));
+
+            return $kustom ? ['role' => $kustom->jenis_dasar, 'role_id' => $kustom->id] : null;
+        }
+
+        return in_array($nilai, self::bawaanAktif(), true) ? ['role' => $nilai, 'role_id' => null] : null;
+    }
+
+    /**
+     * Role tujuan untuk akun yang mendapat role bawaan yang sudah dihapus (mis. pegawai baru = Staff).
+     * Mengikuti rantai pengganti sampai ketemu role aktif.
+     *
+     * @return array{role: string, role_id: ?int}|null
+     */
+    public static function penggantiUntuk(string $kode): ?array
+    {
+        for ($i = 0; $i < 8; $i++) {
+            $baris = self::penyesuaian($kode);
+            if (! $baris || $baris->aktif !== false || ! $baris->pengganti) {
+                return null;
+            }
+            if ($tujuan = self::urai($baris->pengganti)) {
+                return $tujuan;
+            }
+            $kode = $baris->pengganti; // pengganti juga sudah dihapus → ikuti penggantinya
+        }
+
+        return null;
+    }
+
+    /**
+     * Pilihan role aktif untuk dropdown: "<kode bawaan>" / "kustom:<id>" => nama (+ dasar untuk kustom).
+     *
+     * @param  list<string>  $kecuali  nilai yang tidak ditampilkan
+     * @return array<string, string>
+     */
+    public static function pilihanAktif(array $kecuali = []): array
+    {
+        $bawaan = collect(self::bawaanAktif())->mapWithKeys(fn ($k) => [$k => User::roleLabelFor($k)]);
+        $kustom = self::kustom()->mapWithKeys(fn (self $r) => ['kustom:' . $r->id => $r->nama . ' (dasar ' . User::roleLabelFor($r->jenis_dasar) . ')']);
+
+        return $bawaan->merge($kustom)->except($kecuali)->all();
     }
 
     /** @return list<string> hak akses role bawaan (penyesuaian bila ada, selain itu bawaan kode) */

@@ -66,7 +66,7 @@
                             <tr class="rl-baris-grup">
                                 <th colspan="5">
                                     {{ $judulKelompok }} <span class="rl-jumlah-grup">{{ $kelompok->count() }}</span>
-                                    <small class="text-muted fw-normal text-lowercase ms-1">{{ $loop->first ? '— tidak bisa dihapus; bisa diganti nama & hak aksesnya' : '— mengikuti panel & alur jenis dasarnya' }}</small>
+                                    <small class="text-muted fw-normal text-lowercase ms-1">{{ $loop->first ? '— bisa diganti nama & hak aksesnya; selain admin bisa dihapus & dipulihkan' : '— mengikuti panel & alur jenis dasarnya' }}</small>
                                 </th>
                             </tr>
                             @forelse ($kelompok as $r)
@@ -120,11 +120,12 @@
                                                 </form>
                                             @endif
                                             @if ($r->urlHapus)
-                                                <form action="{{ $r->urlHapus }}" method="POST"
-                                                    data-confirm="Hapus role {{ $r->nama }}?{{ $r->jumlah ? ' ' . $r->jumlah . ' akun kembali ke role ' . User::roleLabelFor($r->dasar) . '.' : '' }}">
-                                                    @csrf @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Hapus role"><i class="bi bi-trash"></i></button>
-                                                </form>
+                                                <button type="button" class="btn btn-outline-danger btn-sm" title="Hapus role" data-bs-toggle="modal" data-bs-target="#modalHapusRole"
+                                                    data-url="{{ $r->urlHapus }}" data-metode="{{ $r->jenis === 'kustom' ? 'DELETE' : 'POST' }}" data-nama="{{ $r->nama }}"
+                                                    data-nilai="{{ $r->nilai }}" data-jumlah="{{ $r->jumlah }}" data-otomatis="{{ $r->otomatis ? '1' : '' }}"
+                                                    data-kustom="{{ $r->jenis === 'kustom' ? '1' : '' }}" data-dasar="{{ User::roleLabelFor($r->dasar) }}">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
                                             @endif
                                         </div>
                                     </td>
@@ -132,12 +133,46 @@
                             @empty
                                 <tr>
                                     <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="bi bi-shield-plus fs-3 d-block mb-2"></i>
                                         Belum ada role kustom. <a href="{{ route('admin.role.create') }}">Tambah role</a>, mis. <em>Staf Keuangan</em> berbasis Staff dengan hak lihat laporan.
                                     </td>
                                 </tr>
                             @endforelse
                         </tbody>
                     @endforeach
+                    @if ($dihapus->isNotEmpty())
+                        <tbody>
+                            <tr class="rl-baris-grup">
+                                <th colspan="5">
+                                    Role dihapus <span class="rl-jumlah-grup">{{ $dihapus->count() }}</span>
+                                    <small class="text-muted fw-normal text-lowercase ms-1">— tidak muncul di pilihan role; bisa dipulihkan</small>
+                                </th>
+                            </tr>
+                            @foreach ($dihapus as $d)
+                                <tr class="rl-dihapus">
+                                    <td>
+                                        <div class="rl-role">
+                                            <span class="rl-ikon"><i class="bi {{ Role::IKON_DASAR[$d->kode] ?? 'bi-person' }}"></i></span>
+                                            <div>
+                                                <span class="rl-nama-hapus">{{ $d->nama }}</span>
+                                                @if ($d->nama !== $d->namaAsli)<small class="text-muted ms-1">asli: {{ $d->namaAsli }}</small>@endif
+                                                <small class="rl-ket">{{ $d->pengganti ? 'Pengganti: ' . $d->pengganti : 'Tanpa role pengganti.' }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="rl-kol-dasar"><span class="rl-dasar"><i class="bi {{ Role::IKON_DASAR[$d->kode] ?? 'bi-person' }}"></i>{{ $d->namaAsli }}</span></td>
+                                    <td class="text-muted small">—</td>
+                                    <td class="text-center">{{ $d->jumlah }}</td>
+                                    <td class="text-end rl-aksi">
+                                        <form action="{{ $d->urlPulihkan }}" method="POST" data-confirm="Pulihkan role {{ $d->nama }}? Role ini bisa dipilih lagi di Kelola Akun.">
+                                            @csrf
+                                            <button type="submit" class="btn btn-outline-success btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Pulihkan</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    @endif
                 </table>
             </div>
         </section>
@@ -190,7 +225,39 @@
     </div>
 </main>
 
+<div class="modal fade" id="modalHapusRole" tabindex="-1" aria-labelledby="judulHapusRole" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" class="modal-content" id="formHapusRole">
+            @csrf
+            <input type="hidden" name="_method" value="POST">
+            <div class="modal-header">
+                <h5 class="modal-title" id="judulHapusRole">Hapus role <span data-nama></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small mb-3" data-info></p>
+                <label class="form-label" for="rl-pengganti">Pindahkan akun ke role</label>
+                <select name="pengganti" id="rl-pengganti" class="form-select @error('pengganti') is-invalid @enderror">
+                    <option value="" data-kosong>-- Pilih role pengganti --</option>
+                    @foreach ($pilihanPengganti as $nilai => $label)
+                        <option value="{{ $nilai }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('pengganti')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                <div class="form-text" data-catatan></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i> Hapus role</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <style>
+    .rl-dihapus td { opacity: .75; }
+    .rl-dihapus .rl-ikon { filter: grayscale(1); }
+    .rl-nama-hapus { font-weight: 700; text-decoration: line-through; text-decoration-color: var(--admin-muted); }
     .rl-ringkas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
     @media (max-width: 767.98px) { .rl-ringkas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     .rl-stat { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: var(--hr-radius, 12px); box-shadow: var(--admin-shadow-sm); }
@@ -269,6 +336,31 @@
         let awal = 'daftar';
         try { awal = localStorage.getItem('hrrab.master-role.tampilan') || 'daftar'; } catch (e) {}
         tampilkan(awal === 'matriks' ? 'matriks' : 'daftar');
+
+        // Dialog hapus role: pengganti wajib bila role masih dipakai akun atau dipasang otomatis oleh sistem.
+        const modal = document.getElementById('modalHapusRole');
+        const form = document.getElementById('formHapusRole');
+        const pengganti = form.pengganti;
+        modal.addEventListener('show.bs.modal', (e) => {
+            const t = e.relatedTarget, d = t.dataset;
+            const jumlah = Number(d.jumlah || 0);
+            const wajib = jumlah > 0 || !!d.otomatis;
+            form.action = d.url;
+            form.querySelector('[name=_method]').value = d.metode;
+            modal.querySelector('[data-nama]').textContent = d.nama;
+            Array.from(pengganti.options).forEach((o) => { o.hidden = o.value === d.nilai; });
+            pengganti.value = '';
+            pengganti.required = wajib;
+            pengganti.querySelector('[data-kosong]').textContent = wajib
+                ? '-- Pilih role pengganti --'
+                : (d.kustom ? 'Kembali ke role ' + d.dasar : 'Tidak perlu pengganti');
+            const info = modal.querySelector('[data-info]');
+            info.textContent = (jumlah ? jumlah + ' akun memakai role ini dan akan dipindahkan. ' : 'Tidak ada akun yang memakai role ini. ')
+                + (d.kustom ? 'Role kustom dihapus permanen.' : 'Role bawaan disembunyikan dari pilihan dan bisa dipulihkan kapan saja.');
+            modal.querySelector('[data-catatan]').textContent = d.otomatis
+                ? 'Role ini juga dipasang otomatis oleh sistem (pegawai baru / kepala unit). Setelah dihapus, penetapan otomatis memakai role pengganti — disarankan role dengan jenis dasar yang sama.'
+                : 'Panel & alur persetujuan akun mengikuti jenis dasar role pengganti.';
+        });
     });
 </script>
 @endsection

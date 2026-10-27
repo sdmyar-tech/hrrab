@@ -150,6 +150,11 @@ class User extends Authenticatable
             if ($user->role_id && $user->isDirty('role') && $user->roleKustom()?->jenis_dasar !== $user->role) {
                 $user->role_id = null;
             }
+            // Role bawaan yang sudah dihapus di Master Role (mis. dipasang otomatis: pegawai baru = Staff) → pakai role penggantinya.
+            if (! $user->role_id && ($user->isDirty('role') || $user->isDirty('role_id')) && ($tujuan = Role::penggantiUntuk((string) $user->role))) {
+                $user->role = $tujuan['role'];
+                $user->role_id = $tujuan['role_id'];
+            }
         });
     }
 

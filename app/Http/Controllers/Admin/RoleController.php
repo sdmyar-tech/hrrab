@@ -23,8 +23,8 @@ class RoleController extends Controller
         $jumlahBawaan = User::whereNull('role_id')->whereIn('role', User::INTERNAL_ROLES)->selectRaw('role, count(*) n')->groupBy('role')->pluck('n', 'role');
         $jumlahKustom = User::whereNotNull('role_id')->selectRaw('role_id, count(*) n')->groupBy('role_id')->pluck('n', 'role_id');
 
-        // Satu bentuk data untuk kartu & kolom matriks: role bawaan lebih dulu, lalu role kustom.
-        $roles = collect(User::INTERNAL_ROLES)->map(fn (string $kode) => (object) [
+        // Satu bentuk data untuk baris daftar & kolom matriks: role bawaan aktif lebih dulu, lalu role kustom.
+        $roles = collect(Role::bawaanAktif())->map(fn (string $kode) => (object) [
             'jenis' => Role::penyesuaian($kode) ? 'disesuaikan' : 'bawaan',
             'nama' => User::roleLabelFor($kode),
             'namaAsli' => User::LABEL_ROLE[$kode],
@@ -36,7 +36,9 @@ class RoleController extends Controller
             'urlUbah' => route('admin.role.bawaan.edit', $kode),
             'urlAkun' => route('admin.users.index', ['role' => $kode]),
             'urlReset' => Role::penyesuaian($kode) ? route('admin.role.bawaan.reset', $kode) : null,
-            'urlHapus' => null,
+            'urlHapus' => in_array($kode, Role::TIDAK_BISA_DIHAPUS, true) ? null : route('admin.role.bawaan.hapus', $kode),
+            'nilai' => $kode,
+            'otomatis' => in_array($kode, Role::DIPASANG_OTOMATIS, true),
         ])->concat(Role::kustom()->map(fn (Role $r) => (object) [
             'jenis' => 'kustom',
             'nama' => $r->nama,
@@ -50,10 +52,26 @@ class RoleController extends Controller
             'urlAkun' => route('admin.users.index', ['role' => 'kustom:' . $r->id]),
             'urlReset' => null,
             'urlHapus' => route('admin.role.destroy', $r),
+            'nilai' => 'kustom:' . $r->id,
+            'otomatis' => false,
         ]));
+
+        // Role bawaan yang sudah dihapus: bisa dipulihkan.
+        $pilihan = Role::pilihanAktif();
+        $dihapus = collect(Role::bawaanNonaktif())->map(fn (string $kode) => (object) [
+            'kode' => $kode,
+            'nama' => User::roleLabelFor($kode),
+            'namaAsli' => User::LABEL_ROLE[$kode],
+            'pengganti' => ($p = Role::penyesuaian($kode)?->pengganti) ? ($pilihan[$p] ?? $p) : null,
+            'jumlah' => (int) ($jumlahBawaan[$kode] ?? 0),
+            'urlPulihkan' => route('admin.role.bawaan.pulihkan', $kode),
+        ]);
 
         return view('admin.role.index', [
             'roles' => $roles,
+            'dihapus' => $dihapus,
+            // Tujuan pemindahan akun saat menghapus role (Admin tidak ditawarkan).
+            'pilihanPengganti' => Role::pilihanAktif([User::ROLE_ADMIN]),
             'ringkas' => [
                 'role' => $roles->count(),
                 'kustom' => $roles->where('jenis', 'kustom')->count(),
@@ -65,7 +83,8 @@ class RoleController extends Controller
 
     public function create(Request $request): View
     {
-        $dasar = in_array($request->query('dasar'), Role::JENIS_DASAR_KUSTOM, true) ? $request->query('dasar') : User::ROLE_STAFF;
+        $boleh = $this->jenisDasarAktif();
+        $dasar = in_array($request->query('dasar'), $boleh, true) ? $request->query('dasar') : ($boleh[0] ?? User::ROLE_STAFF);
 
         return view('admin.role.form', [
             'mode' => 'kustom',
@@ -114,18 +133,75 @@ class RoleController extends Controller
         return redirect()->route('admin.role.index')->with('success', "Role {$role->nama} diperbarui." . ($jumlahAkun ? " Berlaku untuk {$jumlahAkun} akun." : ''));
     }
 
-    /** Hapus role kustom; akun yang memakainya kembali ke role bawaan jenis dasarnya. */
-    public function destroy(Role $role): RedirectResponse
+    /**
+     * Hapus role kustom. Akun yang memakainya dipindah ke role pengganti yang dipilih,
+     * atau (tanpa pilihan) kembali ke role bawaan jenis dasarnya.
+     */
+    public function destroy(Request $request, Role $role): RedirectResponse
     {
         abort_if($role->bawaan, 404);
-        $jumlah = DB::transaction(function () use ($role) {
-            $n = $role->users()->update(['role_id' => null]);
+        $tujuan = $this->validasiPengganti($request, 'kustom:' . $role->id, false);
+
+        $akun = DB::transaction(function () use ($role, $tujuan) {
+            // Per akun (bukan update massal) agar aturan model ikut jalan, mis. jenis dasar yang sudah dihapus → penggantinya.
+            $akun = $role->users()->get();
+            $akun->each(fn (User $u) => $u->update($tujuan ?? ['role_id' => null]));
             $role->delete();
+
+            return $akun;
+        });
+        $jumlah = $akun->count();
+        // Nama role tujuan yang benar-benar dipakai (bisa berbeda bila jenis dasar sudah dihapus dan diarahkan ke penggantinya).
+        $ke = $akun->first()?->fresh()->roleLabel();
+
+        return redirect()->route('admin.role.index')->with('success', "Role {$role->nama} dihapus." . ($jumlah ? " {$jumlah} akun dipindah ke role {$ke}." : ''));
+    }
+
+    /**
+     * Hapus (nonaktifkan) role bawaan selain Admin: hilang dari pilihan & daftar aktif, bisa dipulihkan.
+     * Akun yang memakainya dipindah ke role pengganti; role yang dipasang otomatis (Staff, Kepala Bagian) wajib punya pengganti.
+     */
+    public function hapusBawaan(Request $request, string $kode): RedirectResponse
+    {
+        abort_unless(in_array($kode, Role::bawaanAktif(), true) && ! in_array($kode, Role::TIDAK_BISA_DIHAPUS, true), 404);
+        $akun = User::where('role', $kode)->whereNull('role_id');
+        $wajib = $akun->exists() || in_array($kode, Role::DIPASANG_OTOMATIS, true);
+        $tujuan = $this->validasiPengganti($request, $kode, $wajib);
+        $nama = User::roleLabelFor($kode);
+        $p = Role::penyesuaian($kode);
+
+        $jumlah = DB::transaction(function () use ($akun, $tujuan, $kode, $p, $request) {
+            $n = $tujuan ? $akun->update($tujuan) : 0;
+            Role::updateOrCreate(['kode' => $kode], [
+                'nama' => $p?->nama ?? User::LABEL_ROLE[$kode],
+                'keterangan' => $p?->keterangan,
+                'jenis_dasar' => $kode,
+                'hak_akses' => Role::hakAksesBawaan($kode),
+                'bawaan' => true,
+                'aktif' => false,
+                'pengganti' => $tujuan ? $request->input('pengganti') : null,
+            ]);
 
             return $n;
         });
+        $ke = $tujuan ? (Role::pilihanAktif()[$request->input('pengganti')] ?? $request->input('pengganti')) : null;
 
-        return redirect()->route('admin.role.index')->with('success', "Role {$role->nama} dihapus." . ($jumlah ? " {$jumlah} akun kembali ke role " . User::roleLabelFor($role->jenis_dasar) . '.' : ''));
+        return redirect()->route('admin.role.index')->with('success', "Role {$nama} dihapus." . ($jumlah ? " {$jumlah} akun dipindah ke role {$ke}." : '')
+            . ($ke && in_array($kode, Role::DIPASANG_OTOMATIS, true) ? " Akun yang otomatis mendapat role {$nama} kini memakai {$ke}." : ''));
+    }
+
+    /** Pulihkan role bawaan yang sudah dihapus. */
+    public function pulihkanBawaan(string $kode): RedirectResponse
+    {
+        $p = Role::penyesuaian($kode);
+        abort_unless($p && $p->aktif === false, 404);
+
+        // Baris yang dibuat hanya untuk menonaktifkan (nama & hak masih bawaan) dihapus agar role kembali "Bawaan" murni.
+        $hakAsli = collect(Role::rapikan($kode, User::ABILITIES[$kode] ?? []))->sort()->values()->all();
+        $masihAsli = $p->nama === User::LABEL_ROLE[$kode] && ! $p->keterangan && collect($p->hakAksesEfektif())->sort()->values()->all() === $hakAsli;
+        $masihAsli ? $p->delete() : $p->update(['aktif' => true, 'pengganti' => null]);
+
+        return redirect()->route('admin.role.index')->with('success', 'Role ' . User::roleLabelFor($kode) . ' dipulihkan dan bisa dipilih lagi di Kelola Akun.');
     }
 
     public function editBawaan(string $kode): View
@@ -188,10 +264,33 @@ class RoleController extends Controller
                 }
             }],
             'keterangan' => ['nullable', 'string', 'max:255'],
-            'jenis_dasar' => [$kodeBawaan ? 'nullable' : 'required', Rule::in(Role::JENIS_DASAR_KUSTOM)],
+            // Jenis dasar aktif; jenis dasar role ini sendiri tetap sah walau sudah dihapus (role lama yang terkunci).
+            'jenis_dasar' => [$kodeBawaan ? 'nullable' : 'required', Rule::in([...$this->jenisDasarAktif(), ...array_filter([$role?->jenis_dasar])])],
             'hak_akses' => ['nullable', 'array'],
             'hak_akses.*' => [Rule::in(array_keys(Role::HAK_AKSES))],
         ], ['nama.required' => 'Nama role wajib diisi.', 'jenis_dasar.required' => 'Pilih jenis dasar role.']);
+    }
+
+    /** @return list<string> jenis dasar role kustom yang masih aktif */
+    private function jenisDasarAktif(): array
+    {
+        return array_values(array_intersect(Role::JENIS_DASAR_KUSTOM, Role::bawaanAktif()));
+    }
+
+    /**
+     * Role pengganti dari input "pengganti" ("<kode bawaan>" / "kustom:<id>"): harus aktif, bukan Admin, bukan role yang dihapus.
+     *
+     * @return array{role: string, role_id: ?int}|null
+     */
+    private function validasiPengganti(Request $request, string $dihapus, bool $wajib): ?array
+    {
+        $pilihan = array_keys(Role::pilihanAktif([User::ROLE_ADMIN, $dihapus]));
+        $request->validate(['pengganti' => [$wajib ? 'required' : 'nullable', Rule::in($pilihan)]], [
+            'pengganti.required' => 'Pilih role pengganti untuk akun yang memakai role ini.',
+            'pengganti.in' => 'Role pengganti tidak valid.',
+        ]);
+
+        return $request->filled('pengganti') ? Role::urai($request->input('pengganti')) : null;
     }
 
     private function kodeUnik(string $nama): string

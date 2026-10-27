@@ -187,6 +187,8 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::get('/bawaan/{kode}/edit', [AdminRoleController::class, 'editBawaan'])->name('bawaan.edit');
             Route::put('/bawaan/{kode}', [AdminRoleController::class, 'updateBawaan'])->name('bawaan.update');
             Route::delete('/bawaan/{kode}', [AdminRoleController::class, 'resetBawaan'])->name('bawaan.reset');
+            Route::post('/bawaan/{kode}/hapus', [AdminRoleController::class, 'hapusBawaan'])->name('bawaan.hapus');
+            Route::post('/bawaan/{kode}/pulihkan', [AdminRoleController::class, 'pulihkanBawaan'])->name('bawaan.pulihkan');
             Route::get('/{role}/edit', [AdminRoleController::class, 'edit'])->name('edit');
             Route::put('/{role}', [AdminRoleController::class, 'update'])->name('update');
             Route::delete('/{role}', [AdminRoleController::class, 'destroy'])->name('destroy');

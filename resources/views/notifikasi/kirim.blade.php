@@ -114,7 +114,7 @@
                                 <input class="form-check-input" type="checkbox" id="semua-role" data-pilih-semua="role[]">
                                 <label class="form-check-label small fw-semibold" for="semua-role">Pilih semua role <span class="text-muted fw-normal" data-jumlah-terpilih></span></label>
                             </div>
-                                @foreach (\App\Models\User::INTERNAL_ROLES as $r)
+                                @foreach (\App\Models\Role::bawaanAktif() as $r)
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="role[]" value="{{ $r }}" id="r-{{ $r }}" @checked(in_array($r, old('role', []), true))>
                                         <label class="form-check-label small" for="r-{{ $r }}">{{ \App\Models\User::roleLabelFor($r) }}</label>

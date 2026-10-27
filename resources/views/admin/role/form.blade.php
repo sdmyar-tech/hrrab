@@ -52,7 +52,8 @@
                             <div>
                                 <label class="form-label" for="rl-dasar">Jenis dasar</label>
                                 <select name="jenis_dasar" id="rl-dasar" class="form-select @error('jenis_dasar') is-invalid @enderror" required @disabled($dasarTerkunci)>
-                                    @foreach (\App\Models\Role::JENIS_DASAR_KUSTOM as $d)
+                                    {{-- Jenis dasar yang masih aktif (+ jenis dasar role ini sendiri bila sudah dihapus). --}}
+                                    @foreach (array_values(array_unique([...array_intersect(\App\Models\Role::JENIS_DASAR_KUSTOM, \App\Models\Role::bawaanAktif()), ...array_filter([$role->jenis_dasar])])) as $d)
                                         <option value="{{ $d }}" @selected(old('jenis_dasar', $role->jenis_dasar) === $d)>{{ \App\Models\User::roleLabelFor($d) }}</option>
                                     @endforeach
                                 </select>

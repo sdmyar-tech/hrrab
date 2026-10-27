@@ -21,7 +21,11 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class UserController extends Controller
 {
-    private const ROLES = [...User::INTERNAL_ROLES, User::ROLE_PELAMAR];
+    /** @return list<string> role bawaan yang bisa dipilih: yang masih aktif di Master Role + Pelamar */
+    private function roles(): array
+    {
+        return [...Role::bawaanAktif(), User::ROLE_PELAMAR];
+    }
 
     public function index(Request $request): View
     {
@@ -35,7 +39,7 @@ class UserController extends Controller
 
         return view('admin.users.index', [
             'users' => $query->paginate(15)->withQueryString(),
-            'roles' => self::ROLES,
+            'roles' => $this->roles(),
             'rolesKustom' => Role::kustom(),
             ...$urut,
         ]);
@@ -94,7 +98,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
-            'role' => ['required', Rule::in(self::ROLES)],
+            'role' => ['required', Rule::in($this->roles())],
             'divisi' => ['nullable', 'array'],
             'divisi.*' => ['string', Rule::in(config('kepegawaian.unit_kerja'))],
             'kepala_unit' => ['nullable', 'array'],
@@ -133,7 +137,8 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'password' => ['nullable', 'string', 'min:6', 'confirmed'],
-            'role' => ['required', Rule::in(self::ROLES)],
+            // Role akun saat ini tetap sah walau sudah dihapus di Master Role (tidak memaksa ganti saat menyimpan hal lain).
+            'role' => ['required', Rule::in([...$this->roles(), $user->role])],
             'divisi' => ['nullable', 'array'],
             'divisi.*' => ['string', Rule::in(config('kepegawaian.unit_kerja'))],
             'kepala_unit' => ['nullable', 'array'],
@@ -214,7 +219,7 @@ class UserController extends Controller
     private function formOptions(): array
     {
         return [
-            'roles' => self::ROLES,
+            'roles' => $this->roles(),
             'rolesKustom' => Role::kustom(),
             'divisiOptions' => config('kepegawaian.unit_kerja'),
             'gmBidang' => config('kepegawaian.gm_bidang'),
