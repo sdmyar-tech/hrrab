@@ -119,15 +119,15 @@ php artisan migrate --force --seed
 ```
 
 Migrasi hanya membuat struktur tabel — semua tabel kosong (termasuk unit, jabatan, tanggal merah).
-Seeder hanya membuat 2 akun awal, belum tertaut ke data pegawai:
+Seeder hanya membuat 1 akun awal, belum tertaut ke data pegawai:
 
 | Akun | Email | Password awal |
 |---|---|---|
-| Super Admin | `superadmin@example.com` | `password123` |
-| Kepala SDM | `kepala.sdm@example.com` | `password123` |
+| Admin | `admin@example.com` | `password123` |
 
-Keduanya **wajib ganti password** saat login pertama. Urutan penyiapan oleh Super Admin:
+Akun ini **wajib ganti password** saat login pertama. Urutan penyiapan oleh Admin:
 
+0. **Kelola Akun** — ganti email Admin ke email asli, lalu buat akun Kepala SDM.
 1. **Master Unit** — tambah semua unit kerja.
 2. **Master Jabatan** — tambah jabatan dan centang unitnya (dropdown jabatan mengikuti unit).
 3. **Master Lokasi Kerja** — tambah tempat/area kerja (pilihan lokasi di pegawai & lowongan).
@@ -135,7 +135,6 @@ Keduanya **wajib ganti password** saat login pertama. Urutan penyiapan oleh Supe
 5. **Kalender** — tanggal merah terisi otomatis dari API saat halaman internal pertama dibuka
    (atau tekan *Sinkronkan sekarang*); tambahkan libur yayasan secara manual.
 
-Email kedua akun awal bisa diganti lewat menu User.
 Seeder aman dijalankan ulang (akun yang sudah ada dilewati), tetapi tidak perlu dijalankan di server yang
 sudah berisi data.
 
@@ -181,7 +180,7 @@ Tidak perlu *queue worker*: aplikasi tidak memakai job antrean.
 
 - [ ] `https://<domain>` terbuka, `https://<domain>/<STAFF_LOGIN_PATH>` menampilkan login internal
 - [ ] `https://<domain>/.env` dan `https://<domain>/vendor/` → **403**
-- [ ] Login Super Admin berhasil, foto/dokumen pegawai tampil
+- [ ] Login Admin berhasil, foto/dokumen pegawai tampil
 - [ ] Menu **Kalender** berisi tanggal merah (kosong → `php artisan kalender:sinkron-libur`)
 - [ ] Impor absensi kecil berhasil (menguji batas upload & ekstensi `zip`)
 

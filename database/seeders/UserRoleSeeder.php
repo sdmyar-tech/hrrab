@@ -8,15 +8,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Akun awal saat sistem pertama kali dipasang: Super Admin & Kepala SDM, belum ditautkan ke data pegawai.
+ * Akun awal saat sistem pertama kali dipasang: hanya Admin, belum ditautkan ke data pegawai.
+ * Akun lain (Kepala SDM, dst.) dibuat Admin lewat Kelola Akun.
  * Wajib ganti password saat login pertama. Aman dijalankan ulang: akun yang sudah ada tidak ditimpa.
  */
 class UserRoleSeeder extends Seeder
 {
     private const AKUN = [
-        ['email' => 'superadmin@abdurrab.id', 'name' => 'Administrator', 'role' => User::ROLE_ADMIN],
-['email' => 'kepala.sdm@abdurrab.id', 'name' => 'Kepala SDM', 'role' => User::ROLE_KEPALA_SDM],
-
+        ['email' => 'admin@example.com', 'name' => 'Administrator', 'role' => User::ROLE_ADMIN],
     ];
 
     private const PASSWORD_AWAL = 'password123';
