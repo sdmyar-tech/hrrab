@@ -70,7 +70,12 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="text-center text-muted py-4">Belum ada lokasi kerja. Tambahkan lewat kolom di atas.</td></tr>
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="bi bi-geo-alt fs-3 d-block mb-2"></i>
+                                    Belum ada lokasi kerja.
+                                </td>
+                            </tr>
                         @endforelse
                     </tbody>
                 </table>
