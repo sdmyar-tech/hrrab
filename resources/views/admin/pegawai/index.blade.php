@@ -6,6 +6,13 @@
 
             @include('layouts.admin.header')
 
+            @if (session('peringatan_keluar'))
+                <div class="alert alert-info small d-flex gap-2">
+                    <i class="bi bi-info-circle-fill"></i>
+                    <ul class="mb-0 ps-3">@foreach (session('peringatan_keluar') as $p)<li>{{ $p }}</li>@endforeach</ul>
+                </div>
+            @endif
+
             <section class="panel">
                 <div class="panel-header">
                     <div>
@@ -155,6 +162,14 @@
                                                             <i class="bi bi-pencil me-2"></i>Edit
                                                         </a>
                                                     </li>
+                                                    @if (($pegawai->kepegawaian->status_rekrutmen ?? null) === 'Aktif')
+                                                        <li>
+                                                            <button type="button" class="dropdown-item text-warning-emphasis"
+                                                                data-buka-keluar="{{ route('admin.pegawai.keluar.form', [$pegawai->id, 'kembali' => request()->fullUrl()]) }}">
+                                                                <i class="bi bi-box-arrow-right me-2"></i>Resign / Keluar
+                                                            </button>
+                                                        </li>
+                                                    @endif
                                                     <li><hr class="dropdown-divider"></li>
                                                     <li>
                                                         <form action="{{ route('admin.pegawai.destroy', $pegawai->id) }}" method="POST">
@@ -216,6 +231,42 @@
                     }, 500);
                 });
             }
+
+            // Resign / Keluar dari daftar: isi dialog dimuat saat diklik (dampak dihitung per pegawai), lalu dibuka di halaman ini.
+            const wadah = document.getElementById('wadahModalKeluar');
+            document.querySelectorAll('[data-buka-keluar]').forEach(function (tombol) {
+                tombol.addEventListener('click', async function () {
+                    tombol.disabled = true;
+                    try {
+                        const res = await fetch(tombol.dataset.bukaKeluar, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
+                        if (!res.ok) throw new Error(res.status === 404 ? 'Pegawai ini sudah tidak aktif.' : 'Dialog gagal dimuat (' + res.status + ').');
+                        wadah.innerHTML = await res.text();
+                        const modal = wadah.querySelector('#modalKeluar');
+                        const form = modal.querySelector('form');
+                        // Form dimuat setelah halaman siap: konfirmasi akhir dipasang di sini (form[data-confirm] global tidak menjangkaunya).
+                        form.addEventListener('submit', function (e) {
+                            if (form.dataset.confirmed === '1') return;
+                            e.preventDefault();
+                            if (!form.reportValidity()) return;
+                            Swal.fire({
+                                icon: 'warning', title: 'Konfirmasi', text: form.dataset.confirm, showCancelButton: true, reverseButtons: true,
+                                confirmButtonText: 'Ya, proses', cancelButtonText: 'Batal', confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
+                            }).then(function (r) {
+                                if (!r.isConfirmed) return;
+                                form.dataset.confirmed = '1';
+                                form.querySelector('[type=submit]').disabled = true;
+                                form.submit();
+                            });
+                        });
+                        bootstrap.Modal.getOrCreateInstance(modal).show();
+                    } catch (err) {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: err.message, confirmButtonColor: '#880f12' });
+                    } finally {
+                        tombol.disabled = false;
+                    }
+                });
+            });
         });
     </script>
+    <div id="wadahModalKeluar"></div>
 @endsection

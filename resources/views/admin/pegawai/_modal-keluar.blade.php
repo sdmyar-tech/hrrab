@@ -1,4 +1,7 @@
-{{-- Modal proses pegawai keluar (resign dll.). $dampakKeluar dari App\Support\PegawaiKeluar::dampak(). --}}
+{{--
+    Modal Resign/Keluar pegawai. $dampakKeluar dari App\Support\PegawaiKeluar::dampak().
+    Dipakai di Detail Pegawai (langsung) dan di daftar Data Pegawai (dimuat lewat route admin.pegawai.keluar.form, $kembali = URL daftar).
+--}}
 @php
     $d = $dampakKeluar;
     $terkunci = $d['terjadwal'] > 0;
@@ -6,10 +9,13 @@
 <div class="modal fade" id="modalKeluar" tabindex="-1" aria-labelledby="judulModalKeluar" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <form class="modal-content" method="POST" action="{{ route('admin.pegawai.keluar', $pegawai) }}"
-            data-confirm="Proses {{ $pegawai->nama_lengkap }} keluar? Akunnya menjadi akun pelamar.">
+            data-confirm="Proses {{ $pegawai->nama_lengkap }} resign/keluar? Akunnya menjadi akun pelamar.">
             @csrf
+            @if (! empty($kembali))
+                <input type="hidden" name="kembali" value="{{ $kembali }}">
+            @endif
             <div class="modal-header">
-                <h2 class="modal-title" id="judulModalKeluar"><i class="bi bi-box-arrow-right me-1"></i>Proses Keluar · {{ $pegawai->nama_lengkap }}</h2>
+                <h2 class="modal-title" id="judulModalKeluar"><i class="bi bi-box-arrow-right me-1"></i>Resign / Keluar · {{ $pegawai->nama_lengkap }}</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
             <div class="modal-body">
@@ -71,7 +77,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                <button type="submit" class="btn btn-danger" @disabled($terkunci)><i class="bi bi-box-arrow-right me-1"></i>Proses Keluar</button>
+                <button type="submit" class="btn btn-danger" @disabled($terkunci)><i class="bi bi-box-arrow-right me-1"></i>Proses Resign / Keluar</button>
             </div>
         </form>
     </div>

@@ -108,6 +108,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::put('/pegawai/{pegawai}', [AdminPegawaiController::class, 'update'])->name('pegawai.update');
             Route::delete('/pegawai/{pegawai}', [AdminPegawaiController::class, 'destroy'])->name('pegawai.destroy');
             // Pegawai keluar (resign dll.): status Tidak Aktif, akun jadi pelamar (tidak dihapus); bisa dibatalkan.
+            Route::get('/pegawai/{pegawai}/keluar', [PegawaiKeluarController::class, 'form'])->name('pegawai.keluar.form');
             Route::post('/pegawai/{pegawai}/keluar', [PegawaiKeluarController::class, 'store'])->name('pegawai.keluar');
             Route::delete('/pegawai/{pegawai}/keluar', [PegawaiKeluarController::class, 'destroy'])->name('pegawai.keluar.batal');
         });

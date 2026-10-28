@@ -243,7 +243,7 @@
                             </a>
                             @if ($dampakKeluar)
                                 <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalKeluar">
-                                    <i class="bi bi-box-arrow-right"></i> Proses Keluar
+                                    <i class="bi bi-box-arrow-right"></i> Resign / Keluar
                                 </button>
                             @endif
                         @endcan

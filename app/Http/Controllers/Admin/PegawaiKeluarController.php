@@ -5,18 +5,34 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\DataPegawai;
 use App\Models\User;
+use App\Support\EditorData;
 use App\Support\PegawaiKeluar;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 
 /** Proses pegawai keluar (resign dll.) dan pembatalannya. Hak: kelola-pegawai (dijaga di route). */
 class PegawaiKeluarController extends Controller
 {
+    /** Isi dialog Resign/Keluar untuk dibuka dari daftar Data Pegawai (dimuat saat tombol diklik). */
+    public function form(Request $request, DataPegawai $pegawai): View
+    {
+        abort_unless($pegawai->load('kepegawaian')->kepegawaian?->status_rekrutmen === 'Aktif', 404, 'Pegawai ini sudah tidak aktif.');
+
+        return view('admin.pegawai._modal-keluar', [
+            'pegawai' => $pegawai,
+            'dampakKeluar' => PegawaiKeluar::dampak($pegawai),
+            'kembali' => EditorData::kembaliAman($request->query('kembali')),
+        ]);
+    }
+
     public function store(Request $request, DataPegawai $pegawai): RedirectResponse
     {
-        $v = $request->validateWithBag('keluar', [
+        $validator = Validator::make($request->all(), [
             'jenis_keluar' => ['required', Rule::in(array_keys(PegawaiKeluar::JENIS))],
             'tanggal_keluar' => ['required', 'date', 'before_or_equal:today'],
             'alasan_keluar' => [$request->input('jenis_keluar') === 'lainnya' ? 'required' : 'nullable', 'string', 'max:1000'],
@@ -25,12 +41,24 @@ class PegawaiKeluarController extends Controller
             'tanggal_keluar.before_or_equal' => 'Tanggal keluar tidak boleh di masa depan. Proses pada hari terakhir bekerja.',
             'alasan_keluar.required' => 'Tulis alasan untuk jenis "Lainnya".',
         ]);
+        // Gagal (dari daftar maupun detail): ke halaman detail, dialognya terbuka lagi dengan pesan galat.
+        $gagal = fn ($galat) => redirect()->route('admin.pegawai.show', $pegawai)->withErrors($galat, 'keluar')->withInput();
+        if ($validator->fails()) {
+            return $gagal($validator);
+        }
+        $v = $validator->validated();
 
         /** @var User $oleh */
         $oleh = Auth::user();
-        $hasil = PegawaiKeluar::proses($pegawai->load('kepegawaian'), $v['tanggal_keluar'], $v['jenis_keluar'], $v['alasan_keluar'] ?? null, $oleh);
+        try {
+            $hasil = PegawaiKeluar::proses($pegawai->load('kepegawaian'), $v['tanggal_keluar'], $v['jenis_keluar'], $v['alasan_keluar'] ?? null, $oleh);
+        } catch (ValidationException $e) {
+            return $gagal($e->errors());
+        }
 
-        return redirect()->route('admin.pegawai.show', $pegawai)
+        $kembali = EditorData::kembaliAman($request->input('kembali'));
+
+        return ($kembali ? redirect()->to($kembali) : redirect()->route('admin.pegawai.show', $pegawai))
             ->with('success', "{$pegawai->nama_lengkap} diproses keluar (" . PegawaiKeluar::JENIS[$v['jenis_keluar']] . ').')
             ->with('peringatan_keluar', $hasil);
     }
