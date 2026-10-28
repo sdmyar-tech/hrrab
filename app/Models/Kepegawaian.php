@@ -2,14 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DicatatLog;
 use App\Support\EvaluasiKontrakAlur;
+use App\Support\PegawaiKeluar;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Kepegawaian extends Model
 {
-    use \App\Models\Concerns\DicatatLog, HasFactory;
+    use DicatatLog, HasFactory;
 
     protected $table = 'kepegawaians';
 
@@ -21,6 +23,10 @@ class Kepegawaian extends Model
         'lokasi_kerja',
         'tanggal_masuk',
         'tanggal_keluar',
+        'jenis_keluar',
+        'alasan_keluar',
+        'keluar_diproses_oleh',
+        'keluar_snapshot',
         'masa_kerja',
         'status_rekrutmen',
         'status_kerja',
@@ -31,14 +37,15 @@ class Kepegawaian extends Model
         'tanggal_masuk' => 'date',
         'tanggal_keluar' => 'date',
         'tanggal_habis_kontrak' => 'date',
+        'keluar_snapshot' => 'array',
     ];
 
-    /** Tanggal keluar mengikuti status: jadi "Tidak Aktif" → hari ini (bila belum diisi); aktif lagi → dikosongkan. */
+    /** Tanggal keluar mengikuti status: jadi "Tidak Aktif" → hari ini (bila belum diisi); aktif lagi → data keluar dikosongkan. */
     protected static function booted(): void
     {
         static::saving(function (Kepegawaian $k) {
             if ($k->status_rekrutmen === 'Aktif') {
-                $k->tanggal_keluar = null;
+                $k->forceFill(['tanggal_keluar' => null, 'jenis_keluar' => null, 'alasan_keluar' => null, 'keluar_diproses_oleh' => null, 'keluar_snapshot' => null]);
             } elseif ($k->status_rekrutmen === 'Tidak Aktif' && $k->exists && $k->isDirty('status_rekrutmen') && ! $k->tanggal_keluar) {
                 // Hanya saat berubah dari Aktif; data baru/impor yang sudah nonaktif tidak diberi tanggal palsu.
                 $k->tanggal_keluar = now()->toDateString();
@@ -58,5 +65,15 @@ class Kepegawaian extends Model
     public function dataPegawai(): BelongsTo
     {
         return $this->belongsTo(DataPegawai::class);
+    }
+
+    public function pemrosesKeluar(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'keluar_diproses_oleh');
+    }
+
+    public function jenisKeluarLabel(): ?string
+    {
+        return $this->jenis_keluar ? (PegawaiKeluar::JENIS[$this->jenis_keluar] ?? $this->jenis_keluar) : null;
     }
 }

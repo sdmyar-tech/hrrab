@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\LogAktivitasController as AdminLogAktivitasContro
 use App\Http\Controllers\Admin\LokasiKerjaController as AdminLokasiKerjaController;
 use App\Http\Controllers\Admin\LowonganController as AdminLowonganController;
 use App\Http\Controllers\Admin\PegawaiController as AdminPegawaiController;
+use App\Http\Controllers\Admin\PegawaiKeluarController;
 use App\Http\Controllers\Admin\PengajuanCutiController as AdminPengajuanCutiController;
 use App\Http\Controllers\Admin\PengajuanFormasiController as AdminPengajuanFormasiController;
 use App\Http\Controllers\Admin\PengajuanLemburController as AdminPengajuanLemburController;
@@ -106,6 +107,9 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::get('/pegawai/{pegawai}/edit', [AdminPegawaiController::class, 'edit'])->name('pegawai.edit');
             Route::put('/pegawai/{pegawai}', [AdminPegawaiController::class, 'update'])->name('pegawai.update');
             Route::delete('/pegawai/{pegawai}', [AdminPegawaiController::class, 'destroy'])->name('pegawai.destroy');
+            // Pegawai keluar (resign dll.): status Tidak Aktif, akun jadi pelamar (tidak dihapus); bisa dibatalkan.
+            Route::post('/pegawai/{pegawai}/keluar', [PegawaiKeluarController::class, 'store'])->name('pegawai.keluar');
+            Route::delete('/pegawai/{pegawai}/keluar', [PegawaiKeluarController::class, 'destroy'])->name('pegawai.keluar.batal');
         });
         Route::get('/pegawai/{pegawai}', [AdminPegawaiController::class, 'show'])->name('pegawai.show')->middleware('can:lihat-tabel-karyawan');
         Route::get('/pegawai/{pegawai}/export', [AdminPegawaiController::class, 'exportDetail'])->name('pegawai.export-detail')->middleware('can:lihat-tabel-karyawan');

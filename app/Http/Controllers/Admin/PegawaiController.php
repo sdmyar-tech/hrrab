@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\EksporPegawai;
 use App\Support\ExcelExporter;
 use App\Support\KelompokPegawai;
+use App\Support\PegawaiKeluar;
 use App\Support\PengajuanWorkflow;
 use App\Support\PenugasanService;
 use App\Support\Urutan;
@@ -223,6 +224,9 @@ class PegawaiController extends Controller
         return view('admin.pegawai.show', [
             'pegawai' => $pegawai,
             ...$this->alurApproval($pegawai),
+            // Tombol & dialog "Proses Keluar": hanya pegawai aktif, untuk pengelola data pegawai.
+            'dampakKeluar' => $pegawai->kepegawaian?->status_rekrutmen === 'Aktif' && Auth::user()->can('kelola-pegawai')
+                ? PegawaiKeluar::dampak($pegawai) : null,
         ]);
     }
 
@@ -285,8 +289,18 @@ class PegawaiController extends Controller
     {
         $this->authorizeManage();
 
-        $pegawai = DataPegawai::with(['dokumen', 'bpjs'])->findOrFail($id);
+        $pegawai = DataPegawai::with(['dokumen', 'bpjs', 'kepegawaian'])->findOrFail($id);
         $validated = $this->validateRequest($request, $pegawai->id);
+
+        // Aktif ⇄ Tidak Aktif lewat form ini memakai proses keluar yang sama (akun jadi pelamar / dikembalikan).
+        $statusLama = $pegawai->kepegawaian?->status_rekrutmen;
+        $statusBaru = $validated['kepegawaian']['status_rekrutmen'] ?? $statusLama;
+        $keluar = $statusLama === 'Aktif' && $statusBaru === 'Tidak Aktif';
+        $batalKeluar = $statusLama === 'Tidak Aktif' && $statusBaru === 'Aktif' && $pegawai->kepegawaian?->keluar_snapshot;
+        $tanggalKeluar = $validated['kepegawaian']['tanggal_keluar'] ?? null;
+        if ($keluar || $batalKeluar) {
+            unset($validated['kepegawaian']['status_rekrutmen'], $validated['kepegawaian']['tanggal_keluar']);
+        }
 
         // Selain Admin, unit utama hanya bisa diubah lewat Mutasi. Admin boleh koreksi langsung.
         $unitBaru = Auth::user()->isAdmin() ? ($validated['kepegawaian']['unit_kerja'] ?? null) : null;
@@ -334,6 +348,17 @@ class PegawaiController extends Controller
             report($e);
 
             return redirect()->back()->withInput()->with('error', 'Gagal memperbarui data pegawai. Silakan coba lagi. (' . $e->getMessage() . ')');
+        }
+
+        if ($keluar || $batalKeluar) {
+            $pegawai->unsetRelation('kepegawaian');
+            $hasil = $keluar
+                ? PegawaiKeluar::proses($pegawai, $tanggalKeluar ?? now()->toDateString(), 'lainnya', 'Dinonaktifkan lewat Edit Data Pegawai.', Auth::user())
+                : PegawaiKeluar::batalkan($pegawai);
+
+            return redirect()->route('admin.pegawai.show', $pegawai->id)
+                ->with('success', 'Data pegawai berhasil diperbarui' . ($keluar ? ' dan diproses keluar.' : '; proses keluar dibatalkan.'))
+                ->with('peringatan_keluar', $hasil);
         }
 
         return redirect()->route('admin.pegawai.show', $pegawai->id)->with('success', 'Data pegawai berhasil diperbarui.');

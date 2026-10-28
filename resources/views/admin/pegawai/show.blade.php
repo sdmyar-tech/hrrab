@@ -241,6 +241,11 @@
                             <a href="{{ route('admin.pegawai.edit', $pegawai) }}" class="btn btn-primary btn-sm">
                                 <i class="bi bi-pencil-square"></i> Edit Data
                             </a>
+                            @if ($dampakKeluar)
+                                <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalKeluar">
+                                    <i class="bi bi-box-arrow-right"></i> Proses Keluar
+                                </button>
+                            @endif
                         @endcan
                         @if (auth()->user()->isAdmin())
                             {{-- Admin: buka data mentah pegawai ini di Editor Data (semua kolom, tanpa aturan). --}}
@@ -261,6 +266,33 @@
                     </div>
                 </div>
             </section>
+
+            @if (session('peringatan_keluar'))
+                <div class="alert alert-info small d-flex gap-2">
+                    <i class="bi bi-info-circle-fill"></i>
+                    <ul class="mb-0 ps-3">@foreach (session('peringatan_keluar') as $p)<li>{{ $p }}</li>@endforeach</ul>
+                </div>
+            @endif
+            @if (! $aktif && $kepeg?->jenis_keluar)
+                {{-- Pegawai sudah keluar lewat "Proses Keluar": ringkasan + pembatalan. --}}
+                <div class="alert alert-secondary d-flex flex-column flex-md-row gap-2 justify-content-between align-items-md-center">
+                    <div class="small">
+                        <strong><i class="bi bi-box-arrow-right me-1"></i>Keluar per {{ $kepeg->tanggal_keluar?->translatedFormat('d F Y') ?? '-' }}</strong>
+                        · {{ $kepeg->jenisKeluarLabel() }}
+                        @if ($kepeg->alasan_keluar) · {{ $kepeg->alasan_keluar }} @endif
+                        <span class="d-block text-muted">Diproses oleh {{ $kepeg->pemrosesKeluar?->name ?? '-' }}. Akunnya kini akun pelamar; untuk kembali bekerja harus melamar lagi.</span>
+                    </div>
+                    @can('kelola-pegawai')
+                        @if ($kepeg->keluar_snapshot)
+                            <form action="{{ route('admin.pegawai.keluar.batal', $pegawai) }}" method="POST" class="flex-shrink-0"
+                                data-confirm="Batalkan proses keluar {{ $pegawai->nama_lengkap }}? Status, akun, penugasan, dan pengajuan dikembalikan seperti sebelum keluar.">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Batalkan Keluar</button>
+                            </form>
+                        @endif
+                    @endcan
+                </div>
+            @endif
 
             <ul class="nav pd-tabs" id="detailTab" role="tablist">
                 @foreach ([
@@ -319,7 +351,11 @@
                             'Tanggal Masuk' => optional($kepeg?->tanggal_masuk)->translatedFormat('d F Y'),
                             'Masa Kerja' => $kepeg?->masa_kerja,
                             'Status Rekrutmen' => $kepeg?->status_rekrutmen,
-                            ...($kepeg?->status_rekrutmen === 'Tidak Aktif' ? ['Tanggal Keluar' => optional($kepeg->tanggal_keluar)->translatedFormat('d F Y') ?? 'Tidak diketahui'] : []),
+                            ...($kepeg?->status_rekrutmen === 'Tidak Aktif' ? [
+                                'Tanggal Keluar' => optional($kepeg->tanggal_keluar)->translatedFormat('d F Y') ?? 'Tidak diketahui',
+                                'Jenis Keluar' => $kepeg->jenisKeluarLabel(),
+                                'Alasan Keluar' => $kepeg->alasan_keluar,
+                            ] : []),
                             'Status Kerja' => $kepeg?->status_kerja,
                             'Tanggal Habis Kontrak' => optional($kepeg?->tanggal_habis_kontrak)->translatedFormat('d F Y'),
                         ]])
@@ -599,6 +635,9 @@
 
     @include('partials.preview-file-modal')
     @stack('modal-pegawai')
+    @if ($dampakKeluar)
+        @include('admin.pegawai._modal-keluar')
+    @endif
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {

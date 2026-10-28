@@ -28,6 +28,8 @@ class PencatatLog
         'admin.pegawai.store' => ['tambah', 'Data Pegawai', 'Menambah pegawai'],
         'admin.pegawai.update' => ['ubah', 'Data Pegawai', 'Mengubah data pegawai'],
         'admin.pegawai.destroy' => ['hapus', 'Data Pegawai', 'Menghapus pegawai'],
+        'admin.pegawai.keluar' => ['ubah', 'Data Pegawai', 'Memproses pegawai keluar (akun jadi pelamar)'],
+        'admin.pegawai.keluar.batal' => ['ubah', 'Data Pegawai', 'Membatalkan proses keluar pegawai'],
         'admin.pegawai.export' => ['ekspor', 'Data Pegawai', 'Mengekspor data pegawai'],
         'admin.pegawai.export-detail' => ['ekspor', 'Data Pegawai', 'Mengekspor detail pegawai'],
         'admin.penugasan.store' => ['tambah', 'Mutasi & Rangkap', 'Mencatat mutasi/rangkap'],

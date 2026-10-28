@@ -734,8 +734,14 @@ class LamaranController extends Controller
             return redirect()->back()->with('error', 'Pelamar belum melengkapi NIK pada data pelamar. Minta pelamar melengkapi datanya terlebih dahulu sebelum direkrut.');
         }
 
+        // Mantan pegawai (NIK sama, sudah keluar) melamar lagi: data pegawai lamanya diaktifkan kembali, bukan dibuat baru.
+        $mantan = DataPegawai::with('kepegawaian')->where('nik', $pelamar->nik)->first();
+        if ($mantan && $mantan->kepegawaian?->status_rekrutmen !== 'Tidak Aktif') {
+            return redirect()->back()->with('error', "NIK pelamar ini sudah terdaftar sebagai pegawai aktif ({$mantan->nama_lengkap}, NIP {$mantan->nip}).");
+        }
+
         $validated = $request->validate([
-            'nip' => ['required', 'string', 'max:50', 'unique:data_pegawais,nip'],
+            'nip' => ['required', 'string', 'max:50', Rule::unique('data_pegawais', 'nip')->ignore($mantan?->id)],
             'tanggal_masuk' => ['required', 'date'],
             'status_kerja' => ['required', 'in:Tetap,Kontrak,Magang,Harian Lepas,Probation'],
             'masa_kontrak_bulan' => ['nullable', 'integer', 'in:3,6,9,12,15,18,21,24,27,30,33,36'],
@@ -747,8 +753,8 @@ class LamaranController extends Controller
             ? Kalender::habisKontrak(Carbon::parse($validated['tanggal_masuk']), (int) $validated['masa_kontrak_bulan'])
             : null;
 
-        DB::transaction(function () use ($validated, $lamaran, $pelamar, $tanggalHabisKontrak) {
-            $pegawai = DataPegawai::create([
+        DB::transaction(function () use ($validated, $lamaran, $pelamar, $tanggalHabisKontrak, $mantan) {
+            $biodata = [
                 'email' => $pelamar->email,
                 'nip' => $validated['nip'],
                 'nama_lengkap' => $pelamar->nama_lengkap,
@@ -767,9 +773,8 @@ class LamaranController extends Controller
                 'pendidikan_terakhir' => $pelamar->pendidikan_terakhir,
                 'alamat_ktp' => $pelamar->alamat_ktp,
                 'alamat_domisili' => $pelamar->alamat_domisili,
-            ]);
-
-            $pegawai->kepegawaian()->create([
+            ];
+            $kepegawaian = [
                 'jabatan' => $lamaran->jabatanTujuan(),
                 'unit_kerja' => $lamaran->unitKerjaTujuan(),
                 'lokasi_kerja' => $lamaran->lokasiKerjaTujuan() ?? $lamaran->unitKerjaTujuan(),
@@ -777,7 +782,22 @@ class LamaranController extends Controller
                 'status_rekrutmen' => 'Aktif',
                 'status_kerja' => $validated['status_kerja'],
                 'tanggal_habis_kontrak' => $tanggalHabisKontrak,
-            ]);
+            ];
+
+            if ($mantan) {
+                // Email pegawai lain tidak ditimpa (kolom unik); status absensi dikembalikan seperti sebelum keluar.
+                if (DataPegawai::where('email', $biodata['email'])->whereKeyNot($mantan->id)->exists()) {
+                    unset($biodata['email']);
+                }
+                $ikutAbsensi = (bool) ($mantan->kepegawaian?->keluar_snapshot['ikut_absensi'] ?? false);
+                $mantan->update($biodata);
+                $mantan->forceFill(['ikut_absensi' => $ikutAbsensi])->save();
+                $mantan->kepegawaian()->updateOrCreate(['data_pegawai_id' => $mantan->id], $kepegawaian);
+                $pegawai = $mantan;
+            } else {
+                $pegawai = DataPegawai::create($biodata);
+                $pegawai->kepegawaian()->create($kepegawaian);
+            }
             PenugasanService::buatUtama($pegawai, $lamaran->unitKerjaTujuan(), $lamaran->jabatanTujuan(), $validated['tanggal_masuk'], oleh: Auth::user());
 
             if ($pelamar->user) {
