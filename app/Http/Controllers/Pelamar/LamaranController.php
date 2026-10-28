@@ -84,9 +84,7 @@ class LamaranController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        if ($lamaran->data_pelamar_id !== $user->data_pelamar_id) {
-            abort(403);
-        }
+        $this->pastikanMilik($lamaran, $user);
 
         $lamaran->load(['lowongan', 'interviewJadwals.interviewer', 'screeningOnboardings', 'kontrakJadwals']);
 
@@ -98,9 +96,7 @@ class LamaranController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        if ($lamaran->data_pelamar_id !== $user->data_pelamar_id) {
-            abort(403);
-        }
+        $this->pastikanMilik($lamaran, $user);
 
         if ($lamaran->isSelesai()) {
             return redirect()->back()->with('error', 'Lamaran ini sudah memiliki keputusan akhir.');
@@ -117,5 +113,14 @@ class LamaranController extends Controller
         return redirect()
             ->route('pelamar.lamaran.index')
             ->with('success', 'Lamaran dibatalkan.');
+    }
+
+    /**
+     * Lamaran jalur internal tidak punya data_pelamar_id (null), begitu juga akun pelamar yang belum mengisi data:
+     * perbandingan null === null tidak boleh dianggap "milik sendiri".
+     */
+    private function pastikanMilik(Lamaran $lamaran, User $user): void
+    {
+        abort_unless($user->data_pelamar_id && (int) $lamaran->data_pelamar_id === (int) $user->data_pelamar_id, 403);
     }
 }

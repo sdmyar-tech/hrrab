@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\BerkasController;
 use App\Http\Controllers\EksporController;
 use App\Http\Controllers\InterviewJadwalController;
 use App\Http\Controllers\JadwalKandidatController;
@@ -88,6 +89,10 @@ Route::prefix('lowongan')->name('lowongan.')->group(function () {
     Route::get('/', [PublicLowonganController::class, 'index'])->name('index');
     Route::get('/{lowongan}', [PublicLowonganController::class, 'show'])->name('show');
 });
+
+// Dokumen pribadi (KTP, KK, CV, ijazah, foto): wajib login + hak akses (App\Support\Berkas). Di luar 'nocache' agar foto bisa di-cache.
+Route::get('/berkas/{path}', [BerkasController::class, 'lihat'])->name('berkas.lihat')
+    ->where('path', 'dokumen-(pegawai|pelamar)/.+')->middleware(['auth', 'throttle:600,1']);
 
 Route::middleware(['auth', 'nocache'])->group(function () {
     Route::prefix('admin')->name('admin.')->middleware('internal')->group(function () {

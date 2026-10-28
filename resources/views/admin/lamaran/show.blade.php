@@ -92,7 +92,7 @@
                     @php $p = $lamaran->dataPelamar; @endphp
                     <div class="d-flex align-items-center gap-3 mb-3">
                         @if ($p?->foto_path)
-                            <img src="{{ asset('storage/' . $p->foto_path) }}" alt="Pas Foto {{ $p->nama_lengkap }}"
+                            <img src="{{ \App\Support\Berkas::url($p->foto_path) }}" alt="Pas Foto {{ $p->nama_lengkap }}"
                                 class="rounded border flex-shrink-0" style="width:96px;height:96px;object-fit:cover;">
                         @endif
                         <div>
@@ -121,15 +121,15 @@
                         @endif
                         @if ($p?->cv_path)
                             <dt class="col-5 text-muted">CV</dt>
-                            <dd class="col-7"><a href="{{ asset('storage/' . $p->cv_path) }}" target="_blank" rel="noopener">Unduh CV</a></dd>
+                            <dd class="col-7"><a href="{{ \App\Support\Berkas::url($p->cv_path) }}" target="_blank" rel="noopener">Unduh CV</a></dd>
                         @endif
                         @if ($p?->ijazah_path)
                             <dt class="col-5 text-muted">Ijazah</dt>
-                            <dd class="col-7"><a href="{{ asset('storage/' . $p->ijazah_path) }}" target="_blank" rel="noopener">Lihat Ijazah</a></dd>
+                            <dd class="col-7"><a href="{{ \App\Support\Berkas::url($p->ijazah_path) }}" target="_blank" rel="noopener">Lihat Ijazah</a></dd>
                         @endif
                         @if ($p?->sertifikat_path)
                             <dt class="col-5 text-muted">Sertifikat</dt>
-                            <dd class="col-7"><a href="{{ asset('storage/' . $p->sertifikat_path) }}" target="_blank" rel="noopener">Lihat Sertifikat</a></dd>
+                            <dd class="col-7"><a href="{{ \App\Support\Berkas::url($p->sertifikat_path) }}" target="_blank" rel="noopener">Lihat Sertifikat</a></dd>
                         @endif
                     </dl>
 

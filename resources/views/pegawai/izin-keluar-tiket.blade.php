@@ -6,7 +6,7 @@
     $k = $p?->kepegawaian;
     [$mulai, $selesai] = $masaBerlaku;
     $status = $izin->statusTiket();
-    $foto = $p?->dokumen?->pas_foto ? asset('storage/' . $p->dokumen->pas_foto) : null;
+    $foto = $p?->dokumen?->pas_foto ? \App\Support\Berkas::url($p->dokumen->pas_foto) : null;
     $inisial = collect(explode(' ', (string) $p?->nama_lengkap))->filter()->take(2)->map(fn ($s) => mb_substr($s, 0, 1))->implode('');
     // Teks pita per status; diperbarui skrip tiap detik saat status berubah.
     $teks = [

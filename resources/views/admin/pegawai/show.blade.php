@@ -4,7 +4,7 @@
     @php
         $kepeg = $pegawai->kepegawaian;
         $foto = optional($pegawai->dokumen)->pas_foto;
-        $fotoUrl = $foto ? Storage::url($foto) : asset('assets-admin/images/avatar/avatar-fallback.jpg');
+        $fotoUrl = $foto ? \App\Support\Berkas::url($foto) : asset('assets-admin/images/avatar/avatar-fallback.jpg');
         $status = $kepeg->status_rekrutmen ?? 'Non-Aktif';
         $aktif = strtolower($status) === 'aktif';
         $utama = $pegawai->penugasanAktif->firstWhere('is_utama', true);

@@ -102,7 +102,7 @@
                                     <td>
                                         <div class="table-media">
                                             <img class="product-thumb rounded-circle"
-                                                src="{{ optional($pegawai->dokumen)->pas_foto ? asset('storage/' . $pegawai->dokumen->pas_foto) : asset('assets-admin/images/avatar/avatar-fallback.jpg') }}"
+                                                src="{{ optional($pegawai->dokumen)->pas_foto ? \App\Support\Berkas::url($pegawai->dokumen->pas_foto) : asset('assets-admin/images/avatar/avatar-fallback.jpg') }}"
                                                 alt="{{ $pegawai->nama_lengkap }}">
                                             <div>
                                                 <span class="fw-semibold d-block">{{ $pegawai->nama_lengkap }}</span>

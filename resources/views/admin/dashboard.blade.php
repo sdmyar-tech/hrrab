@@ -227,7 +227,7 @@
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
                                             @if ($a['foto'])
-                                                <img src="{{ asset('storage/' . $a['foto']) }}" alt="" class="dash-avatar">
+                                                <img src="{{ \App\Support\Berkas::url($a['foto']) }}" alt="" class="dash-avatar">
                                             @else
                                                 <span class="dash-avatar viz" aria-hidden="true">{{ $inisial($a['nama']) }}</span>
                                             @endif

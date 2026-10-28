@@ -321,7 +321,7 @@
                                             <input type="file" name="pas_foto" class="form-control @error('pas_foto') is-invalid @enderror" accept="image/*">
                                             @error('pas_foto') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                             @if(isset($pegawai) && optional($pegawai->dokumen)->pas_foto)
-                                                <small class="text-muted d-block mt-1"><a href="{{ Storage::url($pegawai->dokumen->pas_foto) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
+                                                <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->pas_foto) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
                                             @endif
                                         </div>
                                         <div class="col-md-6">
@@ -329,7 +329,7 @@
                                             <input type="file" name="upload_ktp" class="form-control @error('upload_ktp') is-invalid @enderror">
                                             @error('upload_ktp') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                             @if(isset($pegawai) && optional($pegawai->dokumen)->upload_ktp)
-                                                <small class="text-muted d-block mt-1"><a href="{{ Storage::url($pegawai->dokumen->upload_ktp) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
+                                                <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_ktp) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
                                             @endif
                                         </div>
                                         <div class="col-md-6">
@@ -337,7 +337,7 @@
                                             <input type="file" name="upload_kk" class="form-control @error('upload_kk') is-invalid @enderror">
                                             @error('upload_kk') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                             @if(isset($pegawai) && optional($pegawai->dokumen)->upload_kk)
-                                                <small class="text-muted d-block mt-1"><a href="{{ Storage::url($pegawai->dokumen->upload_kk) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
+                                                <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_kk) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
                                             @endif
                                         </div>
                                         <div class="col-md-6">
@@ -345,7 +345,7 @@
                                             <input type="file" name="upload_cv" class="form-control @error('upload_cv') is-invalid @enderror">
                                             @error('upload_cv') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                             @if(isset($pegawai) && optional($pegawai->dokumen)->upload_cv)
-                                                <small class="text-muted d-block mt-1"><a href="{{ Storage::url($pegawai->dokumen->upload_cv) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
+                                                <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_cv) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
                                             @endif
                                         </div>
                                         <div class="col-md-6">
@@ -353,7 +353,7 @@
                                             <input type="file" name="upload_ijazah_terakhir" class="form-control @error('upload_ijazah_terakhir') is-invalid @enderror">
                                             @error('upload_ijazah_terakhir') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                             @if(isset($pegawai) && optional($pegawai->dokumen)->upload_ijazah_terakhir)
-                                                <small class="text-muted d-block mt-1"><a href="{{ Storage::url($pegawai->dokumen->upload_ijazah_terakhir) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
+                                                <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_ijazah_terakhir) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
                                             @endif
                                         </div>
                                         <div class="col-md-6">
@@ -361,7 +361,7 @@
                                             <input type="file" name="upload_buku_tabungan" class="form-control @error('upload_buku_tabungan') is-invalid @enderror">
                                             @error('upload_buku_tabungan') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                             @if(isset($pegawai) && optional($pegawai->dokumen)->upload_buku_tabungan)
-                                                <small class="text-muted d-block mt-1"><a href="{{ Storage::url($pegawai->dokumen->upload_buku_tabungan) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
+                                                <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_buku_tabungan) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
                                             @endif
                                         </div>
                                     </div>

@@ -30,7 +30,9 @@
                     Swal.fire({
                         icon: 'question',
                         title: 'Buka Kembali Lowongan?',
-                        html: '<div class="small text-muted mb-2">' + btn.dataset.judul + '</div>Pilih tanggal tutup baru (hari terakhir menerima lamaran):',
+                        // Judul lowongan diisi lewat textContent (bukan disambung ke HTML) agar tidak bisa menyisipkan skrip.
+                        html: '<div class="small text-muted mb-2" data-judul></div>Pilih tanggal tutup baru (hari terakhir menerima lamaran):',
+                        didOpen: function (el) { el.querySelector('[data-judul]').textContent = btn.dataset.judul; },
                         input: 'date',
                         inputValue: toISO(defaultTutup),
                         inputAttributes: adminBebas ? {} : { min: toISO(today) },

@@ -4,6 +4,8 @@
     RewriteEngine On
 
     # "storage" sengaja tidak diblok: /storage/* adalah symlink public/storage (foto & dokumen).
+    # Kecuali dokumen pribadi: hanya lewat /berkas/... (cek login & hak akses).
+    RewriteRule ^(public/)?storage/dokumen-(pegawai|pelamar)(/|$) - [F,L]
     RewriteRule ^(\.env|\.git|\.github|app|bootstrap|config|database|resources|routes|tests|vendor|node_modules)(/.*)?$ - [F,L]
     RewriteRule ^(artisan|composer\.(json|lock)|package(-lock)?\.json|phpunit\.xml|vite\.config\.js)$ - [F,L]
 

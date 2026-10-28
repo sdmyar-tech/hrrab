@@ -1,5 +1,5 @@
 @php
-    $url = $path ? \Illuminate\Support\Facades\Storage::url($path) : null;
+    $url = $path ? \App\Support\Berkas::url($path) : null;
     $ext = $path ? strtolower(pathinfo($path, PATHINFO_EXTENSION)) : null;
 
     $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);

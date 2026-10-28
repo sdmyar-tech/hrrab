@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\DicatatLog;
+use App\Support\Berkas;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -284,7 +285,7 @@ class User extends Authenticatable
         $path = $this->dataPegawai?->dokumen?->pas_foto ?? $this->dataPelamar?->foto_path;
 
         return $path && Storage::disk('public')->exists($path)
-            ? asset('storage/' . $path)
+            ? Berkas::url($path)
             : asset('assets-admin/images/avatar/avatar-fallback.jpg');
     }
 

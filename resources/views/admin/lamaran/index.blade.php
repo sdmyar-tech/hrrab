@@ -78,7 +78,7 @@
                                 <td>
                                     <div class="d-flex align-items-start gap-2">
                                         @if ($item->dataPelamar?->foto_path)
-                                            <img src="{{ asset('storage/' . $item->dataPelamar->foto_path) }}"
+                                            <img src="{{ \App\Support\Berkas::url($item->dataPelamar->foto_path) }}"
                                                 alt="Pas Foto {{ $item->dataPelamar?->nama_lengkap }}"
                                                 class="rounded flex-shrink-0" style="width:40px;height:40px;object-fit:cover;">
                                         @endif

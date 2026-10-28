@@ -14,7 +14,7 @@
         <section class="dash-hero p-3 p-lg-4 mb-3">
             <div class="d-flex flex-column flex-md-row gap-3 align-items-md-center">
                 @if ($pegawai?->dokumen?->pas_foto)
-                    <img src="{{ asset('storage/' . $pegawai->dokumen->pas_foto) }}" alt="" class="rounded-circle border" style="width:72px;height:72px;object-fit:cover;">
+                    <img src="{{ \App\Support\Berkas::url($pegawai->dokumen->pas_foto) }}" alt="" class="rounded-circle border" style="width:72px;height:72px;object-fit:cover;">
                 @else
                     <span class="page-icon" style="width:72px;height:72px;font-size:1.6rem;"><i class="bi bi-person"></i></span>
                 @endif

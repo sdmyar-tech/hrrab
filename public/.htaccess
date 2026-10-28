@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # Dokumen pribadi pegawai/pelamar (KTP, KK, CV, ijazah, foto) hanya lewat /berkas/... yang mengecek login & hak akses.
+    RewriteRule ^storage/dokumen-(pegawai|pelamar)(/|$) - [F,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
