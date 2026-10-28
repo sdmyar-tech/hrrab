@@ -7,7 +7,9 @@
     $pesanKhusus = isset($exception) ? trim((string) $exception->getMessage()) : '';
     // Pesan bawaan Symfony/Laravel (bahasa Inggris) tidak ditampilkan; pesan buatan aplikasi (bahasa Indonesia) ditampilkan.
     $pesanBawaan = ['', 'Forbidden', 'Not Found', 'Unauthorized', 'Page Expired', 'Too Many Requests', 'Server Error', 'Service Unavailable', 'This action is unauthorized.'];
-    $tampilkanPesan = ! in_array($pesanKhusus, $pesanBawaan, true) && ! str_starts_with($pesanKhusus, 'The route ') && ! str_starts_with($pesanKhusus, 'No query results');
+    // Error 5xx: pesan teknis (nama rute, path server, SQL) tidak boleh terlihat pengguna kecuali mode debug.
+    $tampilkanPesan = ((int) $kode < 500 || config('app.debug'))
+        && ! in_array($pesanKhusus, $pesanBawaan, true) && ! str_starts_with($pesanKhusus, 'The route ') && ! str_starts_with($pesanKhusus, 'No query results');
 @endphp
 <!DOCTYPE html>
 <html lang="id">
