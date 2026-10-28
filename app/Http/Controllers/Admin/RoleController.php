@@ -29,12 +29,6 @@ class RoleController extends Controller
             'dihapus' => $dihapus,
             // Tujuan pemindahan akun saat menghapus role (Admin tidak ditawarkan).
             'pilihanPengganti' => Role::pilihanAktif([User::ROLE_ADMIN]),
-            'ringkas' => [
-                'role' => $roles->count(),
-                'kustom' => $roles->where('jenis', 'kustom')->count(),
-                'disesuaikan' => $roles->where('jenis', 'disesuaikan')->count(),
-                'akun' => $roles->sum('jumlah'),
-            ],
         ]);
     }
 
