@@ -85,12 +85,35 @@ html[data-theme="dark"] .admin-navbar.bg-white { background-color: rgba(23, 29, 
 .admin-footer { font-size: .8125rem; }
 .admin-footer .container-fluid { max-width: 1480px; margin-inline: auto; }
 
-/* ---------- Sidebar: submenu lebih rapat ---------- */
-.sidebar-nav .nav-sub-isi { gap: 0; }
-.sidebar-nav .nav-grup.terbuka > .nav-sub .nav-sub-isi { padding-block: 0 .15rem; }
-.sidebar-nav .nav-sub .nav-link { min-height: 27px; padding: .14rem .55rem; font-size: .8125rem; line-height: 1.3; }
-.sidebar-nav .nav-sub .nav-link.active::before { top: 4px; bottom: 4px; }
-.sidebar-nav .nav-sub .nav-icon { width: 16px; height: 16px; font-size: .78rem; }
+/* ---------- Sidebar: menu induk (dropdown) + submenu ---------- */
+.sidebar-nav .nav-grup { margin-top: .15rem; }
+.sidebar-nav .nav-grup-tombol { width: 100%; border: 0; background: transparent; text-align: left; cursor: pointer; font-weight: 600; color: inherit; }
+.sidebar-nav .nav-grup-tombol .nav-panah { margin-left: auto; flex: none; font-size: .72rem; opacity: .6; transition: transform .2s ease; }
+.sidebar-nav .nav-grup.terbuka > .nav-grup-tombol .nav-panah { transform: rotate(180deg); }
+.sidebar-nav .nav-grup .nav-badge-grup + .nav-panah { margin-left: .4rem; }
+.sidebar-nav .nav-grup.terbuka > .nav-grup-tombol .nav-badge-grup { display: none; }   /* badge sudah terlihat di submenu */
+.sidebar-nav .nav-grup.terbuka > .nav-grup-tombol .nav-badge-grup + .nav-panah { margin-left: auto; }
+/* Buka-tutup halus: tinggi 0 → isi. Tertutup = visibility hidden (tidak bisa di-Tab / dibaca pembaca layar). */
+.sidebar-nav .nav-sub { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .2s ease; }
+.sidebar-nav .nav-grup.terbuka > .nav-sub { grid-template-rows: 1fr; }
+.sidebar-nav .nav-sub-isi { min-height: 0; overflow: hidden; display: grid; gap: 1px; visibility: hidden; transition: visibility .2s; }
+.sidebar-nav .nav-grup.terbuka > .nav-sub .nav-sub-isi { visibility: visible; padding-block: .1rem .25rem; }
+/* Submenu menjorok dengan garis pandu di bawah ikon menu induk. */
+.sidebar-nav .nav-sub-isi { border-left: 1px solid var(--admin-border); margin-left: .95rem; }
+.sidebar-nav .nav-sub .nav-link { min-height: 36px; margin-left: .2rem; padding-left: .85rem; font-size: .86rem; font-weight: 500; }
+.sidebar-nav .nav-sub .nav-link.active { font-weight: 600; }
+.sidebar-nav .nav-sub .nav-icon { width: 24px; height: 24px; font-size: .82rem; }
+/* Sidebar ringkas (desktop, ikon saja): menu induk disembunyikan, semua ikon submenu tetap tampil & bisa diklik. */
+@media (min-width: 992px) {
+    body.sidebar-mini .sidebar-nav .nav-grup-tombol { display: none; }
+    body.sidebar-mini .sidebar-nav .nav-grup { margin-top: .3rem; padding-top: .3rem; border-top: 1px solid var(--admin-border); }
+    body.sidebar-mini .sidebar-nav .nav-sub { grid-template-rows: 1fr; }
+    body.sidebar-mini .sidebar-nav .nav-sub-isi { visibility: visible; border-left: 0; margin-left: 0; }
+    body.sidebar-mini .sidebar-nav .nav-sub .nav-link { margin-left: 0; padding-left: .7rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sidebar-nav .nav-sub, .sidebar-nav .nav-grup-tombol .nav-panah { transition: none; }
+}
 
 /* ---------- Judul halaman ---------- */
 .page-heading { margin-bottom: 1.25rem; gap: .75rem 1rem; }

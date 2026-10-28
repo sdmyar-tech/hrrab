@@ -125,7 +125,7 @@
         .footer-links {
             margin-top: 1.2rem;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
             font-size: 0.9rem;
         }
@@ -174,7 +174,6 @@
 
             <div class="footer-links">
                 <a href="{{ route('lowongan.index') }}" class="text-link">Ke Situs Karir</a>
-                <a href="{{ route('pelamar.login') }}" class="text-link">Login Pelamar / Guest</a>
             </div>
         </form>
     </div>
