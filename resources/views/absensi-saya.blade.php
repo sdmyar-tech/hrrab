@@ -25,6 +25,11 @@
                     </p>
                 </div>
             </div>
+            @if ($pegawai->ikut_absensi)
+                <div class="heading-actions">
+                    @include('partials.tombol-ekspor', ['eksporRoute' => 'absensi.saya.export', 'eksporParam' => ['bulan' => $bulan->format('Y-m')]])
+                </div>
+            @endif
         </div>
 
         @unless ($pegawai->ikut_absensi)

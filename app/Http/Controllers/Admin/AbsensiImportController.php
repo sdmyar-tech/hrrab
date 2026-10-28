@@ -8,6 +8,7 @@ use App\Models\AbsensiImport;
 use App\Models\User;
 use App\Support\Absensi\ImportAbsensi;
 use App\Support\Absensi\PembacaFileAbsen;
+use App\Support\ExcelExporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Import file absensi dari flashdisk mesin: unggah → pratinjau → simpan.
@@ -30,6 +32,26 @@ class AbsensiImportController extends Controller
             'layout' => $this->user()->panelLayout(),
             'riwayat' => AbsensiImport::with('diimportOleh')->latest()->paginate(10),
         ]);
+    }
+
+    /** Ekspor seluruh riwayat import file mesin (tanpa halaman). */
+    public function export(): BinaryFileResponse
+    {
+        $rows = AbsensiImport::with('diimportOleh')->orderBy('id')->get()->map(fn (AbsensiImport $r) => [
+            $r->created_at?->format('d-m-Y H:i'),
+            $r->nama_file,
+            $r->periode_dari?->format('d-m-Y'),
+            $r->periode_sampai?->format('d-m-Y'),
+            $r->jumlah_baris,
+            $r->jumlah_baru,
+            $r->jumlah_diperbarui,
+            $r->jumlah_dilewati,
+            $r->diimportOleh?->name,
+        ]);
+
+        return ExcelExporter::download(ExcelExporter::namaFile('riwayat-import-absensi'), [
+            'Waktu Import', 'Nama File', 'Periode Dari', 'Periode Sampai', 'Jumlah Baris', 'Baru', 'Diperbarui', 'Dilewati', 'Diimport Oleh',
+        ], $rows, 'Riwayat Import');
     }
 
     public function pratinjau(Request $request): View|RedirectResponse

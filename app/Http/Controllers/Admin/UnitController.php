@@ -8,6 +8,7 @@ use App\Models\Jabatan;
 use App\Models\Penugasan;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\ExcelExporter;
 use App\Support\PenugasanService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Master Unit: daftar unit kerja + koordinator (kepala) tiap unit.
@@ -44,6 +46,25 @@ class UnitController extends Controller
             'jabatanPerUnit' => Jabatan::perUnit(),
             'bisaKelola' => Auth::user()->can('kelola-sistem'),
         ]);
+    }
+
+    public function export(): BinaryFileResponse
+    {
+        $kepala = Penugasan::aktif()->kepala()->with('dataPegawai:id,nama_lengkap')->get()->groupBy('unit_kerja');
+        $anggota = Penugasan::aktif()->select('unit_kerja', DB::raw('count(distinct data_pegawai_id) as n'))->groupBy('unit_kerja')->pluck('n', 'unit_kerja');
+
+        $rows = Unit::withCount('jabatans')->orderBy('urutan')->orderBy('nama')->get()->map(fn (Unit $u) => [
+            $u->urutan,
+            $u->nama,
+            $u->keterangan,
+            $kepala->get($u->nama, collect())->map(fn ($p) => ($p->dataPegawai?->nama_lengkap ?? '-') . ($p->is_utama ? '' : ' (rangkap)'))
+                ->concat(User::gmKepalaTanpaPegawai($u->nama)->pluck('name')->map(fn ($n) => "{$n} (GM)"))
+                ->implode(', ') ?: 'Belum ada koordinator',
+            $anggota[$u->nama] ?? 0,
+            $u->jabatans_count,
+        ]);
+
+        return ExcelExporter::download(ExcelExporter::namaFile('master-unit'), ['No', 'Unit', 'Keterangan', 'Koordinator', 'Pegawai', 'Jabatan'], $rows, 'Master Unit');
     }
 
     public function store(Request $request): RedirectResponse

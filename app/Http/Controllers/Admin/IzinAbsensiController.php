@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DataPegawai;
 use App\Models\IzinAbsensi;
 use App\Support\Absensi\TanggalAbsensi;
+use App\Support\ExcelExporter;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /** Izin telat / pulang cepat (mis. hujan deras) untuk satu/beberapa pegawai, satu unit, atau semua. */
 class IzinAbsensiController extends Controller
@@ -36,6 +38,29 @@ class IzinAbsensiController extends Controller
             'unitOpsi' => DB::table('kepegawaians')->join('data_pegawais', 'data_pegawais.id', '=', 'kepegawaians.data_pegawai_id')
                 ->where('data_pegawais.ikut_absensi', true)->whereNotNull('unit_kerja')->distinct()->orderBy('unit_kerja')->pluck('unit_kerja'),
         ]);
+    }
+
+    /** Ekspor izin telat / pulang cepat pada bulan yang dilihat. */
+    public function export(Request $request): BinaryFileResponse
+    {
+        $bulan = TanggalAbsensi::bulan($request->query('bulan')) ?? now()->startOfMonth();
+        $rows = IzinAbsensi::with(['dataPegawai', 'pembuat'])
+            ->whereBetween('tanggal', [$bulan->toDateString(), $bulan->copy()->endOfMonth()->toDateString()])
+            ->orderBy('tanggal')->orderBy('id')->get()
+            ->map(fn (IzinAbsensi $z) => [
+                $z->tanggal->format('d-m-Y'),
+                $z->tanggal->translatedFormat('l'),
+                IzinAbsensi::JENIS[$z->jenis] ?? $z->jenis,
+                $z->menit,
+                $z->sasaranLabel(),
+                $z->dataPegawai?->nip,
+                $z->alasan,
+                $z->pembuat?->name,
+            ]);
+
+        return ExcelExporter::download(ExcelExporter::namaFile('izin-absensi-' . $bulan->format('Y-m')), [
+            'Tanggal', 'Hari', 'Jenis', 'Menit', 'Berlaku Untuk', 'NIP', 'Alasan', 'Dibuat Oleh',
+        ], $rows, 'Izin Telat & Pulang Cepat');
     }
 
     public function store(Request $request): RedirectResponse

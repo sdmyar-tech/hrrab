@@ -12,6 +12,9 @@
                     <p class="text-muted mb-0">Sebulan sebelum kontrak habis, atasan mengisi rekomendasi & penilaian; Kepala SDM memutuskan.</p>
                 </div>
             </div>
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.evaluasi-kontrak.export', 'eksporParam' => ['tab' => $tab]])
+            </div>
         </div>
 
         <section class="panel">

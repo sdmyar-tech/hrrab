@@ -13,6 +13,7 @@
                 </div>
             </div>
             <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.unit.export'])
                 <a href="{{ route('admin.penugasan.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left-right"></i> Mutasi &amp; Rangkap</a>
             </div>
         </div>

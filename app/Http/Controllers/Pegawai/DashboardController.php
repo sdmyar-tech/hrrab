@@ -10,15 +10,49 @@ use App\Models\PengajuanLembur;
 use App\Models\Pengumuman;
 use App\Models\User;
 use App\Support\DashboardData;
+use App\Support\ExcelExporter;
 use App\Support\InterviewFlow;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class DashboardController extends Controller
 {
     public function index(): View
+    {
+        return view('pegawai.dashboard', $this->data());
+    }
+
+    /** Ekspor isi dashboard pegawai: ringkasan, kelengkapan data, pengajuan terbaru, penugasan, tren lembur. */
+    public function export(): BinaryFileResponse
+    {
+        $d = $this->data();
+        $p = $d['pegawai'];
+        $ringkas = [
+            ['Nama', $p?->nama_lengkap ?? $d['user']->name], ['NIP', $p?->nip], ['Unit', $p?->kepegawaian?->unit_kerja], ['Jabatan', $p?->kepegawaian?->jabatan],
+            ['Status kerja', $p?->kepegawaian?->status_kerja], ['Masa kerja', $d['masaKerja']],
+            ['Kontrak berakhir', $d['kontrak'] ? $d['kontrak']['habis']->format('d-m-Y') . " (sisa {$d['kontrak']['sisa']} hari)" : '-'],
+            ['Kelengkapan data', $d['kelengkapan'] . '%'], ['Data belum diisi', implode(', ', $d['dataKurang']) ?: '-'],
+            ['Sisa cuti tahunan', "{$d['sisaCuti']} / {$d['kuotaCuti']} hari"], ['Pengajuan cuti tahun ini', "{$d['pengajuanCutiTahunIni']} / {$d['maxPengajuanCuti']} kali"],
+            ['Lembur bulan ini (jam)', $d['lemburBulanIni']], ['Pengajuan menunggu', $d['pending']],
+            ['Unit saya', $d['unitSaya'] ? "{$d['unitSaya']['nama']} · kepala {$d['unitSaya']['kepala']} · {$d['unitSaya']['jumlahRekan']} rekan" : '-'],
+        ];
+
+        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('dashboard-saya'), [
+            ['name' => 'Ringkasan', 'headers' => ['Data', 'Isi'], 'rows' => $ringkas],
+            ['name' => 'Pengajuan Terbaru', 'headers' => ['Jenis', 'Tanggal', 'Detail', 'Status', 'Tahap', 'Catatan'],
+                'rows' => $d['terbaru']->map(fn ($t) => [$t['jenis'], optional($t['tanggal'])->format('d-m-Y'), $t['detail'], $t['status'], $t['tahap'], $t['catatan']])],
+            ['name' => 'Penugasan Aktif', 'headers' => ['Unit', 'Jabatan', 'Peran', 'Jenis', 'Mulai'],
+                'rows' => $d['penugasan']->map(fn ($x) => [$x->unit_kerja, $x->jabatan, $x->peranLabel(), $x->is_utama ? 'Utama' : 'Rangkap', $x->tanggal_mulai?->format('d-m-Y')])],
+            ['name' => 'Tren Lembur', 'headers' => ['Bulan', 'Lembur Disetujui (jam)'],
+                'rows' => array_map(fn ($b) => [$b['judul'], $b['jumlah']], $d['trenLembur'] ?? [])],
+        ]);
+    }
+
+    /** Data dashboard pegawai yang login (halaman & ekspor). */
+    private function data(): array
     {
         /** @var User $user */
         $user = Auth::user();
@@ -44,7 +78,7 @@ class DashboardController extends Controller
         $bisaLembur = $user->can('ajukan-lembur');
         $masaKerjaCukup = $kep?->tanggal_masuk && Carbon::parse($kep->tanggal_masuk)->diffInYears(now()) >= 1;
 
-        return view('pegawai.dashboard', [
+        return [
             'user' => $user,
             'pegawai' => $pegawai,
             'kelengkapan' => $kelengkapan,
@@ -73,7 +107,7 @@ class DashboardController extends Controller
                 ? Lamaran::with(['lowongan', 'interviewJadwals' => fn ($q) => $q->where('status', 'terjadwal')->orderBy('tanggal')])
                     ->where('data_pegawai_id', $user->data_pegawai_id)->where('status', Lamaran::STATUS_PROSES)->get()
                 : collect(),
-        ]);
+        ];
     }
 
     private function kontrak($kep): ?array

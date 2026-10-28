@@ -17,14 +17,15 @@
                     <p class="text-muted mb-0">Tanggal merah, hari kerja, serta cuti &amp; izin keluar Anda. Tanggal merah memengaruhi hitungan hari kerja, absensi, dan cuti.</p>
                 </div>
             </div>
-            @if ($bisaKelola)
-                <div class="heading-actions">
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'kalender.export', 'eksporParam' => ['tahun' => $tahun], 'eksporTeks' => "Ekspor Tanggal Merah {$tahun}"])
+                @if ($bisaKelola)
                     <form action="{{ route('kalender.sinkron') }}" method="POST" data-confirm="Sinkronkan tanggal merah dari API sekarang? Tanggal merah manual tidak akan diubah.">
                         @csrf
                         <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat"></i> Sinkronkan sekarang</button>
                     </form>
-                </div>
-            @endif
+                @endif
+            </div>
         </div>
 
         <div class="row g-3 align-items-start">

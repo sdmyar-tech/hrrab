@@ -26,7 +26,7 @@
                         @if ($pegawai?->nip) &middot; NIP {{ $pegawai->nip }} @endif
                     </p>
                 </div>
-                <div class="d-flex flex-wrap gap-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
                     <div class="dash-mini-stat viz text-center" style="min-width:100px;">
                         <div class="n">{{ $kep?->status_kerja ?? '-' }}</div>
                         <div class="l">Status kerja</div>
@@ -35,6 +35,7 @@
                         <div class="n">{{ $masaKerja }}</div>
                         <div class="l">Masa kerja</div>
                     </div>
+                    @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.dashboard.export', 'eksporUkuran' => '', 'eksporTeks' => 'Ekspor'])
                 </div>
             </div>
         </section>

@@ -8,6 +8,7 @@ use App\Models\DataPegawai;
 use App\Models\JadwalKerjaPegawai;
 use App\Support\Absensi\AksesAbsensi;
 use App\Support\Absensi\ImportAbsensi;
+use App\Support\ExcelExporter;
 use App\Support\Urutan;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -16,6 +17,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /** Pengaturan absensi: finger ID, ikut/tidak ikut absensi, jam kerja per orang (satuan & massal). */
 class AbsensiPengaturanController extends Controller
@@ -23,19 +25,10 @@ class AbsensiPengaturanController extends Controller
     public function index(Request $request): View
     {
         $query = $this->filter($request);
-        $daftar = (clone $query)->with(['kepegawaian', 'jadwalKerja']);
-        $urut = Urutan::terapkan($daftar, [
-            'ikut' => ['Yang diabsen dulu', fn ($q, $arah) => $q->orderByDesc('data_pegawais.ikut_absensi')->orderBy('data_pegawais.nama_lengkap'), 'asc'],
-            ...Urutan::abjad('nama', 'Nama', 'data_pegawais.nama_lengkap'),
-            'unit' => ['Unit A–Z', fn ($q, $arah) => $q->orderByRaw('(select unit_kerja from kepegawaians where kepegawaians.data_pegawai_id = data_pegawais.id limit 1) asc')->orderBy('data_pegawais.nama_lengkap'), 'asc'],
-            'finger' => ['ID mesin terkecil', fn ($q, $arah) => $q->orderByRaw('data_pegawais.finger_id is null')->orderByRaw('cast(data_pegawais.finger_id as unsigned) asc'), 'asc'],
-        ]);
+        [$daftar, $urut] = $this->daftarUrut($query);
         $tanpaFinger = AksesAbsensi::aktif(DataPegawai::whereNull('finger_id'))->with('kepegawaian:id,data_pegawai_id,unit_kerja')
             ->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip', 'ikut_absensi']);
-        $belumDipetakan = Absensi::whereNull('data_pegawai_id')->whereNotNull('finger_id')
-            ->selectRaw('finger_id, max(nama_mesin) as nama_mesin, count(*) as hari, max(tanggal) as terakhir')
-            ->groupBy('finger_id')->orderByRaw('cast(finger_id as unsigned)')->get()
-            ->each(fn ($b) => $b->saran = self::saranPegawai($b->nama_mesin, $tanpaFinger));
+        $belumDipetakan = $this->belumDipetakan()->each(fn ($b) => $b->saran = self::saranPegawai($b->nama_mesin, $tanpaFinger));
 
         return view('admin.absensi.pengaturan', [
             'layout' => $request->user()->panelLayout(),
@@ -56,6 +49,54 @@ class AbsensiPengaturanController extends Controller
                 'hari_kerja' => config('hrrab.hari_kerja', [1, 2, 3, 4, 5]),
             ],
         ]);
+    }
+
+    /** Ekspor semua pegawai sesuai filter & urutan (tanpa halaman) + ID mesin yang belum dikenali. */
+    public function export(Request $request): BinaryFileResponse
+    {
+        [$daftar] = $this->daftarUrut($this->filter($request));
+
+        $pegawai = $daftar->get()->map(fn (DataPegawai $p) => [
+            $p->nama_lengkap,
+            $p->nip,
+            $p->kepegawaian?->unit_kerja,
+            $p->kepegawaian?->jabatan,
+            $p->ikut_absensi ? 'Ya' : 'Tidak',
+            $p->finger_id,
+            $p->jadwalKerja ? substr((string) $p->jadwalKerja->jam_masuk, 0, 5) : null,
+            $p->jadwalKerja ? substr((string) $p->jadwalKerja->jam_pulang, 0, 5) : null,
+            $p->jadwalKerja ? implode(', ', array_map(fn ($h) => JadwalKerjaPegawai::NAMA_HARI[$h] ?? $h, $p->jadwalKerja->hariKerja())) : null,
+            $p->jadwalKerja?->toleransi(),
+            $p->jadwalKerja?->ringkas() ?? 'Belum diatur',
+        ]);
+        $mesin = $this->belumDipetakan()->map(fn ($b) => [$b->finger_id, $b->nama_mesin, $b->hari, $b->terakhir ? date('d-m-Y', strtotime($b->terakhir)) : null]);
+
+        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('pengaturan-absensi'), [
+            ['name' => 'Pegawai', 'headers' => ['Nama', 'NIP', 'Unit', 'Jabatan', 'Ikut Absensi', 'ID Mesin', 'Jam Masuk', 'Jam Pulang', 'Hari Kerja', 'Toleransi (menit)', 'Ringkasan Jadwal'], 'rows' => $pegawai],
+            ['name' => 'ID Mesin Belum Dikenali', 'headers' => ['ID Mesin', 'Nama di Mesin', 'Jumlah Hari', 'Terakhir'], 'rows' => $mesin],
+        ]);
+    }
+
+    /** Daftar pegawai halaman Pengaturan + urutan pilihan (?urut=). @return array{0: Builder, 1: array} */
+    private function daftarUrut(Builder $query): array
+    {
+        $daftar = (clone $query)->with(['kepegawaian', 'jadwalKerja']);
+        $urut = Urutan::terapkan($daftar, [
+            'ikut' => ['Yang diabsen dulu', fn ($q, $arah) => $q->orderByDesc('data_pegawais.ikut_absensi')->orderBy('data_pegawais.nama_lengkap'), 'asc'],
+            ...Urutan::abjad('nama', 'Nama', 'data_pegawais.nama_lengkap'),
+            'unit' => ['Unit A–Z', fn ($q, $arah) => $q->orderByRaw('(select unit_kerja from kepegawaians where kepegawaians.data_pegawai_id = data_pegawais.id limit 1) asc')->orderBy('data_pegawais.nama_lengkap'), 'asc'],
+            'finger' => ['ID mesin terkecil', fn ($q, $arah) => $q->orderByRaw('data_pegawais.finger_id is null')->orderByRaw('cast(data_pegawais.finger_id as unsigned) asc'), 'asc'],
+        ]);
+
+        return [$daftar, $urut];
+    }
+
+    /** ID mesin yang ada di data absensi tetapi belum ditautkan ke pegawai. */
+    private function belumDipetakan(): Collection
+    {
+        return Absensi::whereNull('data_pegawai_id')->whereNotNull('finger_id')
+            ->selectRaw('finger_id, max(nama_mesin) as nama_mesin, count(*) as hari, max(tanggal) as terakhir')
+            ->groupBy('finger_id')->orderByRaw('cast(finger_id as unsigned)')->get();
     }
 
     /**

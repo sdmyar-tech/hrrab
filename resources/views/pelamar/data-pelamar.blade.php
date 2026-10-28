@@ -11,6 +11,11 @@
                     <h1 class="mb-0">Data Pelamar</h1>
                 </div>
             </div>
+            @if ($pelamar)
+                <div class="heading-actions">
+                    @include('partials.tombol-ekspor', ['eksporRoute' => 'pelamar.data-pelamar.export', 'eksporTeks' => 'Ekspor Data Saya'])
+                </div>
+            @endif
         </div>
 
         <div class="panel p-4">

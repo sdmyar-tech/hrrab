@@ -29,6 +29,7 @@
                 </div>
             </div>
             <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'profile.export', 'eksporTeks' => 'Ekspor Data Saya'])
                 <a href="{{ route('pegawai.pengkinian-data') }}" class="btn btn-primary"><i class="bi bi-pencil-square"></i>Perbarui Data</a>
             </div>
         </div>

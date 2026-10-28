@@ -7,6 +7,7 @@ use App\Models\Absensi;
 use App\Models\DataPegawai;
 use App\Models\User;
 use App\Support\Absensi\AksesAbsensi;
+use App\Support\Absensi\EksporAbsensi;
 use App\Support\Absensi\PenilaianAbsensi;
 use App\Support\Absensi\TampilanAbsensi;
 use App\Support\Absensi\TanggalAbsensi;
@@ -16,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -89,6 +91,29 @@ class AbsensiController extends Controller
     public function harian(Request $request): View
     {
         $user = $this->user();
+        $d = $this->dataHarian($request, $user);
+        $bisaKelola = AksesAbsensi::bisaKelola($user);
+
+        return view('admin.absensi.harian', [
+            'layout' => $user->panelLayout(),
+            'tanggal' => $d['tanggal'],
+            'tanggalOtomatis' => ! $d['pilihan'] && ! $d['pesanTanggal'] && ! $d['tanggal']->isToday(),
+            'pesanTanggal' => $d['pesanTanggal'],
+            'urutOpsi' => self::URUT_HARIAN,
+            'urutAktif' => $d['urut'],
+            'baris' => $d['baris'],
+            'hitung' => $d['hitung'],
+            'jumlahPegawai' => $d['jumlahPegawai'],
+            'unitOpsi' => $this->unitOpsi($user),
+            'bisaKelola' => $bisaKelola,
+            'dataTerakhir' => $d['dataTerakhir'],
+            'setup' => $bisaKelola ? TampilanAbsensi::langkahSetup() : null,
+        ]);
+    }
+
+    /** Data halaman Harian (dipakai halaman & ekspor): tanggal terpilih + baris pegawai setelah filter & urut. */
+    private function dataHarian(Request $request, User $user): array
+    {
         $dataTerakhir = Absensi::whereNotNull('finger_id')->max('tanggal');
         $diminta = $request->query('tanggal');
         $pilihan = TanggalAbsensi::tanggal($diminta);
@@ -113,23 +138,16 @@ class AbsensiController extends Controller
         $urut = array_key_exists((string) $request->query('urut'), self::URUT_HARIAN) ? $request->query('urut') : 'nama';
         $baris = self::urutkanHarian($baris, $urut);
 
-        $bisaKelola = AksesAbsensi::bisaKelola($user);
-
-        return view('admin.absensi.harian', [
-            'layout' => $user->panelLayout(),
+        return [
             'tanggal' => $tanggal,
-            'tanggalOtomatis' => ! $pilihan && ! $pesanTanggal && ! $tanggal->isToday(),
+            'pilihan' => $pilihan,
             'pesanTanggal' => $pesanTanggal,
-            'urutOpsi' => self::URUT_HARIAN,
-            'urutAktif' => $urut,
+            'urut' => $urut,
             'baris' => $baris->values(),
             'hitung' => $hitung,
             'jumlahPegawai' => $pegawais->count(),
-            'unitOpsi' => $this->unitOpsi($user),
-            'bisaKelola' => $bisaKelola,
             'dataTerakhir' => $dataTerakhir,
-            'setup' => $bisaKelola ? TampilanAbsensi::langkahSetup() : null,
-        ]);
+        ];
     }
 
     /** Rekap per pegawai pada rentang tanggal. */
@@ -158,43 +176,42 @@ class AbsensiController extends Controller
         [$dari, $sampai] = $this->rentang($request);
         [$barisRekap, , $nilai] = $this->barisRekap($request, $user, $dari, $sampai);
         $pegawais = $barisRekap->pluck('pegawai'); // urutan ekspor = urutan yang dipilih di layar
-        $d = fn (int $m) => $m ? round($m / 60, 2) : 0;
 
-        $rekap = $barisRekap->map(function (array $b) use ($d) {
-            [$p, $r] = [$b['pegawai'], $b['r']];
-
-            return [
-                $p->nama_lengkap, $p->nip, $p->finger_id, $p->kepegawaian?->unit_kerja, $p->jadwalKerja?->ringkas() ?? 'Belum diatur',
-                $r['hari_kerja'], $r['hadir_total'], $r['on_time'], $r['telat'], $r['telat_menit'], $r['telat_izin'],
-                $r['pulang_cepat'], $r['tanpa_scan_pulang'], $r['alpa'], $r['cuti'], $r['izin'], $r['sakit'], $r['dinas_luar'],
-                $d($r['lembur_menit']), $d($r['lembur_surat_menit']), $r['lembur_belum'], $r['dikoreksi'],
-            ];
-        });
+        $rekap = $barisRekap->map(fn (array $b) => EksporAbsensi::rekap($b['pegawai'], $b['r']));
 
         $detail = [];
         foreach ($pegawais as $p) {
             foreach ($nilai[$p->id] ?? [] as $h) {
-                $detail[] = [
-                    $h['tanggal']->format('d-m-Y'), $h['tanggal']->translatedFormat('l'), $p->nama_lengkap, $p->finger_id, $p->kepegawaian?->unit_kerja,
-                    $h['jadwal'] ? $h['jadwal']['masuk'] . '-' . $h['jadwal']['pulang'] : '-', $h['masuk'], $h['keluar'],
-                    $h['label'], $h['telat_menit'] ?: null, $h['pulang_cepat_menit'] ?: null, $h['tanpa_scan_pulang'] ? 'Ya' : null,
-                    $h['lembur_menit'] ? $d($h['lembur_menit']) : null, $h['lembur_status'], $h['dikoreksi'] ? 'Ya' : null,
-                    $h['absensi']?->alasan_koreksi, implode(' ', $h['catatan']),
-                ];
+                $detail[] = EksporAbsensi::detail($p, $h);
             }
         }
 
         return ExcelExporter::downloadMultiSheet('rekap-absensi-' . $dari->format('Ymd') . '-' . $sampai->format('Ymd'), [
-            ['name' => 'Rekap', 'headers' => [
-                'Nama', 'NIP', 'Finger ID', 'Unit', 'Jadwal', 'Hari Kerja', 'Hadir', 'On Time', 'Telat (kali)', 'Telat (menit)', 'Telat Izin',
-                'Pulang Cepat', 'Tidak Scan Pulang', 'Alpa', 'Cuti', 'Izin', 'Sakit', 'Dinas Luar',
-                'Lembur Terverifikasi (jam)', 'Lembur Surat (jam)', 'Lembur Belum Terverifikasi (hari)', 'Hari Dikoreksi',
-            ], 'rows' => $rekap],
-            ['name' => 'Detail Harian', 'headers' => [
-                'Tanggal', 'Hari', 'Nama', 'Finger ID', 'Unit', 'Jadwal', 'Masuk', 'Keluar', 'Status', 'Telat (menit)', 'Pulang Cepat (menit)',
-                'Tidak Scan Pulang', 'Lembur (jam)', 'Status Lembur', 'Dikoreksi', 'Alasan Koreksi', 'Catatan',
-            ], 'rows' => $detail],
+            ['name' => 'Rekap', 'headers' => EksporAbsensi::HEADER_REKAP, 'rows' => $rekap],
+            ['name' => 'Detail Harian', 'headers' => EksporAbsensi::HEADER_DETAIL, 'rows' => $detail],
         ]);
+    }
+
+    /** Ekspor halaman Harian: tanggal, filter unit/cari, kelompok status, dan urutan sama dengan layar. */
+    public function harianExport(Request $request): BinaryFileResponse
+    {
+        ['tanggal' => $tanggal, 'baris' => $baris] = $this->dataHarian($request, $this->user());
+
+        return ExcelExporter::download('absensi-harian-' . $tanggal->format('Ymd'), EksporAbsensi::HEADER_DETAIL,
+            $baris->map(fn (array $b) => EksporAbsensi::detail($b['pegawai'], $b['h'])), 'Absensi ' . $tanggal->format('d-m-Y'));
+    }
+
+    /** Ekspor riwayat absensi satu pegawai pada rentang yang dilihat. */
+    public function pegawaiExport(Request $request, DataPegawai $pegawai): BinaryFileResponse
+    {
+        $pegawai->load(['kepegawaian', 'jadwalKerja']);
+        abort_unless(AksesAbsensi::bolehLihatPegawai($this->user(), $pegawai), 403, 'Pegawai ini di luar unit Anda.');
+
+        [$dari, $sampai] = $this->rentang($request);
+        $hari = PenilaianAbsensi::rentang(collect([$pegawai]), $dari, $sampai)[$pegawai->id] ?? [];
+
+        return ExcelExporter::downloadMultiSheet('absensi-' . Str::slug($pegawai->nama_lengkap) . '-' . $dari->format('Ymd') . '-' . $sampai->format('Ymd'),
+            EksporAbsensi::satuPegawai($pegawai, $hari));
     }
 
     /** Riwayat absensi satu pegawai (dengan form koreksi per hari). */

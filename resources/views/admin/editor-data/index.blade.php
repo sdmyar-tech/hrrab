@@ -12,6 +12,9 @@
                     <p class="text-muted mb-0">Ubah atau hapus data apa pun secara langsung — termasuk yang sudah selesai, ditolak, atau lewat tanggal.</p>
                 </div>
             </div>
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.data.export-semua', 'eksporTeks' => 'Ekspor Semua Data', 'eksporIkon' => 'bi-database-down'])
+            </div>
         </div>
 
         @include('admin.editor-data._peringatan')

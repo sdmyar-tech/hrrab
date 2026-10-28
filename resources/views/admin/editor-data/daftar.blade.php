@@ -12,11 +12,12 @@
                     <p class="text-muted mb-0">{{ number_format($baris->total(), 0, ',', '.') }} data · terbaru di atas</p>
                 </div>
             </div>
-            @if ($k['tambah'] ?? true)
-                <div class="heading-actions">
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.data.export', 'eksporParam' => ['entitas' => $entitas]])
+                @if ($k['tambah'] ?? true)
                     <a href="{{ route('admin.data.create', [$entitas, 'kembali' => request()->fullUrl()]) }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Data</a>
-                </div>
-            @endif
+                @endif
+            </div>
         </div>
 
         <section class="panel p-3 p-lg-4">

@@ -26,14 +26,15 @@
                     <p class="text-muted mb-0">Siapa yang hadir, telat, atau tidak masuk pada tanggal yang dipilih.</p>
                 </div>
             </div>
-            @if ($bisaKelola)
-                <div class="heading-actions d-flex flex-wrap gap-2">
+            <div class="heading-actions d-flex flex-wrap gap-2">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.absensi.harian.export', 'eksporParam' => ['tanggal' => $tanggal->toDateString()]])
+                @if ($bisaKelola)
                     <a href="{{ route('admin.absensi.izin', ['tanggal' => $tanggal->toDateString()]) }}" class="btn btn-outline-secondary">
                         <i class="bi {{ $ik['izin'] }} me-1"></i> Beri Izin Telat
                     </a>
                     <a href="{{ route('admin.absensi.import') }}" class="btn btn-primary"><i class="bi {{ $ik['import'] }} me-1"></i> Import Data Mesin</a>
-                </div>
-            @endif
+                @endif
+            </div>
         </div>
 
         @include('admin.absensi._nav')

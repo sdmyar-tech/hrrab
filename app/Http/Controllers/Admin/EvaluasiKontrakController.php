@@ -9,13 +9,16 @@ use App\Models\SuratPeringatan;
 use App\Models\User;
 use App\Support\Absensi\PenilaianAbsensi;
 use App\Support\EvaluasiKontrakAlur;
+use App\Support\ExcelExporter;
 use App\Support\Notifikasi;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Evaluasi kontrak: penilai memberi nilai (H-30), pemutus (Kepala SDM; GM untuk Kepala SDM) memutuskan
@@ -34,6 +37,57 @@ class EvaluasiKontrakController extends Controller
         EvaluasiKontrakAlur::buatJatuhTempo();
         EvaluasiKontrakAlur::kirimTugasTertunda();
 
+        [$daftar, $tab, $kelompok] = $this->daftar($request, $user);
+
+        return view('admin.evaluasi-kontrak.index', [
+            'daftar' => $daftar,
+            'tab' => $tab,
+            'jumlahTab' => array_map(fn ($c) => $c->count(), $kelompok),
+        ]);
+    }
+
+    /** Ekspor tab & pencarian yang sedang dilihat: lembar ringkasan + nilai per butir. */
+    public function export(Request $request): BinaryFileResponse
+    {
+        $user = $this->pengguna();
+        abort_unless(EvaluasiKontrakAlur::bolehMembuka($user), 403, 'Anda tidak berwenang membuka evaluasi kontrak.');
+
+        [$daftar, $tab] = $this->daftar($request, $user);
+        $daftar->load('pemutus');
+        $butir = array_keys(EvaluasiKontrak::butir());
+        $bagian = array_column(config('penilaian_kontrak.bagian'), 'kode');
+
+        $ringkas = $daftar->map(fn (EvaluasiKontrak $e) => [
+            $e->dataPegawai?->nama_lengkap, $e->dataPegawai?->nip, $e->unit_kerja, $e->status_kerja,
+            $e->tanggal_habis_kontrak->format('d-m-Y'), $e->sisaHari(), $e->statusLabel(),
+            $e->pengisi?->name, $e->diisi_pada?->format('d-m-Y H:i'), $e->total_nilai, $e->rataNilai(), EvaluasiKontrak::predikat($e->total_nilai),
+            $e->rekomendasi ? $e->labelRekomendasi() : null, $e->catatan,
+            $e->keputusan ? $e->labelKeputusan() : null, $e->pemutus?->name, $e->diputuskan_pada?->format('d-m-Y H:i'), $e->catatan_sdm, $e->labelTtd(),
+        ]);
+        $nilai = $daftar->filter(fn (EvaluasiKontrak $e) => $e->nilai)->map(fn (EvaluasiKontrak $e) => [
+            $e->dataPegawai?->nama_lengkap, $e->unit_kerja, $e->total_nilai,
+            ...array_values($e->rataBagian()),
+            ...array_map(fn ($no) => $e->nilai[$no] ?? null, $butir),
+        ]);
+
+        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('evaluasi-kontrak-' . $tab), [
+            ['name' => 'Evaluasi Kontrak', 'headers' => [
+                'Pegawai', 'NIP', 'Unit', 'Status Kerja', 'Habis Kontrak', 'Sisa Hari', 'Status', 'Penilai', 'Dinilai Pada', 'Total Nilai', 'Rata-rata',
+                'Predikat', 'Rekomendasi Penilai', 'Catatan Penilai', 'Keputusan', 'Diputuskan Oleh', 'Diputuskan Pada', 'Catatan SDM', 'Jadwal TTD',
+            ], 'rows' => $ringkas],
+            ['name' => 'Nilai per Butir', 'headers' => [
+                'Pegawai', 'Unit', 'Total', ...array_map(fn ($k) => "Rata {$k}", $bagian), ...array_map(fn ($no) => "Butir {$no}", $butir),
+            ], 'rows' => $nilai],
+        ]);
+    }
+
+    /**
+     * Evaluasi yang boleh dilihat pengguna, dikelompokkan per tab, lalu disaring tab & kata pencarian.
+     *
+     * @return array{0: Collection, 1: string, 2: array<string, Collection>}
+     */
+    private function daftar(Request $request, User $user): array
+    {
         $semua = EvaluasiKontrak::with('dataPegawai.kepegawaian', 'pengisi')->get()
             ->filter(fn (EvaluasiKontrak $e) => EvaluasiKontrakAlur::bisaLihat($user, $e));
         $kelompok = [
@@ -51,11 +105,7 @@ class EvaluasiKontrakController extends Controller
             ->sortBy(fn ($e) => $tab === 'selesai' ? -$e->diputuskan_pada?->timestamp : $e->tanggal_habis_kontrak->timestamp)
             ->values();
 
-        return view('admin.evaluasi-kontrak.index', [
-            'daftar' => $daftar,
-            'tab' => $tab,
-            'jumlahTab' => array_map(fn ($c) => $c->count(), $kelompok),
-        ]);
+        return [$daftar, $tab, $kelompok];
     }
 
     public function show(EvaluasiKontrak $evaluasiKontrak): View

@@ -12,6 +12,9 @@
                     <p class="text-muted mb-0">Tempat/area kerja pegawai. Daftar ini menjadi pilihan lokasi kerja di data pegawai, lowongan, dan kandidat langsung.</p>
                 </div>
             </div>
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.lokasi-kerja.export'])
+            </div>
         </div>
 
         @if ($errors->any())

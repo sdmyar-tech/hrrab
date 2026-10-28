@@ -12,6 +12,9 @@
                     <p class="text-muted mb-0">SP bertahap dalam satu bulan: SP1 → SP2 → SP3 (maksimal 3). Bulan berikutnya mulai lagi dari SP1.</p>
                 </div>
             </div>
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.surat-peringatan.export', 'eksporParam' => ['bulan' => $bulan->format('Y-m')]])
+            </div>
         </div>
 
         <div class="row g-3 align-items-start">

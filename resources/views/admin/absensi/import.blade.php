@@ -17,6 +17,9 @@
                     <p class="text-muted mb-0">Masukkan file dari flashdisk mesin absen. Data dicek dulu sebelum disimpan.</p>
                 </div>
             </div>
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.absensi.import.export', 'eksporTeks' => 'Ekspor Riwayat'])
+            </div>
         </div>
 
         @include('admin.absensi._nav')

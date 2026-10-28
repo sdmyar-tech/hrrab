@@ -6,14 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\DataPegawai;
 use App\Models\SuratPeringatan;
 use App\Models\User;
+use App\Support\ExcelExporter;
 use App\Support\Notifikasi;
 use App\Support\SuratPeringatanAkses;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /** Surat peringatan bulanan: SP1 → SP2 → SP3 bertahap dalam satu bulan; bulan berikutnya mulai lagi dari SP1. */
 class SuratPeringatanController extends Controller
@@ -25,14 +28,7 @@ class SuratPeringatanController extends Controller
 
         $bulan = $this->bulan($request->query('bulan'));
         $bolehDiberi = SuratPeringatanAkses::pegawaiBoleh($user);
-        $lingkup = SuratPeringatanAkses::lihatSemua($user) ? null : $bolehDiberi->pluck('id');
-        $kata = trim((string) $request->query('q'));
-
-        $daftar = SuratPeringatan::with('dataPegawai.kepegawaian', 'pemberi')
-            ->whereBetween('tanggal', [$bulan->copy()->startOfMonth()->toDateString(), $bulan->copy()->endOfMonth()->toDateString()])
-            ->when($lingkup, fn ($q) => $q->whereIn('data_pegawai_id', $lingkup))
-            ->when($kata !== '', fn ($q) => $q->whereHas('dataPegawai', fn ($p) => $p->where('nama_lengkap', 'like', "%{$kata}%")))
-            ->orderByDesc('tanggal')->orderByDesc('id')->get();
+        $daftar = $this->daftar($request, $user, $bulan, $bolehDiberi)->orderByDesc('tanggal')->orderByDesc('id')->get();
 
         // Tingkat SP tertinggi bulan ini per pegawai → pratinjau "akan menjadi SP berapa" di form.
         $tingkatBulanIni = SuratPeringatan::whereBetween('tanggal', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
@@ -45,6 +41,43 @@ class SuratPeringatanController extends Controller
             'pegawai' => $bolehDiberi,
             'tingkatBulanIni' => $tingkatBulanIni,
         ]);
+    }
+
+    /** Ekspor SP bulan & pencarian yang sedang dilihat (lingkup sama dengan halaman). */
+    public function export(Request $request): BinaryFileResponse
+    {
+        $user = $this->pengguna();
+        abort_unless(SuratPeringatanAkses::bolehMembuka($user), 403, 'Anda tidak berwenang membuka surat peringatan.');
+
+        $bulan = $this->bulan($request->query('bulan'));
+        $rows = $this->daftar($request, $user, $bulan, SuratPeringatanAkses::pegawaiBoleh($user))->orderBy('tanggal')->orderBy('id')->get()
+            ->map(fn (SuratPeringatan $sp) => [
+                $sp->tanggal->format('d-m-Y'),
+                $sp->dataPegawai?->nama_lengkap,
+                $sp->dataPegawai?->nip,
+                $sp->dataPegawai?->kepegawaian?->jabatan,
+                $sp->unit_kerja,
+                $sp->label(),
+                $sp->alasan,
+                $sp->keterangan,
+                $sp->pemberi?->name,
+            ]);
+
+        return ExcelExporter::download(ExcelExporter::namaFile('surat-peringatan-' . $bulan->format('Y-m')), [
+            'Tanggal', 'Pegawai', 'NIP', 'Jabatan', 'Unit', 'SP', 'Alasan', 'Keterangan', 'Diberikan Oleh',
+        ], $rows, 'Surat Peringatan');
+    }
+
+    /** SP pada bulan terpilih, dalam lingkup pengguna, disaring kata pencarian (?q=). */
+    private function daftar(Request $request, User $user, Carbon $bulan, $bolehDiberi): Builder
+    {
+        $lingkup = SuratPeringatanAkses::lihatSemua($user) ? null : $bolehDiberi->pluck('id');
+        $kata = trim((string) $request->query('q'));
+
+        return SuratPeringatan::with('dataPegawai.kepegawaian', 'pemberi')
+            ->whereBetween('tanggal', [$bulan->copy()->startOfMonth()->toDateString(), $bulan->copy()->endOfMonth()->toDateString()])
+            ->when($lingkup, fn ($q) => $q->whereIn('data_pegawai_id', $lingkup))
+            ->when($kata !== '', fn ($q) => $q->whereHas('dataPegawai', fn ($p) => $p->where('nama_lengkap', 'like', "%{$kata}%")));
     }
 
     public function store(Request $request): RedirectResponse

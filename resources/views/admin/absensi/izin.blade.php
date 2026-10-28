@@ -16,6 +16,9 @@
                     <p class="text-muted mb-0">Beri kelonggaran pada hari tertentu (mis. hujan deras). Yang datang dalam batas izin dicatat <strong>Telat Izin</strong>, bukan Telat.</p>
                 </div>
             </div>
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.absensi.izin.export', 'eksporParam' => ['bulan' => $bulan->format('Y-m')]])
+            </div>
         </div>
 
         @include('admin.absensi._nav')

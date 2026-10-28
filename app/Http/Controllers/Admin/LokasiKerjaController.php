@@ -4,23 +4,39 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\LokasiKerja;
+use App\Support\ExcelExporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /** Master Lokasi Kerja: area/tempat kerja pegawai (dipakai di data pegawai, lowongan, dan kandidat langsung). */
 class LokasiKerjaController extends Controller
 {
     public function index(): View
     {
-        return view('admin.lokasi-kerja.index', [
+        return view('admin.lokasi-kerja.index', $this->data());
+    }
+
+    public function export(): BinaryFileResponse
+    {
+        ['lokasi' => $lokasi, 'pegawai' => $pegawai, 'lowongan' => $lowongan] = $this->data();
+        $rows = $lokasi->values()->map(fn (LokasiKerja $l, $i) => [$i + 1, $l->nama, $l->keterangan, $pegawai[$l->nama] ?? 0, $lowongan[$l->nama] ?? 0]);
+
+        return ExcelExporter::download(ExcelExporter::namaFile('master-lokasi-kerja'), ['No', 'Lokasi Kerja', 'Keterangan', 'Pegawai Aktif', 'Lowongan'], $rows, 'Lokasi Kerja');
+    }
+
+    /** Daftar lokasi + jumlah pemakaian (halaman & ekspor). */
+    private function data(): array
+    {
+        return [
             'lokasi' => LokasiKerja::orderBy('urutan')->orderBy('nama')->get(),
             'pegawai' => DB::table('kepegawaians')->where('status_rekrutmen', 'Aktif')->whereNotNull('lokasi_kerja')
                 ->groupBy('lokasi_kerja')->pluck(DB::raw('count(*)'), 'lokasi_kerja'),
             'lowongan' => DB::table('lowongans')->whereNotNull('lokasi_kerja')->groupBy('lokasi_kerja')->pluck(DB::raw('count(*)'), 'lokasi_kerja'),
-        ]);
+        ];
     }
 
     public function store(Request $request): RedirectResponse

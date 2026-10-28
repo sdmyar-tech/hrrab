@@ -155,6 +155,27 @@ class PencatatLog
         'pelamar.lamaran.apply' => ['tambah', 'Pelamar', 'Melamar lowongan'],
         'pelamar.lamaran.tolak' => ['hapus', 'Pelamar', 'Membatalkan lamaran'],
         'pelamar.lamaran.export' => ['ekspor', 'Pelamar', 'Mengekspor lamaran sendiri'],
+        'pelamar.data-pelamar.export' => ['ekspor', 'Pelamar', 'Mengekspor data pelamar sendiri'],
+
+        // Ekspor halaman lainnya
+        'admin.dashboard.export' => ['ekspor', 'Dashboard', 'Mengekspor dashboard'],
+        'pegawai.dashboard.export' => ['ekspor', 'Dashboard', 'Mengekspor dashboard sendiri'],
+        'admin.absensi.harian.export' => ['ekspor', 'Absensi', 'Mengekspor absensi harian'],
+        'admin.absensi.pegawai.export' => ['ekspor', 'Absensi', 'Mengekspor absensi satu pegawai'],
+        'admin.absensi.import.export' => ['ekspor', 'Absensi', 'Mengekspor riwayat import absensi'],
+        'admin.absensi.pengaturan.export' => ['ekspor', 'Absensi', 'Mengekspor pengaturan absensi'],
+        'admin.absensi.izin.export' => ['ekspor', 'Absensi', 'Mengekspor izin telat & pulang cepat'],
+        'absensi.saya.export' => ['ekspor', 'Absensi', 'Mengekspor absensi sendiri'],
+        'admin.unit.export' => ['ekspor', 'Master Unit', 'Mengekspor unit & koordinator'],
+        'admin.role.export' => ['ekspor', 'Master Role', 'Mengekspor role & hak akses'],
+        'admin.lokasi-kerja.export' => ['ekspor', 'Master Lokasi Kerja', 'Mengekspor lokasi kerja'],
+        'admin.evaluasi-kontrak.export' => ['ekspor', 'Evaluasi Kontrak', 'Mengekspor evaluasi kontrak'],
+        'admin.surat-peringatan.export' => ['ekspor', 'Surat Peringatan', 'Mengekspor surat peringatan'],
+        'admin.data.export' => ['ekspor', 'Editor Data', 'Mengekspor data mentah'],
+        'admin.data.export-semua' => ['ekspor', 'Editor Data', 'Mengekspor seluruh data'],
+        'kalender.export' => ['ekspor', 'Kalender', 'Mengekspor tanggal merah'],
+        'pegawai.izin-keluar.export' => ['ekspor', 'Izin Keluar', 'Mengekspor riwayat izin keluar sendiri'],
+        'profile.export' => ['ekspor', 'Akun', 'Mengekspor data diri sendiri'],
     ];
 
     /** Rute yang tidak dicatat (bukan tindakan bermakna). */

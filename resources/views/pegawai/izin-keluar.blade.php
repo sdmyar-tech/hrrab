@@ -12,6 +12,9 @@
                     <p class="text-muted mb-0">Setelah disetujui, tunjukkan <strong>tiket keluar</strong> ke security di gerbang.</p>
                 </div>
             </div>
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.izin-keluar.export', 'eksporTeks' => 'Ekspor Riwayat'])
+            </div>
         </div>
 
         <div class="row g-3">

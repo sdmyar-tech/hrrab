@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\InterviewJadwal;
 use App\Models\Lamaran;
+use App\Models\PengajuanIzinKeluar;
 use App\Models\User;
+use App\Support\EksporPegawai;
 use App\Support\ExcelExporter;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -86,6 +88,29 @@ class EksporController extends Controller
         ], $rows, 'Riwayat Lembur');
     }
 
+    public function riwayatIzinKeluar(): BinaryFileResponse
+    {
+        $pegawai = $this->user()->dataPegawai;
+        abort_unless($pegawai, 403);
+
+        $rows = $pegawai->pengajuanIzinKeluars()->reorder()->orderBy('id')->get()->map(fn (PengajuanIzinKeluar $i) => [
+            optional($i->created_at)->format('d-m-Y H:i'),
+            optional($i->tanggal)->format('d-m-Y'),
+            substr((string) $i->jam_keluar, 0, 5),
+            $i->tidakKembali() ? 'Tidak kembali' : substr((string) $i->jam_kembali, 0, 5),
+            $i->keperluanLabel(),
+            $i->alasan,
+            $i->statusLabel(),
+            $i->isPending() ? $i->currentLevelLabel() : '-',
+            $i->kode_tiket,
+            $i->catatan_admin,
+        ]);
+
+        return ExcelExporter::download(ExcelExporter::namaFile('riwayat-izin-keluar-saya'), [
+            'Diajukan', 'Tanggal', 'Jam Keluar', 'Jam Kembali', 'Keperluan', 'Alasan', 'Status', 'Tahap', 'Kode Tiket', 'Catatan',
+        ], $rows, 'Riwayat Izin Keluar');
+    }
+
     public function notifikasi(): BinaryFileResponse
     {
         $rows = $this->user()->notifications()->reorder()->orderBy('created_at')->get()->map(fn ($n) => [
@@ -115,6 +140,46 @@ class EksporController extends Controller
                 'rows' => $lamarans->map(fn (Lamaran $l) => [optional($l->created_at)->format('d-m-Y'), $l->judulPosisi(), $l->unitKerjaTujuan(), $l->tahapLabel(), $l->statusLabel()]),
             ],
             ...self::sheetJadwal($lamarans),
+        ]);
+    }
+
+    /** Data diri pegawai yang login (Data Diri Saya / Profil): biodata, penugasan, cuti, lembur. */
+    public function dataSaya(): BinaryFileResponse
+    {
+        $user = $this->user();
+        $pegawai = $user->dataPegawai;
+        if (! $pegawai) {
+            // Akun tanpa data pegawai (mis. Admin/GM): ekspor data akunnya saja.
+            return ExcelExporter::download(ExcelExporter::namaFile('akun-saya'), ['Data', 'Isi'], [
+                ['Nama', $user->name], ['Email', $user->email], ['Role', $user->roleLabel()], ['Dibuat', optional($user->created_at)->format('d-m-Y H:i')],
+            ], 'Akun');
+        }
+
+        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('data-saya-' . str($pegawai->nama_lengkap)->slug()), EksporPegawai::lembar($pegawai));
+    }
+
+    /** Data pelamar yang login: biodata, riwayat pendidikan & pekerjaan, media sosial. */
+    public function dataPelamarSaya(): BinaryFileResponse
+    {
+        $p = $this->user()->dataPelamar?->load('riwayatPekerjaan', 'riwayatPendidikan');
+        abort_unless($p, 404, 'Data pelamar belum diisi.');
+
+        $biodata = [
+            'Nama Lengkap' => $p->nama_lengkap, 'Email' => $p->email, 'NIK' => $p->nik, 'NPWP' => $p->npwp, 'No. KK' => $p->no_kk, 'No. HP' => $p->no_hp,
+            'Tempat Lahir' => $p->tempat_lahir, 'Tanggal Lahir' => optional($p->tanggal_lahir)->format('d-m-Y'), 'Jenis Kelamin' => $p->jenis_kelamin,
+            'Agama' => $p->agama, 'Golongan Darah' => $p->golongan_darah, 'Status Pernikahan' => $p->status_pernikahan, 'Jumlah Tanggungan' => $p->jumlah_tanggungan,
+            'Nama Ibu Kandung' => $p->nama_ibu_kandung, 'Pendidikan Terakhir' => $p->pendidikan_terakhir, 'Alamat KTP' => $p->alamat_ktp, 'Alamat Domisili' => $p->alamat_domisili,
+        ];
+
+        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('data-pelamar-saya'), [
+            ['name' => 'Biodata', 'headers' => ['Data', 'Isi'], 'rows' => collect($biodata)->map(fn ($v, $k) => [$k, $v])->values()],
+            ['name' => 'Riwayat Pendidikan', 'headers' => ['Jenjang', 'Institusi', 'Jurusan', 'Tahun Masuk', 'Tahun Lulus', 'Nilai'],
+                'rows' => $p->riwayatPendidikan->map(fn ($r) => [$r->jenjang, $r->nama_institusi, $r->jurusan, $r->tahun_masuk, $r->tahun_lulus, $r->nilai])],
+            ['name' => 'Riwayat Pekerjaan', 'headers' => ['Perusahaan', 'Posisi', 'Mulai', 'Selesai', 'Deskripsi'],
+                'rows' => $p->riwayatPekerjaan->map(fn ($r) => [$r->nama_perusahaan, $r->posisi, optional($r->tanggal_mulai)->format('d-m-Y'),
+                    optional($r->tanggal_selesai)->format('d-m-Y') ?? 'Sekarang', $r->deskripsi])],
+            ['name' => 'Media Sosial', 'headers' => ['Platform', 'Tautan'],
+                'rows' => collect($p->sosial_media ?? [])->map(fn ($s, $k) => is_array($s) ? [$s['platform'] ?? $k, $s['url'] ?? null] : [$k, $s])->values()],
         ]);
     }
 

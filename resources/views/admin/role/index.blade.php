@@ -29,6 +29,7 @@
                 </div>
             </div>
             <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.role.export'])
                 <a href="{{ route('admin.role.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Tambah Role</a>
             </div>
         </div>

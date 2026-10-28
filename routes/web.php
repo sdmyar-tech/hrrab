@@ -114,23 +114,28 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         Route::prefix('absensi')->name('absensi.')->group(function () {
             Route::middleware('can:lihat-absensi')->group(function () {
                 Route::get('/', [AdminAbsensiController::class, 'harian'])->name('harian');
+                Route::get('/export', [AdminAbsensiController::class, 'harianExport'])->name('harian.export');
                 Route::get('/rekap', [AdminAbsensiController::class, 'rekap'])->name('rekap');
                 Route::get('/rekap/export', [AdminAbsensiController::class, 'rekapExport'])->name('rekap.export');
                 Route::get('/pegawai/{pegawai}', [AdminAbsensiController::class, 'pegawai'])->name('pegawai');
+                Route::get('/pegawai/{pegawai}/export', [AdminAbsensiController::class, 'pegawaiExport'])->name('pegawai.export');
             });
             Route::middleware('can:kelola-absensi')->group(function () {
                 Route::post('/pegawai/{pegawai}/koreksi', [AdminAbsensiController::class, 'koreksi'])->name('koreksi');
                 Route::get('/import', [AdminAbsensiImportController::class, 'index'])->name('import');
+                Route::get('/import/export', [AdminAbsensiImportController::class, 'export'])->name('import.export');
                 Route::post('/import/pratinjau', [AdminAbsensiImportController::class, 'pratinjau'])->name('import.pratinjau');
                 Route::post('/import/simpan', [AdminAbsensiImportController::class, 'simpan'])->name('import.simpan');
                 Route::delete('/import/{import}', [AdminAbsensiImportController::class, 'hapus'])->name('import.hapus');
                 Route::get('/pengaturan', [AdminAbsensiPengaturanController::class, 'index'])->name('pengaturan');
+                Route::get('/pengaturan/export', [AdminAbsensiPengaturanController::class, 'export'])->name('pengaturan.export');
                 Route::post('/pengaturan/massal', [AdminAbsensiPengaturanController::class, 'massal'])->name('pengaturan.massal');
                 Route::put('/pengaturan/pegawai/{pegawai}', [AdminAbsensiPengaturanController::class, 'updatePegawai'])->name('pengaturan.pegawai');
                 Route::post('/pengaturan/pegawai/{pegawai}/ikut', [AdminAbsensiPengaturanController::class, 'ikut'])->name('pengaturan.ikut');
                 Route::post('/pengaturan/petakan', [AdminAbsensiPengaturanController::class, 'petakan'])->name('pengaturan.petakan');
                 Route::post('/pengaturan/aktifkan-daftar', [AdminAbsensiPengaturanController::class, 'aktifkanDaftar'])->name('pengaturan.aktifkan-daftar');
                 Route::get('/izin', [AdminIzinAbsensiController::class, 'index'])->name('izin');
+                Route::get('/izin/export', [AdminIzinAbsensiController::class, 'export'])->name('izin.export');
                 Route::post('/izin', [AdminIzinAbsensiController::class, 'store'])->name('izin.store');
                 Route::delete('/izin/{izin}', [AdminIzinAbsensiController::class, 'destroy'])->name('izin.destroy');
             });
@@ -138,6 +143,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
     });
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard/export', [AdminDashboardController::class, 'export'])->name('dashboard.export');
 
         Route::prefix('users')->name('users.')->middleware('can:kelola-sistem')->group(function () {
             Route::get('/', [AdminUserController::class, 'index'])->name('index');
@@ -158,7 +164,9 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         // Editor Data: Admin bisa mengubah/menghapus data apa pun langsung (tercatat di log).
         Route::prefix('data')->name('data.')->middleware('can:kelola-sistem')->group(function () {
             Route::get('/', [AdminEditorDataController::class, 'index'])->name('index');
+            Route::get('/export-semua', [AdminEditorDataController::class, 'exportSemua'])->name('export-semua');
             Route::get('/{entitas}', [AdminEditorDataController::class, 'daftar'])->name('daftar')->where('entitas', '[a-z_]+');
+            Route::get('/{entitas}/export', [AdminEditorDataController::class, 'export'])->name('export')->where('entitas', '[a-z_]+');
             Route::get('/{entitas}/tambah', [AdminEditorDataController::class, 'create'])->name('create')->where('entitas', '[a-z_]+');
             Route::post('/{entitas}', [AdminEditorDataController::class, 'store'])->name('store')->where('entitas', '[a-z_]+');
             Route::get('/{entitas}/{id}/edit', [AdminEditorDataController::class, 'edit'])->name('edit')->where('entitas', '[a-z_]+');
@@ -169,6 +177,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         // Master Unit: Kepala SDM & Admin mengatur koordinator (terhubung ke rangkap); tambah/ubah/hapus unit khusus Admin.
         Route::prefix('unit')->name('unit.')->middleware('can:kelola-penugasan')->group(function () {
             Route::get('/', [AdminUnitController::class, 'index'])->name('index');
+            Route::get('/export', [AdminUnitController::class, 'export'])->name('export');
             Route::post('/{unit}/koordinator', [AdminUnitController::class, 'koordinator'])->name('koordinator');
             Route::middleware('can:kelola-sistem')->group(function () {
                 Route::post('/', [AdminUnitController::class, 'store'])->name('store');
@@ -187,6 +196,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
 
         Route::prefix('role')->name('role.')->middleware('can:kelola-sistem')->group(function () {
             Route::get('/', [AdminRoleController::class, 'index'])->name('index');
+            Route::get('/export', [AdminRoleController::class, 'export'])->name('export');
             Route::get('/tambah', [AdminRoleController::class, 'create'])->name('create');
             Route::post('/', [AdminRoleController::class, 'store'])->name('store');
             Route::get('/bawaan/{kode}/edit', [AdminRoleController::class, 'editBawaan'])->name('bawaan.edit');
@@ -201,6 +211,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
 
         Route::prefix('lokasi-kerja')->name('lokasi-kerja.')->middleware('can:kelola-sistem')->group(function () {
             Route::get('/', [AdminLokasiKerjaController::class, 'index'])->name('index');
+            Route::get('/export', [AdminLokasiKerjaController::class, 'export'])->name('export');
             Route::post('/', [AdminLokasiKerjaController::class, 'store'])->name('store');
             Route::put('/{lokasiKerja}', [AdminLokasiKerjaController::class, 'update'])->name('update');
             Route::delete('/{lokasiKerja}', [AdminLokasiKerjaController::class, 'destroy'])->name('destroy');
@@ -271,6 +282,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         // Evaluasi kontrak (H-30): atasan mengisi, Kepala SDM memutuskan. Hak akses dicek di controller.
         Route::prefix('evaluasi-kontrak')->name('evaluasi-kontrak.')->group(function () {
             Route::get('/', [AdminEvaluasiKontrakController::class, 'index'])->name('index');
+            Route::get('/export', [AdminEvaluasiKontrakController::class, 'export'])->name('export');
             Route::get('/{evaluasiKontrak}', [AdminEvaluasiKontrakController::class, 'show'])->name('show');
             Route::post('/{evaluasiKontrak}/isi', [AdminEvaluasiKontrakController::class, 'isi'])->name('isi');
             Route::post('/{evaluasiKontrak}/putuskan', [AdminEvaluasiKontrakController::class, 'putuskan'])->name('putuskan');
@@ -280,6 +292,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         // Surat peringatan bulanan (SP1–SP3 per bulan). Hak akses dicek di controller.
         Route::prefix('surat-peringatan')->name('surat-peringatan.')->group(function () {
             Route::get('/', [AdminSuratPeringatanController::class, 'index'])->name('index');
+            Route::get('/export', [AdminSuratPeringatanController::class, 'export'])->name('export');
             Route::post('/', [AdminSuratPeringatanController::class, 'store'])->name('store');
             Route::delete('/{suratPeringatan}', [AdminSuratPeringatanController::class, 'destroy'])->name('destroy');
         });
@@ -347,6 +360,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
 
     Route::prefix('pegawai')->name('pegawai.')->middleware('pegawai')->group(function () {
         Route::get('/dashboard', [PegawaiDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard/export', [PegawaiDashboardController::class, 'export'])->name('dashboard.export');
         Route::get('/data-pegawai', [ProfilController::class, 'dataPegawai'])->name('data-pegawai');
         Route::get('/pengkinian-data', [ProfilController::class, 'pengkinianData'])->name('pengkinian-data');
         Route::post('/pengkinian-data', [ProfilController::class, 'storePengkinianData'])->name('pengkinian-data.store');
@@ -355,6 +369,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
     Route::prefix('pelamar')->name('pelamar.')->middleware('pelamar')->group(function () {
         Route::get('/data-pelamar', [DataPelamarController::class, 'edit'])->name('data-pelamar.edit');
         Route::post('/data-pelamar', [DataPelamarController::class, 'update'])->name('data-pelamar.update');
+        Route::get('/data-pelamar/export', [EksporController::class, 'dataPelamarSaya'])->name('data-pelamar.export');
 
         Route::get('/lamaran', [PelamarLamaranController::class, 'index'])->name('lamaran.index');
         Route::get('/lamaran/{lamaran}', [PelamarLamaranController::class, 'show'])->name('lamaran.show');
@@ -363,17 +378,20 @@ Route::middleware(['auth', 'nocache'])->group(function () {
     });
 
     Route::get('/absensi-saya', [AbsensiSayaController::class, 'index'])->name('absensi.saya')->middleware('internal');
+    Route::get('/absensi-saya/export', [AbsensiSayaController::class, 'export'])->name('absensi.saya.export')->middleware('internal');
     // Tiket izin keluar: pemilik, atau penyetuju/Admin yang berhak melihat (dicek di controller).
     Route::get('/izin-keluar/{izin}/tiket', [PegawaiIzinKeluarController::class, 'tiket'])->name('pegawai.izin-keluar.tiket')->middleware('internal');
     Route::get('/interview-saya', [InterviewJadwalController::class, 'milikSaya'])->name('interview.saya');
     Route::get('/interview-saya/export', [EksporController::class, 'jadwalInterviewSaya'])->name('interview.saya.export');
     Route::get('/pegawai/pengajuan-cuti/export', [EksporController::class, 'riwayatCuti'])->name('pegawai.pengajuan-cuti.export');
     Route::get('/pegawai/pengajuan-lembur/export', [EksporController::class, 'riwayatLembur'])->name('pegawai.pengajuan-lembur.export');
+    Route::get('/pegawai/izin-keluar/export', [EksporController::class, 'riwayatIzinKeluar'])->name('pegawai.izin-keluar.export');
     Route::get('/pelamar/lamaran-export', [EksporController::class, 'lamaranSaya'])->name('pelamar.lamaran.export')->middleware('pelamar');
 
     Route::middleware('internal')->group(function () {
         // Kalender pegawai: semua akun internal melihat; tanggal merah hanya diatur Super Admin & Kepala SDM.
         Route::get('/kalender', [KalenderController::class, 'index'])->name('kalender.index');
+        Route::get('/kalender/export', [KalenderController::class, 'export'])->name('kalender.export');
         Route::middleware('can:kelola-kalender')->prefix('kalender')->name('kalender.')->group(function () {
             Route::post('/sinkron', [KalenderController::class, 'sinkron'])->name('sinkron');
             Route::post('/', [KalenderController::class, 'store'])->name('store');
@@ -416,6 +434,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
     Route::get('/notifikasi/{id}', [NotifikasiController::class, 'buka'])->name('notifikasi.buka');
 
     Route::get('/profile', [LoginController::class, 'profile'])->name('profile');
+    Route::get('/profile/export', [EksporController::class, 'dataSaya'])->name('profile.export')->middleware('internal');
 
     // Wajib ganti password (satu-satunya halaman yang terbuka selama penanda aktif).
     Route::get('/akun/ganti-password', [WajibPasswordController::class, 'halaman'])->name('akun.ganti-password');

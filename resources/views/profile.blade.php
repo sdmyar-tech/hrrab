@@ -26,6 +26,13 @@
             </div>
             <div class="heading-actions">
                 <a href="{{ route($user->dashboardRoute()) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i>{{ $user->isPelamar() ? 'Lamaran Saya' : 'Dashboard' }}</a>
+                @if ($user->isPelamar())
+                    @if ($user->dataPelamar)
+                        @include('partials.tombol-ekspor', ['eksporRoute' => 'pelamar.data-pelamar.export', 'eksporTeks' => 'Ekspor Data Saya'])
+                    @endif
+                @else
+                    @include('partials.tombol-ekspor', ['eksporRoute' => 'profile.export', 'eksporTeks' => 'Ekspor Data Saya'])
+                @endif
                 @if ($tautanUbah)
                     <a href="{{ $tautanUbah[0] }}" class="btn btn-primary"><i class="bi bi-pencil-square"></i>{{ $tautanUbah[1] }}</a>
                 @endif

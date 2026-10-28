@@ -340,6 +340,35 @@ class EditorData
     }
 
     /** Nilai ringkas untuk tabel daftar. */
+    /**
+     * Lembar ekspor satu jenis data: ID, judul, lalu semua kolom tabel apa adanya (kolom rahasia tidak ikut).
+     *
+     * @param  iterable<Model>  $models
+     * @return array{name: string, headers: list<string>, rows: \Generator}
+     */
+    public static function lembarEkspor(array $konfig, iterable $models): array
+    {
+        $model = self::model($konfig);
+        $kolom = collect(Schema::getColumnListing($model->getTable()))
+            ->reject(fn ($c) => in_array($c, self::KOLOM_RAHASIA, true) || in_array($c, $model->getHidden(), true))->values()->all();
+
+        $rows = (function () use ($models, $kolom, $konfig) {
+            foreach ($models as $m) {
+                yield [
+                    (string) $m->getKey(),
+                    ($konfig['judul'])($m),
+                    ...array_map(function ($c) use ($m) {
+                        $v = $m->getRawOriginal($c);
+
+                        return is_array($v) || is_object($v) ? json_encode($v, JSON_UNESCAPED_UNICODE) : $v;
+                    }, $kolom),
+                ];
+            }
+        })();
+
+        return ['name' => $konfig['label'], 'headers' => ['ID', 'Data', ...$kolom], 'rows' => $rows];
+    }
+
     public static function nilaiRingkas(Model $model, string $kolom): string
     {
         $v = $model->getRawOriginal($kolom);

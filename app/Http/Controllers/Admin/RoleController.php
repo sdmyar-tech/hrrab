@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\ExcelExporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Master Role: sesuaikan role bawaan (nama tampilan, keterangan, hak akses) dan buat role kustom berbasis jenis dasar.
@@ -19,6 +21,48 @@ use Illuminate\View\View;
 class RoleController extends Controller
 {
     public function index(): View
+    {
+        ['roles' => $roles, 'dihapus' => $dihapus] = $this->data();
+
+        return view('admin.role.index', [
+            'roles' => $roles,
+            'dihapus' => $dihapus,
+            // Tujuan pemindahan akun saat menghapus role (Admin tidak ditawarkan).
+            'pilihanPengganti' => Role::pilihanAktif([User::ROLE_ADMIN]),
+            'ringkas' => [
+                'role' => $roles->count(),
+                'kustom' => $roles->where('jenis', 'kustom')->count(),
+                'disesuaikan' => $roles->where('jenis', 'disesuaikan')->count(),
+                'akun' => $roles->sum('jumlah'),
+            ],
+        ]);
+    }
+
+    /** Ekspor daftar role (termasuk yang dihapus) + matriks hak akses. */
+    public function export(): BinaryFileResponse
+    {
+        ['roles' => $roles, 'dihapus' => $dihapus] = $this->data();
+        $jenis = ['bawaan' => 'Bawaan', 'disesuaikan' => 'Bawaan (disesuaikan)', 'kustom' => 'Kustom'];
+
+        $daftar = $roles->map(fn ($r) => [
+            $r->nama, $jenis[$r->jenis], User::LABEL_ROLE[$r->dasar] ?? $r->dasar, $r->keterangan, $r->jumlah, count($r->hak),
+            collect($r->hak)->map(fn ($h) => Role::HAK_AKSES[$h][0] ?? $h)->implode(', '), 'Aktif',
+        ])->concat($dihapus->map(fn ($d) => [
+            $d->nama, 'Bawaan (dihapus)', $d->namaAsli, null, $d->jumlah, null, null, 'Dihapus' . ($d->pengganti ? " → akun ke {$d->pengganti}" : ''),
+        ]));
+        $matriks = collect(Role::HAK_AKSES)->map(fn ($info, $hak) => [
+            $info[0],
+            ...$roles->map(fn ($r) => in_array($hak, $r->kunci, true) ? 'Ya (terkunci)' : (in_array($hak, $r->hak, true) ? 'Ya' : '-'))->all(),
+        ])->values();
+
+        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('master-role'), [
+            ['name' => 'Daftar Role', 'headers' => ['Role', 'Jenis', 'Jenis Dasar', 'Keterangan', 'Jumlah Akun', 'Jumlah Hak', 'Hak Akses', 'Status'], 'rows' => $daftar],
+            ['name' => 'Matriks Hak Akses', 'headers' => ['Hak Akses', ...$roles->pluck('nama')->all()], 'rows' => $matriks],
+        ]);
+    }
+
+    /** Role aktif (bawaan lalu kustom) & role bawaan yang dihapus, dalam bentuk siap tampil/ekspor. */
+    private function data(): array
     {
         $jumlahBawaan = User::whereNull('role_id')->whereIn('role', User::INTERNAL_ROLES)->selectRaw('role, count(*) n')->groupBy('role')->pluck('n', 'role');
         $jumlahKustom = User::whereNotNull('role_id')->selectRaw('role_id, count(*) n')->groupBy('role_id')->pluck('n', 'role_id');
@@ -67,18 +111,7 @@ class RoleController extends Controller
             'urlPulihkan' => route('admin.role.bawaan.pulihkan', $kode),
         ]);
 
-        return view('admin.role.index', [
-            'roles' => $roles,
-            'dihapus' => $dihapus,
-            // Tujuan pemindahan akun saat menghapus role (Admin tidak ditawarkan).
-            'pilihanPengganti' => Role::pilihanAktif([User::ROLE_ADMIN]),
-            'ringkas' => [
-                'role' => $roles->count(),
-                'kustom' => $roles->where('jenis', 'kustom')->count(),
-                'disesuaikan' => $roles->where('jenis', 'disesuaikan')->count(),
-                'akun' => $roles->sum('jumlah'),
-            ],
-        ]);
+        return ['roles' => $roles, 'dihapus' => $dihapus];
     }
 
     public function create(Request $request): View

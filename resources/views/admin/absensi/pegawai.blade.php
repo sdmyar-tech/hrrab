@@ -19,13 +19,15 @@
                     </p>
                 </div>
             </div>
-            @if ($bisaKelola)
-                <div class="heading-actions">
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.absensi.pegawai.export',
+                    'eksporParam' => ['pegawai' => $pegawai, 'dari' => $dari->toDateString(), 'sampai' => $sampai->toDateString()]])
+                @if ($bisaKelola)
                     <a href="{{ route('admin.absensi.pengaturan', ['q' => $pegawai->nip ?: $pegawai->nama_lengkap]) }}" class="btn btn-outline-secondary">
                         <i class="bi {{ $ik['pengaturan'] }} me-1"></i> Ubah Jam Kerja
                     </a>
-                </div>
-            @endif
+                @endif
+            </div>
         </div>
 
         @include('admin.absensi._nav')

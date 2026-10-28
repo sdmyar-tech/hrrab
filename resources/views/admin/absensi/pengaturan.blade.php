@@ -18,6 +18,9 @@
                     <p class="text-muted mb-0">Tentukan siapa yang diabsen, hubungkan ID di mesin, dan atur jam kerja.</p>
                 </div>
             </div>
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.absensi.pengaturan.export'])
+            </div>
         </div>
 
         @include('admin.absensi._nav')

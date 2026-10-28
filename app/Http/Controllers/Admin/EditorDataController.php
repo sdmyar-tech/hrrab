@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\EditorData;
+use App\Support\ExcelExporter;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Editor Data — khusus Admin. Mengubah/menghapus baris data apa pun secara langsung:
@@ -41,6 +43,28 @@ class EditorDataController extends Controller
             'k' => $k,
             'baris' => EditorData::query($k, $request->query('q'))->paginate(25)->withQueryString(),
         ]);
+    }
+
+    /** Ekspor satu jenis data (sesuai pencarian ?q=), semua kolom. */
+    public function export(Request $request, string $entitas): BinaryFileResponse
+    {
+        $this->hanyaAdmin();
+        $k = EditorData::konfig($entitas);
+
+        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('data-' . $entitas),
+            [EditorData::lembarEkspor($k, EditorData::query($k, $request->query('q'))->reorder()->orderBy(EditorData::model($k)->getKeyName())->lazy())]);
+    }
+
+    /** Ekspor seluruh data aplikasi: satu lembar per jenis data. */
+    public function exportSemua(): BinaryFileResponse
+    {
+        $this->hanyaAdmin();
+        @set_time_limit(300);
+
+        $lembar = collect(EditorData::entitas())->map(fn ($k) => EditorData::lembarEkspor($k,
+            EditorData::query($k, null)->reorder()->orderBy(EditorData::model($k)->getKeyName())->lazy()))->values()->all();
+
+        return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('semua-data-hrrab'), $lembar);
     }
 
     public function edit(Request $request, string $entitas, string $id): View

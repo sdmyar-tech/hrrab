@@ -6,6 +6,7 @@ use App\Models\HariLibur;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanIzinKeluar;
 use App\Models\User;
+use App\Support\ExcelExporter;
 use App\Support\Kalender;
 use App\Support\SinkronLibur;
 use Carbon\Carbon;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
 /**
@@ -66,6 +68,26 @@ class KalenderController extends Controller
             'bisaKelola' => $user->can('kelola-kalender'),
             'sinkronTerakhir' => SinkronLibur::terakhir(),
         ]);
+    }
+
+    /** Ekspor daftar tanggal merah setahun (?tahun=, bawaan tahun ini). */
+    public function export(Request $request): BinaryFileResponse
+    {
+        $tahun = (int) $request->query('tahun', now()->year);
+        $rows = HariLibur::with('pembuat')->whereYear('tanggal', $tahun)->orderBy('tanggal')->get()->map(fn (HariLibur $h) => [
+            $h->tanggal->format('d-m-Y'),
+            $h->tanggal->translatedFormat('l'),
+            $h->nama,
+            $h->jenisLabel(),
+            $h->dariApi() ? 'Sinkron API' : 'Manual',
+            $h->aktif ? 'Libur' : 'Tidak diliburkan',
+            $h->keterangan,
+            $h->pembuat?->name,
+        ]);
+
+        return ExcelExporter::download(ExcelExporter::namaFile("kalender-libur-{$tahun}"), [
+            'Tanggal', 'Hari', 'Nama', 'Jenis', 'Sumber', 'Status', 'Keterangan', 'Diatur Oleh',
+        ], $rows, "Tanggal Merah {$tahun}");
     }
 
     /** Tambah tanggal merah manual (satu tanggal atau rentang); tanggal yang sudah ada diambil alih menjadi manual. */

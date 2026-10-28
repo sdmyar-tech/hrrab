@@ -25,17 +25,20 @@
                         <p class="text-muted mb-0">{{ $judul }} &middot; {{ now()->translatedFormat('l, d F Y') }}</p>
                     </div>
                 </div>
-                @if (count($pilihanUnit) > 1)
-                    <form method="GET" action="{{ route('admin.dashboard') }}" class="align-self-lg-center" style="min-width: 260px;">
-                        <label for="pilih-unit" class="form-label small text-muted mb-1"><i class="bi bi-funnel me-1"></i>Tampilkan unit</label>
-                        <select name="unit" id="pilih-unit" class="form-select" onchange="this.form.submit()">
-                            <option value="">Semua ({{ count($pilihanUnit) }} unit)</option>
-                            @foreach ($pilihanUnit as $u)
-                                <option value="{{ $u }}" @selected($unitDipilih === $u)>{{ $u }}</option>
-                            @endforeach
-                        </select>
-                    </form>
-                @endif
+                <div class="d-flex flex-wrap align-items-end gap-2 align-self-lg-center">
+                    @if (count($pilihanUnit) > 1)
+                        <form method="GET" action="{{ route('admin.dashboard') }}" style="min-width: 260px;">
+                            <label for="pilih-unit" class="form-label small text-muted mb-1"><i class="bi bi-funnel me-1"></i>Tampilkan unit</label>
+                            <select name="unit" id="pilih-unit" class="form-select" onchange="this.form.submit()">
+                                <option value="">Semua ({{ count($pilihanUnit) }} unit)</option>
+                                @foreach ($pilihanUnit as $u)
+                                    <option value="{{ $u }}" @selected($unitDipilih === $u)>{{ $u }}</option>
+                                @endforeach
+                            </select>
+                        </form>
+                    @endif
+                    @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.dashboard.export', 'eksporUkuran' => '', 'eksporTeks' => 'Ekspor Dashboard'])
+                </div>
             </div>
             @if ($unitDipilih)
                 <div class="mt-3 small">
