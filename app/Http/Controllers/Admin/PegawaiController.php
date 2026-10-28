@@ -170,12 +170,12 @@ class PegawaiController extends Controller
 
                 $pegawai->kepegawaian()->create($validated['kepegawaian']);
                 PenugasanService::buatUtama($pegawai, $validated['kepegawaian']['unit_kerja'], $validated['kepegawaian']['jabatan'],
-                    $validated['kepegawaian']['tanggal_masuk'], oleh: Auth::user());
+                    $validated['kepegawaian']['tanggal_masuk'] ?? null, oleh: Auth::user());
                 $pegawai->kontakDarurat()->create($validated['kontak_darurat']);
 
                 $pegawai->bpjs()->create($validated['bpjs']);
 
-                $dokumenPaths = $this->handleFileUploads($request, $pegawai->nip);
+                $dokumenPaths = $this->handleFileUploads($request, $pegawai);
                 $pegawai->dokumen()->create($dokumenPaths);
 
                 return $pegawai;
@@ -336,7 +336,7 @@ class PegawaiController extends Controller
                     $validated['bpjs']
                 );
 
-                $dokumenPaths = $this->handleFileUploads($request, $pegawai->nip, $pegawai->dokumen);
+                $dokumenPaths = $this->handleFileUploads($request, $pegawai, $pegawai->dokumen);
                 if (! empty($dokumenPaths)) {
                     $pegawai->dokumen()->updateOrCreate(
                         ['data_pegawai_id' => $pegawai->id],
@@ -446,7 +446,8 @@ class PegawaiController extends Controller
 
         // Admin boleh menyimpan data yang belum lengkap (mis. data lama): hanya kolom yang wajib di database tetap wajib.
         if (Auth::user()?->isAdmin()) {
-            $tetapWajib = ['nama_lengkap', 'jabatan', ...($ignoreId ? [] : ['unit_kerja'])];
+            // status_rekrutmen & status_kerja NOT NULL di database (pilihan form selalu terisi).
+            $tetapWajib = ['nama_lengkap', 'jabatan', 'status_rekrutmen', 'status_kerja', ...($ignoreId ? [] : ['unit_kerja'])];
             foreach ($aturan as $kolom => $r) {
                 if (! in_array($kolom, $tetapWajib, true)) {
                     $aturan[$kolom] = array_map(fn ($x) => $x === 'required' ? 'nullable' : $x, $r);
@@ -484,7 +485,7 @@ class PegawaiController extends Controller
         ];
     }
 
-    private function handleFileUploads(Request $request, string $nip, ?DokumenPegawai $existing = null): array
+    private function handleFileUploads(Request $request, DataPegawai $pegawai, ?DokumenPegawai $existing = null): array
     {
         $paths = [];
 
@@ -494,7 +495,7 @@ class PegawaiController extends Controller
                     Storage::disk('public')->delete($existing->{$field});
                 }
 
-                $paths[$field] = $request->file($field)->store("dokumen-pegawai/{$nip}", 'public');
+                $paths[$field] = $request->file($field)->store($pegawai->folderDokumen(), 'public');
             }
         }
 

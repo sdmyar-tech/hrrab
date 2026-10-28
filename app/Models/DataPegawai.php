@@ -97,6 +97,14 @@ class DataPegawai extends Model
         return $this->hasOne(DokumenPegawai::class);
     }
 
+    /** Folder unggahan dokumen: per NIP, atau per ID bila NIP belum diisi (Admin boleh menyimpan data belum lengkap). */
+    public function folderDokumen(): string
+    {
+        $nip = preg_replace('/[^A-Za-z0-9._-]/', '_', trim((string) $this->nip));
+
+        return 'dokumen-pegawai/' . ($nip !== '' ? $nip : 'id-' . $this->getKey());
+    }
+
     public function penugasans(): HasMany
     {
         return $this->hasMany(Penugasan::class)->orderByDesc('tanggal_mulai')->orderByDesc('id');

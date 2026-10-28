@@ -231,7 +231,7 @@ class ProfilController extends Controller
                             Storage::disk('public')->delete($pegawai->dokumen->{$field});
                         }
                         $dokumenPaths[$field] = $request->file($field)
-                            ->store("dokumen-pegawai/{$pegawai->nip}", 'public');
+                            ->store($pegawai->folderDokumen(), 'public');
                     }
                 }
 
