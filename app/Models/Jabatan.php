@@ -18,29 +18,82 @@ class Jabatan extends Model
 
     public const CACHE_PER_UNIT = 'master.jabatan-per-unit';
 
+    public const CACHE_HAK = 'master.hak-akses-jabatan';
+
+    /** Hak yang tidak boleh diberikan lewat jabatan (setara Admin; hanya lewat Master Role). */
+    public const HAK_TERLARANG = [User::ABILITY_KELOLA_SISTEM];
+
     protected $fillable = ['nama'];
+
+    /** Salinan hakAksesPerUnit() untuk request ini (hasAbility dipanggil berkali-kali). */
+    private static ?array $memoHak = null;
+
+    public static function lupakanHak(): void
+    {
+        self::$memoHak = null;
+        Cache::forget(self::CACHE_HAK);
+    }
 
     protected static function booted(): void
     {
         $lupakan = function () {
             Cache::forget(self::CACHE_KEY);
             Cache::forget(self::CACHE_PER_UNIT);
+            self::lupakanHak();
         };
         static::saved($lupakan);
         static::deleted($lupakan);
     }
 
+    /**
+     * Hak akses tambahan per jabatan di tiap unit (tabel jabatan_unit.hak_akses).
+     *
+     * @return array<string, list<string>> "UNIT|JABATAN" => daftar hak
+     */
+    public static function hakAksesPerUnit(): array
+    {
+        if (self::$memoHak !== null) {
+            return self::$memoHak;
+        }
+        if (! Schema::hasColumn('jabatan_unit', 'hak_akses')) {
+            return self::$memoHak = [];
+        }
+
+        return self::$memoHak = Cache::rememberForever(self::CACHE_HAK, fn () => DB::table('jabatan_unit')
+            ->join('jabatans', 'jabatans.id', '=', 'jabatan_unit.jabatan_id')
+            ->join('units', 'units.id', '=', 'jabatan_unit.unit_id')
+            ->whereNotNull('jabatan_unit.hak_akses')
+            ->get(['units.nama as unit', 'jabatans.nama as jabatan', 'jabatan_unit.hak_akses'])
+            ->mapWithKeys(fn ($r) => [self::kunciHak($r->unit, $r->jabatan) => array_values(array_diff((array) json_decode($r->hak_akses, true), self::HAK_TERLARANG))])
+            ->filter()
+            ->all());
+    }
+
+    public static function kunciHak(?string $unit, ?string $jabatan): string
+    {
+        return mb_strtoupper(trim((string) $unit)) . '|' . mb_strtoupper(trim((string) $jabatan));
+    }
+
+    /** Simpan hak akses tambahan jabatan ini di satu unit. */
+    public function aturHakAkses(Unit $unit, array $hak): void
+    {
+        $hak = array_values(array_intersect(array_keys(Role::HAK_AKSES), array_diff($hak, self::HAK_TERLARANG)));
+        $this->units()->updateExistingPivot($unit->id, ['hak_akses' => $hak ? json_encode($hak) : null]);
+        self::lupakanHak();
+    }
+
     /** Unit tempat jabatan ini berada (satu jabatan boleh di beberapa unit, mis. guru di SMA/SMP/SMK). */
     public function units(): BelongsToMany
     {
-        return $this->belongsToMany(Unit::class)->orderBy('urutan')->orderBy('nama');
+        return $this->belongsToMany(Unit::class)->withPivot('hak_akses')->orderBy('urutan')->orderBy('nama');
     }
 
-    /** Simpan daftar unit jabatan ini (id unit) dan segarkan cache jabatan per unit. */
+    /** Simpan daftar unit jabatan ini (id unit) dan segarkan cache jabatan per unit. Hak akses unit yang tetap tidak berubah. */
     public function aturUnit(array $unitIds): void
     {
         $this->units()->sync(array_values(array_unique(array_map('intval', $unitIds))));
         Cache::forget(self::CACHE_PER_UNIT);
+        self::lupakanHak();
     }
 
     /**

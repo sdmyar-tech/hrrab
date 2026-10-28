@@ -32,6 +32,7 @@ class Unit extends Model
         $lupakan = function () {
             Cache::forget(self::CACHE_KEY);
             Cache::forget(Jabatan::CACHE_PER_UNIT);
+            Jabatan::lupakanHak(); // kunci hak akses jabatan memakai nama unit
         };
         static::saved($lupakan);
         static::deleted($lupakan);

@@ -132,6 +132,8 @@ class PencatatLog
         'admin.jabatan.update' => ['ubah', 'Master Jabatan', 'Mengubah nama jabatan'],
         'admin.jabatan.destroy' => ['hapus', 'Master Jabatan', 'Menghapus jabatan'],
         'admin.jabatan.export' => ['ekspor', 'Master Jabatan', 'Mengekspor jabatan'],
+        'admin.jabatan.hak-akses.update' => ['ubah', 'Hak Akses Jabatan', 'Mengatur hak akses jabatan di unit'],
+        'admin.jabatan.hak-akses.export' => ['ekspor', 'Hak Akses Jabatan', 'Mengekspor hak akses jabatan'],
         'admin.role.store' => ['tambah', 'Master Role', 'Membuat role kustom'],
         'admin.role.update' => ['ubah', 'Master Role', 'Mengubah role kustom'],
         'admin.role.destroy' => ['hapus', 'Master Role', 'Menghapus role kustom'],

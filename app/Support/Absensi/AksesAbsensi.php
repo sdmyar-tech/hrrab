@@ -25,7 +25,12 @@ class AksesAbsensi
             return null;
         }
 
-        return $user->hasAbility(User::ABILITY_LIHAT_ABSENSI) && $user->isKepalaBagian() ? $user->unitsDipimpin() : [];
+        if (! $user->hasAbility(User::ABILITY_LIHAT_ABSENSI)) {
+            return [];
+        }
+
+        // Kepala Bagian: unit yang dipimpin; pegawai lain yang diberi hak lihat (role kustom / hak jabatan): unit tempatnya bertugas.
+        return $user->isKepalaBagian() ? $user->unitsDipimpin() : $user->unitsAktif();
     }
 
     /** Pegawai aktif yang ikut absensi & terlihat oleh user (pegawai keluar/Tidak Aktif tidak dinilai, agar tidak jadi Alpa). */

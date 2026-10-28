@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AlurPegawaiController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EditorDataController as AdminEditorDataController;
 use App\Http\Controllers\Admin\EvaluasiKontrakController as AdminEvaluasiKontrakController;
+use App\Http\Controllers\Admin\HakAksesJabatanController;
 use App\Http\Controllers\Admin\IzinAbsensiController as AdminIzinAbsensiController;
 use App\Http\Controllers\Admin\IzinKeluarController as AdminIzinKeluarController;
 use App\Http\Controllers\Admin\JabatanController as AdminJabatanController;
@@ -194,6 +195,10 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         Route::prefix('jabatan')->name('jabatan.')->middleware('can:kelola-sistem')->group(function () {
             Route::get('/', [AdminJabatanController::class, 'index'])->name('index');
             Route::get('/export', [AdminJabatanController::class, 'export'])->name('export');
+            // Hak akses tambahan per jabatan di tiap unit (di atas hak role akun).
+            Route::get('/hak-akses', [HakAksesJabatanController::class, 'index'])->name('hak-akses');
+            Route::get('/hak-akses/export', [HakAksesJabatanController::class, 'export'])->name('hak-akses.export');
+            Route::put('/{jabatan}/hak-akses/{unit}', [HakAksesJabatanController::class, 'update'])->name('hak-akses.update');
             Route::post('/', [AdminJabatanController::class, 'store'])->name('store');
             Route::put('/{jabatan}', [AdminJabatanController::class, 'update'])->name('update');
             Route::delete('/{jabatan}', [AdminJabatanController::class, 'destroy'])->name('destroy');

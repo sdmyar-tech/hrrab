@@ -44,7 +44,8 @@
         ['bagian' => 'Sistem', 'item' => [
             ['Kelola Akun', 'bi-person-lock', 'admin.users.index', 'admin.users.*', $bisa('kelola-sistem'), null],
             ['Master Role', 'bi-shield-check', 'admin.role.index', 'admin.role.*', $bisa('kelola-sistem'), null],
-            ['Master Jabatan', 'bi-diagram-3', 'admin.jabatan.index', 'admin.jabatan.*', $bisa('kelola-sistem'), null],
+            ['Hak Akses Jabatan', 'bi-person-badge', 'admin.jabatan.hak-akses', 'admin.jabatan.hak-akses*', $bisa('kelola-sistem'), null],
+            ['Master Jabatan', 'bi-diagram-3', 'admin.jabatan.index', ['admin.jabatan.index', 'admin.jabatan.export'], $bisa('kelola-sistem'), null],
             ['Master Lokasi Kerja', 'bi-geo-alt', 'admin.lokasi-kerja.index', 'admin.lokasi-kerja.*', $bisa('kelola-sistem'), null],
             ['Log Aktivitas', 'bi-journal-text', 'admin.log.index', 'admin.log.*', $bisa('kelola-sistem'), null],
         ]],

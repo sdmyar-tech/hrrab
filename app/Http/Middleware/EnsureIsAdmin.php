@@ -39,12 +39,13 @@ class EnsureIsAdmin
     }
 
     /**
-     * Staff dengan role kustom (Master Role) boleh membuka halaman admin yang dijaga hak akses (middleware can:...)
-     * bila semua hak itu dimilikinya. Halaman admin tanpa penjaga hak akses tetap tertutup untuk Staff.
+     * Staff dengan role kustom (Master Role) atau hak tambahan dari jabatannya (Hak Akses Jabatan) boleh membuka
+     * halaman admin yang dijaga hak akses (middleware can:...) bila semua hak itu dimilikinya.
+     * Halaman admin tanpa penjaga hak akses tetap tertutup untuk Staff.
      */
     private function staffBerhakLewatRoleKustom(User $user, Request $request): bool
     {
-        if (! $user->isStaff() || ! $user->roleKustom()) {
+        if (! $user->isStaff() || (! $user->roleKustom() && $user->hakJabatan() === [])) {
             return false;
         }
         $hak = collect($request->route()?->gatherMiddleware() ?? [])

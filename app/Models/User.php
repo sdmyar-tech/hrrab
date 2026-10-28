@@ -196,12 +196,44 @@ class User extends Authenticatable
         };
     }
 
-    /** Hak akses dari Master Role: role kustom bila ada, selain itu role bawaan (penyesuaian atau bawaan kode). */
+    /**
+     * Hak akses dari Master Role (role kustom bila ada, selain itu role bawaan), ditambah hak akses
+     * jabatan yang sedang dipegang di unitnya (Hak Akses Jabatan).
+     */
     private function punyaDiMatriks(string $ability): bool
     {
         $kustom = $this->roleKustom();
 
-        return in_array($ability, $kustom ? $kustom->hakAksesEfektif() : Role::hakAksesBawaan((string) $this->role), true);
+        return in_array($ability, $kustom ? $kustom->hakAksesEfektif() : Role::hakAksesBawaan((string) $this->role), true)
+            || in_array($ability, $this->hakJabatan(), true);
+    }
+
+    /** @var list<string>|null hasil hakJabatan() untuk instance ini */
+    private ?array $hakJabatanMemo = null;
+
+    /**
+     * Hak akses tambahan dari jabatan yang dipegang di tiap unit (penugasan aktif: utama & rangkap, plus jabatan tambahan
+     * di unit utama). Hanya akun internal yang tertaut ke data pegawai.
+     *
+     * @return list<string>
+     */
+    public function hakJabatan(): array
+    {
+        if ($this->hakJabatanMemo !== null) {
+            return $this->hakJabatanMemo;
+        }
+        $peta = Jabatan::hakAksesPerUnit();
+        if (! $peta || ! $this->data_pegawai_id || ! in_array($this->role, self::INTERNAL_ROLES, true)) {
+            return $this->hakJabatanMemo = [];
+        }
+
+        $kep = $this->dataPegawai?->kepegawaian;
+        $pasangan = collect($this->penugasanAktif()->map(fn ($p) => [$p->unit_kerja, $p->jabatan])->all())
+            ->push([$kep?->unit_kerja, $kep?->jabatan], [$kep?->unit_kerja, $kep?->jabatan_tambahan]);
+
+        return $this->hakJabatanMemo = $pasangan
+            ->flatMap(fn ($p) => $peta[Jabatan::kunciHak($p[0], $p[1])] ?? [])
+            ->unique()->values()->all();
     }
 
     public function diUnitTanpaPengajuan(): bool

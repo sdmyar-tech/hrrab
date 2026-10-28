@@ -393,7 +393,13 @@ class PengajuanWorkflow
                     $q->orWhereIn('data_pegawai_id', Penugasan::aktif()->whereIn('unit_kerja', $units)->select('data_pegawai_id'));
                 }
             }),
-            default => $query->where('data_pegawai_id', $viewer->data_pegawai_id ?? 0),
+            // Staff: pengajuannya sendiri; bila diberi hak lihat laporan (role kustom / hak jabatan) juga pengajuan unit tempatnya bertugas.
+            default => $query->where(function ($q) use ($viewer) {
+                $q->where('data_pegawai_id', $viewer->data_pegawai_id ?? 0);
+                if ($viewer->hasAbility(User::ABILITY_LIHAT_LAPORAN) && ($units = $viewer->unitsAktif())) {
+                    $q->orWhereIn('unit_kerja', $units);
+                }
+            }),
         };
     }
 }
