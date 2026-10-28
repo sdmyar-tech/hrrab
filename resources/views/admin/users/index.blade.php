@@ -41,7 +41,7 @@
                         </select>
                     </div>
                     <div class="col-md-1">
-                        <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-search"></i></button>
+                        <button type="submit" class="btn btn-outline-secondary btn-sm" aria-label="Cari" title="Cari"><i class="bi bi-search" aria-hidden="true"></i></button>
                     </div>
                     <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterUserForm'])</div>
                     @if (request()->hasAny(['q', 'role']))
@@ -85,7 +85,7 @@
                                         @if ($unitsKepala = $item->unitsDipimpin())<small class="text-muted d-block">Kepala {{ implode(', ', $unitsKepala) }}</small>@endif
                                     @endif
                                 </td>
-                                <td>{{ $item->nip ?? '-' }}</td>
+                                <td class="angka-utuh">{{ $item->nip ?? '-' }}</td>
                                 <td>
                                     @if ($item->dataPegawai)
                                         <small class="text-muted">Pegawai: {{ $item->dataPegawai->nama_lengkap }}</small>
@@ -104,8 +104,8 @@
                                             data-confirm="Hapus akun {{ $item->name }}? Tindakan ini tidak bisa dibatalkan.">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-outline-danger btn-sm">
-                                                <i class="bi bi-trash"></i>
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Hapus akun {{ $item->name }}" title="Hapus akun">
+                                                <i class="bi bi-trash" aria-hidden="true"></i>
                                             </button>
                                         </form>
                                     @endif

@@ -162,8 +162,8 @@
                 <div class="input-group">
                     <input type="password" id="password" name="password" class="form-control"
                         placeholder="Masukkan password" required>
-                    <button type="button" class="btn btn-toggle-password" id="toggle-password" tabindex="-1">
-                        <i class="bi bi-eye" id="toggle-password-icon"></i>
+                    <button type="button" class="btn btn-toggle-password" id="toggle-password" aria-label="Tampilkan password" aria-pressed="false">
+                        <i class="bi bi-eye" id="toggle-password-icon" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
@@ -193,6 +193,8 @@
                     passwordInput.type = isHidden ? 'text' : 'password';
                     toggleIcon.classList.toggle('bi-eye', !isHidden);
                     toggleIcon.classList.toggle('bi-eye-slash', isHidden);
+                    toggleBtn.setAttribute('aria-pressed', String(isHidden));
+                    toggleBtn.setAttribute('aria-label', isHidden ? 'Sembunyikan password' : 'Tampilkan password');
                 });
             }
         });

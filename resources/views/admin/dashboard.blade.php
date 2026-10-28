@@ -1,5 +1,7 @@
 @extends('layouts.admin.app')
 
+@section('title', 'Dashboard')
+
 @section('content')
 @include('partials.viz.style')
 @php

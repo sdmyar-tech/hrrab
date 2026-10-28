@@ -303,8 +303,79 @@ html[data-theme="dark"] .swal2-popup { background: var(--admin-surface); }
     .aksi-lengket > .btn { flex: 1 1 0; }
 }
 
-/* Surat peringatan: SP1 kuning, SP2 oranye, SP3 merah (makin tegas). */
+/* Surat peringatan: SP1 kuning, SP2 oranye, SP3 merah (makin tegas).
+   SP1 memakai teks gelap & SP2 oranye tua agar kontras teks ≥ 4.5:1 (WCAG AA). */
 .sp-badge { font-weight: 700; color: #fff; }
-.sp-badge.sp-1 { background: #f59e0b; }
-.sp-badge.sp-2 { background: #ea580c; }
+.sp-badge.sp-1 { background: #f59e0b; color: #3d2a00; }
+.sp-badge.sp-2 { background: #c2410c; }
 .sp-badge.sp-3 { background: #b91c1c; }
+
+/* =====================================================================
+   Aksesibilitas & konsistensi (audit UI/UX Okt 2026).
+   ===================================================================== */
+:root { --hr-focus: #8b1215; --hr-wajib: #b42318; }
+html[data-theme="dark"] { --hr-focus: #f08a8c; --hr-wajib: #fca5a5; }
+
+/* Fokus keyboard selalu terlihat: garis solid berwarna merek (kontras ≥ 3:1), hanya untuk navigasi keyboard. */
+:where(a, button, summary, [tabindex]:not([tabindex="-1"]), .form-check-input, .form-range):focus-visible {
+    outline: 2px solid var(--hr-focus);
+    outline-offset: 2px;
+}
+.btn:focus-visible, .btn-akun-keluar:focus-visible, .icon-button:focus-visible, .profile-button:focus-visible, .sidebar-toggle:focus-visible {
+    outline: 2px solid var(--hr-focus);
+    outline-offset: 2px;
+}
+/* Di dalam wadah bergulir (sidebar, dropdown, tab) garis dibuat ke dalam agar tidak terpotong. */
+.sidebar-nav .nav-link:focus-visible, .dropdown-item:focus-visible, .list-group-item:focus-visible, .nav-tabs .nav-link:focus-visible, .nav-pills .nav-link:focus-visible, .page-link:focus-visible {
+    outline: 2px solid var(--hr-focus);
+    outline-offset: -2px;
+    box-shadow: none;
+}
+/* Kolom isian: tepi berubah ke warna merek penuh saat fokus (sebelumnya merah muda pucat, sulit terlihat). */
+.form-control:focus, .form-select:focus, .form-check-input:focus { border-color: var(--hr-focus); box-shadow: var(--admin-ring); }
+.form-control:focus-visible, .form-select:focus-visible { outline: 0; }
+
+/* Lompat ke konten (pengguna keyboard tidak perlu menelusuri seluruh menu sidebar). */
+.skip-link {
+    position: fixed; top: .75rem; left: .75rem; z-index: 2000;
+    padding: .55rem .9rem; border-radius: var(--hr-radius-sm);
+    background: var(--hr-primary); color: #fff !important; font-weight: 600; text-decoration: none;
+    transform: translateY(-200%); transition: transform .15s ease;
+}
+.skip-link:focus { transform: none; }
+#konten-utama:focus { outline: 0; }
+
+/* Kontras teks: .text-warning bawaan Bootstrap (#ffc107) hanya 1.6:1 di atas putih. */
+.text-warning { color: #a15c07 !important; }
+html[data-theme="dark"] .text-warning { color: #fcd34d !important; }
+.sidebar-nav .nav-badge.is-warning { background: #b45309; }
+.form-control::placeholder { color: #6b7385; opacity: 1; }
+html[data-theme="dark"] .form-control::placeholder { color: #8a94a8; }
+
+/* Penanda kolom wajib (*) — otomatis untuk label yang diikuti isian [required], atau label.required. */
+.form-label.required::after,
+.form-label:not(:has(.text-danger)):has(+ :is(input, select, textarea)[required])::after,
+.form-label:not(:has(.text-danger)):has(+ .input-group > :is(input, select, textarea)[required])::after {
+    content: " *";
+    color: var(--hr-wajib);
+    font-weight: 700;
+}
+
+/* Kontrol kecil dalam input-group (filter daftar) setinggi .form-select-sm → baris filter sejajar. */
+.input-group-sm > .form-control, .input-group-sm > .form-select { min-height: 32px; font-size: .8125rem; padding-top: .3rem; padding-bottom: .3rem; }
+.input-group-sm > .input-group-text { font-size: .8125rem; padding: .3rem .6rem; }
+.input-group-sm > .btn { min-height: 32px; }
+.input-group-text.bg-white { background-color: var(--admin-surface) !important; }
+
+/* Tautan "Lihat semua" di kepala kartu: tetap satu baris, berjarak dari judul (judul yang mengalah). */
+.dash-link { flex: none; white-space: nowrap; padding-left: .75rem; }
+
+/* Angka panjang (NIP, telepon) tidak dipatah di tengah. */
+.angka-utuh { white-space: nowrap; font-variant-numeric: tabular-nums; overflow-wrap: normal !important; }
+
+/* Layar sentuh: target klik minimal ±40px untuk tombol & kontrol kecil. */
+@media (pointer: coarse) {
+    .btn-sm, .form-control-sm, .form-select-sm, .input-group-sm > .form-control, .input-group-sm > .form-select, .input-group-sm > .btn { min-height: 40px; }
+    .pagination .page-link { min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; }
+    .form-check-input { width: 1.2em; height: 1.2em; }
+}

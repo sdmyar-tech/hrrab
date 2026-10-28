@@ -11,13 +11,10 @@
                         <div>
                             <h2 class="h5 mb-1 section-title">
                                 <i class="bi bi-person-plus" aria-hidden="true"></i>
-                                <span>{{ isset($pegawai) ? 'Edit Data Pegawai' : 'Tambah Pegawai Baru' }}</span>
+                                <span>Formulir Data Pegawai</span>
                             </h2>
                             <p class="text-muted mb-0">Isi formulir secara bertahap, atau klik langsung tab yang ingin diisi.</p>
                         </div>
-                        <a href="{{ route('admin.pegawai.index') }}" class="btn btn-outline-secondary btn-sm d-none d-md-inline-flex">
-                            <i class="bi bi-arrow-left me-1"></i> Kembali
-                        </a>
                     </div>
 
                     <div class="panel-body p-0 pt-3 p-md-4">{{-- HP: .panel sudah berpadding --}}
@@ -551,7 +548,10 @@
         document.addEventListener('DOMContentLoaded', function () {
             const tetap = ['nama_lengkap', 'jabatan', 'unit_kerja'];
             document.querySelectorAll('#wizardPegawaiForm [required]').forEach(function (el) {
-                if (!tetap.includes(el.name)) el.removeAttribute('required');
+                if (tetap.includes(el.name)) return;
+                el.removeAttribute('required');
+                // Tanda * di label ikut hilang agar sesuai dengan kolom yang benar-benar wajib.
+                el.closest('[class*="col-"]')?.querySelector('.form-label.required')?.classList.remove('required');
             });
         });
     </script>

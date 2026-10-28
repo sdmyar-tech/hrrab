@@ -106,8 +106,7 @@
     }
 
     function updateThemeControls(theme) {
-      var nextTheme = theme === "dark" ? "light" : "dark";
-      var label = "Switch to " + nextTheme + " mode";
+      var label = theme === "dark" ? "Ganti ke mode terang" : "Ganti ke mode gelap";
       var iconClass = theme === "dark" ? "bi bi-sun" : "bi bi-moon-stars";
 
       Array.prototype.forEach.call(themeToggles, function (button) {
