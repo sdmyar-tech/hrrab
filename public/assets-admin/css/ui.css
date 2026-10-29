@@ -402,3 +402,69 @@ html[data-theme="dark"] .form-control::placeholder { color: #8a94a8; }
     .pagination .page-link { min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; }
     .form-check-input { width: 1.2em; height: 1.2em; }
 }
+
+/* =====================================================================
+   Area konten utama — komponen bersama (Okt 2026).
+   Semua selektor dibatasi .dashboard-content: sidebar & topbar tidak tersentuh.
+   Hanya memakai token tema (--hr-*, --admin-*), tanpa warna/ukuran lepas.
+   ===================================================================== */
+
+/* Judul halaman: jarak lega ke isi, deskripsi tidak melebar sepanjang layar. */
+.dashboard-content .page-heading { margin-bottom: 1.5rem; }
+.dashboard-content .page-heading p.text-muted { max-width: 70ch; }
+
+/* Bilah filter di kartu berpadding: tepi kiri/kanan sejajar dengan tabel di bawahnya (dulu menjorok ganda). */
+.dashboard-content .panel:not(.p-0) > .panel-filter { padding-left: 0 !important; padding-right: 0 !important; padding-top: 0 !important; margin-bottom: .25rem; }
+.dashboard-content .panel-filter .btn-link { min-height: 32px; padding-inline: .25rem; color: var(--admin-muted); }
+.dashboard-content .panel-filter .btn-link:hover { color: var(--hr-primary); }
+
+/* Kaki kartu (paginasi): sejajar tabel, ringkasan & tombol halaman satu baris. */
+.dashboard-content .panel:not(.p-0) > .panel-footer { padding: .9rem 0 0 !important; }
+.dashboard-content .panel-footer nav p { margin-bottom: 0; }
+.dashboard-content .panel-footer .pagination { margin-bottom: 0; }
+
+/* Tabel: baris sedikit lebih lega. */
+.dashboard-content .table tbody td { padding-top: .8rem; padding-bottom: .8rem; }
+
+/* Aksi sekunder di baris tabel tampil ringan (tanpa bingkai) agar daftar tidak ramai;
+   latar lembut muncul saat disorot/dibuka. Grup tombol & tombol menempel input tidak diubah. */
+.dashboard-content .table tbody td :is(.btn-light, .btn-outline-secondary, .btn-outline-danger):not(.input-group > *, .btn-group > *, .btn-check + .btn) {
+    --bs-btn-bg: transparent;
+    --bs-btn-border-color: transparent;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+.dashboard-content .table tbody td :is(.btn-light, .btn-outline-secondary):not(.input-group > *, .btn-group > *, .btn-check + .btn):is(:hover, :focus-visible, [aria-expanded="true"]) {
+    background: var(--hr-primary-soft);
+    border-color: transparent;
+    color: var(--hr-primary-dark);
+}
+.dashboard-content .table tbody td .btn-outline-danger:not(.input-group > *, .btn-group > *, .btn-check + .btn):is(:hover, :focus-visible) {
+    background: rgba(220, 53, 69, .1);
+    border-color: transparent;
+    color: #b42318;
+}
+html[data-theme="dark"] .dashboard-content .table tbody td :is(.btn-light, .btn-outline-secondary):is(:hover, :focus-visible, [aria-expanded="true"]) { color: var(--hr-primary-soft-text); }
+html[data-theme="dark"] .dashboard-content .table tbody td .btn-outline-danger { color: #fca5a5; }
+
+/* Tombol ikon saja (mis. menu ⋮ di baris tabel): persegi, ikon di tengah. */
+.btn-ikon { width: 32px; padding-inline: 0 !important; justify-content: center; }
+.btn-ikon.dropdown-toggle::after { display: none; }
+
+/* Identitas di sel tabel (foto + nama + keterangan). */
+.dashboard-content .table-media { min-width: 0; }
+.dashboard-content .table-media .nama-tautan { font-weight: 600; color: var(--admin-text); text-decoration: none; }
+.dashboard-content .table-media .nama-tautan:hover { color: var(--hr-primary); text-decoration: underline; }
+
+/* Judul halaman di HP: tombol aksi berdampingan (bukan bertumpuk selebar layar). */
+@media (max-width: 575.98px) {
+    .dashboard-content .heading-actions > .btn, .dashboard-content .heading-actions > a.btn { width: auto; flex: 1 1 auto; }
+}
+
+/* Kartu tabel di HP: sel identitas (foto + nama) & sel tombol aksi tidak perlu label kolom. */
+@media (max-width: 767.98px) {
+    .dashboard-content table.table-mobile-cards td:has(> .table-media)::before,
+    .dashboard-content table.table-mobile-cards td.text-end:last-child:has(.btn, .dropdown)::before { display: none; }
+    .dashboard-content table.table-mobile-cards td.text-end:last-child:has(.btn, .dropdown) { padding-top: .6rem; }
+}

@@ -1,6 +1,10 @@
 @extends(Auth::user()->panelLayout())
 
 @section('content')
+    @php
+        // Ada saringan aktif (pencarian, dropdown, atau klik grafik dashboard) → tampilkan tombol reset & teks "ditemukan".
+        $adaFilter = request()->hasAny(['q', 'unit_kerja', 'status_rekrutmen']) || $saringanDashboard;
+    @endphp
     <main class="dashboard-content">
         <div class="container-fluid px-3 px-lg-4 py-4">
 
@@ -13,30 +17,21 @@
                 </div>
             @endif
 
-            <section class="panel">
-                <div class="panel-header">
-                    <div>
-                        <h2 class="h5 mb-1 section-title">
-                            <i class="bi bi-people" aria-hidden="true"></i>
-                            <span>Data Pegawai</span>
-                        </h2>
-                        <p class="text-muted mb-0">Daftar seluruh pegawai terdaftar beserta informasi kepegawaian.</p>
-                    </div>
-                </div>
-
+            <section class="panel" aria-label="Daftar pegawai">
+                {{-- Bilah filter: cari (otomatis), unit, status, urutan. Judul kartu tidak diulang (sudah ada di judul halaman). --}}
                 <form action="{{ route('admin.pegawai.index') }}" method="GET" id="filterPegawaiForm"
-                    class="panel-filter px-3 pt-3 pb-2">
+                    class="panel-filter px-3 pt-3 pb-2" role="search">
                     <div class="row g-2 align-items-center">
-                        <div class="col-md-4">
+                        <div class="col-12 col-md-6 col-xl-4">
                             <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search" aria-hidden="true"></i></span>
                                 <input type="search" name="q" id="searchInput" class="form-control border-start-0"
                                     placeholder="Cari nama, NIP, email, atau jabatan..." value="{{ request('q') }}"
-                                    autocomplete="off">
+                                    autocomplete="off" aria-label="Cari pegawai">
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <select name="unit_kerja" class="form-select form-select-sm"
+                        <div class="col-6 col-md-3 col-xl-3">
+                            <select name="unit_kerja" class="form-select form-select-sm" aria-label="Unit kerja"
                                 onchange="document.getElementById('filterPegawaiForm').submit()">
                                 <option value="">Semua Unit Kerja</option>
                                 @foreach ($unitKerjaOptions as $unit)
@@ -45,23 +40,15 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-2">
-                            <select name="status_rekrutmen" class="form-select form-select-sm"
+                        <div class="col-6 col-md-3 col-xl-2">
+                            <select name="status_rekrutmen" class="form-select form-select-sm" aria-label="Status pegawai"
                                 onchange="document.getElementById('filterPegawaiForm').submit()">
                                 <option value="">Semua Status</option>
                                 <option value="Aktif" {{ request('status_rekrutmen') == 'Aktif' ? 'selected' : '' }}>Aktif</option>
                                 <option value="Tidak Aktif" {{ request('status_rekrutmen') == 'Tidak Aktif' ? 'selected' : '' }}>Tidak Aktif</option>
                             </select>
                         </div>
-                        <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterPegawaiForm'])</div>
-                        <div class="col-auto text-end">
-                            @if (request()->hasAny(['q', 'unit_kerja', 'status_rekrutmen']) || $saringanDashboard)
-                                <a href="{{ route('admin.pegawai.index') }}" class="btn btn-outline-secondary btn-sm"
-                                    title="Reset filter">
-                                    <i class="bi bi-x-lg"></i>
-                                </a>
-                            @endif
-                        </div>
+                        <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterPegawaiForm'])</div>
                     </div>
 
                     {{-- Filter yang datang dari klik grafik dashboard: tetap terbawa saat mencari, bisa dilepas satu per satu. --}}
@@ -79,41 +66,56 @@
                         </div>
                     @endif
 
-                    @if (request()->hasAny(['q', 'unit_kerja', 'status_rekrutmen']) || $saringanDashboard)
-                        <div class="mt-2">
-                            <small class="text-muted">
-                                Menampilkan {{ $pegawais->total() }} hasil
-                                @if (request('q'))
-                                    untuk "<strong>{{ request('q') }}</strong>"
-                                @endif
-                            </small>
-                        </div>
-                    @endif
+                    {{-- Jumlah data selalu terlihat: pengguna tahu cakupan daftar tanpa menggulir ke paginasi. --}}
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                        <p class="small text-muted mb-0" aria-live="polite">
+                            <strong class="text-body">{{ $pegawais->total() }}</strong> pegawai{{ $adaFilter ? ' ditemukan' : '' }}
+                            @if (request('q'))
+                                untuk "<strong class="text-body">{{ request('q') }}</strong>"
+                            @endif
+                        </p>
+                        @if ($adaFilter)
+                            <a href="{{ route('admin.pegawai.index') }}" class="btn btn-link btn-sm">
+                                <i class="bi bi-x-circle" aria-hidden="true"></i>Reset filter
+                            </a>
+                        @endif
+                    </div>
                 </form>
 
                 <div class="table-responsive">
                     <table class="table align-middle mb-0" id="pegawaiTable">
                         <thead>
                             <tr>
-                                <th>NIP / Nama</th>
+                                <th>Pegawai</th>
                                 <th>Jabatan</th>
-                                <th>Status Kepegawaian</th>
-                                <th>No. Telepon / BPJS</th>
+                                <th>Status</th>
+                                {{-- Kolom kontak disembunyikan di tablet agar kolom lain tidak berdesakan; tetap tampil di desktop & kartu HP. --}}
+                                <th class="d-md-none d-lg-table-cell">Kontak</th>
                                 <th>Tanggal Masuk</th>
                                 <th class="text-end">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($pegawais as $pegawai)
+                                @php
+                                    $status = $pegawai->kepegawaian->status_rekrutmen ?? 'Non-Aktif';
+                                    $badgeClass = match (strtolower($status)) {
+                                        'tetap', 'aktif' => 'text-bg-success',
+                                        'kontrak' => 'text-bg-info',
+                                        'probation', 'magang' => 'text-bg-warning',
+                                        default => 'text-bg-secondary',
+                                    };
+                                    $noBpjs = optional($pegawai->bpjs)->no_bpjs_kesehatan;
+                                @endphp
                                 <tr>
                                     <td>
                                         <div class="table-media">
-                                            <img class="product-thumb rounded-circle"
-                                                src="{{ optional($pegawai->dokumen)->pas_foto ? \App\Support\Berkas::url($pegawai->dokumen->pas_foto) : asset('assets-admin/images/avatar/avatar-fallback.jpg') }}"
-                                                alt="{{ $pegawai->nama_lengkap }}">
-                                            <div>
-                                                <span class="fw-semibold d-block">{{ $pegawai->nama_lengkap }}</span>
-                                                <small class="text-muted">{{ $pegawai->nip ?? '-' }}</small>
+                                            <img class="product-thumb rounded-circle" loading="lazy" alt=""
+                                                src="{{ optional($pegawai->dokumen)->pas_foto ? \App\Support\Berkas::url($pegawai->dokumen->pas_foto) : asset('assets-admin/images/avatar/avatar-fallback.jpg') }}">
+                                            <div class="min-w-0">
+                                                {{-- Nama langsung membuka detail: aksi paling sering cukup satu klik. --}}
+                                                <a href="{{ route('admin.pegawai.show', $pegawai->id) }}" class="nama-tautan d-block">{{ $pegawai->nama_lengkap }}</a>
+                                                <small class="text-muted angka-utuh">{{ $pegawai->nip ? 'NIP ' . $pegawai->nip : 'NIP belum diisi' }}</small>
                                             </div>
                                         </div>
                                     </td>
@@ -126,80 +128,79 @@
                                             <span class="badge text-bg-info" title="Rangkap tugas">Rangkap {{ $rangkap->unit_kerja }}</span>
                                         @endforeach
                                     </td>
-                                    <td>
-                                        @php
-                                            $status = $pegawai->kepegawaian->status_rekrutmen ?? 'Non-Aktif';
-                                            $badgeClass = match (strtolower($status)) {
-                                                'tetap', 'aktif' => 'text-bg-success',
-                                                'kontrak' => 'text-bg-info',
-                                                'probation', 'magang' => 'text-bg-warning',
-                                                default => 'text-bg-secondary',
-                                            };
-                                        @endphp
-                                        <span class="badge {{ $badgeClass }}">{{ ucfirst($status) }}</span>
+                                    <td><span class="badge {{ $badgeClass }}">{{ ucfirst($status) }}</span></td>
+                                    <td class="d-md-none d-lg-table-cell">
+                                        @if ($pegawai->no_hp || $noBpjs)
+                                            @if ($pegawai->no_hp)
+                                                <span class="angka-utuh d-block">{{ $pegawai->no_hp }}</span>
+                                            @endif
+                                            @if ($noBpjs)
+                                                <small class="text-muted angka-utuh">BPJS {{ $noBpjs }}</small>
+                                            @endif
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
                                     </td>
-                                    <td>
-                                        <div>{{ $pegawai->no_hp ?? '-' }}</div>
-                                        <small class="text-muted">BPJS:
-                                            {{ optional($pegawai->bpjs)->no_bpjs_kesehatan ?? '-' }}</small>
-                                    </td>
-                                    <td>{{ optional(optional($pegawai->kepegawaian)->tanggal_masuk)->translatedFormat('d M Y') ?? '-' }}</td>
+                                    <td class="text-nowrap">{{ optional(optional($pegawai->kepegawaian)->tanggal_masuk)->translatedFormat('d M Y') ?? '-' }}</td>
                                     <td class="text-end">
-                                        <div class="dropdown">
-                                            <button class="btn btn-light btn-sm dropdown-toggle" type="button"
-                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                Aksi
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                <li>
-                                                    <a class="dropdown-item" href="{{ route('admin.pegawai.show', $pegawai->id) }}">
-    <i class="bi bi-eye me-2"></i>Detail
-</a>
-                                                </li>
-                                                @can('kelola-pegawai')
-                                                    <li>
-                                                        <a class="dropdown-item" href="{{ route('admin.pegawai.edit', $pegawai->id) }}">
-                                                            <i class="bi bi-pencil me-2"></i>Edit
-                                                        </a>
-                                                    </li>
-                                                    @if (($pegawai->kepegawaian->status_rekrutmen ?? null) === 'Aktif')
+                                        {{-- Aksi utama baris (Detail) terlihat; aksi lain dikumpulkan di menu ⋮ agar baris tetap tenang. --}}
+                                        <div class="d-inline-flex align-items-center gap-1">
+                                            <a href="{{ route('admin.pegawai.show', $pegawai->id) }}" class="btn btn-light btn-sm">
+                                                <i class="bi bi-eye" aria-hidden="true"></i>Detail
+                                            </a>
+                                            @can('kelola-pegawai')
+                                                <div class="dropdown">
+                                                    <button class="btn btn-light btn-sm btn-ikon dropdown-toggle" type="button"
+                                                        data-bs-toggle="dropdown" aria-expanded="false"
+                                                        aria-label="Aksi lain untuk {{ $pegawai->nama_lengkap }}" title="Aksi lain">
+                                                        <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
                                                         <li>
-                                                            <button type="button" class="dropdown-item text-warning-emphasis"
-                                                                data-buka-keluar="{{ route('admin.pegawai.keluar.form', [$pegawai->id, 'kembali' => request()->fullUrl()]) }}">
-                                                                <i class="bi bi-box-arrow-right me-2"></i>Resign / Keluar
-                                                            </button>
+                                                            <a class="dropdown-item" href="{{ route('admin.pegawai.edit', $pegawai->id) }}">
+                                                                <i class="bi bi-pencil me-2"></i>Edit
+                                                            </a>
                                                         </li>
-                                                    @endif
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li>
-                                                        <form action="{{ route('admin.pegawai.destroy', $pegawai->id) }}" method="POST">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="dropdown-item text-danger"
-                                                                data-confirm="true"
-                                                                data-icon="warning"
-                                                                data-title="Hapus Data Pegawai?"
-                                                                data-text="Data {{ $pegawai->nama_lengkap }} akan dihapus permanen beserta dokumen terkait."
-                                                                data-confirm-text="Ya, Hapus"
-                                                                data-confirm-color="#dc3545"
-                                                                data-cancel-text="Batal">
-                                                                <i class="bi bi-trash me-2"></i>Hapus
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                @endcan
-                                            </ul>
+                                                        @if (($pegawai->kepegawaian->status_rekrutmen ?? null) === 'Aktif')
+                                                            <li>
+                                                                <button type="button" class="dropdown-item text-warning-emphasis"
+                                                                    data-buka-keluar="{{ route('admin.pegawai.keluar.form', [$pegawai->id, 'kembali' => request()->fullUrl()]) }}">
+                                                                    <i class="bi bi-box-arrow-right me-2"></i>Resign / Keluar
+                                                                </button>
+                                                            </li>
+                                                        @endif
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <form action="{{ route('admin.pegawai.destroy', $pegawai->id) }}" method="POST">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="dropdown-item text-danger"
+                                                                    data-confirm="true"
+                                                                    data-icon="warning"
+                                                                    data-title="Hapus Data Pegawai?"
+                                                                    data-text="Data {{ $pegawai->nama_lengkap }} akan dihapus permanen beserta dokumen terkait."
+                                                                    data-confirm-text="Ya, Hapus"
+                                                                    data-confirm-color="#dc3545"
+                                                                    data-cancel-text="Batal">
+                                                                    <i class="bi bi-trash me-2"></i>Hapus
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            @endcan
                                         </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">
-                                        <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                        @if (request()->hasAny(['q', 'unit_kerja', 'status_rekrutmen']))
-                                            Tidak ada pegawai yang cocok dengan pencarian/filter ini.
-                                        @else
-                                            Belum ada data pegawai.
+                                    <td colspan="6">
+                                        @include('partials.kosong', [
+                                            'teks' => $adaFilter ? 'Tidak ada pegawai yang cocok dengan pencarian/filter ini.' : 'Belum ada data pegawai.',
+                                            'ikonKosong' => $adaFilter ? 'bi-search' : 'bi-people',
+                                        ])
+                                        @if ($adaFilter)
+                                            <p class="text-center small mb-3"><a href="{{ route('admin.pegawai.index') }}">Reset filter</a></p>
                                         @endif
                                     </td>
                                 </tr>
