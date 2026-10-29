@@ -196,6 +196,17 @@
                                             </select>
                                         </div>
                                         <div class="col-md-6">
+                                            <label for="f-unit-organisasi" class="form-label">Unit <span class="text-muted fw-normal">(opsional)</span></label>
+                                            <select id="f-unit-organisasi" name="unit_organisasi" class="form-select @error('unit_organisasi') is-invalid @enderror">
+                                                <option value="">-- Tanpa Unit --</option>
+                                                @foreach (\App\Models\UnitOrganisasi::daftar() as $unitOrg)
+                                                    <option value="{{ $unitOrg }}" @selected(old('unit_organisasi', $pegawai->kepegawaian->unit_organisasi ?? '') === $unitOrg)>{{ $unitOrg }}</option>
+                                                @endforeach
+                                            </select>
+                                            <div class="form-text">Pengelompokan pegawai; persetujuan tetap mengikuti Bagian. Kelola daftarnya di <a href="{{ route('admin.master-unit.index') }}">Master Unit</a>.</div>
+                                            @error('unit_organisasi')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                        </div>
+                                        <div class="col-md-6">
                                             <label for="f-lokasi-kerja" class="form-label required">Lokasi Kerja</label>
                                             <select id="f-lokasi-kerja" name="lokasi_kerja" class="form-select @error('lokasi_kerja') is-invalid @enderror" required>
                                                 <option value="">-- Pilih Lokasi Kerja --</option>

@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\PenugasanController as AdminPenugasanController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\SuratPeringatanController as AdminSuratPeringatanController;
 use App\Http\Controllers\Admin\UnitController as AdminUnitController;
+use App\Http\Controllers\Admin\UnitOrganisasiController as AdminUnitOrganisasiController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
@@ -190,6 +191,15 @@ Route::middleware(['auth', 'nocache'])->group(function () {
                 Route::put('/{unit}', [AdminUnitController::class, 'update'])->name('update');
                 Route::delete('/{unit}', [AdminUnitController::class, 'destroy'])->name('destroy');
             });
+        });
+
+        // Master Unit (tanpa koordinator): pengelompokan pegawai, dipilih di data pegawai.
+        Route::prefix('master-unit')->name('master-unit.')->middleware('can:kelola-penugasan')->group(function () {
+            Route::get('/', [AdminUnitOrganisasiController::class, 'index'])->name('index');
+            Route::get('/export', [AdminUnitOrganisasiController::class, 'export'])->name('export');
+            Route::post('/', [AdminUnitOrganisasiController::class, 'store'])->name('store');
+            Route::put('/{unitOrganisasi}', [AdminUnitOrganisasiController::class, 'update'])->name('update');
+            Route::delete('/{unitOrganisasi}', [AdminUnitOrganisasiController::class, 'destroy'])->name('destroy');
         });
 
         Route::prefix('jabatan')->name('jabatan.')->middleware('can:kelola-sistem')->group(function () {

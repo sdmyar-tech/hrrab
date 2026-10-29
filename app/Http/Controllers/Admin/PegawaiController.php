@@ -7,6 +7,7 @@ use App\Models\AlurPegawai;
 use App\Models\DataPegawai;
 use App\Models\DokumenPegawai;
 use App\Models\Jabatan;
+use App\Models\UnitOrganisasi;
 use App\Models\User;
 use App\Support\EksporPegawai;
 use App\Support\ExcelExporter;
@@ -65,7 +66,7 @@ class PegawaiController extends Controller
         $headers = [
             'NIP', 'Nama Lengkap', 'Email', 'NIK', 'Jenis Kelamin', 'Tempat Lahir', 'Tanggal Lahir', 'Agama',
             'Status Pernikahan', 'Pendidikan Terakhir', 'No. HP', 'Alamat Domisili',
-            'Jabatan', 'Jabatan Tambahan', 'Bagian', 'Rangkap Tugas', 'Lokasi Kerja',
+            'Jabatan', 'Jabatan Tambahan', 'Bagian', 'Rangkap Tugas', 'Unit', 'Lokasi Kerja',
             'Status Rekrutmen', 'Status Kerja', 'Tanggal Masuk', 'Habis Kontrak',
             'BPJS Ketenagakerjaan', 'BPJS Kesehatan', 'Kontak Darurat',
         ];
@@ -91,6 +92,7 @@ class PegawaiController extends Controller
                 $kepegawaian?->jabatan_tambahan,
                 $kepegawaian?->unit_kerja,
                 $p->penugasanAktif->where('is_utama', false)->pluck('unit_kerja')->implode(', '),
+                $kepegawaian?->unit_organisasi,
                 $kepegawaian?->lokasi_kerja,
                 $kepegawaian?->status_rekrutmen,
                 $kepegawaian?->status_kerja,
@@ -138,6 +140,10 @@ class PegawaiController extends Controller
 
         if ($unitKerja = $request->query('unit_kerja')) {
             $query->whereHas('penugasanAktif', fn ($q) => $q->where('unit_kerja', $unitKerja));
+        }
+
+        if ($unitOrg = $request->query('unit_organisasi')) {
+            $query->whereHas('kepegawaian', fn ($q) => $unitOrg === '-' ? $q->whereNull('unit_organisasi') : $q->where('unit_organisasi', $unitOrg));
         }
 
         if ($status = $request->query('status_rekrutmen')) {
@@ -431,6 +437,7 @@ class PegawaiController extends Controller
             'jabatan_tambahan' => ['nullable', 'string', Rule::in(Jabatan::daftar())],
             'unit_kerja' => [$ignoreId ? 'nullable' : 'required', 'string', Rule::in(config('kepegawaian.unit_kerja'))],
             'lokasi_kerja' => ['required', 'string', Rule::in(config('kepegawaian.lokasi_kerja'))],
+            'unit_organisasi' => ['nullable', 'string', Rule::in(UnitOrganisasi::daftar())],
             'tanggal_masuk' => ['required', 'date'],
             'status_rekrutmen' => ['required', 'string', 'max:100'],
             'status_kerja' => ['required', Rule::in(['Tetap', 'Kontrak', 'Magang', 'Harian Lepas', 'Probation'])],
@@ -478,7 +485,7 @@ class PegawaiController extends Controller
                 'nama_ibu_kandung', 'pendidikan_terakhir', 'alamat_ktp', 'alamat_domisili',
             ])->toArray(),
             'kepegawaian' => collect($validated)->only([
-                'jabatan', 'jabatan_tambahan', 'unit_kerja', 'lokasi_kerja',
+                'jabatan', 'jabatan_tambahan', 'unit_kerja', 'unit_organisasi', 'lokasi_kerja',
                 'tanggal_masuk', 'status_rekrutmen', 'status_kerja',
                 'tanggal_habis_kontrak', 'tanggal_keluar',
             ])->toArray(),

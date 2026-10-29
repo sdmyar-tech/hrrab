@@ -3,7 +3,7 @@
 @section('content')
     @php
         // Ada saringan aktif (pencarian, dropdown, atau klik grafik dashboard) → tampilkan tombol reset & teks "ditemukan".
-        $adaFilter = request()->hasAny(['q', 'unit_kerja', 'status_rekrutmen', 'tanggal_dari', 'tanggal_sampai']) || $saringanDashboard;
+        $adaFilter = request()->hasAny(['q', 'unit_kerja', 'unit_organisasi', 'status_rekrutmen', 'tanggal_dari', 'tanggal_sampai']) || $saringanDashboard;
     @endphp
     <main class="dashboard-content">
         <div class="container-fluid px-3 px-lg-4 py-4">
@@ -47,8 +47,20 @@
                                 <option value="Tidak Aktif" {{ request('status_rekrutmen') == 'Tidak Aktif' ? 'selected' : '' }}>Tidak Aktif</option>
                             </select>
                         </div>
+                        @if ($daftarUnitOrg = \App\Models\UnitOrganisasi::daftar())
+                            <div class="col-6 col-md-3 col-xl-2">
+                                <select name="unit_organisasi" class="form-select form-select-sm" aria-label="Unit"
+                                    onchange="document.getElementById('filterPegawaiForm').submit()">
+                                    <option value="">Semua Unit</option>
+                                    <option value="-" @selected(request('unit_organisasi') === '-')>Belum ada unit</option>
+                                    @foreach ($daftarUnitOrg as $unitOrg)
+                                        <option value="{{ $unitOrg }}" @selected(request('unit_organisasi') === $unitOrg)>{{ $unitOrg }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
                         <div class="col-12 col-md-6 col-xl-4">@include('partials.filter-tanggal', ['tanggalLabel' => 'Tgl masuk'])</div>
-                    <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterPegawaiForm'])</div>
+                        <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterPegawaiForm'])</div>
                     </div>
 
                     {{-- Filter yang datang dari klik grafik dashboard: tetap terbawa saat mencari, bisa dilepas satu per satu. --}}
@@ -112,8 +124,8 @@
                                     </td>
                                     <td>
                                         {{ $pegawai->kepegawaian->jabatan ?? '-' }}
-                                        @if ($pegawai->kepegawaian?->unit_kerja)
-                                            <small class="text-muted d-block">{{ $pegawai->kepegawaian->unit_kerja }}</small>
+                                        @if ($pegawai->kepegawaian?->unit_kerja || $pegawai->kepegawaian?->unit_organisasi)
+                                            <small class="text-muted d-block">{{ collect([$pegawai->kepegawaian->unit_kerja, $pegawai->kepegawaian->unit_organisasi ? 'Unit ' . $pegawai->kepegawaian->unit_organisasi : null])->filter()->implode(' · ') }}</small>
                                         @endif
                                         @foreach ($pegawai->penugasanAktif->where('is_utama', false) as $rangkap)
                                             <span class="badge text-bg-info" title="Rangkap tugas">Rangkap {{ $rangkap->unit_kerja }}</span>

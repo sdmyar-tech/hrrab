@@ -30,7 +30,7 @@ class EditorData
     /** Kolom teks yang diberi daftar saran (nilai yang sudah ada di tabel). */
     private const KOLOM_SARAN = ['status', 'tahap', 'hasil_status', 'hasil_sdm', 'hasil_kepala', 'keputusan', 'jalur', 'role', 'jenis',
         'jenis_cuti', 'kategori_cuti_besar', 'current_level', 'kategori', 'jadwal', 'tipe_kerja', 'status_manual', 'unit_kerja',
-        'unit_kerja_tujuan', 'jabatan', 'jabatan_tujuan', 'lokasi_kerja', 'lokasi_kerja_tujuan', 'jabatan_tambahan', 'hari', 'jenjang', 'agama', 'pendidikan_terakhir'];
+        'unit_kerja_tujuan', 'jabatan', 'jabatan_tujuan', 'lokasi_kerja', 'lokasi_kerja_tujuan', 'unit_organisasi', 'jabatan_tambahan', 'hari', 'jenjang', 'agama', 'pendidikan_terakhir'];
 
     /**
      * Konfigurasi entitas.
@@ -146,6 +146,8 @@ class EditorData
             'role' => ['grup' => 'Sistem', 'label' => 'Master Role', 'ikon' => 'bi-shield-check', 'model' => Models\Role::class,
                 'judul' => fn ($m) => $m->nama, 'kolom' => ['jenis_dasar', 'bawaan', 'updated_at'], 'cari' => ['nama', 'kode']],
             'lokasi_kerja' => ['grup' => 'Sistem', 'label' => 'Master Lokasi Kerja', 'ikon' => 'bi-geo-alt', 'model' => Models\LokasiKerja::class,
+                'judul' => fn ($m) => $m->nama, 'kolom' => ['urutan', 'updated_at'], 'cari' => ['nama', 'keterangan']],
+            'unit_organisasi' => ['grup' => 'Kepegawaian', 'label' => 'Master Unit', 'ikon' => 'bi-grid-3x3-gap', 'model' => Models\UnitOrganisasi::class,
                 'judul' => fn ($m) => $m->nama, 'kolom' => ['urutan', 'updated_at'], 'cari' => ['nama', 'keterangan']],
         ];
     }

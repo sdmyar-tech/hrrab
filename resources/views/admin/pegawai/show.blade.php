@@ -347,6 +347,7 @@
                             'Jabatan Utama' => $kepeg?->jabatan,
                             'Jabatan Tambahan' => $kepeg?->jabatan_tambahan,
                             'Bagian Utama' => $kepeg?->unit_kerja,
+                            'Unit' => $kepeg?->unit_organisasi,
                             'Lokasi Kerja' => $kepeg?->lokasi_kerja,
                             'Tanggal Masuk' => optional($kepeg?->tanggal_masuk)->translatedFormat('d F Y'),
                             'Masa Kerja' => $kepeg?->masa_kerja,

@@ -20,6 +20,7 @@ class Kepegawaian extends Model
         'jabatan',
         'jabatan_tambahan',
         'unit_kerja',
+        'unit_organisasi',
         'lokasi_kerja',
         'tanggal_masuk',
         'tanggal_keluar',

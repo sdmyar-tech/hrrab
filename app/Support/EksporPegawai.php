@@ -19,7 +19,7 @@ class EksporPegawai
             'Jenis Kelamin' => $p->jenis_kelamin, 'Agama' => $p->agama, 'Golongan Darah' => $p->golongan_darah, 'Status Pernikahan' => $p->status_pernikahan,
             'Jumlah Tanggungan' => $p->jumlah_tanggungan, 'Nama Ibu Kandung' => $p->nama_ibu_kandung, 'Pendidikan Terakhir' => $p->pendidikan_terakhir,
             'Alamat KTP' => $p->alamat_ktp, 'Alamat Domisili' => $p->alamat_domisili,
-            'Jabatan' => $k?->jabatan, 'Jabatan Tambahan' => $k?->jabatan_tambahan, 'Bagian' => $k?->unit_kerja, 'Lokasi Kerja' => $k?->lokasi_kerja,
+            'Jabatan' => $k?->jabatan, 'Jabatan Tambahan' => $k?->jabatan_tambahan, 'Bagian' => $k?->unit_kerja, 'Unit' => $k?->unit_organisasi, 'Lokasi Kerja' => $k?->lokasi_kerja,
             'Tanggal Masuk' => optional($k?->tanggal_masuk)->format('d-m-Y'), 'Status Rekrutmen' => $k?->status_rekrutmen, 'Status Kerja' => $k?->status_kerja,
             'Habis Kontrak' => optional($k?->tanggal_habis_kontrak)->format('d-m-Y'),
             'Kontak Darurat' => $kontak ? "{$kontak->nama_kerabat} ({$kontak->hubungan_kerabat})" : null, 'No. HP Kerabat' => $kontak?->no_hp_kerabat,
