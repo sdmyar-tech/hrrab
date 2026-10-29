@@ -230,7 +230,8 @@
         let unitAktif = '';
 
         function jelaskan() {
-            const opsi = pilih.selectedOptions[0];
+            // Opsi kosong (belum memilih) jangan dianggap pegawai dari bagian lain.
+            const opsi = pilih.selectedOptions[0]?.value ? pilih.selectedOptions[0] : null;
             form.jabatan.disabled = Boolean(opsi?.dataset.tanpaPegawai);
             if (!opsi) { info.textContent = 'Pilih pegawai untuk melihat cara pencatatannya.'; return; }
             if (opsi.dataset.tanpaPegawai) {
@@ -239,11 +240,12 @@
                     + (bidang ? '' : ' <span class="text-warning-emphasis">Bagian ini di luar bidang GM tersebut.</span>');
                 return;
             }
-            info.innerHTML = opsi.dataset.unit === unitAktif
+            const samaBagian = (opsi.dataset.unit || '').trim().toUpperCase() === (unitAktif || '').trim().toUpperCase();
+            info.innerHTML = samaBagian
                 ? '<i class="bi bi-arrow-up-circle me-1"></i>Sudah di bagian ini — dinaikkan menjadi koordinator.'
                 : '<i class="bi bi-diagram-2 me-1"></i>Bagian utamanya <strong></strong> — dicatat sebagai <strong>rangkap</strong> koordinator di ' + unitAktif + '.';
             const s = info.querySelector('strong');
-            if (s && opsi.dataset.unit !== unitAktif) s.textContent = opsi.dataset.unit || '-';
+            if (s && !samaBagian) s.textContent = opsi.dataset.unit || '-';
         }
         function saring() {
             const kata = cariPg.value.trim().toLowerCase();
