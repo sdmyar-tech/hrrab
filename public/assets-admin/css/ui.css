@@ -472,6 +472,8 @@ span.btn-ikon { display: inline-block; height: 1px; }
 .banner-umpan .btn-close { width: .7em; height: .7em; }
 @media (max-width: 575.98px) {
     .banner-umpan { flex-wrap: wrap; }
+    /* Ikon & pesan tetap sebaris; hanya tombol aksi yang turun ke baris sendiri. */
+    .banner-umpan-isi { flex: 1 1 0; }
     .banner-umpan-aksi { width: 100%; justify-content: flex-end; }
 }
 
