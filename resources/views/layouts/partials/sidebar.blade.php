@@ -2,8 +2,9 @@
     Sidebar bersama untuk semua panel. Variabel:
     $menu    = [['bagian' => ?string, 'ikon' => ?string, 'item' => [[label, ikon, route, polaAktif, tampil, badge, (opsional) badgePeringatan, (opsional) eksternal]]]]
     $beranda = nama route tujuan logo
-    Bagian = menu induk yang bisa dibuka-tutup (dropdown) berisi submenu. Bagian yang memuat halaman aktif selalu terbuka;
-    pilihan buka/tutup lainnya diingat browser. Saat tertutup, jumlah tugas (badge) submenu tampil di menu induknya.
+    Bagian = menu induk yang bisa dibuka-tutup (dropdown) berisi submenu. Setiap halaman dibuka semua menu tertutup,
+    kecuali menu berisi halaman aktif; membuka satu menu menutup menu lain (akordeon). Saat tertutup, jumlah tugas
+    (badge) submenu tampil di menu induknya.
 --}}
 @php
     $pengguna = Auth::user();
@@ -82,28 +83,23 @@
     </div>
 </aside>
 <script>
-    // Dropdown menu sidebar: dijalankan langsung (bukan DOMContentLoaded) agar status tersimpan terpasang sebelum tampil.
+    // Dropdown menu sidebar (akordeon): satu menu terbuka pada satu waktu; status tidak diingat antarhalaman.
     (function () {
-        const KUNCI = 'hrrab.sidebar.grup';
-        let simpan = {};
-        try { simpan = JSON.parse(localStorage.getItem(KUNCI) || '{}') || {}; } catch (e) { simpan = {}; }
+        try { localStorage.removeItem('hrrab.sidebar.grup'); } catch (e) { /* sisa versi lama yang mengingat status */ }
 
+        const semua = document.querySelectorAll('#adminSidebar [data-nav-grup]');
         const atur = function (grup, buka) {
             grup.classList.toggle('terbuka', buka);
             grup.querySelector('.nav-grup-tombol').setAttribute('aria-expanded', String(buka));
         };
 
-        document.querySelectorAll('#adminSidebar [data-nav-grup]').forEach(function (grup) {
-            const id = grup.dataset.navGrup;
-            // Grup berisi halaman aktif selalu terbuka; lainnya mengikuti pilihan terakhir pengguna.
-            if (grup.dataset.aktif !== '1' && typeof simpan[id] === 'boolean') {
-                atur(grup, simpan[id]);
-            }
+        semua.forEach(function (grup) {
             grup.querySelector('.nav-grup-tombol').addEventListener('click', function () {
                 const buka = !grup.classList.contains('terbuka');
+                if (buka) {
+                    semua.forEach(function (lain) { if (lain !== grup) atur(lain, false); });
+                }
                 atur(grup, buka);
-                simpan[id] = buka;
-                try { localStorage.setItem(KUNCI, JSON.stringify(simpan)); } catch (e) { /* mode privat: tidak diingat */ }
             });
         });
     })();
