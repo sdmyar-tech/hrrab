@@ -17,7 +17,7 @@
         . ($nilaiDari($p) === $terpilih ? ' selected' : '') . '>' . e($p['label']) . '</option>';
 @endphp
 <div class="pilih-pegawai-wadah">
-    <input type="search" class="form-control form-control-sm mb-1" placeholder="Cari nama / NIP / jabatan / unit…" data-saring-pilihan="#{{ $id }}" aria-label="Cari pegawai" autocomplete="off">
+    <input type="search" class="form-control form-control-sm mb-1" placeholder="Cari pegawai, contoh: Siti atau SMK" data-saring-pilihan="#{{ $id }}" aria-label="Cari pegawai" autocomplete="off">
     <select name="{{ $name }}" id="{{ $id }}" class="form-select {{ $kelas ?? '' }} @error($name) is-invalid @enderror" @if ($wajib ?? false) required @endif>
         @if (! empty($kosong))
             <option value="" @selected($terpilih === '')>{{ $kosong }}</option>

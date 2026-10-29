@@ -75,7 +75,7 @@
 
                 <label class="form-label small mt-3 mb-1" for="alur-catatan">Catatan <span class="text-muted fw-normal">(opsional)</span></label>
                 <input type="text" name="catatan" id="alur-catatan" class="form-control form-control-sm" maxlength="255"
-                    value="{{ old('catatan', $alurKhusus?->catatan) }}" placeholder="mis. Sementara selama kepala unit cuti panjang">
+                    value="{{ old('catatan', $alurKhusus?->catatan) }}" placeholder="Contoh: sementara selama kepala unit cuti panjang">
                 <p class="form-text mb-0">Pengajuan yang sedang menunggu ikut alur baru mulai tahap berikutnya. Kembalikan ke otomatis kapan saja.</p>
             </div>
             <div class="modal-footer">

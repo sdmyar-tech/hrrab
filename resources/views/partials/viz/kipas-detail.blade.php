@@ -31,7 +31,7 @@
     </div>
 
     <div class="kipas-samping">
-        <input type="search" class="form-control form-control-sm mb-2" placeholder="Cari…" data-kipas-cari aria-label="Cari di diagram">
+        <input type="search" class="form-control form-control-sm mb-2" placeholder="Cari nama, contoh: Siti" data-kipas-cari aria-label="Cari di diagram">
         <ul class="kipas-legenda" role="listbox" aria-label="Daftar {{ $judulTotal }}">
             @foreach ($items as $i)
                 <li>

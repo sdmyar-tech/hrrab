@@ -59,8 +59,8 @@
 
         <div class="row g-2" data-saat-tidak-semua>
             @foreach ([
-                ['kunci' => 'unit', 'judul' => 'Per unit', 'cari' => 'Cari unit…', 'ikon' => 'bi-diagram-3', 'opsi' => $absen['unit'], 'pilih' => $pilUnit],
-                ['kunci' => 'jabatan', 'judul' => 'Per jabatan', 'cari' => 'Cari jabatan…', 'ikon' => 'bi-person-badge', 'opsi' => $absen['jabatan'], 'pilih' => $pilJabatan],
+                ['kunci' => 'unit', 'judul' => 'Per unit', 'cari' => 'Saring unit, contoh: SMK', 'ikon' => 'bi-diagram-3', 'opsi' => $absen['unit'], 'pilih' => $pilUnit],
+                ['kunci' => 'jabatan', 'judul' => 'Per jabatan', 'cari' => 'Saring jabatan, contoh: Guru', 'ikon' => 'bi-person-badge', 'opsi' => $absen['jabatan'], 'pilih' => $pilJabatan],
             ] as $kel)
                 <div class="col-md-6 col-xl-4">
                     <div class="border rounded-3 p-2 h-100">
@@ -82,7 +82,7 @@
             <div class="col-md-12 col-xl-4">
                 <div class="border rounded-3 p-2 h-100">
                     <div class="small fw-semibold mb-1"><i class="bi bi-person-check me-1"></i>Pilih nama <span class="text-muted fw-normal" data-jumlah-pilih="user"></span></div>
-                    <input type="search" class="form-control form-control-sm mb-1" placeholder="Cari nama / unit…" data-cari-daftar="user">
+                    <input type="search" class="form-control form-control-sm mb-1" placeholder="Saring daftar, contoh: Siti atau SMK" data-cari-daftar="user">
                     <div class="daftar-pilih" data-daftar="user">
                         @foreach ($absen['kandidat'] as $k)
                             <label class="form-check small mb-0" data-teks="{{ mb_strtolower($k['nama'] . ' ' . implode(' ', $k['unit']) . ' ' . implode(' ', $k['jabatan'])) }}">

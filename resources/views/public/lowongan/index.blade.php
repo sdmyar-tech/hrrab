@@ -38,7 +38,7 @@
                 <div class="input-group">
                     <span class="input-group-text bg-white" style="border-color:#e4d3d3; border-radius:10px 0 0 10px;"><i class="bi bi-search text-muted"></i></span>
                     <input type="search" name="q" class="form-control border-start-0" style="border-radius:0 10px 10px 0;"
-                        placeholder="Cari posisi, jabatan, atau unit kerja..." value="{{ request('q') }}">
+                        placeholder="Cari lowongan, contoh: Guru Matematika" aria-label="Cari lowongan menurut posisi, jabatan, atau unit kerja" value="{{ request('q') }}">
                 </div>
             </div>
             <div class="col-md-4">
@@ -66,7 +66,7 @@
         <div class="d-flex flex-wrap align-items-center gap-2">
             @include('partials.urut', ['urutForm' => 'filterLowonganPublik'])
             @if (request()->hasAny(['q', 'unit_kerja']))
-                <a href="{{ route('lowongan.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg me-1"></i> Reset filter</a>
+                <a href="{{ route('lowongan.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg me-1"></i> Tampilkan semua</a>
             @endif
         </div>
     </div>

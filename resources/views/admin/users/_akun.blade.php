@@ -5,7 +5,7 @@
 </div>
 <div class="mb-3 pilih-pegawai">
     <label class="form-label" for="data_pegawai_id">Data Pegawai <span class="text-muted fw-normal">(nama, email & NIP terisi otomatis)</span></label>
-    <input type="search" class="form-control form-control-sm mb-1" placeholder="Cari nama, NIP, atau unit…" data-cari-pegawai aria-label="Cari pegawai">
+    <input type="search" class="form-control form-control-sm mb-1" placeholder="Cari pegawai, contoh: Siti atau SMK" data-cari-pegawai aria-label="Cari pegawai">
     <select name="data_pegawai_id" id="data_pegawai_id" class="form-select @error('data_pegawai_id') is-invalid @enderror">
         <option value="">-- Pilih pegawai --</option>
         {{-- Opsi tersendiri (bukan placeholder): akun sengaja tidak ditautkan, mis. GM dari luar data pegawai. --}}

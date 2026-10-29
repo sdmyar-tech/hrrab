@@ -1,7 +1,7 @@
-{{-- Akun login milik pegawai + sakelar "wajib ganti password" (Kepala SDM/Admin). --}}
+{{-- Akun HRRAB milik pegawai + sakelar "wajib ganti kata sandi" (Kepala SDM/Admin). --}}
 @php $saya = auth()->user(); @endphp
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2" id="akun-login">
-    <h2 class="pd-section-title mb-0"><i class="bi bi-person-lock"></i> Akun Login</h2>
+    <h2 class="pd-section-title mb-0"><i class="bi bi-person-lock"></i> Akun HRRAB</h2>
 </div>
 
 @if ($semuaAkun->isEmpty())
@@ -26,7 +26,7 @@
                 </div>
                 <div class="d-flex align-items-center flex-wrap gap-2 ms-auto">
                     @if ($u->wajib_ganti_password)
-                        <span class="badge text-bg-warning"><i class="bi bi-shield-exclamation me-1"></i>Wajib ganti password</span>
+                        <span class="badge text-bg-warning"><i class="bi bi-shield-exclamation me-1"></i>Wajib ganti kata sandi</span>
                     @endif
                     @if ($bolehAturAkun)
                         @if ($alasanKunci)
@@ -34,14 +34,14 @@
                         @else
                             <form action="{{ route('admin.akun.wajib-password', $u) }}" method="POST"
                                 data-confirm="{{ $u->wajib_ganti_password
-                                    ? "Matikan kewajiban ganti password untuk {$u->email}?"
-                                    : "Wajibkan {$u->email} mengganti password? Sampai diganti, akun ini tidak bisa membuka halaman apa pun." }}">
+                                    ? "Matikan kewajiban ganti kata sandi untuk {$u->email}?"
+                                    : "Wajibkan {$u->email} mengganti kata sandi? Sampai diganti, akun ini tidak bisa membuka halaman apa pun." }}">
                                 @csrf
                                 <input type="hidden" name="wajib" value="{{ $u->wajib_ganti_password ? 0 : 1 }}">
                                 <input type="hidden" name="kembali" value="{{ route('admin.pegawai.show', [$pegawai, 'tab' => 'penugasan']) }}#akun-login">
                                 <button type="submit" class="btn btn-sm {{ $u->wajib_ganti_password ? 'btn-light' : 'btn-outline-warning' }}">
                                     <i class="bi {{ $u->wajib_ganti_password ? 'bi-unlock' : 'bi-shield-lock' }}"></i>
-                                    {{ $u->wajib_ganti_password ? 'Matikan Wajib Ganti' : 'Wajibkan Ganti Password' }}
+                                    {{ $u->wajib_ganti_password ? 'Matikan Wajib Ganti' : 'Wajibkan Ganti Kata Sandi' }}
                                 </button>
                             </form>
                         @endif

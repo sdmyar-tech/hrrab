@@ -94,7 +94,7 @@
 
                         <div data-target="pegawai">
                             <label class="form-label small" for="cari-pegawai">Pegawai (punya akun)</label>
-                            <input type="search" class="form-control form-control-sm mb-2" id="cari-pegawai" placeholder="Cari nama...">
+                            <input type="search" class="form-control form-control-sm mb-2" id="cari-pegawai" placeholder="Saring nama, contoh: Siti">
                             <div class="form-check mb-1">
                                 <input class="form-check-input" type="checkbox" id="semua-pegawai" data-pilih-semua="pegawai[]">
                                 <label class="form-check-label small fw-semibold" for="semua-pegawai">Pilih semua (yang tampil) <span class="text-muted fw-normal" data-jumlah-terpilih></span></label>

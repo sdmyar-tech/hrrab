@@ -102,7 +102,7 @@
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label small mb-1" for="kl-nama">Nama</label>
-                                    <input type="text" name="nama" id="kl-nama" class="form-control form-control-sm" maxlength="150" value="{{ old('nama') }}" placeholder="mis. Milad Yayasan Abdurrab" required>
+                                    <input type="text" name="nama" id="kl-nama" class="form-control form-control-sm" maxlength="150" value="{{ old('nama') }}" placeholder="Contoh: Milad Yayasan Abdurrab" required>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label small mb-1" for="kl-jenis">Jenis</label>
@@ -114,7 +114,7 @@
                                     </select>
                                 </div>
                                 <div class="col-12">
-                                    <input type="text" name="keterangan" class="form-control form-control-sm" maxlength="255" value="{{ old('keterangan') }}" placeholder="Keterangan (opsional)" aria-label="Keterangan">
+                                    <input type="text" name="keterangan" class="form-control form-control-sm" maxlength="255" value="{{ old('keterangan') }}" placeholder="Keterangan, contoh: cuti bersama" aria-label="Keterangan">
                                 </div>
                             </div>
                             {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}

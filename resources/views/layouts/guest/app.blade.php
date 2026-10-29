@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @include('layouts.partials.favicon')
     @stack('head')
-    <title>@yield('title', 'Login') | HRRAB</title>
+    <title>@yield('title', 'Masuk') | HRRAB</title>
 
     <link rel="stylesheet" href="{{ asset('assets-admin/css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets-admin/vendors/bootstrap-icons/bootstrap-icons.css') }}">

@@ -56,7 +56,7 @@
         </div>
         <div class="col-md-2">
             <label class="form-label small mb-1">IPK / Nilai</label>
-            <input type="text" name="riwayat_pendidikan[__i__][nilai]" class="form-control form-control-sm" maxlength="20" placeholder="mis. 3.50">
+            <input type="text" name="riwayat_pendidikan[__i__][nilai]" class="form-control form-control-sm" maxlength="20" placeholder="Contoh: 3.50">
         </div>
         <div class="col-md-1 d-flex align-items-end">
             <button type="button" class="btn btn-outline-danger btn-sm repeater-remove" title="Hapus"><i class="bi bi-trash"></i></button>
@@ -105,11 +105,11 @@
         <div class="col-md-4">
             <label class="form-label small mb-1">Platform</label>
             <input type="text" name="sosial_media[__i__][platform]" class="form-control form-control-sm" list="daftarPlatformSosmed"
-                maxlength="50" placeholder="mis. LinkedIn" required>
+                maxlength="50" placeholder="Contoh: LinkedIn" required>
         </div>
         <div class="col">
             <label class="form-label small mb-1">Link</label>
-            <input type="url" name="sosial_media[__i__][url]" class="form-control form-control-sm" maxlength="255" placeholder="https://..." required>
+            <input type="url" name="sosial_media[__i__][url]" class="form-control form-control-sm" maxlength="255" placeholder="Contoh: https://linkedin.com/in/nama" required>
         </div>
         <div class="col-auto">
             <button type="button" class="btn btn-outline-danger btn-sm repeater-remove" title="Hapus"><i class="bi bi-trash"></i></button>

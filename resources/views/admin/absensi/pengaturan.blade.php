@@ -65,7 +65,7 @@
                         <div class="col-md-4">
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                                <input type="search" name="q" class="form-control border-start-0" placeholder="Cari nama, NIP, ID mesin, unit..." value="{{ request('q') }}">
+                                <input type="search" name="q" class="form-control border-start-0" placeholder="Cari pegawai, contoh: Siti atau 1023" aria-label="Cari pegawai menurut nama, NIP, ID mesin, atau unit" value="{{ request('q') }}">
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
@@ -281,7 +281,7 @@
                     </div>
                     <div class="col-sm-6">
                         <label class="form-label small mb-1" for="p-finger">ID di mesin absen (AC-No.)</label>
-                        <input type="text" name="finger_id" id="p-finger" class="form-control" inputmode="numeric" pattern="\d{1,12}" placeholder="mis. 13">
+                        <input type="text" name="finger_id" id="p-finger" class="form-control" inputmode="numeric" pattern="\d{1,12}" placeholder="Contoh: 13">
                     </div>
                 </div>
                 <h3 class="h6 fw-bold mb-2">Jam kerja</h3>

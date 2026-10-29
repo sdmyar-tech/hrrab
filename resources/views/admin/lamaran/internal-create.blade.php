@@ -122,7 +122,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Pendidikan Terakhir</label>
-                                    <input type="text" name="pendidikan_terakhir" class="form-control @error('pendidikan_terakhir') is-invalid @enderror" value="{{ old('pendidikan_terakhir') }}" placeholder="mis. S1 Akuntansi">
+                                    <input type="text" name="pendidikan_terakhir" class="form-control @error('pendidikan_terakhir') is-invalid @enderror" value="{{ old('pendidikan_terakhir') }}" placeholder="Contoh: S1 Akuntansi">
                                     @error('pendidikan_terakhir')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-6">

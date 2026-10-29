@@ -239,7 +239,7 @@
                         @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pegawai.export-detail', 'eksporParam' => ['pegawai' => $pegawai->id], 'eksporUkuran' => 'btn-sm'])
                         @can('kelola-pegawai')
                             <a href="{{ route('admin.pegawai.edit', $pegawai) }}" class="btn btn-primary btn-sm">
-                                <i class="bi bi-pencil-square"></i> Edit Data
+                                <i class="bi bi-pencil-square"></i> Ubah Data
                             </a>
                             @if ($dampakKeluar)
                                 <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalKeluar">

@@ -8,7 +8,7 @@
                 <span class="page-icon"><i class="bi bi-briefcase"></i></span>
                 <div>
                     <p class="eyebrow mb-1">Rekrutmen</p>
-                    <h1 class="h3 mb-1">Edit Lowongan</h1>
+                    <h1 class="h3 mb-1">Ubah Lowongan</h1>
                     <p class="text-muted mb-0">
                         Status saat ini:
                         <span class="badge {{ $lowongan->status === 'dipublikasikan' ? 'text-bg-success' : ($lowongan->status === 'ditutup' ? 'text-bg-secondary' : 'text-bg-warning') }}">

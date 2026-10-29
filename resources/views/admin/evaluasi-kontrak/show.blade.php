@@ -185,7 +185,7 @@
                         <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-check"></i>Penilaian</h2>
                         @if ($bisaIsi)
                             <label class="form-label fw-semibold small" for="catatan">Catatan penilai <span class="fw-normal text-muted">(opsional)</span></label>
-                            <textarea name="catatan" id="catatan" rows="3" class="form-control mb-3" maxlength="1000" placeholder="Pencapaian, hal yang perlu diperbaiki…">{{ old('catatan', $e->catatan) }}</textarea>
+                            <textarea name="catatan" id="catatan" rows="3" class="form-control mb-3" maxlength="1000" placeholder="Contoh: target tercapai; perlu meningkatkan ketepatan waktu">{{ old('catatan', $e->catatan) }}</textarea>
                             @unless ($satuLangkah)
                                 <p class="small text-muted"><i class="bi bi-info-circle me-1"></i>Penilai hanya memberi nilai; keputusan kontrak diambil {{ $labelPemutus }}.</p>
                                 <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send me-1"></i>{{ $e->diisi_pada ? 'Simpan perubahan nilai' : 'Kirim nilai ke ' . $labelPemutus }}</button>

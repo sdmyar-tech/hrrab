@@ -249,7 +249,7 @@
                                                 </select>
                                             </div>
                                             <div class="col-sm-5">
-                                                <input type="text" name="catatan_hasil" class="form-control form-control-sm" placeholder="Catatan (opsional)" aria-label="Catatan hasil" value="{{ $jadwal->catatan_hasil }}">
+                                                <input type="text" name="catatan_hasil" class="form-control form-control-sm" placeholder="Catatan (opsional), contoh: komunikasi baik" aria-label="Catatan hasil" value="{{ $jadwal->catatan_hasil }}">
                                             </div>
                                             <div class="col-sm-3 d-grid">
                                                 <button type="submit" class="btn btn-success btn-sm">{{ $jadwal->hasil_status ? 'Ubah Hasil' : 'Simpan Hasil' }}</button>
@@ -300,10 +300,10 @@
                                                     <input type="time" name="waktu_selesai" class="form-control form-control-sm" value="{{ $jadwal->waktu_selesai ? substr($jadwal->waktu_selesai, 0, 5) : '' }}">
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Nama tempat, link Google Maps, atau link meeting" value="{{ $jadwal->lokasi }}">
+                                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Tempat atau link, contoh: Ruang Rapat Lt. 2" value="{{ $jadwal->lokasi }}">
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Catatan jadwal (opsional)" value="{{ $jadwal->catatan }}">
+                                                    <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Catatan (opsional), contoh: bawa berkas asli" value="{{ $jadwal->catatan }}">
                                                 </div>
                                                 @if ($admin)
                                                     <div class="col-md-5">
@@ -376,7 +376,7 @@
                                     <input type="time" name="waktu_selesai" class="form-control form-control-sm">
                                 </div>
                                 <div class="col-md-8">
-                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Nama tempat, link Google Maps, atau link meeting">
+                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Tempat atau link, contoh: Ruang Rapat Lt. 2">
                                 </div>
                                 <div class="col-md-4 d-grid">
                                     <button type="submit" class="btn btn-primary btn-sm">
@@ -386,7 +386,7 @@
                             </form>
                         @elseif ($canReview && $tahapBerikutnya && ! $interviewerBerikutnya)
                             <div class="alert alert-warning small mt-2 mb-0">
-                                Belum ada akun <strong>Kepala SDM</strong> untuk menjadi interviewer Interview 1. Tambahkan lewat Kelola User.
+                                Belum ada akun <strong>Kepala SDM</strong> untuk menjadi interviewer Interview 1. Tambahkan lewat Kelola Akun.
                             </div>
                         @endif
 
@@ -454,10 +454,10 @@
                                                     <input type="time" name="waktu_selesai" class="form-control form-control-sm">
                                                 </div>
                                                 <div class="col-12">
-                                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Nama tempat, link Google Maps, atau link meeting">
+                                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Tempat atau link, contoh: Ruang Rapat Lt. 2">
                                                 </div>
                                                 <div class="col-12">
-                                                    <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Tujuan interview ini (opsional), mis. tes praktik">
+                                                    <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Tujuan (opsional), contoh: tes praktik">
                                                 </div>
                                             </div>
                                         </div>
@@ -624,10 +624,10 @@
                                                     <div class="alert alert-info small py-2 mb-0" id="onboarding-ringkasan"></div>
                                                 </div>
                                                 <div class="col-12">
-                                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Lokasi onboarding / link Google Maps (opsional)" maxlength="255">
+                                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Lokasi (opsional), contoh: Kantor SDM Lt. 1" maxlength="255">
                                                 </div>
                                                 <div class="col-12">
-                                                    <textarea name="catatan" rows="2" class="form-control form-control-sm" placeholder="Arahan selama onboarding (opsional)" maxlength="1000"></textarea>
+                                                    <textarea name="catatan" rows="2" class="form-control form-control-sm" placeholder="Arahan (opsional), contoh: hadir 07.30 berseragam putih" maxlength="1000"></textarea>
                                                 </div>
                                                 <div class="col-12 text-muted" style="font-size:.75rem;">
                                                     Konfirmasi hasil: Kepala SDM{{ $kepalaTerkait ? ' & ' . $kepalaTerkait->name : '' }}.
@@ -741,7 +741,7 @@
                                     <button type="submit" class="btn btn-primary btn-sm">Jadwalkan Kontrak</button>
                                 </div>
                                 <div class="col-12">
-                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Nama tempat atau link Google Maps">
+                                    <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Tempat, contoh: Ruang Rapat Yayasan">
                                 </div>
                             </form>
                         @endif
@@ -840,7 +840,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small mb-1">Tanggal Habis Kontrak</label>
-                                    <input type="text" id="rekrut-tanggal-habis" class="form-control form-control-sm" disabled placeholder="Otomatis terkalkulasi">
+                                    <input type="text" id="rekrut-tanggal-habis" class="form-control form-control-sm" disabled placeholder="Terisi otomatis">
                                 </div>
                                 <div class="col-12 d-flex gap-2 pt-3 mt-1 border-top">
                                     <button type="submit" class="btn btn-success flex-fill" @disabled((! $onboardingLulus && ! $adminBebas) || $tungguKontrak || $kuotaPenuh)>
@@ -896,7 +896,7 @@
                                 </select>
                             </div>
                             <div class="col-12">
-                                <input type="text" name="catatan_admin" class="form-control form-control-sm" maxlength="1000" placeholder="Catatan (opsional)" value="{{ $lamaran->catatan_admin }}">
+                                <input type="text" name="catatan_admin" class="form-control form-control-sm" maxlength="1000" placeholder="Catatan untuk pelamar (opsional), contoh: berkas lengkap" value="{{ $lamaran->catatan_admin }}">
                             </div>
                             <div class="col-12">
                                 <button type="submit" class="btn btn-warning btn-sm"><i class="bi bi-save me-1"></i>Simpan Langsung</button>

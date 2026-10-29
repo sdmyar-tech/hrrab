@@ -47,7 +47,7 @@
                 <div class="d-flex flex-wrap gap-2 mt-2">
                     <span class="badge text-bg-light border"><i class="bi bi-shield-check me-1"></i>{{ $user->roleLabel() }}</span>
                     @if ($kepegawaian?->unit_kerja)<span class="badge text-bg-light border">{{ $kepegawaian->unit_kerja }}</span>@endif
-                    @if ($user->google_id)<span class="badge text-bg-light border"><i class="bi bi-google me-1"></i>Login Google aktif</span>@endif
+                    @if ($user->google_id)<span class="badge text-bg-light border"><i class="bi bi-google me-1"></i>Masuk dengan Google aktif</span>@endif
                 </div>
                 @if (! $user->isPelamar() && ! $pegawai?->dokumen?->pas_foto && $user->isStaff())
                     <a href="{{ route('pegawai.pengkinian-data') }}" class="small d-inline-block mt-2"><i class="bi bi-camera me-1"></i>Unggah pas foto lewat Pengkinian Data</a>
@@ -57,7 +57,7 @@
                 @csrf
                 <button type="submit" class="btn btn-outline-danger js-confirm" data-confirm="true" data-title="Logout"
                     data-text="Apakah Anda yakin ingin keluar dari sesi login saat ini?" data-confirm-text="Ya, logout" data-cancel-text="Batal">
-                    <i class="bi bi-box-arrow-right"></i>Logout
+                    <i class="bi bi-box-arrow-right"></i>Keluar
                 </button>
             </form>
         </section>

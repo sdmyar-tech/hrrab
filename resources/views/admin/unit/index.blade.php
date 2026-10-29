@@ -137,7 +137,7 @@
             <div class="modal-body">
                 <div class="small mb-3" data-sekarang></div>
                 <label class="form-label" for="un-cari-pegawai">Pilih koordinator baru <span class="text-muted fw-normal">(GM atau pegawai)</span></label>
-                <input type="search" class="form-control form-control-sm mb-2" id="un-cari-pegawai" placeholder="Cari nama / NIP / unit / GM…" autocomplete="off">
+                <input type="search" class="form-control form-control-sm mb-2" id="un-cari-pegawai" placeholder="Cari koordinator, contoh: Siti atau SMK" autocomplete="off">
                 <select name="koordinator" class="form-select" size="9" required>
                     {{-- GM: yang punya data pegawai dicatat sebagai rangkap kepala; yang tidak, unit dicatat di akun GM. --}}
                     <optgroup label="GM">

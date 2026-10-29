@@ -45,7 +45,7 @@
                 <div class="mb-3">
                     <label for="alasan_keluar" class="form-label">Alasan / catatan <span class="fw-normal text-muted">(wajib untuk "Lainnya")</span></label>
                     <textarea name="alasan_keluar" id="alasan_keluar" rows="2" maxlength="1000" class="form-control @error('alasan_keluar', 'keluar') is-invalid @enderror"
-                        placeholder="mis. melanjutkan studi, surat resign tgl 1 Okt">{{ old('alasan_keluar') }}</textarea>
+                        placeholder="Contoh: melanjutkan studi, surat pengunduran diri tanggal 1 Oktober">{{ old('alasan_keluar') }}</textarea>
                     @error('alasan_keluar', 'keluar')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
 

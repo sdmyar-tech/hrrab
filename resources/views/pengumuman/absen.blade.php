@@ -73,7 +73,7 @@
                 <input type="hidden" name="status" value="{{ $filter === 'semua' ? '' : $filter }}">
                 <div class="input-group input-group-sm ms-lg-auto" style="max-width:260px">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="search" name="q" class="form-control" value="{{ request('q') }}" placeholder="Cari nama, unit, NIP…">
+                    <input type="search" name="q" class="form-control" value="{{ request('q') }}" placeholder="Cari peserta, contoh: Siti atau SMK" aria-label="Cari peserta menurut nama, unit, atau NIP">
                 </div>
                 <select name="urut" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()" aria-label="Urutkan">
                     @foreach (['status' => 'Perlu perhatian dulu', 'nama' => 'Nama A–Z', 'waktu' => 'Waktu absen'] as $k => $l)

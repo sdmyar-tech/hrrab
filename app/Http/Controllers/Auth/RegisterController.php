@@ -25,7 +25,7 @@ class RegisterController extends Controller
             'password' => ['required', 'string', 'min:6', 'confirmed'],
         ], [
             'email.unique' => 'Email sudah terdaftar. Silakan login.',
-            'password.confirmed' => 'Konfirmasi password tidak cocok.',
+            'password.confirmed' => 'Ulangan kata sandi tidak cocok.',
         ]);
 
         $user = User::create([

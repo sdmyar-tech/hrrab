@@ -323,7 +323,49 @@
       });
     }
 
+    // Aksesibilitas isian: label .form-label tanpa for= dihubungkan ke isian sesudahnya (pembaca layar membacakan label),
+    // dan isian yang tetap tanpa label diberi aria-label dari placeholder (bagian sebelum "contoh:").
+    function initLabelIsian() {
+      var nomor = 0;
+      var KONTROL = "input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]), select, textarea";
+
+      Array.prototype.forEach.call(document.querySelectorAll("label.form-label:not([for])"), function (label) {
+        if (label.querySelector("input, select, textarea")) {
+          return;
+        }
+        var isian = null;
+        var el = label.nextElementSibling;
+        for (var i = 0; el && i < 3 && !isian; i++, el = el.nextElementSibling) {
+          if (el.tagName === "LABEL") {
+            break; // sudah masuk label isian berikutnya
+          }
+          isian = el.matches(KONTROL) ? el : el.querySelector(KONTROL);
+        }
+        if (!isian || (isian.labels && isian.labels.length)) {
+          return;
+        }
+        if (!isian.id) {
+          do {
+            nomor++;
+          } while (document.getElementById("isian-otomatis-" + nomor));
+          isian.id = "isian-otomatis-" + nomor;
+        }
+        label.htmlFor = isian.id;
+      });
+
+      Array.prototype.forEach.call(document.querySelectorAll("input[placeholder], textarea[placeholder]"), function (isian) {
+        if (isian.hasAttribute("aria-label") || isian.hasAttribute("aria-labelledby") || (isian.labels && isian.labels.length)) {
+          return;
+        }
+        var teks = isian.getAttribute("placeholder").split(/,?\s*contoh:/i)[0].trim();
+        if (teks) {
+          isian.setAttribute("aria-label", teks);
+        }
+      });
+    }
+
     initValidation();
+    initLabelIsian();
     initLokasiMaps();
     initSaringLangsung();
     initCariOtomatis();

@@ -63,10 +63,10 @@
                 </select>
             </div>
             <div class="col-md-6">
-                <input type="text" name="lokasi" class="form-control form-control-sm" value="{{ $screening->lokasi }}" placeholder="Lokasi" aria-label="Lokasi" maxlength="255">
+                <input type="text" name="lokasi" class="form-control form-control-sm" value="{{ $screening->lokasi }}" placeholder="Lokasi, contoh: Kantor SDM" aria-label="Lokasi" maxlength="255">
             </div>
             <div class="col-md-6">
-                <input type="text" name="catatan" class="form-control form-control-sm" value="{{ $screening->catatan }}" placeholder="Arahan" aria-label="Arahan" maxlength="1000">
+                <input type="text" name="catatan" class="form-control form-control-sm" value="{{ $screening->catatan }}" placeholder="Arahan, contoh: hadir 07.30 berseragam" aria-label="Arahan" maxlength="1000">
             </div>
             <div class="col-12 d-flex justify-content-between align-items-center">
                 <span class="text-muted" style="font-size:.75rem;">Hari terakhir dihitung ulang dari hari pertama + durasi. Hasil diubah lewat tombol konfirmasi.</span>

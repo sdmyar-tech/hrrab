@@ -71,7 +71,7 @@
                             </select>
                         </div>
                         <div class="mb-3" data-sasaran="pegawai">
-                            <input type="search" class="form-control form-control-sm mb-1" placeholder="Cari nama..." data-cari-izin aria-label="Cari pegawai">
+                            <input type="search" class="form-control form-control-sm mb-1" placeholder="Saring nama, contoh: Siti" data-cari-izin aria-label="Cari pegawai">
                             <div class="border rounded-3 p-2" style="max-height:200px; overflow-y:auto;">
                                 @forelse ($pegawais as $p)
                                     <div class="form-check" data-nama="{{ strtolower($p->nama_lengkap) }}">
@@ -88,7 +88,7 @@
                         <div class="d-flex flex-wrap gap-1 mb-2">
                             @foreach ($alasanCepat as $a)<button type="button" class="abs-chip" data-alasan-izin="{{ $a }}">{{ $a }}</button>@endforeach
                         </div>
-                        <input type="text" name="alasan" class="form-control mb-3 @error('alasan') is-invalid @enderror" maxlength="255" value="{{ old('alasan') }}" placeholder="Atau tulis alasan lain..." required>
+                        <input type="text" name="alasan" class="form-control mb-3 @error('alasan') is-invalid @enderror" maxlength="255" value="{{ old('alasan') }}" placeholder="Atau tulis alasan lain, contoh: banjir di jalan utama" required>
 
                         <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2 me-1"></i> Simpan Izin</button>
                     </form>

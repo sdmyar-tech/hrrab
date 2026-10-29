@@ -78,7 +78,7 @@
                             <span class="badge {{ (new \App\Models\SuratPeringatan(['tingkat' => $t]))->badgeClass() }}">SP{{ $t }}: {{ $daftar->where('tingkat', $t)->count() }}</span>
                         @endforeach
                         @if (request()->filled('q'))
-                            <a href="{{ route('admin.surat-peringatan.index', ['bulan' => $bulan->format('Y-m')]) }}" class="btn btn-link btn-sm"><i class="bi bi-x-circle" aria-hidden="true"></i>Reset filter</a>
+                            <a href="{{ route('admin.surat-peringatan.index', ['bulan' => $bulan->format('Y-m')]) }}" class="btn btn-link btn-sm"><i class="bi bi-x-circle" aria-hidden="true"></i>Tampilkan semua</a>
                         @endif
                     </div>
 

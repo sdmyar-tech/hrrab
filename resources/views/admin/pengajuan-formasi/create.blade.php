@@ -122,7 +122,7 @@
                     <div class="col-12">
                         <label class="form-label" for="f-keahlian">Minimal kemampuan / keahlian yang dibutuhkan</label>
                         <textarea name="kualifikasi" id="f-keahlian" rows="2" class="form-control @error('kualifikasi') is-invalid @enderror" required
-                            placeholder="mis. menguasai Excel, pengalaman administrasi keuangan 1 tahun">{{ old('kualifikasi') }}</textarea>
+                            placeholder="Contoh: menguasai Excel, pengalaman administrasi keuangan 1 tahun">{{ old('kualifikasi') }}</textarea>
                         @error('kualifikasi')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-sm-6">
@@ -164,7 +164,7 @@
                                 <div class="input-group mb-2 tugas-baris">
                                     <span class="input-group-text tugas-no">{{ $i + 1 }}</span>
                                     <input type="text" name="tugas[]" class="form-control @error('tugas.' . $i) is-invalid @enderror" value="{{ $isi }}" maxlength="500"
-                                        placeholder="mis. Menginput transaksi harian ke sistem keuangan" aria-label="Tugas {{ $i + 1 }}" @if ($i === 0) required @endif>
+                                        placeholder="Contoh: menginput transaksi harian ke sistem keuangan" aria-label="Tugas {{ $i + 1 }}" @if ($i === 0) required @endif>
                                     <button type="button" class="btn btn-outline-danger" data-hapus-tugas title="Hapus tugas ini"><i class="bi bi-trash"></i></button>
                                 </div>
                             @endforeach
@@ -185,7 +185,7 @@
                 <p class="small mb-2" data-bagan-petunjuk></p>
                 <div class="bagan">
                     <div class="bagan-alat">
-                        <input type="search" class="form-control form-control-sm" placeholder="Cari nama pegawai di bagan…" data-bagan-cari>
+                        <input type="search" class="form-control form-control-sm" placeholder="Cari di bagan, contoh: Siti" aria-label="Cari nama pegawai di bagan" data-bagan-cari>
                         <div class="ms-auto d-flex align-items-center gap-1">
                             <button type="button" class="btn btn-outline-secondary" data-zoom="-" title="Perkecil" aria-label="Perkecil"><i class="bi bi-zoom-out"></i></button>
                             <span class="bagan-skala" data-bagan-skala>100%</span>
@@ -442,7 +442,7 @@
             const wadahSwal = el('div', 'text-start');
             wadahSwal.innerHTML = '<div class="small fw-semibold mb-1">Jenis kelamin</div><div class="d-flex flex-wrap gap-2 mb-3" data-jk></div>'
                 + '<label class="small fw-semibold mb-1" for="swal-ket">Keterangan <span class="fw-normal text-muted">(opsional)</span></label>'
-                + '<input id="swal-ket" class="form-control" maxlength="150" placeholder="mis. untuk shift malam / gedung B">'
+                + '<input id="swal-ket" class="form-control" maxlength="150" placeholder="Contoh: untuk shift malam di gedung B">'
                 + (pindah ? '<div class="alert alert-warning small mt-3 mb-0" data-pindah></div>' : '');
             JK.forEach(([nama, label], k) => {
                 const r = el('input', 'btn-check'); r.type = 'radio'; r.name = 'swal-jk'; r.id = 'swal-jk-' + k; r.value = k; r.checked = k === 2;

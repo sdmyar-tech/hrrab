@@ -19,7 +19,7 @@
 
         <div class="row g-3 mb-3">
             @foreach ([['Aktivitas hari ini', $ringkas['hari_ini'], 'bi-activity'], ['Pengguna aktif hari ini', $ringkas['pengguna_hari_ini'], 'bi-people'],
-                ['Login hari ini', $ringkas['login_hari_ini'], 'bi-box-arrow-in-right'], ['Gagal hari ini', $ringkas['gagal_hari_ini'], 'bi-exclamation-triangle']] as [$judul, $angka, $ikonStat])
+                ['Masuk hari ini', $ringkas['login_hari_ini'], 'bi-box-arrow-in-right'], ['Gagal hari ini', $ringkas['gagal_hari_ini'], 'bi-exclamation-triangle']] as [$judul, $angka, $ikonStat])
                 <div class="col-6 col-lg-3">
                     <div class="log-stat {{ $ikonStat === 'bi-exclamation-triangle' && $angka ? 'peringatan' : '' }}">
                         <i class="bi {{ $ikonStat }}" aria-hidden="true"></i>
@@ -138,7 +138,7 @@
                             'ikonKosong' => $adaFilter ? 'bi-search' : 'bi-journal',
                         ])
                         @if ($adaFilter)
-                            <p class="text-center small mb-0"><a href="{{ route('admin.log.index') }}">Reset filter</a></p>
+                            <p class="text-center small mb-0"><a href="{{ route('admin.log.index') }}">Tampilkan semua aktivitas</a></p>
                         @endif
                     </li>
                 @endforelse

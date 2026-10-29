@@ -90,7 +90,7 @@
                                         @if ($r->urlReset)
                                             <form action="{{ $r->urlReset }}" method="POST" data-confirm="Kembalikan role {{ $r->namaAsli }} ke nama & hak akses bawaan sistem?">
                                                 @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-warning btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+                                                <button type="submit" class="btn btn-outline-warning btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Kembalikan Bawaan</button>
                                             </form>
                                         @endif
                                         @if ($r->urlHapus)

@@ -24,7 +24,7 @@ class PaksaGantiPassword
             return $next($request);
         }
 
-        $pesan = 'Anda wajib mengganti password terlebih dahulu.';
+        $pesan = 'Anda wajib mengganti kata sandi terlebih dahulu.';
 
         if ($request->expectsJson()) {
             return response()->json(['message' => $pesan, 'wajib_ganti_password' => true], 423);

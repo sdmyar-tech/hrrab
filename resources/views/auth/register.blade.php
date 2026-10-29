@@ -134,14 +134,14 @@
             <div class="mb-3">
                 <label for="email" class="form-label">Email</label>
                 <input type="email" id="email" name="email" class="form-control @error('email') is-invalid @enderror"
-                    placeholder="nama@gmail.com" value="{{ old('email') }}" required>
+                    placeholder="Contoh: nama@gmail.com" value="{{ old('email') }}" required>
                 @error('email')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>
 
             <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
+                <label for="password" class="form-label">Kata Sandi</label>
                 <input type="password" id="password" name="password"
                     class="form-control @error('password') is-invalid @enderror" placeholder="Minimal 6 karakter" required>
                 @error('password')
@@ -150,7 +150,7 @@
             </div>
 
             <div class="mb-3">
-                <label for="password_confirmation" class="form-label">Konfirmasi Password</label>
+                <label for="password_confirmation" class="form-label">Ulangi Kata Sandi</label>
                 <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" required>
             </div>
 

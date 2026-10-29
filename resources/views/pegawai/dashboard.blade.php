@@ -250,7 +250,7 @@
                             <a href="{{ route('pegawai.pengajuan-lembur') }}" class="btn btn-outline-primary btn-sm text-start"><i class="bi bi-clock me-2"></i>Ajukan Lembur</a>
                         @endif
                         <a href="{{ route('pegawai.data-pegawai') }}" class="btn btn-outline-secondary btn-sm text-start"><i class="bi bi-person-vcard me-2"></i>Data Pegawai Saya</a>
-                        <a href="{{ route('profile') }}" class="btn btn-outline-secondary btn-sm text-start"><i class="bi bi-person-lines-fill me-2"></i>Profil & Password</a>
+                        <a href="{{ route('profile') }}" class="btn btn-outline-secondary btn-sm text-start"><i class="bi bi-person-lines-fill me-2"></i>Profil & Kata Sandi</a>
                     </div>
                 </div>
             </div>

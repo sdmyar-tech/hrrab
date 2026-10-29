@@ -4,7 +4,7 @@
 --}}
 @extends('layouts.guest.app')
 
-@section('title', 'Ganti Password')
+@section('title', 'Ganti Kata Sandi')
 
 @push('head')
     <meta name="robots" content="noindex, nofollow">
@@ -34,28 +34,28 @@
         <div class="d-flex align-items-center gap-3 mb-3">
             <span class="kunci-ikon"><i class="bi bi-shield-lock"></i></span>
             <div>
-                <h1 class="h5 fw-bold mb-0">Ganti password dulu</h1>
+                <h1 class="h5 fw-bold mb-0">Ganti kata sandi dulu</h1>
                 <p class="small text-muted mb-0">{{ $user->name }} · {{ $user->email }}</p>
             </div>
         </div>
-        <p class="small text-muted">Demi keamanan, SDM/Admin mewajibkan akun Anda mengganti password sebelum memakai sistem.</p>
+        <p class="small text-muted">Demi keamanan, SDM/Admin mewajibkan akun Anda mengganti kata sandi sebelum memakai sistem.</p>
 
         {{-- Form cadangan (dipakai juga oleh dialog). --}}
         <form method="POST" action="{{ route('akun.ganti-password.simpan') }}" id="formGantiPassword" autocomplete="off">
             @csrf
             <div class="mb-2">
-                <label class="form-label" for="f-lama">Password saat ini</label>
+                <label class="form-label" for="f-lama">Kata sandi saat ini</label>
                 <input type="password" name="password_lama" id="f-lama" class="form-control" required autocomplete="current-password">
             </div>
             <div class="mb-2">
-                <label class="form-label" for="f-baru">Password baru</label>
+                <label class="form-label" for="f-baru">Kata sandi baru</label>
                 <input type="password" name="password" id="f-baru" class="form-control" required minlength="8" autocomplete="new-password">
             </div>
             <div class="mb-3">
-                <label class="form-label" for="f-ulang">Ulangi password baru</label>
+                <label class="form-label" for="f-ulang">Ulangi kata sandi baru</label>
                 <input type="password" name="password_confirmation" id="f-ulang" class="form-control" required autocomplete="new-password">
             </div>
-            <button type="submit" class="btn btn-primary w-100">Simpan Password Baru</button>
+            <button type="submit" class="btn btn-primary w-100">Simpan Kata Sandi Baru</button>
         </form>
         <form method="POST" action="{{ route('logout') }}" id="formKeluar" class="mt-2">
             @csrf
@@ -75,7 +75,7 @@
             <label for="${id}">${label}</label>
             <div class="input-group">
                 <input type="password" id="${id}" class="form-control" autocomplete="${auto}">
-                <button type="button" class="btn btn-light" data-lihat="${id}" tabindex="-1" aria-label="Tampilkan password"><i class="bi bi-eye"></i></button>
+                <button type="button" class="btn btn-light" data-lihat="${id}" tabindex="-1" aria-label="Tampilkan kata sandi"><i class="bi bi-eye"></i></button>
             </div>`;
 
         const syarat = [
@@ -86,12 +86,12 @@
 
         function buka() {
             Swal.fire({
-                title: 'Wajib Ganti Password',
+                title: 'Wajib Ganti Kata Sandi',
                 html: `<div class="swal-ganti">
-                        <p class="small text-muted mb-1">Akun Anda diwajibkan mengganti password sebelum bisa memakai sistem.</p>
-                        ${kolom('s-lama', 'Password saat ini', 'current-password')}
-                        ${kolom('s-baru', 'Password baru', 'new-password')}
-                        ${kolom('s-ulang', 'Ulangi password baru', 'new-password')}
+                        <p class="small text-muted mb-1">Akun Anda diwajibkan mengganti kata sandi sebelum bisa memakai sistem.</p>
+                        ${kolom('s-lama', 'Kata sandi saat ini', 'current-password')}
+                        ${kolom('s-baru', 'Kata sandi baru', 'new-password')}
+                        ${kolom('s-ulang', 'Ulangi kata sandi baru', 'new-password')}
                         <ul class="syarat">${syarat.map(([k, t]) => `<li data-syarat="${k}"><i class="bi bi-circle"></i>${t}</li>`).join('')}</ul>
                     </div>`,
                 icon: 'warning',
@@ -128,11 +128,11 @@
                     const lama = el.querySelector('#s-lama').value;
                     const baru = el.querySelector('#s-baru').value;
                     const ulang = el.querySelector('#s-ulang').value;
-                    if (!lama) return Swal.showValidationMessage('Isi password saat ini.');
+                    if (!lama) return Swal.showValidationMessage('Isi kata sandi saat ini.');
                     const gagal = syarat.find(([, , cek]) => !cek(baru));
                     if (gagal) return Swal.showValidationMessage('Password baru: ' + gagal[1].toLowerCase() + '.');
-                    if (baru === lama) return Swal.showValidationMessage('Password baru harus berbeda dari password lama.');
-                    if (baru !== ulang) return Swal.showValidationMessage('Ulangi password baru dengan benar.');
+                    if (baru === lama) return Swal.showValidationMessage('Kata sandi baru harus berbeda dari kata sandi lama.');
+                    if (baru !== ulang) return Swal.showValidationMessage('Ulangi kata sandi baru dengan benar.');
                     return { lama, baru, ulang };
                 },
             }).then((r) => {

@@ -78,7 +78,7 @@
                         <button type="button" class="abs-chip" data-alasan="{{ $a }}">{{ $a }}</button>
                     @endforeach
                 </div>
-                <textarea name="alasan" id="k-alasan" rows="2" class="form-control" maxlength="500" placeholder="Atau tulis alasan lain..." required></textarea>
+                <textarea name="alasan" id="k-alasan" rows="2" class="form-control" maxlength="500" placeholder="Atau tulis alasan lain, contoh: lupa scan pulang" required></textarea>
             </div>
 
             <div class="modal-footer justify-content-between">

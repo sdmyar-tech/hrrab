@@ -41,10 +41,10 @@
                         <input type="time" name="waktu_selesai" id="ia-selesai" class="form-control form-control-sm">
                     </div>
                     <div class="col-12">
-                        <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Nama tempat, link Google Maps, atau link meeting" aria-label="Lokasi">
+                        <input type="text" name="lokasi" class="form-control form-control-sm" placeholder="Tempat atau link, contoh: Ruang Rapat Lt. 2" aria-label="Lokasi">
                     </div>
                     <div class="col-12">
-                        <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Catatan (opsional)" aria-label="Catatan">
+                        <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Catatan (opsional), contoh: bawa portofolio" aria-label="Catatan">
                     </div>
                 </div>
             </div>

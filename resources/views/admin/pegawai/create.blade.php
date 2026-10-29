@@ -153,7 +153,7 @@
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Alamat Domisili</label>
-                                            <textarea name="alamat_domisili" class="form-control" rows="3" placeholder="Kosongkan jika sama dengan KTP">{{ old('alamat_domisili', $pegawai->alamat_domisili ?? '') }}</textarea>
+                                            <textarea name="alamat_domisili" class="form-control" rows="3" placeholder="Kosongkan bila sama dengan KTP. Contoh: Jl. Melati No. 5">{{ old('alamat_domisili', $pegawai->alamat_domisili ?? '') }}</textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -306,7 +306,7 @@
                                         <div class="col-md-4">
                                             <label class="form-label">Faskes Tingkat 1</label>
                                             <input type="text" name="faskes_tingkat_1" class="form-control @error('faskes_tingkat_1') is-invalid @enderror"
-                                                placeholder="Nama RS/Klinik" value="{{ old('faskes_tingkat_1', $pegawai->bpjs->faskes_tingkat_1 ?? '') }}">
+                                                placeholder="Nama RS/klinik, contoh: Klinik Abdurrab" value="{{ old('faskes_tingkat_1', $pegawai->bpjs->faskes_tingkat_1 ?? '') }}">
                                             @error('faskes_tingkat_1')
                                                 <div class="invalid-feedback d-block">{{ $message }}</div>
                                             @enderror
@@ -325,7 +325,7 @@
                                             @endif
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Upload KTP (PDF/JPG)</label>
+                                            <label class="form-label">Unggah KTP (PDF/JPG)</label>
                                             <input type="file" name="upload_ktp" class="form-control @error('upload_ktp') is-invalid @enderror">
                                             @error('upload_ktp') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                             @if(isset($pegawai) && optional($pegawai->dokumen)->upload_ktp)
@@ -333,7 +333,7 @@
                                             @endif
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Upload KK (PDF/JPG)</label>
+                                            <label class="form-label">Unggah KK (PDF/JPG)</label>
                                             <input type="file" name="upload_kk" class="form-control @error('upload_kk') is-invalid @enderror">
                                             @error('upload_kk') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                             @if(isset($pegawai) && optional($pegawai->dokumen)->upload_kk)
@@ -341,7 +341,7 @@
                                             @endif
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Upload CV (PDF)</label>
+                                            <label class="form-label">Unggah CV (PDF)</label>
                                             <input type="file" name="upload_cv" class="form-control @error('upload_cv') is-invalid @enderror">
                                             @error('upload_cv') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                             @if(isset($pegawai) && optional($pegawai->dokumen)->upload_cv)
@@ -349,7 +349,7 @@
                                             @endif
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Upload Ijazah Terakhir (PDF)</label>
+                                            <label class="form-label">Unggah Ijazah Terakhir (PDF)</label>
                                             <input type="file" name="upload_ijazah_terakhir" class="form-control @error('upload_ijazah_terakhir') is-invalid @enderror">
                                             @error('upload_ijazah_terakhir') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                             @if(isset($pegawai) && optional($pegawai->dokumen)->upload_ijazah_terakhir)
@@ -357,7 +357,7 @@
                                             @endif
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Upload Buku Tabungan (PDF/JPG)</label>
+                                            <label class="form-label">Unggah Buku Tabungan (PDF/JPG)</label>
                                             <input type="file" name="upload_buku_tabungan" class="form-control @error('upload_buku_tabungan') is-invalid @enderror">
                                             @error('upload_buku_tabungan') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                             @if(isset($pegawai) && optional($pegawai->dokumen)->upload_buku_tabungan)

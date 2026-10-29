@@ -41,6 +41,6 @@
             <input type="text" name="ttd_lokasi" {!! $f !!} class="form-control" maxlength="150" value="{{ old('ttd_lokasi', $e->ttd_lokasi ?? EK::TTD_LOKASI_BAWAAN) }}" aria-label="Lokasi TTD kontrak" data-wajib-bukan-tidak>
         </div>
     </div>
-    <textarea name="catatan_sdm" {!! $f !!} rows="2" class="form-control mb-2" maxlength="1000" placeholder="Catatan keputusan (wajib bila tidak diperpanjang)" data-catatan-keputusan>{{ old('catatan_sdm', $e->catatan_sdm) }}</textarea>
+    <textarea name="catatan_sdm" {!! $f !!} rows="2" class="form-control mb-2" maxlength="1000" placeholder="Wajib bila tidak diperpanjang. Contoh: kinerja di bawah target" data-catatan-keputusan>{{ old('catatan_sdm', $e->catatan_sdm) }}</textarea>
     <p class="small text-muted mb-2"><i class="bi bi-info-circle me-1"></i>Perpanjang: tanggal habis kontrak dimundurkan. Angkat tetap: status kerja jadi Tetap. Pegawai menerima notifikasi jadwal TTD.</p>
 </div>

@@ -43,7 +43,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(Logout::class, fn (Logout $e) => $e->user instanceof User
             && PencatatLog::tulis($e->user, 'logout', 'Akun', 'Logout dari sistem'));
         Event::listen(Failed::class, fn (Failed $e) => $e->user instanceof User
-            && PencatatLog::tulis($e->user, 'login', 'Akun', 'Percobaan login gagal (password salah)', 'gagal'));
+            && PencatatLog::tulis($e->user, 'login', 'Akun', 'Percobaan masuk gagal (kata sandi salah)', 'gagal'));
 
         $abilities = array_unique([
             ...array_merge(...array_values(User::ABILITIES)),

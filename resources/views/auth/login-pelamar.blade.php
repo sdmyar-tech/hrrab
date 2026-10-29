@@ -281,16 +281,16 @@
 
                     <div class="mb-3">
                         <label for="email" class="form-label">Email</label>
-                        <input type="email" id="email" name="email" class="form-control" placeholder="nama@gmail.com"
+                        <input type="email" id="email" name="email" class="form-control" placeholder="Contoh: nama@gmail.com"
                             value="{{ old('email') }}" required autofocus>
                     </div>
 
                     <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
+                        <label for="password" class="form-label">Kata Sandi</label>
                         <div class="input-group">
                             <input type="password" id="password" name="password" class="form-control"
-                                placeholder="Masukkan password" required>
-                            <button type="button" class="btn btn-toggle-password" id="toggle-password" aria-label="Tampilkan password" aria-pressed="false">
+                                placeholder="Masukkan kata sandi" required>
+                            <button type="button" class="btn btn-toggle-password" id="toggle-password" aria-label="Tampilkan kata sandi" aria-pressed="false">
                                 <i class="bi bi-eye" id="toggle-password-icon" aria-hidden="true"></i>
                             </button>
                         </div>
@@ -324,7 +324,7 @@
                     toggleIcon.classList.toggle('bi-eye', !isHidden);
                     toggleIcon.classList.toggle('bi-eye-slash', isHidden);
                     toggleBtn.setAttribute('aria-pressed', String(isHidden));
-                    toggleBtn.setAttribute('aria-label', isHidden ? 'Sembunyikan password' : 'Tampilkan password');
+                    toggleBtn.setAttribute('aria-label', isHidden ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi');
                 });
             }
         });

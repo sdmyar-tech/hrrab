@@ -40,14 +40,14 @@ class WajibPasswordController extends Controller
             'password_lama' => ['required', 'string', 'current_password'],
             'password' => ['required', 'string', 'confirmed', Password::min(8)->letters()->numbers(), 'different:password_lama'],
         ], [
-            'password_lama.required' => 'Isi password saat ini.',
-            'password_lama.current_password' => 'Password saat ini salah.',
-            'password.required' => 'Isi password baru.',
-            'password.confirmed' => 'Konfirmasi password baru tidak sama.',
-            'password.different' => 'Password baru harus berbeda dari password lama.',
-            'password.min' => 'Password baru minimal 8 karakter.',
-            'password.letters' => 'Password baru harus mengandung huruf.',
-            'password.numbers' => 'Password baru harus mengandung angka.',
+            'password_lama.required' => 'Isi kata sandi saat ini.',
+            'password_lama.current_password' => 'Kata sandi saat ini salah.',
+            'password.required' => 'Isi kata sandi baru.',
+            'password.confirmed' => 'Ulangan kata sandi baru tidak sama.',
+            'password.different' => 'Kata sandi baru harus berbeda dari kata sandi lama.',
+            'password.min' => 'Kata sandi baru minimal 8 karakter.',
+            'password.letters' => 'Kata sandi baru harus mengandung huruf.',
+            'password.numbers' => 'Kata sandi baru harus mengandung angka.',
         ]);
 
         $user->forceFill([
@@ -58,7 +58,7 @@ class WajibPasswordController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->to($this->beranda($user))->with('success', 'Password berhasil diganti. Silakan lanjutkan.');
+        return redirect()->to($this->beranda($user))->with('success', 'Kata sandi berhasil diganti. Silakan lanjutkan.');
     }
 
     /** Kepala SDM/Admin: nyalakan/matikan wajib ganti password untuk satu akun. */

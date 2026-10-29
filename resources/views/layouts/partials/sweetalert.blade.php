@@ -123,16 +123,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
             e.preventDefault();
             const msg = form.dataset.confirm || 'Yakin ingin melanjutkan?';
+            // Aksi destruktif (hapus, tolak, batalkan, nonaktifkan, …) → ikon peringatan + tombol merah berlabel kata kerjanya.
+            const bahaya = msg.match(/\b(hapus|tolak|batalkan|nonaktifkan|kosongkan|keluarkan|cabut)\b/i);
+            const kata = bahaya ? bahaya[1].charAt(0).toUpperCase() + bahaya[1].slice(1).toLowerCase() : null;
 
             Swal.fire({
-                icon: 'question',
+                icon: bahaya ? 'warning' : 'question',
                 title: 'Konfirmasi',
                 text: msg,
                 showCancelButton: true,
-                confirmButtonColor: '#880f12',
+                confirmButtonColor: bahaya ? '#dc3545' : '#880f12',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Ya, Lanjutkan',
-                cancelButtonText: 'Batal',
+                confirmButtonText: bahaya ? 'Ya, ' + kata : 'Ya, Lanjutkan',
+                // "Batal" di samping "Ya, Batalkan" membingungkan → "Kembali".
+                cancelButtonText: kata === 'Batalkan' ? 'Kembali' : 'Batal',
                 reverseButtons: true,
             }).then((result) => {
                 if (result.isConfirmed) {

@@ -37,7 +37,7 @@
                         <div class="mb-3">
                             <label class="form-label" for="judul">Judul</label>
                             <input type="text" name="judul" id="judul" class="form-control @error('judul') is-invalid @enderror" maxlength="150" required
-                                value="{{ old('judul', $pengumuman->judul) }}" placeholder="mis. Kajian Rutin Rabu Sore">
+                                value="{{ old('judul', $pengumuman->judul) }}" placeholder="Contoh: Kajian Rutin Rabu Sore">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Kategori</label>
@@ -51,7 +51,7 @@
                         <div>
                             <label class="form-label" for="isi">Isi</label>
                             <textarea name="isi" id="isi" rows="7" class="form-control @error('isi') is-invalid @enderror" maxlength="3000" required
-                                placeholder="Tuliskan informasi lengkap: tujuan, susunan acara, pakaian, dll.">{{ old('isi', $pengumuman->isi) }}</textarea>
+                                placeholder="Contoh: Kajian rutin bersama Ustaz Ahmad. Peserta memakai baju putih dan membawa Al-Qur&#39;an.">{{ old('isi', $pengumuman->isi) }}</textarea>
                         </div>
                     </section>
 
@@ -94,7 +94,7 @@
                         </div>
                         <div>
                             <label class="form-label small" for="lokasi">Lokasi</label>
-                            <input type="text" name="lokasi" id="lokasi" class="form-control" maxlength="150" value="{{ old('lokasi', $pengumuman->lokasi) }}" placeholder="mis. Masjid Yayasan, atau tempel link Google Maps">
+                            <input type="text" name="lokasi" id="lokasi" class="form-control" maxlength="150" value="{{ old('lokasi', $pengumuman->lokasi) }}" placeholder="Contoh: Masjid Yayasan atau link Google Maps">
                         </div>
                     </section>
 

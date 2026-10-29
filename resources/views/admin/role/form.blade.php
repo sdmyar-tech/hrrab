@@ -44,7 +44,7 @@
                         <div class="mb-3">
                             <label class="form-label" for="rl-nama">Nama role</label>
                             <input type="text" name="nama" id="rl-nama" class="form-control @error('nama') is-invalid @enderror" maxlength="100" required
-                                value="{{ old('nama', $role->nama) }}" placeholder="mis. Staf Keuangan">
+                                value="{{ old('nama', $role->nama) }}" placeholder="Contoh: Staf Keuangan">
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="rl-ket">Keterangan <span class="text-muted fw-normal">(opsional)</span></label>

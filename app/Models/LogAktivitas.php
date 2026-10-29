@@ -12,8 +12,8 @@ class LogAktivitas extends Model
     public const UPDATED_AT = null;
 
     public const AKSI = [
-        'login' => ['Login', 'text-bg-success', 'bi-box-arrow-in-right'],
-        'logout' => ['Logout', 'text-bg-secondary', 'bi-box-arrow-right'],
+        'login' => ['Masuk', 'text-bg-success', 'bi-box-arrow-in-right'],
+        'logout' => ['Keluar', 'text-bg-secondary', 'bi-box-arrow-right'],
         'tambah' => ['Tambah', 'text-bg-primary', 'bi-plus-circle'],
         'ubah' => ['Ubah', 'text-bg-info', 'bi-pencil'],
         'hapus' => ['Hapus', 'text-bg-danger', 'bi-trash'],

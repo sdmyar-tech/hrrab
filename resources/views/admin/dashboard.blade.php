@@ -210,7 +210,7 @@
                         <h2 class="h5 mb-1 section-title"><i class="bi bi-person-lines-fill" aria-hidden="true"></i><span>Anggota {{ $labelLingkup }}</span></h2>
                         <p class="text-muted mb-0">{{ $anggota->count() }} pegawai aktif &middot; {{ $anggota->where('cuti', true)->count() }} sedang cuti</p>
                     </div>
-                    <input type="search" class="form-control form-control-sm" style="max-width:240px;" placeholder="Cari nama / jabatan..." data-cari-anggota aria-label="Cari anggota">
+                    <input type="search" class="form-control form-control-sm" style="max-width:240px;" placeholder="Cari pegawai, contoh: Siti atau Guru" data-cari-anggota aria-label="Cari anggota">
                 </div>
                 <div class="table-responsive dash-scroll">
                     <table class="table align-middle mb-0 small" id="tabel-anggota">
@@ -359,7 +359,7 @@
                 @if ($akunPerRole)
                     <div class="col-12 {{ $pipeline ? 'col-xl-6' : '' }}">
                         <div class="panel h-100">
-                            <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-lock me-1"></i>Akun Login per Role</h2>
+                            <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-lock me-1"></i>Akun per Role</h2>
                             @include('partials.viz.batang', ['items' => collect(\App\Models\Role::bawaanAktif())->map(fn ($r) => [
                                 'label' => \App\Models\User::roleLabelFor($r), 'jumlah' => (int) ($akunPerRole[$r] ?? 0), 'url' => route('admin.users.index', ['role' => $r]),
                             ])->all(), 'satuan' => 'akun'])

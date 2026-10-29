@@ -48,8 +48,8 @@ class LoginController extends Controller
         ], [
             'email.required' => 'Email wajib diisi.',
             'email.email' => 'Format email tidak valid.',
-            'password.required' => 'Password wajib diisi.',
-            'password.min' => 'Password minimal 6 karakter.',
+            'password.required' => 'Kata sandi wajib diisi.',
+            'password.min' => 'Kata sandi minimal 6 karakter.',
         ]);
 
         $user = User::where('email', $request->email)->first();
@@ -57,7 +57,7 @@ class LoginController extends Controller
         if (! $user || ! Hash::check($request->password, $user->password)) {
             return redirect()->back()
                 ->withInput($request->only('email'))
-                ->with('error', 'Email atau password yang Anda masukkan salah.');
+                ->with('error', 'Email atau kata sandi yang Anda masukkan salah.');
         }
 
         $isGuest = $user->isPelamar();

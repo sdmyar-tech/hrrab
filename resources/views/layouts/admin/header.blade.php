@@ -2,7 +2,7 @@
     $judulHalaman = match (true) {
         request()->routeIs('admin.pegawai.index') => ['Data Pegawai', 'Kelola data seluruh pegawai, informasi kepegawaian, dan dokumen terkait.'],
         request()->routeIs('admin.pegawai.create') => ['Tambah Pegawai Baru', 'Masukkan data pegawai baru ke dalam sistem kepegawaian.'],
-        request()->routeIs('admin.pegawai.edit') => ['Edit Data Pegawai', 'Perbarui informasi detail dan dokumen pegawai yang sudah ada.'],
+        request()->routeIs('admin.pegawai.edit') => ['Ubah Data Pegawai', 'Perbarui informasi detail dan dokumen pegawai yang sudah ada.'],
         default => ['Detail Pegawai', 'Profil lengkap, rincian kepegawaian, BPJS, dan dokumen.'],
     };
 @endphp
