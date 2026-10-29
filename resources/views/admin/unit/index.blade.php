@@ -136,28 +136,17 @@
             </div>
             <div class="modal-body">
                 <div class="small mb-3" data-sekarang></div>
-                <label class="form-label" for="un-cari-pegawai">Pilih koordinator baru <span class="text-muted fw-normal">(GM atau pegawai)</span></label>
+                <label class="form-label" for="un-cari-pegawai">Pilih koordinator baru <span class="text-muted fw-normal">(dari Data Pegawai)</span></label>
                 <input type="search" class="form-control form-control-sm mb-2" id="un-cari-pegawai" placeholder="Cari koordinator, contoh: Siti atau SMK" autocomplete="off">
                 <select name="koordinator" class="form-select" size="9" required>
-                    {{-- GM: yang punya data pegawai dicatat sebagai rangkap kepala; yang tidak, unit dicatat di akun GM. --}}
-                    <optgroup label="GM">
-                        @foreach ($gms as $g)
-                            @php $unitGm = $g->dataPegawai?->kepegawaian?->unit_kerja; @endphp
-                            <option value="{{ $g->data_pegawai_id ? 'pegawai:' . $g->data_pegawai_id : 'gm:' . $g->id }}" data-unit="{{ $unitGm }}" data-gm="1"
-                                data-tanpa-pegawai="{{ $g->data_pegawai_id ? '' : '1' }}" data-divisi='@json(array_values((array) $g->divisi))'
-                                data-cari="{{ mb_strtolower($g->name . ' gm ' . $unitGm . ' ' . implode(' ', (array) $g->divisi)) }}">
-                                {{ $g->name }} — GM{{ $g->divisi ? ' (' . implode(', ', array_slice((array) $g->divisi, 0, 3)) . (count((array) $g->divisi) > 3 ? ', …' : '') . ')' : '' }}
-                            </option>
-                        @endforeach
-                    </optgroup>
-                    <optgroup label="Pegawai">
-                        @foreach ($pegawaiOpsi as $pg)
-                            <option value="pegawai:{{ $pg->id }}" data-unit="{{ $pg->kepegawaian?->unit_kerja }}"
-                                data-cari="{{ mb_strtolower($pg->nama_lengkap . ' ' . $pg->nip . ' ' . $pg->kepegawaian?->unit_kerja) }}">
-                                {{ $pg->nama_lengkap }} — {{ $pg->kepegawaian?->jabatan ?? '-' }} ({{ $pg->kepegawaian?->unit_kerja ?? '-' }})
-                            </option>
-                        @endforeach
-                    </optgroup>
+                    <option value="" disabled hidden>Pilih pegawai…</option>
+                    @foreach ($pegawaiOpsi as $pg)
+                        @php $gmPg = in_array($pg->id, $gmPegawaiIds, true); @endphp
+                        <option value="pegawai:{{ $pg->id }}" data-unit="{{ $pg->kepegawaian?->unit_kerja }}" @if ($gmPg) data-gm="1" @endif
+                            data-cari="{{ mb_strtolower($pg->nama_lengkap . ' ' . $pg->nip . ' ' . $pg->kepegawaian?->unit_kerja . ($gmPg ? ' gm' : '')) }}">
+                            {{ $pg->nama_lengkap }}{{ $gmPg ? ' · GM' : '' }} — {{ $pg->kepegawaian?->jabatan ?? '-' }} ({{ $pg->kepegawaian?->unit_kerja ?? '-' }})
+                        </option>
+                    @endforeach
                 </select>
                 <div class="form-text" data-info-rangkap>Pilih pegawai untuk melihat cara pencatatannya.</div>
 

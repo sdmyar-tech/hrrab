@@ -29,8 +29,8 @@ class UnitController extends Controller
         $units = Unit::withCount('jabatans')->orderBy('urutan')->orderBy('nama')->get();
         $kepala = Penugasan::aktif()->kepala()->with('dataPegawai:id,nama_lengkap')->get()->groupBy('unit_kerja');
         $anggota = Penugasan::aktif()->select('unit_kerja', DB::raw('count(distinct data_pegawai_id) as n'))->groupBy('unit_kerja')->pluck('n', 'unit_kerja');
-        // GM juga bisa jadi koordinator/kepala unit (yang punya data pegawai → rangkap; yang tidak → dicatat di akun).
-        $gms = User::with('dataPegawai.kepegawaian')->where('role', User::ROLE_GM)->orderBy('name')->get();
+        // Koordinator dipilih dari Data Pegawai; pegawai yang akunnya GM ditandai di daftar.
+        $gmPegawaiIds = User::where('role', User::ROLE_GM)->whereNotNull('data_pegawai_id')->pluck('data_pegawai_id')->all();
 
         return view('admin.unit.index', [
             'units' => $units,
@@ -40,9 +40,8 @@ class UnitController extends Controller
             'gmKepala' => $units->mapWithKeys(fn (Unit $u) => [$u->nama => User::gmKepalaTanpaPegawai($u->nama)->get(['id', 'name'])]),
             'pegawaiOpsi' => DataPegawai::with('kepegawaian:id,data_pegawai_id,unit_kerja,jabatan')
                 ->whereHas('kepegawaian', fn ($q) => $q->where('status_rekrutmen', 'Aktif'))
-                ->whereNotIn('id', $gms->pluck('data_pegawai_id')->filter())   // GM sudah tampil di grup GM
                 ->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip']),
-            'gms' => $gms,
+            'gmPegawaiIds' => $gmPegawaiIds,
             'jabatanPerUnit' => Jabatan::perUnit(),
             'bisaKelola' => Auth::user()->can('kelola-sistem'),
         ]);
@@ -103,14 +102,14 @@ class UnitController extends Controller
     /** Tetapkan / ganti / kosongkan koordinator unit. */
     public function koordinator(Request $request, Unit $unit): RedirectResponse
     {
-        // Pilihan: "pegawai:<id data pegawai>" atau "gm:<id akun GM tanpa data pegawai>"; kosong = kosongkan koordinator.
+        // Pilihan hanya dari Data Pegawai: "pegawai:<id data pegawai>"; kosong = kosongkan koordinator.
         $data = $request->validate([
-            'koordinator' => ['nullable', 'string', 'regex:/^(pegawai|gm):\d+$/'],
+            'koordinator' => ['nullable', 'string', 'regex:/^pegawai:\d+$/'],
             'jabatan' => ['nullable', 'string', 'max:150'],
         ], ['koordinator.regex' => 'Pilihan koordinator tidak valid.']);
         [$jenis, $id] = ! empty($data['koordinator']) ? explode(':', $data['koordinator']) : [null, null];
         $baru = $jenis === 'pegawai' ? DataPegawai::findOrFail($id) : null;
-        $gm = $jenis === 'gm' ? User::where('role', User::ROLE_GM)->whereNull('data_pegawai_id')->findOrFail($id) : null;
+        $gm = null; // akun GM tanpa Data Pegawai tidak lagi dipilih dari sini (diatur di Kelola Akun)
         $jabatan = isset($data['jabatan']) ? mb_strtoupper(trim(preg_replace('/\s+/', ' ', $data['jabatan']))) : null;
 
         $peringatan = PenugasanService::tetapkanKoordinator($unit->nama, $baru, $jabatan ?: null, Auth::user(), $gm);
