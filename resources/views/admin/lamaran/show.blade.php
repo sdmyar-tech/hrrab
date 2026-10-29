@@ -77,7 +77,7 @@
                             <dt class="col-5 text-muted">Email</dt><dd class="col-7">{{ $pg?->email }}</dd>
                             <dt class="col-5 text-muted">No. HP</dt><dd class="col-7">{{ $pg?->no_hp }}</dd>
                             <dt class="col-5 text-muted">Jabatan Sekarang</dt><dd class="col-7">{{ $pg?->kepegawaian?->jabatan ?? '-' }}</dd>
-                            <dt class="col-5 text-muted">Unit Sekarang</dt><dd class="col-7">{{ $pg?->kepegawaian?->unit_kerja ?? '-' }}</dd>
+                            <dt class="col-5 text-muted">Bagian Sekarang</dt><dd class="col-7">{{ $pg?->kepegawaian?->unit_kerja ?? '-' }}</dd>
                             <dt class="col-5 text-muted">Status Kerja</dt><dd class="col-7">{{ $pg?->kepegawaian?->status_kerja ?? '-' }}</dd>
                         </dl>
                         @if ($pg)

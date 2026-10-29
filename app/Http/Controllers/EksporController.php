@@ -38,7 +38,7 @@ class EksporController extends Controller
             ]);
 
         return ExcelExporter::download(ExcelExporter::namaFile('jadwal-interview-saya'), [
-            'Tanggal', 'Jam', 'Kandidat', 'Posisi', 'Unit', 'Tahap', 'Lokasi', 'Status', 'Hasil', 'Catatan Hasil',
+            'Tanggal', 'Jam', 'Kandidat', 'Posisi', 'Bagian', 'Tahap', 'Lokasi', 'Status', 'Hasil', 'Catatan Hasil',
         ], $rows, 'Jadwal Interview');
     }
 
@@ -86,7 +86,7 @@ class EksporController extends Controller
         ]);
 
         return ExcelExporter::download(ExcelExporter::namaFile('riwayat-lembur-saya'), [
-            'Diajukan', 'Unit', 'Tanggal', 'Hari', 'Jam Mulai', 'Jam Selesai', 'Jumlah Jam', 'Uraian Tugas', 'Status', 'Tahap', 'Catatan',
+            'Diajukan', 'Bagian', 'Tanggal', 'Hari', 'Jam Mulai', 'Jam Selesai', 'Jumlah Jam', 'Uraian Tugas', 'Status', 'Tahap', 'Catatan',
         ], $rows, 'Riwayat Lembur');
     }
 
@@ -139,7 +139,7 @@ class EksporController extends Controller
         return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('lamaran-saya'), [
             [
                 'name' => 'Lamaran',
-                'headers' => ['Tanggal Melamar', 'Posisi', 'Unit', 'Tahap', 'Status'],
+                'headers' => ['Tanggal Melamar', 'Posisi', 'Bagian', 'Tahap', 'Status'],
                 'rows' => $lamarans->map(fn (Lamaran $l) => [optional($l->created_at)->format('d-m-Y'), $l->judulPosisi(), $l->unitKerjaTujuan(), $l->tahapLabel(), $l->statusLabel()]),
             ],
             ...self::sheetJadwal($lamarans),

@@ -16,20 +16,20 @@ class EksporDashboard
 
         $lembar = [
             ['name' => 'Ringkasan', 'headers' => ['Bagian', 'Keterangan', 'Nilai', 'Detail'], 'rows' => [
-                ['Lingkup', 'Unit', $d['labelLingkup'], null],
+                ['Lingkup', 'Bagian', $d['labelLingkup'], null],
                 ['Lingkup', 'Diekspor', now()->format('d-m-Y H:i'), null],
                 ...array_map(fn ($k) => ['Kartu', $k['label'], $k['nilai'], $k['meta'] ?? null], $d['kartu']),
                 ...array_map(fn ($t) => ['Perlu tindakan', $t['label'], $t['jumlah'], null], $d['tugas']),
                 ...array_map(fn ($p) => ['Pipeline rekrutmen', $p['label'], $p['jumlah'], null], $d['pipeline'] ?? []),
                 ...collect($d['akunPerRole'] ?? [])->map(fn ($n, $role) => ['Akun per role', User::roleLabelFor($role), $n, null])->values()->all(),
             ]],
-            ['name' => 'Per Unit', 'headers' => ['Unit', 'Kepala', 'Pegawai', 'Laki-laki', 'Perempuan', ...self::STATUS_KERJA,
+            ['name' => 'Per Bagian', 'headers' => ['Bagian', 'Kepala', 'Pegawai', 'Laki-laki', 'Perempuan', ...self::STATUS_KERJA,
                 'Kontrak Habis ≤60 Hari', 'Cuti Hari Ini', 'Cuti Bulan Ini (hari)', 'Lembur Bulan Ini (jam)', 'Pengajuan Menunggu'],
                 'rows' => collect($d['ringkasanUnit'])->map(fn ($u) => [
                     $u['unit'], $u['kepala'], $u['jumlah'], $u['laki'], $u['perempuan'], ...$status($u['status']),
                     $u['kontrak_habis'], $u['cuti_hari_ini'], $u['cuti_bulan_ini'], $u['lembur_bulan_ini'], $u['pending'],
                 ])],
-            ['name' => 'Per Area Kerja', 'headers' => ['Area', 'Pegawai', 'Laki-laki', 'Perempuan', ...self::STATUS_KERJA, 'Kontrak Habis ≤60 Hari', 'Unit'],
+            ['name' => 'Per Area Kerja', 'headers' => ['Area', 'Pegawai', 'Laki-laki', 'Perempuan', ...self::STATUS_KERJA, 'Kontrak Habis ≤60 Hari', 'Bagian'],
                 'rows' => collect($d['ringkasanArea'])->map(fn ($a) => [
                     $a['area'], $a['jumlah'], $a['laki'], $a['perempuan'], ...$status($a['status']), $a['kontrak_habis'],
                     collect($a['unit'])->map(fn ($n, $u) => "{$u} ({$n})")->implode(', '),
@@ -46,16 +46,16 @@ class EksporDashboard
                 'rows' => array_map(fn ($c, $l) => [$c['judul'], $c['jumlah'], $l['jumlah']], $d['tren']['cuti'], $d['tren']['lembur'])];
         }
 
-        $lembar[] = ['name' => 'Kontrak Habis ≤60 Hari', 'headers' => ['Nama', 'NIP', 'Unit', 'Jabatan', 'Habis Kontrak', 'Sisa Hari'],
+        $lembar[] = ['name' => 'Kontrak Habis ≤60 Hari', 'headers' => ['Nama', 'NIP', 'Bagian', 'Jabatan', 'Habis Kontrak', 'Sisa Hari'],
             'rows' => $d['kontrakHabis']->map(fn ($p) => [
                 $p->nama_lengkap, $p->nip, $p->kepegawaian?->unit_kerja, $p->kepegawaian?->jabatan,
                 $p->kepegawaian?->tanggal_habis_kontrak?->format('d-m-Y'), (int) now()->startOfDay()->diffInDays($p->kepegawaian?->tanggal_habis_kontrak, false),
             ])];
-        $lembar[] = ['name' => 'Cuti Hari Ini', 'headers' => ['Nama', 'Unit', 'Jenis', 'Mulai', 'Selesai', 'Lama (hari)', 'Pengganti'],
+        $lembar[] = ['name' => 'Cuti Hari Ini', 'headers' => ['Nama', 'Bagian', 'Jenis', 'Mulai', 'Selesai', 'Lama (hari)', 'Pengganti'],
             'rows' => $d['cutiHariIni']->map(fn ($c) => [
                 $c->dataPegawai?->nama_lengkap, $c->unit_kerja, $c->jenisLabel(), $c->tanggal_mulai->format('d-m-Y'), $c->tanggal_selesai->format('d-m-Y'), $c->lama_cuti, $c->pengganti_nama,
             ])];
-        $lembar[] = ['name' => 'Pegawai Baru', 'headers' => ['Nama', 'NIP', 'Unit', 'Jabatan', 'Tanggal Masuk'],
+        $lembar[] = ['name' => 'Pegawai Baru', 'headers' => ['Nama', 'NIP', 'Bagian', 'Jabatan', 'Tanggal Masuk'],
             'rows' => $d['pegawaiBaru']->map(fn ($p) => [
                 $p->nama_lengkap, $p->nip, $p->kepegawaian?->unit_kerja, $p->kepegawaian?->jabatan, $p->kepegawaian?->tanggal_masuk?->format('d-m-Y'),
             ])];

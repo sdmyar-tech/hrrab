@@ -25,14 +25,14 @@
 
                         @if (count($unitOptions) > 1)
                             <div class="mb-3">
-                                <label for="unit_kerja" class="form-label">Unit Tempat Lembur</label>
+                                <label for="unit_kerja" class="form-label">Bagian Tempat Lembur</label>
                                 <select name="unit_kerja" id="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror" required>
-                                    <option value="">-- Pilih unit --</option>
+                                    <option value="">-- Pilih bagian --</option>
                                     @foreach ($unitOptions as $unit)
-                                        <option value="{{ $unit }}" @selected(old('unit_kerja') === $unit)>{{ $unit }}{{ $loop->first ? ' (unit utama)' : '' }}</option>
+                                        <option value="{{ $unit }}" @selected(old('unit_kerja') === $unit)>{{ $unit }}{{ $loop->first ? ' (bagian utama)' : '' }}</option>
                                     @endforeach
                                 </select>
-                                <div class="form-text">Anda bertugas di beberapa unit. Pengajuan akan diproses kepala unit yang dipilih.</div>
+                                <div class="form-text">Anda bertugas di beberapa bagian. Pengajuan akan diproses kepala bagian yang dipilih.</div>
                                 @error('unit_kerja')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror

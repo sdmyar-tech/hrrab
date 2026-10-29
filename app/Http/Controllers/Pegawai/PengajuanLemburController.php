@@ -60,8 +60,8 @@ class PengajuanLemburController extends Controller
             'jam_mulai' => ['required', 'date_format:H:i'],
             'jam_selesai' => ['required', 'date_format:H:i', 'after:jam_mulai'],
         ], [
-            'unit_kerja.required' => 'Pilih unit tempat Anda lembur.',
-            'unit_kerja.in' => 'Unit tidak valid untuk pengajuan lembur Anda.',
+            'unit_kerja.required' => 'Pilih bagian tempat Anda lembur.',
+            'unit_kerja.in' => 'Bagian tidak valid untuk pengajuan lembur Anda.',
             'tanggal.required' => 'Tanggal wajib diisi.',
             'uraian_tugas.required' => 'Uraian tugas wajib diisi.',
             'jam_mulai.required' => 'Jam mulai wajib diisi.',

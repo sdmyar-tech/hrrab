@@ -42,9 +42,9 @@
                         <input type="text" name="nama" class="form-control @error('nama') is-invalid @enderror" placeholder="Jabatan baru, contoh: GURU" aria-label="Nama jabatan baru"
                             value="{{ $errors->ubah->any() ? '' : old('nama') }}" maxlength="150" required autocomplete="off">
                         {{-- Jabatan dibuat langsung di unitnya (unit lain bisa ditambah lewat Ubah). --}}
-                        <select name="unit_id" class="form-select jb-unit-tambah" aria-label="Unit jabatan">
-                            <option value="">-- Pilih unit --</option>
-                            <option value="">Tanpa unit</option>
+                        <select name="unit_id" class="form-select jb-unit-tambah" aria-label="Bagian jabatan">
+                            <option value="">-- Pilih bagian --</option>
+                            <option value="">Tanpa bagian</option>
                             @foreach ($units as $un)
                                 <option value="{{ $un->id }}" @selected(old('unit_id') == $un->id || (! old('unit_id') && request('unit') === $un->nama))>{{ $un->nama }}</option>
                             @endforeach
@@ -58,9 +58,9 @@
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="search" id="jb-cari" class="form-control" placeholder="Cari jabatan, contoh: Guru" aria-label="Cari jabatan menurut nama" value="{{ request('q') }}" autocomplete="off">
                     </div>
-                    <select id="jb-saring-unit" class="form-select" aria-label="Saring per unit">
-                        <option value="">Semua unit</option>
-                        <option value="-">Belum ada unit</option>
+                    <select id="jb-saring-unit" class="form-select" aria-label="Saring per bagian">
+                        <option value="">Semua bagian</option>
+                        <option value="-">Belum ada bagian</option>
                         @foreach ($units as $un)
                             <option value="{{ $un->nama }}" @selected(request('unit') === $un->nama)>{{ $un->nama }}</option>
                         @endforeach
@@ -74,7 +74,7 @@
 
             <div class="jb-info small text-muted px-3 py-2">
                 Menampilkan <strong id="jb-tampil">{{ $total }}</strong> dari {{ $total }} jabatan.
-                Klik nama atau <strong>Ubah</strong> untuk mengganti nama (semua data ikut diperbarui) atau <strong>unitnya</strong> · jabatan hanya muncul di pilihan unit yang ditautkan · hapus jabatan yang dipakai akan meminta jabatan pengganti.
+                Klik nama atau <strong>Ubah</strong> untuk mengganti nama (semua data ikut diperbarui) atau <strong>bagiannya</strong> · jabatan hanya muncul di pilihan bagian yang ditautkan · hapus jabatan yang dipakai akan meminta jabatan pengganti.
             </div>
 
             <ul class="jb-daftar list-unstyled mb-0" id="jb-daftar">
@@ -86,12 +86,12 @@
                         data-units='@json($j->units->pluck('nama'))' data-unit-ids='@json($j->units->pluck('id'))'>
                         <div class="jb-tampil">
                             <span class="jb-nama-wadah">
-                                <button type="button" class="jb-nama" data-ubah-jabatan title="Klik untuk mengubah nama / unit">{{ $j->nama }}</button>
+                                <button type="button" class="jb-nama" data-ubah-jabatan title="Klik untuk mengubah nama / bagian">{{ $j->nama }}</button>
                                 <span class="jb-unit">
                                     @forelse ($j->units as $un)
                                         <span class="jb-unit-chip">{{ $un->nama }}</span>
                                     @empty
-                                        <span class="jb-unit-chip kosong" title="Belum ditautkan ke unit — tidak muncul di daftar jabatan unit mana pun">tanpa unit</span>
+                                        <span class="jb-unit-chip kosong" title="Belum ditautkan ke bagian — tidak muncul di daftar jabatan bagian mana pun">tanpa bagian</span>
                                     @endforelse
                                 </span>
                             </span>
@@ -193,10 +193,10 @@
                 <input type="hidden" name="unit_dikirim" value="1">
                 <div class="mt-3">
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="form-label mb-0">Unit</label>
+                        <label class="form-label mb-0">Bagian</label>
                         <span class="form-text m-0" data-jumlah-unit></span>
                     </div>
-                    <input type="search" class="form-control form-control-sm mb-2" placeholder="Saring unit, contoh: SMK" aria-label="Saring daftar unit" data-cari-unit autocomplete="off">
+                    <input type="search" class="form-control form-control-sm mb-2" placeholder="Saring bagian, contoh: SMK" aria-label="Saring daftar bagian" data-cari-unit autocomplete="off">
                     <div class="jb-pilih-unit" data-pilih-unit>
                         @foreach ($units as $un)
                             <label class="form-check" data-nama-unit="{{ $un->nama }}">
@@ -394,10 +394,10 @@
             formGabung.pengganti_id.value = kembar ? idKembar : '';
             formGabung.action = aktif.dataset.urlHapus;
             const unitBerubah = unitDipilih() !== unitAwal;
-            formUbah.querySelector('[data-jumlah-unit]').textContent = centangUnit.filter((c) => c.checked).length + ' unit dipilih';
+            formUbah.querySelector('[data-jumlah-unit]').textContent = centangUnit.filter((c) => c.checked).length + ' bagian dipilih';
             tombolSimpan.disabled = !nama || kembar || (nama === lama && !unitBerubah);
             pesanNama.textContent = !nama ? 'Nama jabatan wajib diisi.'
-                : nama === lama ? (unitBerubah ? 'Nama tetap; unit akan diperbarui.' : 'Belum ada perubahan.')
+                : nama === lama ? (unitBerubah ? 'Nama tetap; bagian akan diperbarui.' : 'Belum ada perubahan.')
                 : kembar ? 'Nama ini sudah dipakai jabatan lain.'
                 : 'Akan disimpan sebagai: ' + nama;
             pesanNama.classList.toggle('text-danger', !nama || kembar);

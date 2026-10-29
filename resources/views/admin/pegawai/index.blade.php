@@ -30,9 +30,9 @@
                             ])
                         </div>
                         <div class="col-6 col-md-3 col-xl-3">
-                            <select name="unit_kerja" class="form-select form-select-sm" aria-label="Unit kerja"
+                            <select name="unit_kerja" class="form-select form-select-sm" aria-label="Bagian"
                                 onchange="document.getElementById('filterPegawaiForm').submit()">
-                                <option value="">Semua Unit Kerja</option>
+                                <option value="">Semua Bagian</option>
                                 @foreach ($unitKerjaOptions as $unit)
                                     <option value="{{ $unit }}"
                                         {{ request('unit_kerja') == $unit ? 'selected' : '' }}>{{ $unit }}</option>

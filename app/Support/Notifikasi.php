@@ -120,7 +120,7 @@ class Notifikasi
         $reviewer = User::whereIn('role', [User::ROLE_KEPALA_SDM, User::ROLE_GM, User::ROLE_PEMBINA])->get()
             ->filter(fn (User $u) => RekrutmenAccess::canReviewFormasi($u, $formasi));
 
-        self::kirim($reviewer, $judul, "{$formasi->jumlah_dibutuhkan} orang {$formasi->jabatan} untuk unit {$formasi->unit_kerja}.",
+        self::kirim($reviewer, $judul, "{$formasi->jumlah_dibutuhkan} orang {$formasi->jabatan} untuk bagian {$formasi->unit_kerja}.",
             route('admin.pengajuan-formasi.index'), Pemberitahuan::JENIS_TUGAS, 'bi-person-plus', null, TugasNotifikasi::penanda(TugasNotifikasi::FORMASI, $formasi->id));
     }
 

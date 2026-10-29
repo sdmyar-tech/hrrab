@@ -172,15 +172,15 @@
 
                         <div data-posisi="manual">
                             <div class="mb-3">
-                                <label class="form-label" for="unit-tujuan">Unit Kerja Tujuan</label>
+                                <label class="form-label" for="unit-tujuan">Bagian Tujuan</label>
                                 <select name="unit_kerja_tujuan" id="unit-tujuan" class="form-select @error('unit_kerja_tujuan') is-invalid @enderror">
-                                    <option value="">-- Pilih Unit Kerja --</option>
+                                    <option value="">-- Pilih Bagian --</option>
                                     @foreach (config('kepegawaian.unit_kerja') as $u)
                                         <option value="{{ $u }}" {{ old('unit_kerja_tujuan') === $u ? 'selected' : '' }}>{{ $u }}</option>
                                     @endforeach
                                 </select>
                                 @error('unit_kerja_tujuan')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                <div class="form-text">Interview 2 otomatis dengan Kepala Bagian unit ini.</div>
+                                <div class="form-text">Interview 2 otomatis dengan Kepala Bagian di bagian ini.</div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label" for="jabatan-tujuan">Jabatan Tujuan</label>
@@ -227,7 +227,7 @@
                     <section class="panel p-4">
                         <h2 class="h6 fw-bold mb-3"><i class="bi bi-diagram-3 me-1"></i>Gambaran Posisi di Bagan</h2>
                         <div data-bagan-kandidat>
-                            <p class="small text-muted mb-0">Pilih lowongan, atau unit kerja & jabatan tujuan, untuk melihat posisi yang akan diisi kandidat.</p>
+                            <p class="small text-muted mb-0">Pilih lowongan, atau bagian & jabatan tujuan, untuk melihat posisi yang akan diisi kandidat.</p>
                         </div>
                     </section>
                 </div>
@@ -265,7 +265,7 @@
             const nilai = jabatan.value || jabatanLama;
             jabatan.innerHTML = '';
             if (!unit.value) {
-                jabatan.add(new Option('-- Pilih unit kerja dulu --', ''));
+                jabatan.add(new Option('-- Pilih bagian dulu --', ''));
                 return;
             }
             jabatan.add(new Option('-- Pilih Jabatan --', ''));
@@ -277,7 +277,7 @@
                 daftar.forEach((j) => g.append(new Option(j, j, false, j === nilai)));
                 jabatan.append(g);
             };
-            grup('Jabatan di unit ' + unit.value, diUnit);
+            grup('Jabatan di bagian ' + unit.value, diUnit);
             grup(diUnit.length ? 'Jabatan lainnya' : 'Semua jabatan', semuaJabatan.filter((j) => !diUnit.includes(j)));
         }
 

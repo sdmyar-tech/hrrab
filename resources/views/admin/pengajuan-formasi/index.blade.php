@@ -32,7 +32,7 @@
                     <div class="col-12 col-md-6 col-xl-4">
                         @include('partials.daftar-cari', [
                             'cariTeks' => 'Cari formasi, contoh: Guru SMK',
-                            'cariLabel' => 'Cari pengajuan formasi menurut jabatan atau unit kerja',
+                            'cariLabel' => 'Cari pengajuan formasi menurut jabatan atau bagian',
                         ])
                     </div>
                     <div class="col-12 col-md-3">
@@ -120,7 +120,7 @@
                                         @php
                                             $tahap = $item->isPending() ? \App\Support\RekrutmenAccess::tahapPersetujuan($item) : null;
                                             $langkah = array_filter([
-                                                'gm' => \App\Support\RekrutmenAccess::perluGm($item) ? ['GM unit', $item->gm_disetujui_oleh, $item->gmPenyetuju] : null,
+                                                'gm' => \App\Support\RekrutmenAccess::perluGm($item) ? ['GM bagian', $item->gm_disetujui_oleh, $item->gmPenyetuju] : null,
                                                 'owner' => ['Owner', $item->owner_disetujui_oleh, $item->ownerPenyetuju],
                                             ]);
                                         @endphp

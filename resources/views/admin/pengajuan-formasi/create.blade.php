@@ -29,9 +29,9 @@
                 @if (auth()->user()->isAdmin() || count($unitOptions) > 1)
                     {{-- Admin: semua unit. Kepala beberapa unit: hanya unit yang dipimpinnya. --}}
                     <div class="mb-3">
-                        <label class="form-label" for="f-unit">Unit <span class="text-muted fw-normal">({{ auth()->user()->isAdmin() ? 'Admin' : 'unit yang Anda pimpin' }})</span></label>
+                        <label class="form-label" for="f-unit">Bagian <span class="text-muted fw-normal">({{ auth()->user()->isAdmin() ? 'Admin' : 'bagian yang Anda pimpin' }})</span></label>
                         <select name="unit_kerja" id="f-unit" class="form-select @error('unit_kerja') is-invalid @enderror" required>
-                            @if (auth()->user()->isAdmin())<option value="">-- Pilih unit --</option>@endif
+                            @if (auth()->user()->isAdmin())<option value="">-- Pilih bagian --</option>@endif
                             @foreach ($unitOptions as $u)
                                 <option value="{{ $u }}" @selected($unitAwal === $u)>{{ $u }}</option>
                             @endforeach
@@ -41,8 +41,8 @@
                 @else
                     {{-- Hanya satu unit → terkunci. --}}
                     <div class="mb-3">
-                        <label class="form-label">Unit</label>
-                        <div class="unit-terkunci"><i class="bi bi-lock-fill"></i><strong>{{ $unitOptions[0] ?? '-' }}</strong><span class="text-muted small ms-auto">unit Anda</span></div>
+                        <label class="form-label">Bagian</label>
+                        <div class="unit-terkunci"><i class="bi bi-lock-fill"></i><strong>{{ $unitOptions[0] ?? '-' }}</strong><span class="text-muted small ms-auto">bagian Anda</span></div>
                         <input type="hidden" name="unit_kerja" id="f-unit" value="{{ $unitOptions[0] ?? '' }}">
                         @error('unit_kerja')<div class="text-danger small">{{ $message }}</div>@enderror
                     </div>
@@ -61,7 +61,7 @@
                 </div>
                 @error('jenis_kebutuhan')<div class="text-danger small">{{ $message }}</div>@enderror
                 <p class="form-text mb-3" data-info-jenis>
-                    <span data-jenis="penambahan" @if ($jenis !== 'penambahan') hidden @endif><i class="bi bi-people me-1"></i>Penambahan karyawan disetujui bertahap: <strong>GM unit</strong>, lalu <strong>Owner</strong>.</span>
+                    <span data-jenis="penambahan" @if ($jenis !== 'penambahan') hidden @endif><i class="bi bi-people me-1"></i>Penambahan karyawan disetujui bertahap: <strong>GM bagian</strong>, lalu <strong>Owner</strong>.</span>
                     <span data-jenis="replacement" @if ($jenis !== 'replacement') hidden @endif><i class="bi bi-person-check me-1"></i>Replacement direview Kepala SDM/GM seperti biasa. Pegawai yang bisa dipilih di bagan sebanyak jumlah yang dibutuhkan.</span>
                 </p>
 
@@ -128,7 +128,7 @@
                     <div class="col-sm-6">
                         <label class="form-label" for="f-jabatan">Jabatan / posisi</label>
                         <select name="jabatan" id="f-jabatan" class="form-select @error('jabatan') is-invalid @enderror" required></select>
-                        <div class="form-text" data-info-jabatan>Hanya jabatan yang ada di unit ini.</div>
+                        <div class="form-text" data-info-jabatan>Hanya jabatan yang ada di bagian ini.</div>
                         @error('jabatan')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-sm-6">
@@ -218,7 +218,7 @@
                 <h2 class="h6 fw-bold mb-3"><i class="bi bi-signpost-split"></i>Alur Pengajuan</h2>
                 <ol class="alur-langkah">
                     <li><strong>Diajukan</strong><span>Anda mengisi kebutuhan pegawai beserta alasannya.</span></li>
-                    <li><strong>Disetujui</strong><span><b>Penambahan karyawan</b>: bertahap, GM unit dulu lalu Owner (keduanya wajib). <b>Replacement</b>: {{ auth()->user()->isKepalaSdm() ? 'GM' : 'Kepala SDM atau GM' }} (unit SMK oleh Pembina).</span></li>
+                    <li><strong>Disetujui</strong><span><b>Penambahan karyawan</b>: bertahap, GM bagian dulu lalu Owner (keduanya wajib). <b>Replacement</b>: {{ auth()->user()->isKepalaSdm() ? 'GM' : 'Kepala SDM atau GM' }} (bagian SMK oleh Pembina).</span></li>
                     <li><strong>Lowongan terbit</strong><span>Bila disetujui, lowongan otomatis tampil di halaman publik dan pelamar bisa mulai melamar.</span></li>
                 </ol>
                 <div class="alert alert-light border small mb-0">
@@ -267,7 +267,7 @@
             const daftar = perUnit[unit.value] || [];
             const nilai = jabatan.value || lama;
             jabatan.innerHTML = '';
-            jabatan.add(new Option(unit.value ? (daftar.length ? '-- Pilih jabatan --' : 'Belum ada jabatan di unit ini') : '-- Pilih unit dulu --', ''));
+            jabatan.add(new Option(unit.value ? (daftar.length ? '-- Pilih jabatan --' : 'Belum ada jabatan di bagian ini') : '-- Pilih bagian dulu --', ''));
             daftar.forEach((j) => jabatan.add(new Option(j, j, false, j === nilai)));
             jabatan.disabled = !daftar.length;
         }
@@ -521,7 +521,7 @@
             const akar = el('div', 'bagan-akar');
             const deretKepala = el('div', 'bagan-akar-deret');
             // Kepala = pegawai aktif (hijau); belum ada kepala tercatat → abu.
-            (data.kepala.length ? data.kepala : ['Kepala unit belum tercatat']).forEach((nm) => { const k = node((data.kepala.length ? 'aktif' : 'nonaktif') + ' kepala', 'bi-person-badge', nm); k.disabled = true; deretKepala.append(k); });
+            (data.kepala.length ? data.kepala : ['Kepala bagian belum tercatat']).forEach((nm) => { const k = node((data.kepala.length ? 'aktif' : 'nonaktif') + ' kepala', 'bi-person-badge', nm); k.disabled = true; deretKepala.append(k); });
             akar.append(el('div', 'bagan-akar-label', 'Kepala · ' + (unit.value || '-')), deretKepala);
             wadah.append(akar);
 
@@ -541,7 +541,7 @@
             });
 
             if (!cabang.length) {
-                wadah.append(el('div', 'bagan-kosong-info', kata ? 'Tidak ada pegawai yang cocok.' : 'Belum ada pegawai tercatat di unit ini.'));
+                wadah.append(el('div', 'bagan-kosong-info', kata ? 'Tidak ada pegawai yang cocok.' : 'Belum ada pegawai tercatat di bagian ini.'));
             } else if (cabang.length === 1) {
                 // Satu jabatan saja: pakai lebar penuh (bukan setengah) untuk berjajar/rak.
                 const lebarPenuh = Math.max(layar.clientWidth - 24, 200);
@@ -595,7 +595,7 @@
                 : mode === 'penambahan'
                     ? 'Klik kotak merah "Posisi kosong" (+) pada jabatan yang dibutuhkan untuk mengajukan pegawai baru (jabatan & jumlah terisi otomatis).'
                         + (n && jabatan.value ? ' Sekarang ' + n + ' posisi baru di ' + jabatan.value + '; klik kotaknya untuk ubah keterangan atau hapus.' : '')
-                    : 'Bagan menampilkan susunan pegawai unit Anda.';
+                    : 'Bagan menampilkan susunan pegawai bagian Anda.';
         }
 
         form.querySelectorAll('[data-zoom]').forEach((b) => b.addEventListener('click', () => {
@@ -656,7 +656,7 @@
             const jab = dipilih.size ? jabatanDari([...dipilih][0]) : Object.keys(grup).find((j) => samaJabatan(j, jabatan.value));
             return jab
                 ? { n: grup[jab].length, di: jab }
-                : { n: Object.values(grup).reduce((s, g) => s + g.length, 0), di: 'unit ' + (unit.value || '-') };
+                : { n: Object.values(grup).reduce((s, g) => s + g.length, 0), di: 'bagian ' + (unit.value || '-') };
         }
         const hitung = () => {
             const n = total();

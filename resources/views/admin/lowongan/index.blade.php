@@ -30,7 +30,7 @@
                     <div class="col-12 col-md-6 col-xl-4">
                         @include('partials.daftar-cari', [
                             'cariTeks' => 'Cari lowongan, contoh: Guru Matematika',
-                            'cariLabel' => 'Cari lowongan menurut judul, jabatan, atau unit kerja',
+                            'cariLabel' => 'Cari lowongan menurut judul, jabatan, atau bagian',
                         ])
                     </div>
                     <div class="col-12 col-md-3">

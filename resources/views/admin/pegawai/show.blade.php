@@ -210,7 +210,7 @@
                                 <i class="bi {{ $aktif ? 'bi-check-circle-fill' : 'bi-pause-circle' }}"></i> {{ $status }}
                             </span>
                             @if ($kepeg?->unit_kerja)
-                                <span class="pd-chip pd-chip-primary" title="Unit utama">
+                                <span class="pd-chip pd-chip-primary" title="Bagian utama">
                                     <i class="bi bi-building"></i> {{ $kepeg->unit_kerja }}{{ $utama?->isKepala() ? ' · Kepala' : '' }}
                                 </span>
                             @endif
@@ -346,7 +346,7 @@
                             'NIP' => $pegawai->nip,
                             'Jabatan Utama' => $kepeg?->jabatan,
                             'Jabatan Tambahan' => $kepeg?->jabatan_tambahan,
-                            'Unit Kerja Utama' => $kepeg?->unit_kerja,
+                            'Bagian Utama' => $kepeg?->unit_kerja,
                             'Lokasi Kerja' => $kepeg?->lokasi_kerja,
                             'Tanggal Masuk' => optional($kepeg?->tanggal_masuk)->translatedFormat('d F Y'),
                             'Masa Kerja' => $kepeg?->masa_kerja,
@@ -397,7 +397,7 @@
                                     </button>
                                     @if ($alurKhusus)
                                         <form action="{{ route('admin.pegawai.alur.destroy', $pegawai) }}" method="POST"
-                                            data-confirm="Kembalikan alur persetujuan {{ $pegawai->nama_lengkap }} ke otomatis (mengikuti unit & jabatan)?">
+                                            data-confirm="Kembalikan alur persetujuan {{ $pegawai->nama_lengkap }} ke otomatis (mengikuti bagian & jabatan)?">
                                             @csrf @method('DELETE')
                                             <button type="submit" class="btn btn-light btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Kembali Otomatis</button>
                                         </form>
@@ -422,15 +422,15 @@
                         @endif
                         @unless ($alurKhusus)
                             <p class="text-muted small mb-3">
-                                Cuti mengikuti unit utama. Lembur dipilih per unit dan di-approve kepala unit tersebut;
-                                bila pegawai ini kepala di unit itu, atau unitnya tidak punya kepala, approval naik ke GM.
+                                Cuti mengikuti bagian utama. Lembur dipilih per bagian dan di-approve kepala bagian tersebut;
+                                bila pegawai ini kepala di bagian itu, atau bagiannya tidak punya kepala, approval naik ke GM.
                             </p>
                         @endunless
 
                         @if (! $akun)
                             <div class="pd-empty mb-4"><i class="bi bi-person-x"></i>Pegawai ini belum punya akun, jadi belum bisa mengajukan cuti/lembur.</div>
                         @elseif (! $alurApproval)
-                            <div class="pd-empty mb-4"><i class="bi bi-slash-circle"></i>Akun pegawai ini tidak mengajukan cuti/lembur lewat sistem (unit/jabatan dikecualikan).</div>
+                            <div class="pd-empty mb-4"><i class="bi bi-slash-circle"></i>Akun pegawai ini tidak mengajukan cuti/lembur lewat sistem (bagian/jabatan dikecualikan).</div>
                         @else
                             <div class="row g-3 mb-4">
                                 @foreach ($alurApproval as $alur)
@@ -441,7 +441,7 @@
                                                 <span class="pd-chip {{ $alur['jenis'] === 'Cuti' ? 'pd-chip-primary' : 'pd-chip-dark' }}">
                                                     <i class="bi {{ $alur['jenis'] === 'Cuti' ? 'bi-calendar2-week' : 'bi-clock-history' }}"></i> {{ $alur['jenis'] }}
                                                 </span>
-                                                <span class="fw-semibold small">{{ $alur['unit'] ?? 'Unit belum diisi' }}</span>
+                                                <span class="fw-semibold small">{{ $alur['unit'] ?? 'Bagian belum diisi' }}</span>
                                             </div>
                                             <ol class="pd-steps">
                                                 @foreach ($alur['tahap'] as $tahap)
@@ -502,7 +502,7 @@
                                 <table class="table pd-table mb-0">
                                     <thead>
                                         <tr>
-                                            <th>Unit</th>
+                                            <th>Bagian</th>
                                             <th>Jabatan / Peran</th>
                                             <th>Periode</th>
                                             <th>Status</th>
@@ -573,7 +573,7 @@
                                                         @endif
                                                         @if (! $p->isAkanDatang() && ($p->jenis !== \App\Models\Penugasan::JENIS_AWAL || auth()->user()->isAdmin()))
                                                             <form action="{{ route('admin.penugasan.destroy', $p) }}" method="POST" class="mt-1"
-                                                                data-confirm="Hapus {{ strtolower($p->jenisLabel()) }} ke {{ $p->unit_kerja }} (koreksi salah input)?{{ $p->is_utama ? ' Pegawai dikembalikan ke unit sebelumnya.' : '' }}">
+                                                                data-confirm="Hapus {{ strtolower($p->jenisLabel()) }} ke {{ $p->unit_kerja }} (koreksi salah input)?{{ $p->is_utama ? ' Pegawai dikembalikan ke bagian sebelumnya.' : '' }}">
                                                                 @csrf
                                                                 @method('DELETE')
                                                                 <button type="submit" class="btn btn-link btn-sm text-danger p-0">

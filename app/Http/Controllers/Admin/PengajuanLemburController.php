@@ -58,7 +58,7 @@ class PengajuanLemburController extends Controller
         $filename = ExcelExporter::namaFile('pengajuan-lembur');
 
         $headers = [
-            'Nama Pegawai', 'NIP', 'Unit Kerja', 'Tanggal', 'Hari', 'Uraian Tugas',
+            'Nama Pegawai', 'NIP', 'Bagian', 'Tanggal', 'Hari', 'Uraian Tugas',
             'Jam Mulai', 'Jam Selesai', 'Jumlah Jam', 'Status', 'Tahap Saat Ini', 'Catatan Admin', 'Tanggal Pengajuan',
         ];
 

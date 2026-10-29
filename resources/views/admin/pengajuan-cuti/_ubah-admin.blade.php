@@ -41,7 +41,7 @@
                 @include('partials.pilih-pegawai', [
                     'name' => 'pengganti_nama', 'id' => 'ubah-pengganti', 'nilai' => 'nama', 'kelas' => 'form-select-sm',
                     'terpilih' => old('pengganti_nama', $pengajuanCuti->pengganti_nama), 'kosong' => 'Belum ditentukan',
-                    'utama' => $pengajuanCuti->substituteOptions()->all(), 'labelUtama' => 'Satu unit', 'kecuali' => [$pengajuanCuti->data_pegawai_id],
+                    'utama' => $pengajuanCuti->substituteOptions()->all(), 'labelUtama' => 'Satu bagian', 'kecuali' => [$pengajuanCuti->data_pegawai_id],
                 ])
             </div>
             <div class="col-md-6">

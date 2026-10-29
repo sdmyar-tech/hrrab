@@ -178,7 +178,7 @@ class PengumumanController extends Controller
         ], [
             'hari.required_if' => 'Pilih hari untuk kegiatan mingguan.',
             'jam_selesai.after' => 'Jam selesai harus setelah jam mulai.',
-            'sasaran_unit.required' => 'Pilih unit yang dituju.',
+            'sasaran_unit.required' => 'Pilih bagian yang dituju.',
             'tanggal.after_or_equal' => 'Tanggal kegiatan tidak boleh di masa lalu.',
         ]);
 
@@ -238,7 +238,7 @@ class PengumumanController extends Controller
             'absen_buka.required' => 'Isi jam absen dibuka.',
             'absen_tutup.required' => 'Isi jam absen ditutup.',
             'absen_tutup.after' => 'Jam absen ditutup harus setelah jam dibuka dan belum lewat.',
-            'absen_unit.*.in' => 'Unit peserta tidak valid.',
+            'absen_unit.*.in' => 'Bagian peserta tidak valid.',
             'absen_jabatan.*.in' => 'Jabatan peserta tidak valid.',
             'absen_user.*.in' => 'Ada pegawai yang tidak bisa dipilih.',
         ]);
@@ -250,7 +250,7 @@ class PengumumanController extends Controller
             'user' => array_values(array_unique(array_map('intval', $v['absen_user'] ?? []))),
         ];
         if (AbsenAcara::terapkanKriteria($kriteria, $pilihan['kandidat'])->isEmpty()) {
-            throw ValidationException::withMessages(['absen_peserta' => 'Pilih peserta absen: semua, per unit, per jabatan, atau nama pegawai.']);
+            throw ValidationException::withMessages(['absen_peserta' => 'Pilih peserta absen: semua, per bagian, per jabatan, atau nama pegawai.']);
         }
 
         // Pengumuman harus tetap tampil sampai absen ditutup.

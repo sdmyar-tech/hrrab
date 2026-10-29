@@ -12,7 +12,7 @@
                 <div>
                     <p class="eyebrow mb-1">Sistem</p>
                     <h1 class="h3 mb-1">Hak Akses Jabatan</h1>
-                    <p class="text-muted mb-0">Tambahan hak untuk pemegang jabatan tertentu di tiap unit — mis. Staff unit A boleh melihat absensi, Staff unit B tidak.</p>
+                    <p class="text-muted mb-0">Tambahan hak untuk pemegang jabatan tertentu di tiap bagian — mis. Staff bagian A boleh melihat absensi, Staff bagian B tidak.</p>
                 </div>
             </div>
             <div class="heading-actions">
@@ -25,7 +25,7 @@
             <i class="bi bi-info-circle-fill"></i>
             <div>
                 Hak di sini <strong>ditambahkan</strong> di atas hak role akun (Master Role), tidak mengurangi.
-                Berlaku untuk pegawai yang sedang memegang jabatan itu di unit tersebut, termasuk lewat rangkap tugas.
+                Berlaku untuk pegawai yang sedang memegang jabatan itu di bagian tersebut, termasuk lewat rangkap tugas.
                 Hak <em>Kelola sistem</em> hanya bisa diberikan lewat Master Role.
             </div>
         </div>
@@ -33,8 +33,8 @@
         <section class="panel">
             <form method="GET" class="panel-filter row g-2 align-items-center mb-3">
                 <div class="col-md-4">
-                    <select name="unit" class="form-select form-select-sm" aria-label="Unit" onchange="this.form.submit()">
-                        <option value="">Semua unit</option>
+                    <select name="unit" class="form-select form-select-sm" aria-label="Bagian" onchange="this.form.submit()">
+                        <option value="">Semua bagian</option>
                         @foreach ($unitOpsi as $id => $nama)
                             <option value="{{ $id }}" @selected((string) request('unit') === (string) $id)>{{ $nama }}</option>
                         @endforeach
@@ -61,7 +61,7 @@
                 <table class="table align-middle mb-0 table-mobile-cards">
                     <thead>
                         <tr>
-                            <th>Unit</th>
+                            <th>Bagian</th>
                             <th>Jabatan</th>
                             <th class="text-center">Pemegang</th>
                             <th>Hak akses tambahan</th>
@@ -96,7 +96,7 @@
                                     @if (request()->hasAny(['unit', 'q', 'ada']))
                                         Tidak ada jabatan yang cocok dengan filter ini.
                                     @else
-                                        Belum ada jabatan yang ditautkan ke unit. Atur unit jabatan di <a href="{{ route('admin.jabatan.index') }}">Master Jabatan</a>.
+                                        Belum ada jabatan yang ditautkan ke bagian. Atur bagian jabatan di <a href="{{ route('admin.jabatan.index') }}">Master Jabatan</a>.
                                     @endif
                                 </td>
                             </tr>
@@ -117,7 +117,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
             <div class="modal-body">
-                <p class="small text-muted mb-3">Centang hak yang <strong>ditambahkan</strong> untuk pemegang jabatan ini di unit ini. Kosongkan semua untuk mengikuti role saja.</p>
+                <p class="small text-muted mb-3">Centang hak yang <strong>ditambahkan</strong> untuk pemegang jabatan ini di bagian ini. Kosongkan semua untuk mengikuti role saja.</p>
                 @foreach ($grupHak as $judul => [$ikon, $daftar])
                     <fieldset class="mb-3">
                         <legend class="fw-semibold small mb-2"><i class="bi {{ $ikon }} me-1"></i>{{ $judul }}</legend>

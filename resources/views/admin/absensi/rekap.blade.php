@@ -58,8 +58,8 @@
                     </div>
                     @if (count($unitOpsi) > 1)
                         <div class="col-6 col-md-2">
-                            <select name="unit" class="form-select form-select-sm" aria-label="Unit" onchange="this.form.submit()">
-                                <option value="">Semua unit</option>
+                            <select name="unit" class="form-select form-select-sm" aria-label="Bagian" onchange="this.form.submit()">
+                                <option value="">Semua bagian</option>
                                 @foreach ($unitOpsi as $u)
                                     <option value="{{ $u }}" @selected(request('unit') === $u)>{{ $u }}</option>
                                 @endforeach
@@ -67,7 +67,7 @@
                         </div>
                     @endif
                     <div class="col-12 col-md-4 col-xl-3">
-                        @include('partials.daftar-cari', ['cariTeks' => 'Cari pegawai, contoh: Siti', 'cariLabel' => 'Cari rekap menurut nama, NIP, atau unit'])
+                        @include('partials.daftar-cari', ['cariTeks' => 'Cari pegawai, contoh: Siti', 'cariLabel' => 'Cari rekap menurut nama, NIP, atau bagian'])
                     </div>
                     <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterRekap'])</div>
                     <div class="col-md-auto">

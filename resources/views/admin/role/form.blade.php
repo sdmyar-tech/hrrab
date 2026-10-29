@@ -63,7 +63,7 @@
                                     <input type="hidden" name="jenis_dasar" value="{{ $role->jenis_dasar }}">
                                     <div class="form-text"><i class="bi bi-lock-fill me-1"></i>Tidak bisa diganti: role sudah dipakai {{ $jumlahAkun }} akun.</div>
                                 @else
-                                    <div class="form-text">Menentukan panel (admin/pegawai) & alur persetujuan akun. Contoh: dasar Staff → cuti tetap disetujui kepala unitnya.</div>
+                                    <div class="form-text">Menentukan panel (admin/pegawai) & alur persetujuan akun. Contoh: dasar Staff → cuti tetap disetujui kepala bagiannya.</div>
                                 @endif
                             </div>
                         @endunless
@@ -105,7 +105,7 @@
                                 </div>
                             </fieldset>
                         @endforeach
-                        <p class="form-text mb-0 mt-2">Beberapa hak tetap mengikuti aturan khusus sistem, mis. staf unit SDM otomatis boleh mengelola pegawai & absensi.</p>
+                        <p class="form-text mb-0 mt-2">Beberapa hak tetap mengikuti aturan khusus sistem, mis. staf bagian SDM otomatis boleh mengelola pegawai & absensi.</p>
                     </section>
                 </div>
             </div>

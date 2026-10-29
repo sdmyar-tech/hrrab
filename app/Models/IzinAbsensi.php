@@ -41,7 +41,7 @@ class IzinAbsensi extends Model
 
     public function sasaranLabel(): string
     {
-        return $this->dataPegawai?->nama_lengkap ?? ($this->unit_kerja ? 'Unit ' . $this->unit_kerja : 'Semua pegawai');
+        return $this->dataPegawai?->nama_lengkap ?? ($this->unit_kerja ? 'Bagian ' . $this->unit_kerja : 'Semua pegawai');
     }
 
     public function berlakuUntuk(int $pegawaiId, ?string $unit): bool

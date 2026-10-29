@@ -32,7 +32,7 @@ class LowonganController extends Controller
             ...Urutan::tanggal('dibuat', 'Dibuat', 'lowongans.created_at'),
             ...Urutan::tanggal('tutup', 'Tanggal tutup', 'lowongans.tanggal_tutup'),
             ...Urutan::abjad('judul', 'Judul', 'lowongans.judul'),
-            ...Urutan::abjad('unit', 'Unit', 'lowongans.unit_kerja'),
+            ...Urutan::abjad('unit', 'Bagian', 'lowongans.unit_kerja'),
         ]);
         $lowongans = $query->paginate(15)->withQueryString();
 
@@ -59,7 +59,7 @@ class LowonganController extends Controller
         ]);
 
         return ExcelExporter::download(ExcelExporter::namaFile('lowongan'), [
-            'Dibuat', 'Judul', 'Jabatan', 'Unit Kerja', 'Kebutuhan', 'Jumlah Pelamar', 'Status',
+            'Dibuat', 'Judul', 'Jabatan', 'Bagian', 'Kebutuhan', 'Jumlah Pelamar', 'Status',
             'Dipublikasikan', 'Tanggal Tutup', 'Dipublikasikan Oleh', 'Sumber',
         ], $rows, 'Lowongan');
     }

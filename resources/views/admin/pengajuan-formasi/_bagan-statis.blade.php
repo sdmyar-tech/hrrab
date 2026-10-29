@@ -15,13 +15,13 @@
                     @forelse ($bagan['kepala'] as $nama)
                         <span class="bagan-node aktif kepala"><i class="bi bi-person-badge"></i><span class="nm">{{ $nama }}</span></span>
                     @empty
-                        <span class="bagan-node nonaktif kepala"><i class="bi bi-person-badge"></i><span class="nm">Kepala unit belum tercatat</span></span>
+                        <span class="bagan-node nonaktif kepala"><i class="bi bi-person-badge"></i><span class="nm">Kepala bagian belum tercatat</span></span>
                     @endforelse
                 </div>
             </div>
 
             @if (! $bagan['baris'])
-                <div class="bagan-kosong-info">Belum ada pegawai tercatat di unit ini.</div>
+                <div class="bagan-kosong-info">Belum ada pegawai tercatat di bagian ini.</div>
             @elseif ($bagan['tunggal'])
                 <div class="bagan-sisi tunggal">@include('admin.pengajuan-formasi._bagan-statis-cabang', ['c' => $bagan['baris'][0]['kiri'][0]])</div>
             @else

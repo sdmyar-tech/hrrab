@@ -119,7 +119,7 @@ class EditorData
             'import_absensi' => ['grup' => 'Absensi', 'label' => 'Riwayat Import Absensi', 'ikon' => 'bi-upload', 'model' => Models\AbsensiImport::class,
                 'judul' => fn ($m) => $m->nama_file, 'kolom' => ['periode_dari', 'periode_sampai', 'jumlah_baris'], 'cari' => ['nama_file']],
             'izin_absensi' => ['grup' => 'Absensi', 'label' => 'Izin Telat / Pulang Cepat', 'ikon' => 'bi-clock', 'model' => Models\IzinAbsensi::class,
-                'with' => ['dataPegawai:id,nama_lengkap'], 'judul' => fn ($m) => ($m->data_pegawai_id ? $pegawai($m) : 'Unit ' . ($m->unit_kerja ?? 'semua')) . ' — ' . $m->jenis,
+                'with' => ['dataPegawai:id,nama_lengkap'], 'judul' => fn ($m) => ($m->data_pegawai_id ? $pegawai($m) : 'Bagian ' . ($m->unit_kerja ?? 'semua')) . ' — ' . $m->jenis,
                 'kolom' => ['tanggal', 'menit', 'alasan'], 'cari' => ['jenis', 'alasan', 'unit_kerja'], 'relasi' => ['dataPegawai' => 'nama_lengkap']],
             'jadwal_kerja' => ['grup' => 'Absensi', 'label' => 'Jam Kerja Pegawai', 'ikon' => 'bi-alarm', 'model' => Models\JadwalKerjaPegawai::class,
                 'with' => ['dataPegawai:id,nama_lengkap'], 'judul' => $pegawai, 'kolom' => ['jam_masuk', 'jam_pulang', 'toleransi_menit'], 'cari' => [], 'relasi' => ['dataPegawai' => 'nama_lengkap']],

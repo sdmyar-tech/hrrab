@@ -34,7 +34,7 @@ class HakAksesJabatanController extends Controller
 
     public function update(Request $request, Jabatan $jabatan, Unit $unit): RedirectResponse
     {
-        abort_unless($jabatan->units()->whereKey($unit->id)->exists(), 404, 'Jabatan ini tidak terdaftar di unit tersebut.');
+        abort_unless($jabatan->units()->whereKey($unit->id)->exists(), 404, 'Jabatan ini tidak terdaftar di bagian tersebut.');
         $hak = $request->validate([
             'hak_akses' => ['nullable', 'array'],
             'hak_akses.*' => [Rule::in(array_keys(self::hakOpsi()))],
@@ -54,7 +54,7 @@ class HakAksesJabatanController extends Controller
             collect($b->hak)->map(fn ($h) => $hakOpsi[$h][0] ?? $h)->implode(', ') ?: '-',
         ]);
 
-        return ExcelExporter::download(ExcelExporter::namaFile('hak-akses-jabatan'), ['Unit', 'Jabatan', 'Pemegang Aktif', 'Hak Akses Tambahan'], $rows, 'Hak Akses Jabatan');
+        return ExcelExporter::download(ExcelExporter::namaFile('hak-akses-jabatan'), ['Bagian', 'Jabatan', 'Pemegang Aktif', 'Hak Akses Tambahan'], $rows, 'Hak Akses Jabatan');
     }
 
     /** Hak yang boleh diberikan lewat jabatan (semua hak Master Role kecuali yang setara Admin). */

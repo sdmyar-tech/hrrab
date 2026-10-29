@@ -64,7 +64,7 @@ class SuratPeringatanController extends Controller
             ]);
 
         return ExcelExporter::download(ExcelExporter::namaFile('surat-peringatan-' . $bulan->format('Y-m')), [
-            'Tanggal', 'Pegawai', 'NIP', 'Jabatan', 'Unit', 'SP', 'Alasan', 'Keterangan', 'Diberikan Oleh',
+            'Tanggal', 'Pegawai', 'NIP', 'Jabatan', 'Bagian', 'SP', 'Alasan', 'Keterangan', 'Diberikan Oleh',
         ], $rows, 'Surat Peringatan');
     }
 

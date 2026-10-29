@@ -31,20 +31,20 @@ class DashboardController extends Controller
         $d = $this->data();
         $p = $d['pegawai'];
         $ringkas = [
-            ['Nama', $p?->nama_lengkap ?? $d['user']->name], ['NIP', $p?->nip], ['Unit', $p?->kepegawaian?->unit_kerja], ['Jabatan', $p?->kepegawaian?->jabatan],
+            ['Nama', $p?->nama_lengkap ?? $d['user']->name], ['NIP', $p?->nip], ['Bagian', $p?->kepegawaian?->unit_kerja], ['Jabatan', $p?->kepegawaian?->jabatan],
             ['Status kerja', $p?->kepegawaian?->status_kerja], ['Masa kerja', $d['masaKerja']],
             ['Kontrak berakhir', $d['kontrak'] ? $d['kontrak']['habis']->format('d-m-Y') . " (sisa {$d['kontrak']['sisa']} hari)" : '-'],
             ['Kelengkapan data', $d['kelengkapan'] . '%'], ['Data belum diisi', implode(', ', $d['dataKurang']) ?: '-'],
             ['Sisa cuti tahunan', "{$d['sisaCuti']} / {$d['kuotaCuti']} hari"], ['Pengajuan cuti tahun ini', "{$d['pengajuanCutiTahunIni']} / {$d['maxPengajuanCuti']} kali"],
             ['Lembur bulan ini (jam)', $d['lemburBulanIni']], ['Pengajuan menunggu', $d['pending']],
-            ['Unit saya', $d['unitSaya'] ? "{$d['unitSaya']['nama']} · kepala {$d['unitSaya']['kepala']} · {$d['unitSaya']['jumlahRekan']} rekan" : '-'],
+            ['Bagian saya', $d['unitSaya'] ? "{$d['unitSaya']['nama']} · kepala {$d['unitSaya']['kepala']} · {$d['unitSaya']['jumlahRekan']} rekan" : '-'],
         ];
 
         return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('dashboard-saya'), [
             ['name' => 'Ringkasan', 'headers' => ['Data', 'Isi'], 'rows' => $ringkas],
             ['name' => 'Pengajuan Terbaru', 'headers' => ['Jenis', 'Tanggal', 'Detail', 'Status', 'Tahap', 'Catatan'],
                 'rows' => $d['terbaru']->map(fn ($t) => [$t['jenis'], optional($t['tanggal'])->format('d-m-Y'), $t['detail'], $t['status'], $t['tahap'], $t['catatan']])],
-            ['name' => 'Penugasan Aktif', 'headers' => ['Unit', 'Jabatan', 'Peran', 'Jenis', 'Mulai'],
+            ['name' => 'Penugasan Aktif', 'headers' => ['Bagian', 'Jabatan', 'Peran', 'Jenis', 'Mulai'],
                 'rows' => $d['penugasan']->map(fn ($x) => [$x->unit_kerja, $x->jabatan, $x->peranLabel(), $x->is_utama ? 'Utama' : 'Rangkap', $x->tanggal_mulai?->format('d-m-Y')])],
             ['name' => 'Tren Lembur', 'headers' => ['Bulan', 'Lembur Disetujui (jam)'],
                 'rows' => array_map(fn ($b) => [$b['judul'], $b['jumlah']], $d['trenLembur'] ?? [])],
@@ -66,7 +66,7 @@ class DashboardController extends Controller
             'Tempat lahir' => $pegawai?->tempat_lahir, 'Tanggal lahir' => $pegawai?->tanggal_lahir, 'Jenis kelamin' => $pegawai?->jenis_kelamin,
             'Agama' => $pegawai?->agama, 'Alamat KTP' => $pegawai?->alamat_ktp, 'Status pernikahan' => $pegawai?->status_pernikahan,
             'Nama ibu kandung' => $pegawai?->nama_ibu_kandung, 'Pendidikan terakhir' => $pegawai?->pendidikan_terakhir,
-            'Jabatan' => $kep?->jabatan, 'Unit kerja' => $kep?->unit_kerja, 'Lokasi kerja' => $kep?->lokasi_kerja, 'Tanggal masuk' => $kep?->tanggal_masuk,
+            'Jabatan' => $kep?->jabatan, 'Bagian' => $kep?->unit_kerja, 'Lokasi kerja' => $kep?->lokasi_kerja, 'Tanggal masuk' => $kep?->tanggal_masuk,
             'No. HP kerabat' => $pegawai?->kontakDarurat?->no_hp_kerabat, 'Nama kerabat' => $pegawai?->kontakDarurat?->nama_kerabat,
             'Hubungan kerabat' => $pegawai?->kontakDarurat?->hubungan_kerabat,
             'File KTP' => $pegawai?->dokumen?->upload_ktp, 'File KK' => $pegawai?->dokumen?->upload_kk, 'Pas foto' => $pegawai?->dokumen?->pas_foto,

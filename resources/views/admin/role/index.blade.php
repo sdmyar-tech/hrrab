@@ -10,7 +10,7 @@
     $ketBawaan = [
         User::ROLE_PEMBINA => 'Pemilik yayasan: memantau (hanya-baca) & ikut menyetujui formasi.',
         User::ROLE_GM => 'Menyetujui pengajuan pegawai di bidangnya.',
-        User::ROLE_KEPALA_BAGIAN => 'Kepala unit: menyetujui pengajuan anggota unitnya.',
+        User::ROLE_KEPALA_BAGIAN => 'Kepala bagian: menyetujui pengajuan anggota bagiannya.',
         User::ROLE_KEPALA_SDM => 'Mengelola kepegawaian & absensi, persetujuan tahap akhir.',
         User::ROLE_STAFF => 'Pegawai: mengajukan cuti, lembur & izin keluar.',
         User::ROLE_ADMIN => 'Pengelola sistem dengan akses penuh.',
@@ -283,7 +283,7 @@
             info.textContent = (jumlah ? jumlah + ' akun memakai role ini dan akan dipindahkan. ' : 'Tidak ada akun yang memakai role ini. ')
                 + (d.kustom ? 'Role kustom dihapus permanen.' : 'Role bawaan disembunyikan dari pilihan dan bisa dipulihkan kapan saja.');
             modal.querySelector('[data-catatan]').textContent = d.otomatis
-                ? 'Role ini juga dipasang otomatis oleh sistem (pegawai baru / kepala unit). Setelah dihapus, penetapan otomatis memakai role pengganti — disarankan role dengan jenis dasar yang sama.'
+                ? 'Role ini juga dipasang otomatis oleh sistem (pegawai baru / kepala bagian). Setelah dihapus, penetapan otomatis memakai role pengganti — disarankan role dengan jenis dasar yang sama.'
                 : 'Panel & alur persetujuan akun mengikuti jenis dasar role pengganti.';
         });
     });

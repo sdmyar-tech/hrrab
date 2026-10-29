@@ -8,13 +8,13 @@ use App\Models\DataPegawai;
 class EksporAbsensi
 {
     public const HEADER_REKAP = [
-        'Nama', 'NIP', 'Finger ID', 'Unit', 'Jadwal', 'Hari Kerja', 'Hadir', 'On Time', 'Telat (kali)', 'Telat (menit)', 'Telat Izin',
+        'Nama', 'NIP', 'Finger ID', 'Bagian', 'Jadwal', 'Hari Kerja', 'Hadir', 'On Time', 'Telat (kali)', 'Telat (menit)', 'Telat Izin',
         'Pulang Cepat', 'Tidak Scan Pulang', 'Alpa', 'Cuti', 'Izin', 'Sakit', 'Dinas Luar',
         'Lembur Terverifikasi (jam)', 'Lembur Surat (jam)', 'Lembur Belum Terverifikasi (hari)', 'Hari Dikoreksi',
     ];
 
     public const HEADER_DETAIL = [
-        'Tanggal', 'Hari', 'Nama', 'Finger ID', 'Unit', 'Jadwal', 'Masuk', 'Keluar', 'Status', 'Telat (menit)', 'Pulang Cepat (menit)',
+        'Tanggal', 'Hari', 'Nama', 'Finger ID', 'Bagian', 'Jadwal', 'Masuk', 'Keluar', 'Status', 'Telat (menit)', 'Pulang Cepat (menit)',
         'Tidak Scan Pulang', 'Lembur (jam)', 'Status Lembur', 'Dikoreksi', 'Alasan Koreksi', 'Catatan',
     ];
 

@@ -61,7 +61,7 @@ class UserController extends Controller
         ]);
 
         return ExcelExporter::download(ExcelExporter::namaFile('akun-pengguna'), [
-            'Dibuat', 'Nama', 'Email', 'Role', 'NIP', 'Bidang GM', 'Kepala Unit', 'Terhubung Dengan', 'Login Google',
+            'Dibuat', 'Nama', 'Email', 'Role', 'NIP', 'Bidang GM', 'Kepala Bagian', 'Terhubung Dengan', 'Login Google',
         ], $rows, 'Akun Pengguna');
     }
 
@@ -266,7 +266,7 @@ class UserController extends Controller
 
         if ($kepalaUnit && ! in_array($validated['role'], [User::ROLE_GM, User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM], true)) {
             throw ValidationException::withMessages([
-                'kepala_unit' => 'Role ' . User::roleLabelFor($validated['role']) . ' tidak bisa memimpin unit. Pilih role Kepala Bagian, Kepala SDM, GM, atau Staff.',
+                'kepala_unit' => 'Role ' . User::roleLabelFor($validated['role']) . ' tidak bisa memimpin bagian. Pilih role Kepala Bagian, Kepala SDM, GM, atau Staff.',
             ]);
         }
 
@@ -316,7 +316,7 @@ class UserController extends Controller
         if (! $pegawai) {
             if ($units) {
                 throw ValidationException::withMessages([
-                    'kepala_unit' => 'Akun ini belum tertaut ke Data Pegawai. Untuk role di bawah GM, pilih pegawai (atau isi NIP) agar bisa memimpin unit.',
+                    'kepala_unit' => 'Akun ini belum tertaut ke Data Pegawai. Untuk role di bawah GM, pilih pegawai (atau isi NIP) agar bisa memimpin bagian.',
                 ]);
             }
 

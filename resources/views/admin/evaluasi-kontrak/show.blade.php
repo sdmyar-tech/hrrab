@@ -54,7 +54,7 @@
                         <dt>TMT sebagai pegawai</dt><dd>{{ $k?->tanggal_masuk?->translatedFormat('d F Y') ?? '-' }}</dd>
                         <dt>Masa kerja</dt><dd>{{ $masa ? ($masa->y ? $masa->y . ' tahun ' : '') . $masa->m . ' bulan' : '-' }}</dd>
                         <dt>Jenis kelamin</dt><dd>{{ $p?->jenis_kelamin ?? '-' }}</dd>
-                        <dt>Divisi / unit / bagian</dt><dd>{{ collect([$e->unit_kerja, $k?->jabatan])->filter()->implode(' · ') }}</dd>
+                        <dt>Divisi / bagian</dt><dd>{{ collect([$e->unit_kerja, $k?->jabatan])->filter()->implode(' · ') }}</dd>
                         <dt>Status kerja</dt><dd>{{ $e->status_kerja ?? '-' }} · habis kontrak {{ $e->tanggal_habis_kontrak->translatedFormat('d F Y') }}
                             @if ($e->status !== EK::STATUS_SELESAI)<span class="{{ $sisa <= 7 ? 'text-danger fw-semibold' : 'text-muted' }}">({{ $sisa < 0 ? 'lewat ' . abs($sisa) . ' hari' : ($sisa === 0 ? 'hari ini' : $sisa . ' hari lagi') }})</span>@endif
                         </dd>

@@ -98,7 +98,7 @@ class AbsenAcaraController extends Controller
         ];
 
         return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('absen-acara-' . Str::slug($pengumuman->judul)), [
-            ['name' => 'Kehadiran', 'headers' => ['No', 'Nama', 'NIP', 'Unit', 'Jabatan', 'Status', 'Waktu Absen', 'Keterangan', 'Diingatkan'], 'rows' => $peserta],
+            ['name' => 'Kehadiran', 'headers' => ['No', 'Nama', 'NIP', 'Bagian', 'Jabatan', 'Status', 'Waktu Absen', 'Keterangan', 'Diingatkan'], 'rows' => $peserta],
             ['name' => 'Ringkasan', 'headers' => ['Keterangan', 'Nilai'], 'rows' => $ringkasan],
         ]);
     }

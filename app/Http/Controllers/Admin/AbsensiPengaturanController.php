@@ -72,7 +72,7 @@ class AbsensiPengaturanController extends Controller
         $mesin = $this->belumDipetakan()->map(fn ($b) => [$b->finger_id, $b->nama_mesin, $b->hari, $b->terakhir ? date('d-m-Y', strtotime($b->terakhir)) : null]);
 
         return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('pengaturan-absensi'), [
-            ['name' => 'Pegawai', 'headers' => ['Nama', 'NIP', 'Unit', 'Jabatan', 'Ikut Absensi', 'ID Mesin', 'Jam Masuk', 'Jam Pulang', 'Hari Kerja', 'Toleransi (menit)', 'Ringkasan Jadwal'], 'rows' => $pegawai],
+            ['name' => 'Pegawai', 'headers' => ['Nama', 'NIP', 'Bagian', 'Jabatan', 'Ikut Absensi', 'ID Mesin', 'Jam Masuk', 'Jam Pulang', 'Hari Kerja', 'Toleransi (menit)', 'Ringkasan Jadwal'], 'rows' => $pegawai],
             ['name' => 'ID Mesin Belum Dikenali', 'headers' => ['ID Mesin', 'Nama di Mesin', 'Jumlah Hari', 'Terakhir'], 'rows' => $mesin],
         ]);
     }
@@ -84,7 +84,7 @@ class AbsensiPengaturanController extends Controller
         $urut = Urutan::terapkan($daftar, [
             'ikut' => ['Yang diabsen dulu', fn ($q, $arah) => $q->orderByDesc('data_pegawais.ikut_absensi')->orderBy('data_pegawais.nama_lengkap'), 'asc'],
             ...Urutan::abjad('nama', 'Nama', 'data_pegawais.nama_lengkap'),
-            'unit' => ['Unit A–Z', fn ($q, $arah) => $q->orderByRaw('(select unit_kerja from kepegawaians where kepegawaians.data_pegawai_id = data_pegawais.id limit 1) asc')->orderBy('data_pegawais.nama_lengkap'), 'asc'],
+            'unit' => ['Bagian A–Z', fn ($q, $arah) => $q->orderByRaw('(select unit_kerja from kepegawaians where kepegawaians.data_pegawai_id = data_pegawais.id limit 1) asc')->orderBy('data_pegawais.nama_lengkap'), 'asc'],
             'finger' => ['ID mesin terkecil', fn ($q, $arah) => $q->orderByRaw('data_pegawais.finger_id is null')->orderByRaw('cast(data_pegawais.finger_id as unsigned) asc'), 'asc'],
         ]);
 

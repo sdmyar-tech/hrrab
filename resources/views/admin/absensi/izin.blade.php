@@ -59,14 +59,14 @@
 
                         <p class="fw-semibold small mb-2">3. Untuk siapa</p>
                         <div class="btn-group w-100 mb-2" role="group" aria-label="Sasaran izin">
-                            @foreach (['semua' => 'Semua pegawai', 'unit' => 'Satu unit', 'pegawai' => 'Pilih pegawai'] as $k => $label)
+                            @foreach (['semua' => 'Semua pegawai', 'unit' => 'Satu bagian', 'pegawai' => 'Pilih pegawai'] as $k => $label)
                                 <input type="radio" class="btn-check" name="sasaran" value="{{ $k }}" id="s-{{ $k }}" @checked(old('sasaran', 'semua') === $k)>
                                 <label class="btn btn-outline-secondary btn-sm" for="s-{{ $k }}">{{ $label }}</label>
                             @endforeach
                         </div>
                         <div class="mb-3" data-sasaran="unit">
-                            <select name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror" aria-label="Unit">
-                                <option value="">Pilih unit...</option>
+                            <select name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror" aria-label="Bagian">
+                                <option value="">Pilih bagian...</option>
                                 @foreach ($unitOpsi as $u)<option value="{{ $u }}" @selected(old('unit_kerja') === $u)>{{ $u }}</option>@endforeach
                             </select>
                         </div>

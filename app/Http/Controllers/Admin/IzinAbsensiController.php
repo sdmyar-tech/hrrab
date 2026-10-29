@@ -75,7 +75,7 @@ class IzinAbsensiController extends Controller
             'pegawai_ids.*' => ['integer', 'exists:data_pegawais,id'],
             'alasan' => ['required', 'string', 'max:255'],
         ], [
-            'unit_kerja.required_if' => 'Pilih unit.',
+            'unit_kerja.required_if' => 'Pilih bagian.',
             'pegawai_ids.required_if' => 'Pilih minimal satu pegawai.',
             'alasan.required' => 'Isi alasan, mis. "Hujan deras".',
         ]);
@@ -88,7 +88,7 @@ class IzinAbsensiController extends Controller
             'pegawai' => collect($v['pegawai_ids'])->unique()->each(fn ($id) => IzinAbsensi::create($dasar + ['data_pegawai_id' => $id]))->count(),
         };
 
-        $sasaran = ['semua' => 'semua pegawai', 'unit' => 'unit ' . ($v['unit_kerja'] ?? ''), 'pegawai' => "{$jumlah} pegawai"][$v['sasaran']];
+        $sasaran = ['semua' => 'semua pegawai', 'unit' => 'bagian ' . ($v['unit_kerja'] ?? ''), 'pegawai' => "{$jumlah} pegawai"][$v['sasaran']];
 
         return redirect()->route('admin.absensi.izin', ['bulan' => Carbon::parse($v['tanggal'])->format('Y-m')])
             ->with('success', IzinAbsensi::JENIS[$v['jenis']] . " {$v['menit']} menit untuk {$sasaran} pada " . Carbon::parse($v['tanggal'])->translatedFormat('d M Y') . ' disimpan.');

@@ -28,7 +28,7 @@
                     <input class="form-control form-control-sm" value="{{ $kepegawaian?->jabatan ?? '-' }}" readonly>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label text-muted small">Divisi / Unit Kerja</label>
+                    <label class="form-label text-muted small">Divisi / Bagian</label>
                     <input class="form-control form-control-sm" value="{{ $kepegawaian?->unit_kerja ?? '-' }}" readonly>
                 </div>
                 <div class="col-md-6">

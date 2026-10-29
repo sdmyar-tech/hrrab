@@ -29,7 +29,7 @@ class Role extends Model
         User::ABILITY_LIHAT_LAPORAN => ['Lihat laporan pengajuan', 'Melihat daftar cuti, lembur & izin keluar.'],
         User::ABILITY_LIHAT_TABEL_KARYAWAN => ['Lihat data pegawai', 'Membuka daftar & detail pegawai.'],
         User::ABILITY_KELOLA_PEGAWAI => ['Kelola data pegawai', 'Menambah, mengubah & menghapus data pegawai.'],
-        User::ABILITY_KELOLA_PENUGASAN => ['Mutasi, rangkap & unit', 'Mengelola mutasi, rangkap tugas & koordinator unit.'],
+        User::ABILITY_KELOLA_PENUGASAN => ['Mutasi, rangkap & bagian', 'Mengelola mutasi, rangkap tugas & koordinator bagian.'],
         User::ABILITY_LIHAT_ABSENSI => ['Lihat absensi', 'Melihat absensi harian & rekap.'],
         User::ABILITY_KELOLA_ABSENSI => ['Kelola absensi', 'Import data mesin, koreksi & pengaturan absensi.'],
         User::ABILITY_KELOLA_PENGUMUMAN => ['Kelola pengumuman', 'Membuat pengumuman & absen acara.'],

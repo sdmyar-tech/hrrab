@@ -39,7 +39,7 @@
                     <div class="col-12 col-md-6 col-xl-4">
                         @include('partials.daftar-cari', [
                             'cariTeks' => 'Cari pegawai, contoh: Siti atau SMK',
-                            'cariLabel' => 'Cari evaluasi kontrak menurut nama pegawai atau unit',
+                            'cariLabel' => 'Cari evaluasi kontrak menurut nama pegawai atau bagian',
                         ])
                     </div>
                     <div class="col-12 col-md-6 col-xl-4">@include('partials.filter-tanggal', ['tanggalLabel' => 'Habis kontrak'])</div>

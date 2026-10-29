@@ -33,7 +33,7 @@ class PenugasanController extends Controller
             ...Urutan::tanggal('diperbarui', 'Diperbarui', 'penugasans.updated_at'),
             ...Urutan::tanggal('mulai', 'Tanggal mulai', 'penugasans.tanggal_mulai'),
             ...Urutan::abjad('nama', 'Nama', Urutan::namaPegawai('penugasans')),
-            ...Urutan::abjad('unit', 'Unit', 'penugasans.unit_kerja'),
+            ...Urutan::abjad('unit', 'Bagian', 'penugasans.unit_kerja'),
         ]);
 
         return view('admin.penugasan.index', [
@@ -63,7 +63,7 @@ class PenugasanController extends Controller
         ]);
 
         return ExcelExporter::download(ExcelExporter::namaFile('mutasi-rangkap'), [
-            'Dicatat', 'NIP', 'Nama Pegawai', 'Jenis', 'Unit', 'Jabatan', 'Peran',
+            'Dicatat', 'NIP', 'Nama Pegawai', 'Jenis', 'Bagian', 'Jabatan', 'Peran',
             'Mulai', 'Selesai', 'Status', 'Dicatat Oleh', 'Keterangan',
         ], $rows, 'Mutasi & Rangkap');
     }

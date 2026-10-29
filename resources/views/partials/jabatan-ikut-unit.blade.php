@@ -25,7 +25,7 @@
                     if (!unit.value || !diUnit.length) {
                         tambah(el, semua);
                     } else {
-                        [['Jabatan di unit ' + unit.value, semua.filter(([v]) => diUnit.includes(v))],
+                        [['Jabatan di bagian ' + unit.value, semua.filter(([v]) => diUnit.includes(v))],
                          ['Jabatan lainnya', semua.filter(([v]) => !diUnit.includes(v))]].forEach(([label, daftar]) => {
                             if (!daftar.length) return;
                             const g = document.createElement('optgroup');

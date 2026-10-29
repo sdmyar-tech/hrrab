@@ -28,9 +28,9 @@
                 <div class="d-flex flex-wrap align-items-end gap-2 align-self-lg-center">
                     @if (count($pilihanUnit) > 1)
                         <form method="GET" action="{{ route('admin.dashboard') }}" style="min-width: 260px;">
-                            <label for="pilih-unit" class="form-label small text-muted mb-1"><i class="bi bi-funnel me-1"></i>Tampilkan unit</label>
+                            <label for="pilih-unit" class="form-label small text-muted mb-1"><i class="bi bi-funnel me-1"></i>Tampilkan bagian</label>
                             <select name="unit" id="pilih-unit" class="form-select" onchange="this.form.submit()">
-                                <option value="">Semua ({{ count($pilihanUnit) }} unit)</option>
+                                <option value="">Semua ({{ count($pilihanUnit) }} bagian)</option>
                                 @foreach ($pilihanUnit as $u)
                                     <option value="{{ $u }}" @selected($unitDipilih === $u)>{{ $u }}</option>
                                 @endforeach
@@ -42,8 +42,8 @@
             </div>
             @if ($unitDipilih)
                 <div class="mt-3 small">
-                    <span class="badge text-bg-primary">Unit: {{ $unitDipilih }}</span>
-                    <a href="{{ route('admin.dashboard') }}" class="ms-2 dash-link">Tampilkan semua unit</a>
+                    <span class="badge text-bg-primary">Bagian: {{ $unitDipilih }}</span>
+                    <a href="{{ route('admin.dashboard') }}" class="ms-2 dash-link">Tampilkan semua bagian</a>
                 </div>
             @endif
         </section>
@@ -170,7 +170,7 @@
                         @if ($bisaLaporan && $cutiHariIni->isNotEmpty())<a href="{{ route('admin.pengajuan-cuti.index', ['berlangsung' => 1]) }}" class="small dash-link">Lihat semua</a>@endif
                     </div>
                     @if (! $bisaLaporan)
-                        @include('partials.kosong', ['teks' => 'Cuti unit ini diurus secara internal (tidak lewat sistem).', 'ikonKosong' => 'bi-info-circle'])
+                        @include('partials.kosong', ['teks' => 'Cuti bagian ini diurus secara internal (tidak lewat sistem).', 'ikonKosong' => 'bi-info-circle'])
                     @else
                         @forelse ($cutiHariIni as $c)
                             <a href="{{ route('admin.pengajuan-cuti.show', $c) }}" class="dash-baris d-flex justify-content-between small gap-2">
@@ -283,7 +283,7 @@
                     $r['kontrak_habis'] ? ['bi-hourglass-split', $r['kontrak_habis'] . ' kontrak berakhir ≤ 60 hari'] : null,
                 ])),
                 'detail' => array_values(array_filter([
-                    $r['kepala'] ? ['bi-person-badge', 'Kepala: ' . $r['kepala']] : ['bi-exclamation-circle', 'Belum ada kepala unit', 'is-danger'],
+                    $r['kepala'] ? ['bi-person-badge', 'Kepala: ' . $r['kepala']] : ['bi-exclamation-circle', 'Belum ada kepala bagian', 'is-danger'],
                     ['bi-gender-ambiguous', "Laki-laki {$r['laki']} · Perempuan {$r['perempuan']}"],
                     $r['kontrak_habis'] ? ['bi-hourglass-split', $r['kontrak_habis'] . ' kontrak berakhir ≤ 60 hari', 'is-danger'] : null,
                     $bisaLaporan && $r['pending'] ? ['bi-inbox', $r['pending'] . ' pengajuan menunggu persetujuan', 'is-warning'] : null,
@@ -291,7 +291,7 @@
                     $bisaLaporan && $r['cuti_bulan_ini'] ? ['bi-calendar2-check', $r['cuti_bulan_ini'] . ' hari cuti bulan ini'] : null,
                     $bisaLaporan && $r['lembur_bulan_ini'] ? ['bi-clock-history', $jam($r['lembur_bulan_ini']) . ' jam lembur bulan ini'] : null,
                 ])),
-                'tautan' => array_values(array_filter([[route('admin.dashboard', ['unit' => $r['unit']]), 'Dashboard unit'],
+                'tautan' => array_values(array_filter([[route('admin.dashboard', ['unit' => $r['unit']]), 'Dashboard bagian'],
                     $bisaPegawai ? [route('admin.pegawai.index', ['status_rekrutmen' => 'Aktif', 'unit_kerja' => $r['unit']]), 'Lihat pegawai'] : null])),
             ])->all();
             $itemArea = $ringkasanArea->map(fn ($r) => [
@@ -300,7 +300,7 @@
                 'perhatian' => $r['kontrak_habis'],
                 'peringatan' => $r['kontrak_habis'] ? [['bi-hourglass-split', $r['kontrak_habis'] . ' kontrak berakhir ≤ 60 hari']] : [],
                 'detail' => array_values(array_filter([
-                    ['bi-diagram-3', 'Unit: ' . collect($r['unit'])->map(fn ($n, $u) => "{$u} ({$n})")->implode(', ')],
+                    ['bi-diagram-3', 'Bagian: ' . collect($r['unit'])->map(fn ($n, $u) => "{$u} ({$n})")->implode(', ')],
                     ['bi-gender-ambiguous', "Laki-laki {$r['laki']} · Perempuan {$r['perempuan']}"],
                     $r['kontrak_habis'] ? ['bi-hourglass-split', $r['kontrak_habis'] . ' kontrak berakhir ≤ 60 hari', 'is-danger'] : null,
                 ])),
@@ -316,7 +316,7 @@
                 </div>
                 <div class="row g-3">
                     @foreach (array_filter([
-                        $itemUnit ? ['id' => 'diagram-unit', 'judul' => 'Per Unit', 'ikon' => 'bi-diagram-3', 'items' => $itemUnit, 'ket' => count($itemUnit) . ' unit · pegawai rangkap dihitung di setiap unitnya', 'tengah' => 'pegawai · unit'] : null,
+                        $itemUnit ? ['id' => 'diagram-unit', 'judul' => 'Per Bagian', 'ikon' => 'bi-diagram-3', 'items' => $itemUnit, 'ket' => count($itemUnit) . ' bagian · pegawai rangkap dihitung di setiap bagiannya', 'tengah' => 'pegawai · bagian'] : null,
                         $itemArea ? ['id' => 'diagram-area', 'judul' => 'Per Area Kerja', 'ikon' => 'bi-geo-alt', 'items' => $itemArea, 'ket' => count($itemArea) . ' area kerja (lokasi)', 'tengah' => 'pegawai · area'] : null,
                     ]) as $d)
                         <div class="col-12 {{ $itemUnit && $itemArea ? 'col-xxl-6' : '' }}">

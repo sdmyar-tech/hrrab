@@ -71,7 +71,7 @@
                     @include('admin.pegawai._info-grid', ['items' => [
                         'Jabatan' => $kepegawaian?->jabatan,
                         'Jabatan Tambahan' => $kepegawaian?->jabatan_tambahan,
-                        'Unit Kerja' => $kepegawaian?->unit_kerja,
+                        'Bagian' => $kepegawaian?->unit_kerja,
                         'Lokasi Kerja' => $kepegawaian?->lokasi_kerja,
                         'Tanggal Masuk' => $kepegawaian?->tanggal_masuk?->translatedFormat('d F Y'),
                         'Status Kerja' => $kepegawaian?->status_kerja,

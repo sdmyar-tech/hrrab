@@ -165,7 +165,7 @@
                                         <div class="invalid-feedback">@error('nip'){{ $message }}@else NIP wajib diisi. @enderror</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="f-unit-kerja" class="form-label">Unit Kerja (Utama)</label>
+                                        <label for="f-unit-kerja" class="form-label">Bagian (Utama)</label>
                                         @if (auth()->user()->isAdmin())
                                             <select id="f-unit-kerja" name="unit_kerja" class="form-select">
                                                 @foreach (config('kepegawaian.unit_kerja') as $unit)
@@ -177,7 +177,7 @@
                                             <input type="text" class="form-control" value="{{ $pegawai->kepegawaian->unit_kerja ?? '-' }}" disabled>
                                         @endif
                                         <div class="form-text">
-                                            Ubah unit lewat
+                                            Ubah bagian lewat
                                             <a href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'mutasi']) }}">Mutasi</a>
                                             atau tambah <a href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'rangkap']) }}">Rangkap Tugas</a>.
                                         </div>

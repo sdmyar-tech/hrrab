@@ -42,7 +42,7 @@ class DashboardData
             'judul' => self::judul($user),
             'unitDipilih' => $unit,
             'pilihanUnit' => $pilihanUnit,
-            'labelLingkup' => $unit ?? ($lingkup ? implode(', ', $lingkup) : 'Semua unit'),
+            'labelLingkup' => $unit ?? ($lingkup ? implode(', ', $lingkup) : 'Semua bagian'),
             'kartu' => self::kartu($user, $aktif, $kontrakHabis, $approvalCuti, $approvalLembur, $interviewSaya, $cutiHariIni, $unit),
             'tugas' => self::tugas($user, $approvalCuti, $approvalLembur),
             'agenda' => self::agenda($user),
@@ -115,7 +115,7 @@ class DashboardData
     {
         $tetap = $aktif->where('kepegawaian.status_kerja', 'Tetap')->count();
         $kartu = [[
-            'label' => $user->isKepalaBagian() ? 'Anggota Unit' : 'Pegawai Aktif', 'nilai' => $aktif->count(),
+            'label' => $user->isKepalaBagian() ? 'Anggota Bagian' : 'Pegawai Aktif', 'nilai' => $aktif->count(),
             'meta' => "{$tetap} tetap · " . ($aktif->count() - $tetap) . ' kontrak/lainnya', 'ikon' => 'bi-people', 'warna' => 'primary',
             'url' => $user->can(User::ABILITY_LIHAT_TABEL_KARYAWAN) ? route('admin.pegawai.index', array_filter(['status_rekrutmen' => 'Aktif', 'unit_kerja' => $unit])) : null,
         ]];
@@ -171,7 +171,7 @@ class DashboardData
                 'url' => route('admin.pengajuan-formasi.index'), 'ikon' => 'bi-hourglass'];
         }
         if ($user->can(User::ABILITY_KELOLA_PENUGASAN)) {
-            $tugas[] = ['label' => 'Unit tanpa kepala', 'jumlah' => count(PenugasanService::unitsTanpaKepala()), 'url' => route('admin.penugasan.index'), 'ikon' => 'bi-diagram-3'];
+            $tugas[] = ['label' => 'Bagian tanpa kepala', 'jumlah' => count(PenugasanService::unitsTanpaKepala()), 'url' => route('admin.penugasan.index'), 'ikon' => 'bi-diagram-3'];
             $tugas[] = ['label' => 'Mutasi terjadwal', 'jumlah' => Penugasan::where('tanggal_mulai', '>', now()->toDateString())->count(), 'url' => route('admin.penugasan.index', ['status' => 'terjadwal']), 'ikon' => 'bi-arrow-left-right'];
         }
         if ($user->isAdmin()) {

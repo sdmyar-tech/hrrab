@@ -145,7 +145,7 @@
                         </div>
                     </div>
                     @if (! $bisaCuti && ! $bisaLembur)
-                        <p class="text-muted small mb-0">Pengajuan cuti & lembur unit Anda diurus secara internal (tidak lewat sistem).</p>
+                        <p class="text-muted small mb-0">Pengajuan cuti & lembur bagian Anda diurus secara internal (tidak lewat sistem).</p>
                     @else
                         <div class="table-responsive">
                             <table class="table align-middle mb-0">
@@ -210,7 +210,7 @@
 
                 @include('partials.jadwal-ttd-kontrak')
                 <div class="panel">
-                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-building me-1"></i>Unit Saya</h2>
+                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-building me-1"></i>Bagian Saya</h2>
                     @if ($unitSaya)
                         <div class="d-flex gap-2 mb-3">
                             <div class="dash-mini-stat viz flex-fill">
@@ -219,7 +219,7 @@
                             </div>
                             <div class="dash-mini-stat viz flex-fill">
                                 <div class="n text-truncate" style="font-size:.9rem;" title="{{ $unitSaya['kepala'] }}">{{ $unitSaya['kepala'] ? \Illuminate\Support\Str::of($unitSaya['kepala'])->before(',') : '-' }}</div>
-                                <div class="l">Kepala unit</div>
+                                <div class="l">Kepala bagian</div>
                             </div>
                         </div>
                     @endif

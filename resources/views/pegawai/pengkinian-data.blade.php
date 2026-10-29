@@ -35,7 +35,7 @@
         ]],
         'kepegawaian' => ['judul' => 'Kepegawaian', 'ikon' => 'bi-briefcase', 'fields' => [
             ['name' => 'jabatan', 'label' => 'Jabatan', 'type' => 'select', 'value' => $kepegawaian?->jabatan, 'options' => $jabatanOptions, 'required' => true, 'lainnya' => true, 'help' => 'Jabatan utama saat ini. Pilih "Lainnya" bila tidak ada di daftar.'],
-            ['name' => 'unit_kerja', 'label' => 'Unit Kerja', 'type' => 'select', 'value' => $kepegawaian?->unit_kerja, 'options' => config('kepegawaian.unit_kerja'), 'required' => true],
+            ['name' => 'unit_kerja', 'label' => 'Bagian', 'type' => 'select', 'value' => $kepegawaian?->unit_kerja, 'options' => config('kepegawaian.unit_kerja'), 'required' => true],
             ['name' => 'lokasi_kerja', 'label' => 'Lokasi Kerja', 'type' => 'select', 'value' => $kepegawaian?->lokasi_kerja, 'options' => config('kepegawaian.lokasi_kerja'), 'required' => true],
             ['name' => 'tanggal_masuk', 'label' => 'Tanggal Masuk', 'type' => 'date', 'value' => optional($kepegawaian?->tanggal_masuk)->format('Y-m-d'), 'required' => true, 'help' => 'Tanggal mulai aktif bekerja. Tanyakan pimpinan bila tidak tahu.'],
         ]],

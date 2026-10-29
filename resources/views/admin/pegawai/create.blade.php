@@ -167,14 +167,14 @@
                                             <div class="invalid-feedback">@error('nip'){{ $message }}@else NIP wajib diisi. @enderror</div>
                                         </div>
                                         <div class="col-md-6">
-                                            <label for="f-unit-kerja" class="form-label required">Unit Kerja</label>
+                                            <label for="f-unit-kerja" class="form-label required">Bagian</label>
                                             <select id="f-unit-kerja" name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror" required>
-                                                <option value="">-- Pilih Unit Kerja --</option>
+                                                <option value="">-- Pilih Bagian --</option>
                                                 @foreach (config('kepegawaian.unit_kerja') as $unit)
                                                     <option value="{{ $unit }}" {{ old('unit_kerja', $pegawai->kepegawaian->unit_kerja ?? '') == $unit ? 'selected' : '' }}>{{ $unit }}</option>
                                                 @endforeach
                                             </select>
-                                            <div class="invalid-feedback">Silakan pilih unit kerja.</div>
+                                            <div class="invalid-feedback">Silakan pilih bagian.</div>
                                         </div>
                                         <div class="col-md-6">
                                             <label for="f-jabatan" class="form-label required">Jabatan Utama</label>

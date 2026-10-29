@@ -101,14 +101,14 @@
                     <section class="panel p-4">
                         <h2 class="h6 fw-bold mb-3">Ditujukan Kepada</h2>
                         @if (! $wajibUnit)
-                            <p class="small text-muted mb-2">Kosongkan untuk <strong>semua pegawai</strong>, atau pilih unit tertentu.</p>
+                            <p class="small text-muted mb-2">Kosongkan untuk <strong>semua pegawai</strong>, atau pilih bagian tertentu.</p>
                         @else
-                            <p class="small text-muted mb-2">Pilih unit yang Anda pimpin.</p>
+                            <p class="small text-muted mb-2">Pilih bagian yang Anda pimpin.</p>
                         @endif
                         <div class="form-check border-bottom pb-2 mb-2">
                             <input class="form-check-input" type="checkbox" id="pilih-semua-unit" data-pilih-semua="sasaran_unit[]">
                             <label class="form-check-label small fw-semibold" for="pilih-semua-unit">
-                                Pilih semua unit <span class="text-muted fw-normal" data-jumlah-terpilih></span>
+                                Pilih semua bagian <span class="text-muted fw-normal" data-jumlah-terpilih></span>
                             </label>
                         </div>
                         <div class="border rounded p-2" style="max-height:200px; overflow-y:auto;">

@@ -39,7 +39,7 @@ class LowonganController extends Controller
             // "Segera tutup" = tanggal tutup paling dekat di atas.
             'tutup' => ['Segera ditutup', 'lowongans.tanggal_tutup', 'asc'],
             ...Urutan::abjad('judul', 'Judul', 'lowongans.judul'),
-            ...Urutan::abjad('unit', 'Unit', 'lowongans.unit_kerja'),
+            ...Urutan::abjad('unit', 'Bagian', 'lowongans.unit_kerja'),
         ]);
         $lowongans = $query->paginate(12)->withQueryString();
 

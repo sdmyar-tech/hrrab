@@ -19,7 +19,7 @@ class KelengkapanData
             'Tempat lahir' => $p?->tempat_lahir, 'Tanggal lahir' => $p?->tanggal_lahir, 'Jenis kelamin' => $p?->jenis_kelamin,
             'Agama' => $p?->agama, 'Alamat KTP' => $p?->alamat_ktp, 'Status pernikahan' => $p?->status_pernikahan,
             'Nama ibu kandung' => $p?->nama_ibu_kandung, 'Pendidikan terakhir' => $p?->pendidikan_terakhir,
-            'Jabatan' => $kep?->jabatan, 'Unit kerja' => $kep?->unit_kerja, 'Lokasi kerja' => $kep?->lokasi_kerja, 'Tanggal masuk' => $kep?->tanggal_masuk,
+            'Jabatan' => $kep?->jabatan, 'Bagian' => $kep?->unit_kerja, 'Lokasi kerja' => $kep?->lokasi_kerja, 'Tanggal masuk' => $kep?->tanggal_masuk,
             'No. HP kerabat' => $p?->kontakDarurat?->no_hp_kerabat, 'Nama kerabat' => $p?->kontakDarurat?->nama_kerabat,
             'Hubungan kerabat' => $p?->kontakDarurat?->hubungan_kerabat,
             'File KTP' => $p?->dokumen?->upload_ktp, 'File KK' => $p?->dokumen?->upload_kk, 'Pas foto' => $p?->dokumen?->pas_foto,

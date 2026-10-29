@@ -13,7 +13,7 @@
                 <div>
                     <p class="eyebrow mb-1">Kepegawaian</p>
                     <h1 class="h3 mb-1">Mutasi & Rangkap Tugas</h1>
-                    <p class="text-muted mb-0">Riwayat perpindahan unit dan rangkap tugas pegawai. Mutasi/rangkap baru dibuat langsung dari halaman ini.</p>
+                    <p class="text-muted mb-0">Riwayat perpindahan bagian dan rangkap tugas pegawai. Mutasi/rangkap baru dibuat langsung dari halaman ini.</p>
                 </div>
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
@@ -28,8 +28,8 @@
             <div class="alert alert-warning d-flex gap-2 align-items-start">
                 <i class="bi bi-exclamation-triangle-fill mt-1"></i>
                 <div>
-                    <strong>Unit tanpa kepala aktif:</strong> {{ implode(', ', $unitsTanpaKepala) }}.
-                    <div class="small">Pengajuan cuti/lembur staf di unit ini tidak punya approver tahap Kepala Bagian. Tunjuk kepala lewat Mutasi/Rangkap (peran Kepala) atau Kelola Akun.</div>
+                    <strong>Bagian tanpa kepala aktif:</strong> {{ implode(', ', $unitsTanpaKepala) }}.
+                    <div class="small">Pengajuan cuti/lembur staf di bagian ini tidak punya approver tahap Kepala Bagian. Tunjuk kepala lewat Mutasi/Rangkap (peran Kepala) atau Kelola Akun.</div>
                 </div>
             </div>
         @endif
@@ -55,8 +55,8 @@
                 <div class="row g-2 align-items-center">
                     <div class="col-12 col-md-6 col-xl-4">
                         @include('partials.daftar-cari', [
-                            'cariTeks' => 'Cari pegawai atau unit, contoh: Siti atau SMK',
-                            'cariLabel' => 'Cari mutasi/rangkap menurut nama pegawai, NIP, atau unit',
+                            'cariTeks' => 'Cari pegawai atau bagian, contoh: Siti atau SMK',
+                            'cariLabel' => 'Cari mutasi/rangkap menurut nama pegawai, NIP, atau bagian',
                         ])
                     </div>
                     <div class="col-6 col-md-3 col-xl-2">
@@ -102,7 +102,7 @@
                                     <a href="{{ route('admin.pegawai.show', ['pegawai' => $p->data_pegawai_id, 'tab' => 'penugasan']) }}" class="nama-tautan d-block">
                                         {{ $p->dataPegawai?->nama_lengkap ?? '-' }}
                                     </a>
-                                    <small class="text-muted">Unit utama: {{ $p->dataPegawai?->kepegawaian?->unit_kerja ?? '-' }}</small>
+                                    <small class="text-muted">Bagian utama: {{ $p->dataPegawai?->kepegawaian?->unit_kerja ?? '-' }}</small>
                                 </td>
                                 <td>
                                     <span class="badge {{ $p->jenis === 'mutasi' ? 'text-bg-primary' : 'text-bg-info' }} me-1">{{ $p->jenisLabel() }}</span>{{ $p->unit_kerja }}
@@ -144,7 +144,7 @@
                                                         <button type="submit" class="dropdown-item text-danger"
                                                             data-confirm="true" data-icon="warning" data-confirm-color="#dc3545" data-confirm-text="Ya, Hapus" data-cancel-text="Batal"
                                                             data-title="Hapus {{ strtolower($p->jenisLabel()) }}?"
-                                                            data-text="{{ $p->jenisLabel() }} {{ $p->dataPegawai?->nama_lengkap }} ke {{ $p->unit_kerja }} akan dihapus.{{ $p->is_utama ? ' Pegawai dikembalikan ke unit sebelumnya.' : '' }}">
+                                                            data-text="{{ $p->jenisLabel() }} {{ $p->dataPegawai?->nama_lengkap }} ke {{ $p->unit_kerja }} akan dihapus.{{ $p->is_utama ? ' Pegawai dikembalikan ke bagian sebelumnya.' : '' }}">
                                                             <i class="bi bi-trash me-2"></i>Hapus
                                                         </button>
                                                     </form>

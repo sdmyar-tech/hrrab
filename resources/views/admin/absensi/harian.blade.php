@@ -99,12 +99,12 @@
                 @if ($statusAktif)<input type="hidden" name="status" value="{{ $statusAktif }}">@endif
                 <div class="row g-2 align-items-center">
                     <div class="col-12 col-md-6 col-xl-5">
-                        @include('partials.daftar-cari', ['cariTeks' => 'Cari pegawai, contoh: Siti atau SMK', 'cariLabel' => 'Cari absensi menurut nama, NIP, ID mesin, unit, atau jabatan'])
+                        @include('partials.daftar-cari', ['cariTeks' => 'Cari pegawai, contoh: Siti atau SMK', 'cariLabel' => 'Cari absensi menurut nama, NIP, ID mesin, bagian, atau jabatan'])
                     </div>
                     @if (count($unitOpsi) > 1)
                         <div class="col-12 col-md-3">
-                            <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Unit">
-                                <option value="">Semua unit</option>
+                            <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Bagian">
+                                <option value="">Semua bagian</option>
                                 @foreach ($unitOpsi as $u)<option value="{{ $u }}" @selected(request('unit') === $u)>{{ $u }}</option>@endforeach
                             </select>
                         </div>

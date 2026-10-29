@@ -26,11 +26,11 @@
 </section>
 
 <section class="panel" data-untuk-role="gm kepala_bagian kepala_sdm staff">
-    <h2 class="h6 fw-bold mb-1"><i class="bi bi-person-badge"></i>Kepala Unit</h2>
+    <h2 class="h6 fw-bold mb-1"><i class="bi bi-person-badge"></i>Kepala Bagian</h2>
     <p class="small text-muted mb-3">
-        Unit yang dipimpin akun ini (approve tahap Kepala Bagian & interviewer tahap 2). Bisa lebih dari satu.
+        Bagian yang dipimpin akun ini (approve tahap Kepala Bagian & interviewer tahap 2). Bisa lebih dari satu.
         Akun <strong>Staff</strong> yang dicentang otomatis jadi Kepala Bagian.
-        <span data-untuk-role="gm">Akun <strong>GM</strong> boleh memimpin unit <strong>tanpa NIP / Data Pegawai</strong>.</span>
+        <span data-untuk-role="gm">Akun <strong>GM</strong> boleh memimpin bagian <strong>tanpa NIP / Data Pegawai</strong>.</span>
         <span data-untuk-role="kepala_bagian kepala_sdm staff">Untuk role ini akun harus tertaut ke Data Pegawai (pilih pegawai atau isi NIP).</span>
     </p>
     <div class="row row-cols-2 row-cols-md-3 g-1 kotak-centang">
@@ -50,7 +50,7 @@
 
 <div class="panel kosong-role text-center text-muted small" hidden>
     <i class="bi bi-info-circle d-block fs-4 mb-2 opacity-50"></i>
-    <span data-teks-kosong>Role ini tidak memerlukan pengaturan divisi atau unit.</span>
+    <span data-teks-kosong>Role ini tidak memerlukan pengaturan divisi atau bagian.</span>
 </div>
 
 <script>
@@ -72,8 +72,8 @@
             });
             kosong.hidden = tampil > 0;
             kosong.querySelector('[data-teks-kosong]').textContent = pilihRole.value
-                ? 'Role ini tidak memerlukan pengaturan divisi atau unit.'
-                : 'Pilih role terlebih dahulu. Pengaturan divisi/kepala unit muncul untuk GM, Kepala SDM, Kepala Bagian, dan Staff.';
+                ? 'Role ini tidak memerlukan pengaturan divisi atau bagian.'
+                : 'Pilih role terlebih dahulu. Pengaturan divisi/kepala bagian muncul untuk GM, Kepala SDM, Kepala Bagian, dan Staff.';
         }
 
         pilihRole.addEventListener('change', aturKartu);

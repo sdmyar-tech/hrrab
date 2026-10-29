@@ -94,7 +94,7 @@ class KandidatInternalController extends Controller
         ], [
             'lowongan_id.required_if' => 'Pilih lowongan tujuan.',
             'jabatan_tujuan.required_if' => 'Jabatan tujuan wajib diisi.',
-            'unit_kerja_tujuan.required_if' => 'Unit kerja tujuan wajib diisi.',
+            'unit_kerja_tujuan.required_if' => 'Bagian tujuan wajib diisi.',
             'data_pegawai_id.required_if' => 'Pilih pegawai yang akan diikutkan seleksi.',
             'direkomendasikan_oleh.in' => 'Pilih pengusul dari daftar pegawai.',
             ...RiwayatPelamar::messages(),

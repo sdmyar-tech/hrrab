@@ -122,7 +122,7 @@ class PegawaiKeluar
             // 5. Dampak ke orang lain: jadwal interview tahap 2, unit tanpa kepala, alur khusus yang menunjuk akunnya.
             PenugasanService::sinkronInterviewer();
             foreach ($d['memimpin'] as $unit) {
-                $hasil[] = "Unit {$unit} kini tanpa koordinator — tetapkan penggantinya di Master Unit.";
+                $hasil[] = "Bagian {$unit} kini tanpa koordinator — tetapkan penggantinya di Master Bagian.";
             }
             $ids = collect($snapshot['akun'])->pluck('id');
             if ($ids->isNotEmpty() && ($n = AlurPegawai::whereIn('atasan_user_id', $ids)->orWhereIn('gm_user_id', $ids)->count())) {

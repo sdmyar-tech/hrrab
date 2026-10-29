@@ -65,12 +65,12 @@
                         <div class="col-md-4">
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                                <input type="search" name="q" class="form-control border-start-0" placeholder="Cari pegawai, contoh: Siti atau 1023" aria-label="Cari pegawai menurut nama, NIP, ID mesin, atau unit" value="{{ request('q') }}">
+                                <input type="search" name="q" class="form-control border-start-0" placeholder="Cari pegawai, contoh: Siti atau 1023" aria-label="Cari pegawai menurut nama, NIP, ID mesin, atau bagian" value="{{ request('q') }}">
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
-                            <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Unit">
-                                <option value="">Semua unit</option>
+                            <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Bagian">
+                                <option value="">Semua bagian</option>
                                 @foreach ($unitOpsi as $u)<option value="{{ $u }}" @selected(request('unit') === $u)>{{ $u }}</option>@endforeach
                             </select>
                         </div>

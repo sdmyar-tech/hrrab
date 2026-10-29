@@ -29,7 +29,7 @@
         ['bagian' => 'Kepegawaian', 'item' => [
             ['Data Pegawai', 'bi-people', 'admin.pegawai.index', 'admin.pegawai.*', $bisa('lihat-tabel-karyawan'), null],
             ['Mutasi & Rangkap', 'bi-arrow-left-right', 'admin.penugasan.index', 'admin.penugasan.*', $bisa('kelola-penugasan'), null],
-            ['Unit & Koordinator', 'bi-buildings', 'admin.unit.index', 'admin.unit.*', $bisa('kelola-penugasan'), null],
+            ['Bagian & Koordinator', 'bi-buildings', 'admin.unit.index', 'admin.unit.*', $bisa('kelola-penugasan'), null],
         ]],
         ['bagian' => 'Absensi', 'item' => [
             ['Absensi Harian', $ik['harian'], 'admin.absensi.harian', ['admin.absensi.harian', 'admin.absensi.pegawai', 'admin.absensi.izin*'], $bisa('lihat-absensi'), null],

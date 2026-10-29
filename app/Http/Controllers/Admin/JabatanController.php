@@ -35,7 +35,7 @@ class JabatanController extends Controller
         $rows = Jabatan::with('units:id,nama')->orderBy('nama')->get()
             ->map(fn (Jabatan $j, $i) => [$i + 1, $j->nama, $j->units->pluck('nama')->implode(', '), $dipakai[$j->nama] ?? 0]);
 
-        return ExcelExporter::download(ExcelExporter::namaFile('master-jabatan'), ['No', 'Nama Jabatan', 'Unit', 'Dipakai'], $rows, 'Master Jabatan');
+        return ExcelExporter::download(ExcelExporter::namaFile('master-jabatan'), ['No', 'Nama Jabatan', 'Bagian', 'Dipakai'], $rows, 'Master Jabatan');
     }
 
     public function store(Request $request): RedirectResponse
@@ -46,7 +46,7 @@ class JabatanController extends Controller
         $jabatan = Jabatan::create(['nama' => $nama]);
         $jabatan->aturUnit($unitId ? [$unitId] : []);
 
-        return $this->kembali($jabatan)->with('success', "Jabatan {$nama} ditambahkan" . ($unitId ? ' di unit ' . Unit::find($unitId)?->nama : ' (belum ditautkan ke unit)') . '.');
+        return $this->kembali($jabatan)->with('success', "Jabatan {$nama} ditambahkan" . ($unitId ? ' di bagian ' . Unit::find($unitId)?->nama : ' (belum ditautkan ke bagian)') . '.');
     }
 
     public function update(Request $request, Jabatan $jabatan): RedirectResponse
@@ -69,7 +69,7 @@ class JabatanController extends Controller
         // Unit hanya disinkronkan bila bagian unit ikut dikirim dari form ubah.
         if ($request->boolean('unit_dikirim') && collect($unitIds)->map('intval')->sort()->values()->all() !== $unitLama) {
             $jabatan->aturUnit($unitIds);
-            $pesan[] = 'Unit jabatan ' . $jabatan->nama . ': ' . ($jabatan->units()->pluck('nama')->implode(', ') ?: 'tidak ada') . '.';
+            $pesan[] = 'Bagian jabatan ' . $jabatan->nama . ': ' . ($jabatan->units()->pluck('nama')->implode(', ') ?: 'tidak ada') . '.';
         }
 
         return $this->kembali($jabatan)->with($pesan ? 'success' : 'info', $pesan ? implode(' ', $pesan) : 'Tidak ada perubahan.');

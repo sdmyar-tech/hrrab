@@ -47,7 +47,7 @@ class RingkasanPengajuan
             $peringatan[] = "Melebihi sisa cuti tahunan ({$sisa} hari tersisa, diajukan {$c->lama_cuti} hari).";
         }
         if ($bersamaan->isNotEmpty()) {
-            $peringatan[] = 'Rekan unit ' . $unit . ' cuti di tanggal yang sama: '
+            $peringatan[] = 'Rekan bagian ' . $unit . ' cuti di tanggal yang sama: '
                 . $bersamaan->map(fn ($b) => ($b->dataPegawai?->nama_lengkap ?? '-') . ($b->isPending() ? ' (menunggu)' : ''))->take(4)->implode(', ')
                 . ($bersamaan->count() > 4 ? ', +' . ($bersamaan->count() - 4) . ' lainnya' : '') . '.';
         }
@@ -147,13 +147,13 @@ class RingkasanPengajuan
             $peringatan[] = "Masih ada lowongan aktif \"{$low->judul}\" (terisi {$low->jumlah_terisi}/{$low->jumlah_dibutuhkan}).";
         }
         if ($dobel = (clone $lainUnit)->where('jabatan', $f->jabatan)->where('status', PengajuanFormasi::STATUS_PENDING)->count()) {
-            $peringatan[] = "Ada {$dobel} pengajuan formasi lain untuk {$f->jabatan} di unit ini yang masih menunggu.";
+            $peringatan[] = "Ada {$dobel} pengajuan formasi lain untuk {$f->jabatan} di bagian ini yang masih menunggu.";
         }
 
         return [
             'judul' => $f->jabatan . ' · ' . $f->jumlahLabel(),
             'orang' => ['nama' => $f->diajukanOleh?->dataPegawai?->nama_lengkap ?? $f->diajukanOleh?->name ?? '-',
-                'sub' => 'Pengaju · unit ' . $unit, 'meta' => $f->diajukanOleh?->roleLabel()],
+                'sub' => 'Pengaju · bagian ' . $unit, 'meta' => $f->diajukanOleh?->roleLabel()],
             'detail' => array_filter([
                 ['Kebutuhan', $f->jenisLabel()],
                 ['Jabatan', $f->jabatan],
@@ -166,13 +166,13 @@ class RingkasanPengajuan
                 ['Diajukan', self::waktu($f->created_at)],
             ]),
             'angka' => [
-                ['label' => 'Pegawai aktif unit', 'nilai' => ($aktifDi(collect($bagan['grup'])->flatten(1)->all()) + count($bagan['kepala'])) . ' orang', 'catatan' => $unit, 'nada' => null],
+                ['label' => 'Pegawai aktif bagian', 'nilai' => ($aktifDi(collect($bagan['grup'])->flatten(1)->all()) + count($bagan['kepala'])) . ' orang', 'catatan' => $unit, 'nada' => null],
                 ['label' => 'Aktif di jabatan ini', 'nilai' => $aktifDi($bagan['grup'][mb_strtoupper($f->jabatan)] ?? []) . ' orang', 'catatan' => $f->jabatan, 'nada' => null],
                 ['label' => 'Keluar 12 bulan', 'nilai' => Kepegawaian::where('unit_kerja', $unit)->whereDate('tanggal_keluar', '>=', $setahun)->count() . ' orang', 'catatan' => null, 'nada' => null],
                 ['label' => 'Masuk 12 bulan', 'nilai' => Kepegawaian::where('unit_kerja', $unit)->whereDate('tanggal_masuk', '>=', $setahun)->count() . ' orang', 'catatan' => null, 'nada' => null],
             ],
             'peringatan' => $peringatan,
-            'riwayatJudul' => 'Formasi terakhir unit ' . $unit,
+            'riwayatJudul' => 'Formasi terakhir bagian ' . $unit,
             'riwayat' => (clone $lainUnit)->latest()->limit(5)->get()->map(fn (PengajuanFormasi $r) => [
                 'utama' => $r->jabatan . ' · ' . $r->jumlah_dibutuhkan . ' orang',
                 'sub' => ($r->jenis_kebutuhan ? (PengajuanFormasi::JENIS_LABEL[$r->jenis_kebutuhan] ?? '') . ' · ' : '') . $r->created_at?->translatedFormat('d M Y'),
@@ -232,7 +232,7 @@ class RingkasanPengajuan
             ]),
             'angka' => [
                 ['label' => "Izin keluar {$namaBulan}", 'nilai' => $disetujuiBulanIni . ' kali', 'catatan' => 'disetujui, selain ini', 'nada' => $disetujuiBulanIni >= 4 ? 'waspada' : null],
-                ['label' => 'Rekan unit keluar hari itu', 'nilai' => $rekan->count() . ' orang', 'catatan' => $rekan->pluck('dataPegawai.nama_lengkap')->take(2)->implode(', ') ?: null, 'nada' => $rekan->isNotEmpty() ? 'waspada' : null],
+                ['label' => 'Rekan bagian keluar hari itu', 'nilai' => $rekan->count() . ' orang', 'catatan' => $rekan->pluck('dataPegawai.nama_lengkap')->take(2)->implode(', ') ?: null, 'nada' => $rekan->isNotEmpty() ? 'waspada' : null],
             ],
             'peringatan' => $peringatan,
             'riwayatJudul' => 'Riwayat izin keluar terakhir',
@@ -295,7 +295,7 @@ class RingkasanPengajuan
 
         if ($f->butuhDuaPersetujuan()) {
             $daftar = array_filter([
-                'gm' => RekrutmenAccess::perluGm($f) ? ['GM unit', $f->gmPenyetuju, $f->gm_disetujui_pada, RekrutmenAccess::gmFormasi($f)->pluck('name')] : null,
+                'gm' => RekrutmenAccess::perluGm($f) ? ['GM bagian', $f->gmPenyetuju, $f->gm_disetujui_pada, RekrutmenAccess::gmFormasi($f)->pluck('name')] : null,
                 'owner' => ['Owner', $f->ownerPenyetuju, $f->owner_disetujui_pada, User::where('role', User::ROLE_PEMBINA)->pluck('name')],
             ]);
         } else {

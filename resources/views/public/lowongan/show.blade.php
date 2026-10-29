@@ -57,7 +57,7 @@
                     <dl class="mb-3">
                         <dt><i class="bi bi-person-badge me-1"></i> Jabatan</dt>
                         <dd>{{ $lowongan->jabatan }}</dd>
-                        <dt><i class="bi bi-diagram-3 me-1"></i> Unit Kerja</dt>
+                        <dt><i class="bi bi-diagram-3 me-1"></i> Bagian</dt>
                         <dd>{{ $lowongan->unit_kerja }}</dd>
                         @if ($lowongan->lokasi_kerja)
                             <dt><i class="bi bi-geo-alt me-1"></i> Lokasi</dt>

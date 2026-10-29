@@ -72,13 +72,13 @@ class AbsensiController extends Controller
         'masuk_awal' => 'Masuk paling pagi',
         'masuk_akhir' => 'Masuk paling siang',
         'telat' => 'Telat paling lama',
-        'unit' => 'Unit A–Z',
+        'unit' => 'Bagian A–Z',
     ];
 
     /** Pilihan urutan halaman Rekap (juga dipakai ekspor). */
     public const URUT_REKAP = [
         'nama' => 'Nama A–Z',
-        'unit' => 'Unit A–Z',
+        'unit' => 'Bagian A–Z',
         'telat' => 'Telat terbanyak',
         'telat_menit' => 'Menit telat terbanyak',
         'alpa' => 'Alpa terbanyak',
@@ -205,7 +205,7 @@ class AbsensiController extends Controller
     public function pegawaiExport(Request $request, DataPegawai $pegawai): BinaryFileResponse
     {
         $pegawai->load(['kepegawaian', 'jadwalKerja']);
-        abort_unless(AksesAbsensi::bolehLihatPegawai($this->user(), $pegawai), 403, 'Pegawai ini di luar unit Anda.');
+        abort_unless(AksesAbsensi::bolehLihatPegawai($this->user(), $pegawai), 403, 'Pegawai ini di luar bagian Anda.');
 
         [$dari, $sampai] = $this->rentang($request);
         $hari = PenilaianAbsensi::rentang(collect([$pegawai]), $dari, $sampai)[$pegawai->id] ?? [];
@@ -219,7 +219,7 @@ class AbsensiController extends Controller
     {
         $user = $this->user();
         $pegawai->load(['kepegawaian', 'jadwalKerja']);
-        abort_unless(AksesAbsensi::bolehLihatPegawai($user, $pegawai), 403, 'Pegawai ini di luar unit Anda.');
+        abort_unless(AksesAbsensi::bolehLihatPegawai($user, $pegawai), 403, 'Pegawai ini di luar bagian Anda.');
 
         [$dari, $sampai, $pesanRentang] = $this->rentang($request);
         $hari = PenilaianAbsensi::rentang(collect([$pegawai]), $dari, $sampai)[$pegawai->id] ?? [];

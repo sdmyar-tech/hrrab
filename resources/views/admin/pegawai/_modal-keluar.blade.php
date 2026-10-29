@@ -65,7 +65,7 @@
                             <li>{{ $d['penugasan']->count() }} penugasan aktif ({{ $d['penugasan']->pluck('unit_kerja')->unique()->implode(', ') }}) diakhiri.</li>
                         @endif
                         @foreach ($d['memimpin'] as $unit)
-                            <li class="text-warning-emphasis">Unit {{ $unit }} kehilangan koordinatornya.</li>
+                            <li class="text-warning-emphasis">Bagian {{ $unit }} kehilangan koordinatornya.</li>
                         @endforeach
                         @if ($d['pengajuan'])
                             <li>{{ $d['pengajuan'] }} pengajuan (cuti/lembur/izin keluar) yang masih menunggu ditutup.</li>

@@ -105,7 +105,7 @@
                         <h2 class="h6 fw-bold mb-3"><i class="bi bi-briefcase"></i>Kepegawaian & Kontak</h2>
                         @include('admin.pegawai._info-grid', ['items' => [
                             'Jabatan' => $kepegawaian?->jabatan,
-                            'Unit Kerja' => $kepegawaian?->unit_kerja,
+                            'Bagian' => $kepegawaian?->unit_kerja,
                             'Kontak Darurat' => $kontakDarurat ? trim("{$kontakDarurat->nama_kerabat} ({$kontakDarurat->no_hp_kerabat})") : null,
                             'BPJS Kesehatan' => $bpjs?->no_bpjs_kesehatan,
                         ]])

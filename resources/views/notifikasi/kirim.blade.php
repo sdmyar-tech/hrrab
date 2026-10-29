@@ -36,7 +36,7 @@
                         @php
                             $opsi = [
                                 'belum_lengkap' => ['Pegawai yang datanya belum lengkap', 'bi-person-vcard', $belumLengkap->count() . ' akun'],
-                                'unit' => ['Per unit', 'bi-diagram-3', null],
+                                'unit' => ['Per bagian', 'bi-diagram-3', null],
                                 'pegawai' => ['Pilih pegawai tertentu', 'bi-person-check', null],
                                 'semua' => ['Semua pegawai dalam wewenang saya', 'bi-people', $pilihanPegawai->count() . ' akun'],
                             ];
@@ -77,10 +77,10 @@
                         </div>
 
                         <div data-target="unit">
-                            <label class="form-label small">Unit</label>
+                            <label class="form-label small">Bagian</label>
                             <div class="form-check mb-1">
                                 <input class="form-check-input" type="checkbox" id="semua-unit" data-pilih-semua="unit[]">
-                                <label class="form-check-label small fw-semibold" for="semua-unit">Pilih semua unit <span class="text-muted fw-normal" data-jumlah-terpilih></span></label>
+                                <label class="form-check-label small fw-semibold" for="semua-unit">Pilih semua bagian <span class="text-muted fw-normal" data-jumlah-terpilih></span></label>
                             </div>
                             <div class="border rounded p-2 row row-cols-2 g-1 mx-0" style="max-height:220px; overflow-y:auto;">
                                 @foreach ($pilihanUnit as $u)

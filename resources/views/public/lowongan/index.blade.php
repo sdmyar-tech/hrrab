@@ -14,7 +14,7 @@
                 </p>
                 <div class="d-flex flex-wrap gap-2">
                     <span class="stat-pill"><i class="bi bi-briefcase me-1"></i> {{ $lowongans->total() }} lowongan terbuka</span>
-                    <span class="stat-pill"><i class="bi bi-diagram-3 me-1"></i> {{ $unitKerjaOptions->count() }} unit kerja</span>
+                    <span class="stat-pill"><i class="bi bi-diagram-3 me-1"></i> {{ $unitKerjaOptions->count() }} bagian</span>
                 </div>
                 @unless (Auth::user()?->isPelamar())
                     <div class="d-flex flex-wrap gap-2 mt-4">
@@ -38,12 +38,12 @@
                 <div class="input-group">
                     <span class="input-group-text bg-white" style="border-color:#e4d3d3; border-radius:10px 0 0 10px;"><i class="bi bi-search text-muted"></i></span>
                     <input type="search" name="q" class="form-control border-start-0" style="border-radius:0 10px 10px 0;"
-                        placeholder="Cari lowongan, contoh: Guru Matematika" aria-label="Cari lowongan menurut posisi, jabatan, atau unit kerja" value="{{ request('q') }}">
+                        placeholder="Cari lowongan, contoh: Guru Matematika" aria-label="Cari lowongan menurut posisi, jabatan, atau bagian" value="{{ request('q') }}">
                 </div>
             </div>
             <div class="col-md-4">
                 <select name="unit_kerja" class="form-select" onchange="this.form.submit()">
-                    <option value="">Semua Unit Kerja</option>
+                    <option value="">Semua Bagian</option>
                     @foreach ($unitKerjaOptions as $opt)
                         <option value="{{ $opt }}" {{ request('unit_kerja') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
                     @endforeach
@@ -131,7 +131,7 @@
                     </h3>
                     <p class="text-muted mb-0">
                         @if (request()->hasAny(['q', 'unit_kerja']))
-                            Coba kata kunci atau unit kerja lain.
+                            Coba kata kunci atau bagian lain.
                         @else
                             Silakan cek kembali dalam waktu dekat. Daftarkan akun agar siap melamar saat lowongan dibuka.
                         @endif

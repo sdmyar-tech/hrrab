@@ -55,11 +55,11 @@
             <input class="form-check-input" type="checkbox" role="switch" name="absen_semua" value="1" id="absen_semua" @checked($semua)>
             <label class="form-check-label" for="absen_semua">Pilih semua pegawai <span class="text-muted small">({{ $absen['kandidat']->count() }} akun pegawai aktif)</span></label>
         </div>
-        <p class="small text-muted mb-2" data-saat-tidak-semua>Boleh dikombinasikan — mis. semua <em>Kepala</em> + seluruh pegawai unit <em>SDM</em> + beberapa nama.</p>
+        <p class="small text-muted mb-2" data-saat-tidak-semua>Boleh dikombinasikan — mis. semua <em>Kepala</em> + seluruh pegawai bagian <em>SDM</em> + beberapa nama.</p>
 
         <div class="row g-2" data-saat-tidak-semua>
             @foreach ([
-                ['kunci' => 'unit', 'judul' => 'Per unit', 'cari' => 'Saring unit, contoh: SMK', 'ikon' => 'bi-diagram-3', 'opsi' => $absen['unit'], 'pilih' => $pilUnit],
+                ['kunci' => 'unit', 'judul' => 'Per bagian', 'cari' => 'Saring bagian, contoh: SMK', 'ikon' => 'bi-diagram-3', 'opsi' => $absen['unit'], 'pilih' => $pilUnit],
                 ['kunci' => 'jabatan', 'judul' => 'Per jabatan', 'cari' => 'Saring jabatan, contoh: Guru', 'ikon' => 'bi-person-badge', 'opsi' => $absen['jabatan'], 'pilih' => $pilJabatan],
             ] as $kel)
                 <div class="col-md-6 col-xl-4">
@@ -161,7 +161,7 @@
             const buka = el('[name=absen_buka]').value, tutup = el('[name=absen_tutup]').value;
             if (!buka || !tutup) return tahan('Isi waktu absen', 'Tentukan kapan absen dibuka dan ditutup.', el('[name=absen_buka]'));
             if (tutup <= buka) return tahan('Waktu absen tidak valid', 'Jam ditutup harus setelah jam dibuka.', el('[name=absen_tutup]'));
-            if (hitung() === 0) return tahan('Pilih peserta absen', 'Pilih semua, per unit, per jabatan, atau nama pegawai.', el('[data-total-peserta]'));
+            if (hitung() === 0) return tahan('Pilih peserta absen', 'Pilih semua, per bagian, per jabatan, atau nama pegawai.', el('[data-total-peserta]'));
         }, true);
     });
 </script>

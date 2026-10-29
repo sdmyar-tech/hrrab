@@ -8,8 +8,8 @@
                 <span class="page-icon"><i class="bi bi-buildings"></i></span>
                 <div>
                     <p class="eyebrow mb-1">Kepegawaian</p>
-                    <h1 class="h3 mb-1">Master Unit &amp; Koordinator</h1>
-                    <p class="text-muted mb-0">Daftar unit kerja dan koordinatornya. Koordinator dari unit lain otomatis dicatat sebagai <strong>rangkap</strong> di Mutasi &amp; Rangkap.</p>
+                    <h1 class="h3 mb-1">Master Bagian &amp; Koordinator</h1>
+                    <p class="text-muted mb-0">Daftar bagian dan koordinatornya. Koordinator dari bagian lain otomatis dicatat sebagai <strong>rangkap</strong> di Mutasi &amp; Rangkap.</p>
                 </div>
             </div>
             <div class="heading-actions">
@@ -36,25 +36,25 @@
                         @csrf
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-plus-lg"></i></span>
-                            <input type="text" name="nama" class="form-control" placeholder="Unit baru, contoh: LEGAL" aria-label="Nama unit baru" maxlength="100" required autocomplete="off" value="{{ old('nama') }}">
-                            <input type="text" name="keterangan" class="form-control d-none d-md-block" placeholder="Keterangan, contoh: Bagian hukum" aria-label="Keterangan unit (opsional)" maxlength="255" value="{{ old('keterangan') }}">
+                            <input type="text" name="nama" class="form-control" placeholder="Bagian baru, contoh: LEGAL" aria-label="Nama bagian baru" maxlength="100" required autocomplete="off" value="{{ old('nama') }}">
+                            <input type="text" name="keterangan" class="form-control d-none d-md-block" placeholder="Keterangan, contoh: Bagian hukum" aria-label="Keterangan bagian (opsional)" maxlength="255" value="{{ old('keterangan') }}">
                             <button type="submit" class="btn btn-primary">Tambah</button>
                         </div>
                     </form>
                 @endif
                 <div class="input-group un-cari">
                     <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
-                    <input type="search" class="form-control" id="un-cari" placeholder="Cari unit, contoh: SDM atau Siti" aria-label="Cari unit menurut nama unit atau koordinator" autocomplete="off" data-saring="#un-daftar">
+                    <input type="search" class="form-control" id="un-cari" placeholder="Cari bagian, contoh: SDM atau Siti" aria-label="Cari bagian menurut nama bagian atau koordinator" autocomplete="off" data-saring="#un-daftar">
                 </div>
             </div>
-            <p class="small text-muted mb-0 px-3 pt-3" aria-live="polite"><strong class="text-body" data-saring-jumlah="#un-daftar">{{ $units->count() }}</strong> dari {{ $units->count() }} unit</p>
+            <p class="small text-muted mb-0 px-3 pt-3" aria-live="polite"><strong class="text-body" data-saring-jumlah="#un-daftar">{{ $units->count() }}</strong> dari {{ $units->count() }} bagian</p>
 
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead>
                         <tr>
                             <th class="kolom-no" style="width:56px">No</th>
-                            <th>Unit</th>
+                            <th>Bagian</th>
                             <th>Koordinator</th>
                             <th class="text-center">Pegawai</th>
                             <th class="text-center">Jabatan</th>
@@ -80,7 +80,7 @@
                                     @forelse ($koor as $p)
                                         <span class="un-koor">
                                             <i class="bi bi-person-badge"></i>{{ $p->dataPegawai?->nama_lengkap ?? '-' }}
-                                            <span class="badge {{ $p->is_utama ? 'text-bg-light border' : 'text-bg-info' }}">{{ $p->is_utama ? 'Unit utama' : 'Rangkap' }}</span>
+                                            <span class="badge {{ $p->is_utama ? 'text-bg-light border' : 'text-bg-info' }}">{{ $p->is_utama ? 'Bagian utama' : 'Rangkap' }}</span>
                                         </span>
                                     @empty
                                         @if ($gm->isEmpty())<span class="text-danger small"><i class="bi bi-exclamation-circle me-1"></i>Belum ada koordinator</span>@endif
@@ -91,7 +91,7 @@
                                 </td>
                                 <td class="text-center">{{ $anggota[$u->nama] ?? 0 }}</td>
                                 <td class="text-center">
-                                    <a href="{{ route('admin.jabatan.index', ['unit' => $u->nama]) }}" class="text-decoration-none" title="Lihat jabatan unit ini">{{ $u->jabatans_count }}</a>
+                                    <a href="{{ route('admin.jabatan.index', ['unit' => $u->nama]) }}" class="text-decoration-none" title="Lihat jabatan bagian ini">{{ $u->jabatans_count }}</a>
                                 </td>
                                 <td class="text-end un-aksi">
                                     <div class="d-inline-flex gap-1 justify-content-end">
@@ -107,8 +107,8 @@
                                             </button>
                                             <form action="{{ route('admin.unit.destroy', $u) }}" method="POST">
                                                 @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="true" data-icon="warning" data-title="Hapus unit?"
-                                                    data-text="Unit {{ $u->nama }} akan dihapus. Penghapusan hanya bisa bila unit ini tidak dipakai data apa pun."
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="true" data-icon="warning" data-title="Hapus bagian?"
+                                                    data-text="Bagian {{ $u->nama }} akan dihapus. Penghapusan hanya bisa bila bagian ini tidak dipakai data apa pun."
                                                     data-confirm-text="Ya, Hapus" data-confirm-color="#dc3545" data-cancel-text="Batal"><i class="bi bi-trash"></i> Hapus</button>
                                             </form>
                                         @endif
@@ -116,9 +116,9 @@
                                 </td>
                             </tr>
                         @empty
-                            @include('partials.kosong-tabel', ['kosongKolom' => 6, 'kosongTeks' => 'Belum ada unit.', 'kosongIkon' => 'bi-building'])
+                            @include('partials.kosong-tabel', ['kosongKolom' => 6, 'kosongTeks' => 'Belum ada bagian.', 'kosongIkon' => 'bi-building'])
                         @endforelse
-                        <tr data-saring-kosong="#un-daftar" hidden><td colspan="6">@include('partials.kosong', ['teks' => 'Tidak ada unit yang cocok dengan pencarian ini.', 'ikonKosong' => 'bi-search'])</td></tr>
+                        <tr data-saring-kosong="#un-daftar" hidden><td colspan="6">@include('partials.kosong', ['teks' => 'Tidak ada bagian yang cocok dengan pencarian ini.', 'ikonKosong' => 'bi-search'])</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -128,7 +128,7 @@
 
 <div class="modal fade" id="modalKoordinator" tabindex="-1" aria-labelledby="judulKoordinator" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content" id="formKoordinator" data-confirm="Simpan koordinator unit ini?">
+        <form method="POST" class="modal-content" id="formKoordinator" data-confirm="Simpan koordinator bagian ini?">
             @csrf
             <div class="modal-header">
                 <h5 class="modal-title" id="judulKoordinator">Koordinator <span data-unit></span></h5>
@@ -164,7 +164,7 @@
                 <label class="form-label mt-3" for="un-jabatan">Jabatan koordinator <span class="text-muted fw-normal">(opsional)</span></label>
                 <input type="text" name="jabatan" id="un-jabatan" class="form-control" list="un-jabatan-daftar" maxlength="150" autocomplete="off">
                 <datalist id="un-jabatan-daftar"></datalist>
-                <div class="form-text">Kosongkan: jabatan unit utamanya tetap, atau "KEPALA &lt;UNIT&gt;" untuk rangkap.</div>
+                <div class="form-text">Kosongkan: jabatan bagian utamanya tetap, atau "KEPALA &lt;BAGIAN&gt;" untuk rangkap.</div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-danger me-auto" data-kosongkan hidden><i class="bi bi-person-x"></i> Kosongkan</button>
@@ -172,7 +172,7 @@
                 <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Simpan</button>
             </div>
         </form>
-        <form method="POST" id="formKosongkan" hidden data-confirm="Kosongkan koordinator unit ini? Pengajuan pegawai unit ini akan diteruskan ke GM.">
+        <form method="POST" id="formKosongkan" hidden data-confirm="Kosongkan koordinator bagian ini? Pengajuan pegawai bagian ini akan diteruskan ke GM.">
             @csrf
             <input type="hidden" name="koordinator" value="">
         </form>
@@ -182,16 +182,16 @@
 @if ($bisaKelola)
     <div class="modal fade" id="modalUbahUnit" tabindex="-1" aria-labelledby="judulUbahUnit" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <form method="POST" class="modal-content" data-confirm="Simpan perubahan unit? Bila nama diganti, semua data yang memakai nama lama ikut diperbarui.">
+            <form method="POST" class="modal-content" data-confirm="Simpan perubahan bagian? Bila nama diganti, semua data yang memakai nama lama ikut diperbarui.">
                 @csrf @method('PUT')
                 <div class="modal-header">
-                    <h5 class="modal-title" id="judulUbahUnit">Ubah Unit</h5>
+                    <h5 class="modal-title" id="judulUbahUnit">Ubah Bagian</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-8">
-                            <label class="form-label">Nama unit</label>
+                            <label class="form-label">Nama bagian</label>
                             <input type="text" name="nama" class="form-control text-uppercase" maxlength="100" required>
                         </div>
                         <div class="col-4">
@@ -203,7 +203,7 @@
                             <input type="text" name="keterangan" class="form-control" maxlength="255">
                         </div>
                     </div>
-                    <p class="form-text mt-2 mb-0">Urutan menentukan posisi unit di semua daftar pilihan.</p>
+                    <p class="form-text mt-2 mb-0">Urutan menentukan posisi bagian di semua daftar pilihan.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
@@ -246,13 +246,13 @@
             if (!opsi) { info.textContent = 'Pilih pegawai untuk melihat cara pencatatannya.'; return; }
             if (opsi.dataset.tanpaPegawai) {
                 const bidang = JSON.parse(opsi.dataset.divisi || '[]').includes(unitAktif);
-                info.innerHTML = '<i class="bi bi-person-gear me-1"></i>GM tanpa data pegawai — unit dicatat di akun GM (seperti di Kelola Akun).'
-                    + (bidang ? '' : ' <span class="text-warning-emphasis">Unit ini di luar bidang GM tersebut.</span>');
+                info.innerHTML = '<i class="bi bi-person-gear me-1"></i>GM tanpa data pegawai — bagian dicatat di akun GM (seperti di Kelola Akun).'
+                    + (bidang ? '' : ' <span class="text-warning-emphasis">Bagian ini di luar bidang GM tersebut.</span>');
                 return;
             }
             info.innerHTML = opsi.dataset.unit === unitAktif
-                ? '<i class="bi bi-arrow-up-circle me-1"></i>Sudah di unit ini — dinaikkan menjadi koordinator.'
-                : '<i class="bi bi-diagram-2 me-1"></i>Unit utamanya <strong></strong> — dicatat sebagai <strong>rangkap</strong> koordinator di ' + unitAktif + '.';
+                ? '<i class="bi bi-arrow-up-circle me-1"></i>Sudah di bagian ini — dinaikkan menjadi koordinator.'
+                : '<i class="bi bi-diagram-2 me-1"></i>Bagian utamanya <strong></strong> — dicatat sebagai <strong>rangkap</strong> koordinator di ' + unitAktif + '.';
             const s = info.querySelector('strong');
             if (s && opsi.dataset.unit !== unitAktif) s.textContent = opsi.dataset.unit || '-';
         }
@@ -270,7 +270,7 @@
             modal.querySelectorAll('[data-unit]').forEach((el) => { if (el.tagName === 'SPAN') el.textContent = unitAktif; });
             const koor = JSON.parse(t.dataset.koor || '[]');
             const sekarang = modal.querySelector('[data-sekarang]');
-            sekarang.innerHTML = koor.length ? 'Koordinator sekarang: <strong></strong>' : '<span class="text-danger">Unit ini belum punya koordinator.</span>';
+            sekarang.innerHTML = koor.length ? 'Koordinator sekarang: <strong></strong>' : '<span class="text-danger">Bagian ini belum punya koordinator.</span>';
             if (koor.length) sekarang.querySelector('strong').textContent = koor.map((k) => k.nama + k.ket).join(', ');
             tombolKosong.hidden = !koor.length;
             pilih.value = koor[0]?.nilai ?? '';

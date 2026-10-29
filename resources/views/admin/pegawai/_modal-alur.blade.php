@@ -46,7 +46,7 @@
                                 <div class="tahap-pilih">
                                     <label class="form-label small mb-1" for="alur-atasan">Siapa atasannya?</label>
                                     <select name="atasan_user_id" id="alur-atasan" class="form-select form-select-sm">
-                                        <option value="">Otomatis: kepala unit {{ $unitUtama ?? '-' }}{{ $kepalaOtomatis ? " ({$kepalaOtomatis})" : ' — belum ada, naik ke GM' }}</option>
+                                        <option value="">Otomatis: kepala bagian {{ $unitUtama ?? '-' }}{{ $kepalaOtomatis ? " ({$kepalaOtomatis})" : ' — belum ada, naik ke GM' }}</option>
                                         @foreach ($grupRole as $role => $daftar)
                                             <optgroup label="{{ $role }}">
                                                 @foreach ($daftar as $u)
@@ -60,7 +60,7 @@
                                 <div class="tahap-pilih">
                                     <label class="form-label small mb-1" for="alur-gm">GM yang menyetujui</label>
                                     <select name="gm_user_id" id="alur-gm" class="form-select form-select-sm">
-                                        <option value="">GM mana pun (GM bidang unit diutamakan)</option>
+                                        <option value="">GM mana pun (GM bidang bagian diutamakan)</option>
                                         @foreach ($pilihanAlur['gm'] as $u)
                                             <option value="{{ $u->id }}" @selected($gmAwal === $u->id)>{{ $u->name }}{{ $u->divisi ? ' · ' . implode(', ', $u->divisi) : '' }}</option>
                                         @endforeach
@@ -75,7 +75,7 @@
 
                 <label class="form-label small mt-3 mb-1" for="alur-catatan">Catatan <span class="text-muted fw-normal">(opsional)</span></label>
                 <input type="text" name="catatan" id="alur-catatan" class="form-control form-control-sm" maxlength="255"
-                    value="{{ old('catatan', $alurKhusus?->catatan) }}" placeholder="Contoh: sementara selama kepala unit cuti panjang">
+                    value="{{ old('catatan', $alurKhusus?->catatan) }}" placeholder="Contoh: sementara selama kepala bagian cuti panjang">
                 <p class="form-text mb-0">Pengajuan yang sedang menunggu ikut alur baru mulai tahap berikutnya. Kembalikan ke otomatis kapan saja.</p>
             </div>
             <div class="modal-footer">

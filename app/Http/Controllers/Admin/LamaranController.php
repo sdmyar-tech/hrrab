@@ -47,7 +47,7 @@ class LamaranController extends Controller
             ...Urutan::tanggal('diperbarui', 'Diperbarui', 'lamarans.updated_at'),
             ...Urutan::abjad('nama', 'Nama', $namaKandidat),
             ...Urutan::abjad('jabatan', 'Jabatan', 'lamarans.jabatan_tujuan'),
-            ...Urutan::abjad('unit', 'Unit', 'lamarans.unit_kerja_tujuan'),
+            ...Urutan::abjad('unit', 'Bagian', 'lamarans.unit_kerja_tujuan'),
         ]);
         $lamarans = $query->paginate(15)->withQueryString();
 
@@ -68,7 +68,7 @@ class LamaranController extends Controller
 
         $headers = [
             'Tanggal Melamar', 'Nama Kandidat', 'Email', 'No. HP', 'NIK', 'Jenis Kelamin', 'Pendidikan Terakhir',
-            'Jalur', 'Posisi', 'Unit Kerja Tujuan', 'Status', 'Tahap', 'Interview Lulus',
+            'Jalur', 'Posisi', 'Bagian Tujuan', 'Status', 'Tahap', 'Interview Lulus',
             'Diverifikasi Oleh', 'Diputuskan Oleh', 'Tanggal Keputusan', 'Catatan',
         ];
 

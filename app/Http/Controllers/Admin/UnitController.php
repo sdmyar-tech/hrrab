@@ -64,7 +64,7 @@ class UnitController extends Controller
             $u->jabatans_count,
         ]);
 
-        return ExcelExporter::download(ExcelExporter::namaFile('master-unit'), ['No', 'Unit', 'Keterangan', 'Koordinator', 'Pegawai', 'Jabatan'], $rows, 'Master Unit');
+        return ExcelExporter::download(ExcelExporter::namaFile('master-unit'), ['No', 'Bagian', 'Keterangan', 'Koordinator', 'Pegawai', 'Jabatan'], $rows, 'Master Bagian');
     }
 
     public function store(Request $request): RedirectResponse
@@ -72,7 +72,7 @@ class UnitController extends Controller
         $data = $this->validasi($request);
         $unit = Unit::create($data + ['urutan' => (int) Unit::max('urutan') + 1]);
 
-        return redirect()->route('admin.unit.index')->with('success', "Unit {$unit->nama} ditambahkan. Atur koordinatornya lewat tombol Koordinator.");
+        return redirect()->route('admin.unit.index')->with('success', "Bagian {$unit->nama} ditambahkan. Atur koordinatornya lewat tombol Koordinator.");
     }
 
     public function update(Request $request, Unit $unit): RedirectResponse
@@ -83,21 +83,21 @@ class UnitController extends Controller
         $unit->update(collect($data)->except('nama')->all());
 
         return redirect()->route('admin.unit.index')->with('success', $lama === $unit->nama
-            ? "Unit {$unit->nama} diperbarui."
-            : "Unit {$lama} diganti menjadi {$unit->nama}." . ($jumlah ? " {$jumlah} data ikut diperbarui." : ''));
+            ? "Bagian {$unit->nama} diperbarui."
+            : "Bagian {$lama} diganti menjadi {$unit->nama}." . ($jumlah ? " {$jumlah} data ikut diperbarui." : ''));
     }
 
     public function destroy(Unit $unit): RedirectResponse
     {
         if ($pakai = array_sum($unit->pemakaian())) {
-            return back()->with('error', "Unit {$unit->nama} masih dipakai di {$pakai} data (pegawai, penugasan, pengajuan, lowongan, ...). Pindahkan datanya dulu.");
+            return back()->with('error', "Bagian {$unit->nama} masih dipakai di {$pakai} data (pegawai, penugasan, pengajuan, lowongan, ...). Pindahkan datanya dulu.");
         }
         if ($config = Unit::dipakaiConfig($unit->nama)) {
-            return back()->with('error', "Unit {$unit->nama} dipakai di pengaturan sistem ({$config}) dan tidak bisa dihapus.");
+            return back()->with('error', "Bagian {$unit->nama} dipakai di pengaturan sistem ({$config}) dan tidak bisa dihapus.");
         }
         $unit->delete();
 
-        return back()->with('success', "Unit {$unit->nama} dihapus.");
+        return back()->with('success', "Bagian {$unit->nama} dihapus.");
     }
 
     /** Tetapkan / ganti / kosongkan koordinator unit. */
@@ -131,8 +131,8 @@ class UnitController extends Controller
             'urutan' => [$unit ? 'required' : 'nullable', 'integer', 'min:0', 'max:9999'],
             'keterangan' => ['nullable', 'string', 'max:255'],
         ], [
-            'nama.required' => 'Nama unit wajib diisi.',
-            'nama.unique' => 'Unit dengan nama ini sudah ada.',
+            'nama.required' => 'Nama bagian wajib diisi.',
+            'nama.unique' => 'Bagian dengan nama ini sudah ada.',
         ]);
     }
 }

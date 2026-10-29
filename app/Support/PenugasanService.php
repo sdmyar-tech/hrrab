@@ -53,7 +53,7 @@ class PenugasanService
             throw ValidationException::withMessages(['tanggal_efektif' => 'Tanggal efektif harus setelah ' . $lama->tanggal_mulai->format('d-m-Y') . ' (mulai penugasan sekarang).']);
         }
         if (! self::admin() && $lama && $lama->unit_kerja === $data['unit_kerja'] && $lama->jabatan === ($data['jabatan'] ?? $lama->jabatan) && $lama->peran === $data['peran']) {
-            throw ValidationException::withMessages(['unit_kerja' => 'Unit, jabatan, dan peran sama dengan penugasan sekarang.']);
+            throw ValidationException::withMessages(['unit_kerja' => 'Bagian, jabatan, dan peran sama dengan penugasan sekarang.']);
         }
 
         return DB::transaction(function () use ($pegawai, $data, $oleh, $efektif, $lama) {
@@ -79,12 +79,12 @@ class PenugasanService
             if ($lama && ($data['pengajuan_pending'] ?? self::PENDING_LANJUT) === self::PENDING_TOLAK) {
                 $jumlah = self::tolakPending($pegawai, $lama->unit_kerja, $oleh);
                 if ($jumlah) {
-                    $peringatan[] = "{$jumlah} pengajuan cuti/lembur yang masih menunggu di unit {$lama->unit_kerja} ditolak otomatis.";
+                    $peringatan[] = "{$jumlah} pengajuan cuti/lembur yang masih menunggu di bagian {$lama->unit_kerja} ditolak otomatis.";
                 }
             }
 
             if ($lama?->isKepala() && $lama->unit_kerja !== $data['unit_kerja'] && self::unitTanpaKepala($lama->unit_kerja, $efektif)) {
-                $peringatan[] = "Unit {$lama->unit_kerja} tidak punya kepala mulai {$efektif->format('d-m-Y')}. Tunjuk kepala baru supaya pengajuan di unit itu tidak macet.";
+                $peringatan[] = "Bagian {$lama->unit_kerja} tidak punya kepala mulai {$efektif->format('d-m-Y')}. Tunjuk kepala baru supaya pengajuan di unit itu tidak macet.";
             }
 
             return [...$peringatan, ...self::sinkron($pegawai)];
@@ -107,7 +107,7 @@ class PenugasanService
             ->when($selesai, fn ($q) => $q->where('tanggal_mulai', '<=', $selesai))
             ->exists();
         if ($bentrok) {
-            throw ValidationException::withMessages(['unit_kerja' => "Pegawai sudah bertugas di unit {$data['unit_kerja']} pada periode itu."]);
+            throw ValidationException::withMessages(['unit_kerja' => "Pegawai sudah bertugas di bagian {$data['unit_kerja']} pada periode itu."]);
         }
 
         return DB::transaction(function () use ($pegawai, $data, $oleh, $mulai, $selesai) {
@@ -138,7 +138,7 @@ class PenugasanService
         $tanggal = Carbon::parse($tanggal)->startOfDay();
 
         if ($penugasan->is_utama && ! self::admin()) {
-            throw ValidationException::withMessages(['tanggal_selesai' => 'Penugasan utama tidak bisa diakhiri. Gunakan Mutasi untuk memindahkan unit utama.']);
+            throw ValidationException::withMessages(['tanggal_selesai' => 'Penugasan utama tidak bisa diakhiri. Gunakan Mutasi untuk memindahkan bagian utama.']);
         }
         if ($tanggal->lt($penugasan->tanggal_mulai)) {
             throw ValidationException::withMessages(['tanggal_selesai' => 'Tanggal selesai tidak boleh sebelum tanggal mulai (' . $penugasan->tanggal_mulai->format('d-m-Y') . ').']);
@@ -149,7 +149,7 @@ class PenugasanService
 
             $peringatan = [];
             if ($penugasan->isKepala() && self::unitTanpaKepala($penugasan->unit_kerja, $tanggal->copy()->addDay())) {
-                $peringatan[] = "Unit {$penugasan->unit_kerja} tidak punya kepala mulai {$tanggal->copy()->addDay()->format('d-m-Y')}.";
+                $peringatan[] = "Bagian {$penugasan->unit_kerja} tidak punya kepala mulai {$tanggal->copy()->addDay()->format('d-m-Y')}.";
             }
 
             return [...$peringatan, ...self::sinkron($penugasan->dataPegawai)];
@@ -171,13 +171,13 @@ class PenugasanService
     public static function hapus(Penugasan $penugasan, bool $bebas = false): array
     {
         if ($penugasan->jenis === Penugasan::JENIS_AWAL && ! $bebas) {
-            throw ValidationException::withMessages(['penugasan' => 'Penempatan awal pegawai tidak bisa dihapus. Gunakan Mutasi untuk memindahkan unit.']);
+            throw ValidationException::withMessages(['penugasan' => 'Penempatan awal pegawai tidak bisa dihapus. Gunakan Mutasi untuk memindahkan bagian.']);
         }
 
         $pegawai = $penugasan->dataPegawai;
 
         if (! $bebas && $penugasan->jenis === Penugasan::JENIS_AWAL && ! $pegawai->penugasans()->where('is_utama', true)->whereKeyNot($penugasan->id)->exists()) {
-            throw ValidationException::withMessages(['penugasan' => 'Ini satu-satunya penempatan utama pegawai, tidak bisa dihapus. Ubah unitnya lewat Edit.']);
+            throw ValidationException::withMessages(['penugasan' => 'Ini satu-satunya penempatan utama pegawai, tidak bisa dihapus. Ubah bagiannya lewat Edit.']);
         }
 
         // Mutasi di tengah riwayat boleh dihapus Admin: penempatan sebelumnya disambung sampai tanggal selesai mutasi ini.
@@ -202,7 +202,7 @@ class PenugasanService
 
             $peringatan = self::sinkron($pegawai);
             if ($penugasan->isKepala() && self::unitTanpaKepala($penugasan->unit_kerja)) {
-                $peringatan[] = "Unit {$penugasan->unit_kerja} sekarang tidak punya kepala aktif.";
+                $peringatan[] = "Bagian {$penugasan->unit_kerja} sekarang tidak punya kepala aktif.";
             }
 
             return $peringatan;
@@ -315,7 +315,7 @@ class PenugasanService
                         'is_utama' => false,
                         'jenis' => Penugasan::JENIS_RANGKAP,
                         'tanggal_mulai' => $hariIni,
-                        'keterangan' => 'Ditetapkan sebagai koordinator dari Master Unit.',
+                        'keterangan' => 'Ditetapkan sebagai koordinator dari Master Bagian.',
                         'dibuat_oleh' => $oleh?->id,
                     ]);
                 }
@@ -326,10 +326,10 @@ class PenugasanService
                 array_push($peringatan, ...self::sinkron($pegawai));
             }
             if ($gm && ($jumlah = self::sinkronInterviewer()) > 0) {
-                $peringatan[] = "{$jumlah} jadwal interview tahap 2 dialihkan ke kepala unit yang baru.";
+                $peringatan[] = "{$jumlah} jadwal interview tahap 2 dialihkan ke kepala bagian yang baru.";
             }
             if (! $baru && ! $gm && self::unitTanpaKepala($unit)) {
-                $peringatan[] = "Unit {$unit} sekarang tidak punya koordinator. Pengajuan pegawai unit ini diteruskan ke GM.";
+                $peringatan[] = "Bagian {$unit} sekarang tidak punya koordinator. Pengajuan pegawai bagian ini diteruskan ke GM.";
             }
 
             return array_values(array_unique($peringatan));
@@ -360,14 +360,14 @@ class PenugasanService
                 $peringatan[] = "Akun {$akun->email} dinaikkan menjadi Kepala Bagian.";
             } elseif ($akun->isKepalaBagian() && ! $memimpin) {
                 $akun->update(['role' => User::ROLE_STAFF]);
-                $peringatan[] = "Akun {$akun->email} diturunkan menjadi Staff (tidak lagi memimpin unit).";
+                $peringatan[] = "Akun {$akun->email} diturunkan menjadi Staff (tidak lagi memimpin bagian).";
             } elseif ($akun->isKepalaSdm() && ! $aktif->contains(fn (Penugasan $p) => $p->isKepala() && $p->unit_kerja === 'SDM')) {
                 $peringatan[] = "Akun {$akun->email} masih ber-role Kepala SDM — sesuaikan role di Kelola User.";
             }
         }
 
         if (($jumlah = self::sinkronInterviewer()) > 0) {
-            $peringatan[] = "{$jumlah} jadwal interview tahap 2 dialihkan ke kepala unit yang baru.";
+            $peringatan[] = "{$jumlah} jadwal interview tahap 2 dialihkan ke kepala bagian yang baru.";
         }
 
         return $peringatan;
@@ -445,7 +445,7 @@ class PenugasanService
                 ->update([
                     'status' => $model::STATUS_REJECTED,
                     'current_level' => null,
-                    'catatan_admin' => "Dibatalkan otomatis karena mutasi dari unit {$unit}. Silakan ajukan ulang di unit baru.",
+                    'catatan_admin' => "Dibatalkan otomatis karena mutasi dari bagian {$unit}. Silakan ajukan ulang di bagian baru.",
                     'approved_by' => $oleh?->id,
                     'approved_at' => now(),
                 ]);

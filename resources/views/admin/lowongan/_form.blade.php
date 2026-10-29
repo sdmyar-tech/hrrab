@@ -14,9 +14,9 @@
     </div>
 
     <div class="col-md-6">
-        <label class="form-label">Unit Kerja</label>
+        <label class="form-label">Bagian</label>
         <select name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror" required>
-            <option value="">-- Pilih Unit Kerja --</option>
+            <option value="">-- Pilih Bagian --</option>
             @foreach (config('kepegawaian.unit_kerja') as $unit)
                 <option value="{{ $unit }}" {{ old('unit_kerja', $lowongan->unit_kerja ?? '') == $unit ? 'selected' : '' }}>{{ $unit }}</option>
             @endforeach

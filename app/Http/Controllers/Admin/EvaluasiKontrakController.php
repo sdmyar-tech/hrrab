@@ -73,11 +73,11 @@ class EvaluasiKontrakController extends Controller
 
         return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('evaluasi-kontrak-' . $tab), [
             ['name' => 'Evaluasi Kontrak', 'headers' => [
-                'Pegawai', 'NIP', 'Unit', 'Status Kerja', 'Habis Kontrak', 'Sisa Hari', 'Status', 'Penilai', 'Dinilai Pada', 'Total Nilai', 'Rata-rata',
+                'Pegawai', 'NIP', 'Bagian', 'Status Kerja', 'Habis Kontrak', 'Sisa Hari', 'Status', 'Penilai', 'Dinilai Pada', 'Total Nilai', 'Rata-rata',
                 'Predikat', 'Rekomendasi Penilai', 'Catatan Penilai', 'Keputusan', 'Diputuskan Oleh', 'Diputuskan Pada', 'Catatan SDM', 'Jadwal TTD',
             ], 'rows' => $ringkas],
             ['name' => 'Nilai per Butir', 'headers' => [
-                'Pegawai', 'Unit', 'Total', ...array_map(fn ($k) => "Rata {$k}", $bagian), ...array_map(fn ($no) => "Butir {$no}", $butir),
+                'Pegawai', 'Bagian', 'Total', ...array_map(fn ($k) => "Rata {$k}", $bagian), ...array_map(fn ($no) => "Butir {$no}", $butir),
             ], 'rows' => $nilai],
         ]);
     }

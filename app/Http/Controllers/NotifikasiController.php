@@ -139,7 +139,7 @@ class NotifikasiController extends Controller
             'pesan' => ['required', 'string', 'max:1000'],
             'jenis' => ['required', Rule::in([Pemberitahuan::JENIS_PENGINGAT, Pemberitahuan::JENIS_TUGAS, Pemberitahuan::JENIS_INFO])],
         ], [
-            'unit.required_if' => 'Pilih minimal satu unit.',
+            'unit.required_if' => 'Pilih minimal satu bagian.',
             'role.required_if' => 'Pilih minimal satu role.',
             'pegawai.required_if' => 'Pilih minimal satu pegawai.',
         ]);

@@ -46,7 +46,7 @@ class PegawaiController extends Controller
             ...Urutan::abjad('nama', 'Nama', 'data_pegawais.nama_lengkap'),
             ...Urutan::tanggal('masuk', 'Tanggal masuk', $kepeg('tanggal_masuk')),
             ...Urutan::abjad('jabatan', 'Jabatan', $kepeg('jabatan')),
-            ...Urutan::abjad('unit', 'Unit', $kepeg('unit_kerja')),
+            ...Urutan::abjad('unit', 'Bagian', $kepeg('unit_kerja')),
             ...Urutan::tanggal('diperbarui', 'Diperbarui', 'data_pegawais.updated_at'),
         ]);
         $pegawais = $query->paginate(15)->withQueryString();
@@ -65,7 +65,7 @@ class PegawaiController extends Controller
         $headers = [
             'NIP', 'Nama Lengkap', 'Email', 'NIK', 'Jenis Kelamin', 'Tempat Lahir', 'Tanggal Lahir', 'Agama',
             'Status Pernikahan', 'Pendidikan Terakhir', 'No. HP', 'Alamat Domisili',
-            'Jabatan', 'Jabatan Tambahan', 'Unit Kerja', 'Rangkap Tugas', 'Lokasi Kerja',
+            'Jabatan', 'Jabatan Tambahan', 'Bagian', 'Rangkap Tugas', 'Lokasi Kerja',
             'Status Rekrutmen', 'Status Kerja', 'Tanggal Masuk', 'Habis Kontrak',
             'BPJS Ketenagakerjaan', 'BPJS Kesehatan', 'Kontak Darurat',
         ];

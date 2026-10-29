@@ -64,7 +64,7 @@ class IzinKeluarController extends Controller
         ]);
 
         return ExcelExporter::download(ExcelExporter::namaFile('izin-keluar'), [
-            'Nama Pegawai', 'NIP', 'Unit Kerja', 'Tanggal', 'Jam Keluar', 'Jam Kembali', 'Keperluan', 'Alasan',
+            'Nama Pegawai', 'NIP', 'Bagian', 'Tanggal', 'Jam Keluar', 'Jam Kembali', 'Keperluan', 'Alasan',
             'Status', 'Tahap Saat Ini', 'Kode Tiket', 'Catatan', 'Tanggal Pengajuan',
         ], $rows, 'Izin Keluar');
     }

@@ -24,7 +24,7 @@
                 @method('PUT')
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label for="f-unit-kerja" class="form-label">Unit Kerja</label>
+                        <label for="f-unit-kerja" class="form-label">Bagian</label>
                         <select id="f-unit-kerja" name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror">
                             @foreach (config('kepegawaian.unit_kerja') as $unit)
                                 <option value="{{ $unit }}" @selected(old('unit_kerja', $penugasan->unit_kerja) === $unit)>{{ $unit }}</option>

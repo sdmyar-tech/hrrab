@@ -32,7 +32,7 @@ class PengajuanFormasiController extends Controller
             ...Urutan::tanggal('diajukan', 'Diajukan', 'pengajuan_formasis.created_at'),
             ...Urutan::tanggal('target', 'Target waktu', 'pengajuan_formasis.target_waktu'),
             ...Urutan::abjad('jabatan', 'Jabatan', 'pengajuan_formasis.jabatan'),
-            ...Urutan::abjad('unit', 'Unit', 'pengajuan_formasis.unit_kerja'),
+            ...Urutan::abjad('unit', 'Bagian', 'pengajuan_formasis.unit_kerja'),
         ]);
         $pengajuanFormasis = $query->paginate(15)->withQueryString();
 
@@ -76,7 +76,7 @@ class PengajuanFormasiController extends Controller
         ]);
 
         return ExcelExporter::download(ExcelExporter::namaFile('pengajuan-formasi'), [
-            'Tanggal Pengajuan', 'Diajukan Oleh', 'Unit', 'Kebutuhan Karena', 'Jabatan', 'Jumlah', 'Laki-laki', 'Perempuan', 'Bebas (L/P)',
+            'Tanggal Pengajuan', 'Diajukan Oleh', 'Bagian', 'Kebutuhan Karena', 'Jabatan', 'Jumlah', 'Laki-laki', 'Perempuan', 'Bebas (L/P)',
             'Tanggal Dibutuhkan', 'Min. Pendidikan', 'Min. Usia', 'Kemampuan/Keahlian', 'Atasan Langsung', 'Tugas & Tanggung Jawab', 'Keterangan',
             'Status', 'Disetujui GM', 'Disetujui Owner', 'Direview Oleh', 'Tanggal Review', 'Catatan', 'Lowongan Terbit',
         ], $rows, 'Pengajuan Formasi');
@@ -196,12 +196,12 @@ class PengajuanFormasiController extends Controller
             'tugas' => ['required', 'array', 'min:1', 'max:30'],
             'tugas.*' => ['nullable', 'string', 'max:500'],
         ], [
-            'unit_kerja.required' => 'Pilih unit yang membutuhkan pegawai.',
-            'unit_kerja.in' => 'Unit harus unit yang Anda pimpin.',
-            'diganti.required_if' => 'Pilih pegawai yang digantikan pada bagan unit.',
-            'diganti.*.in' => 'Pegawai yang digantikan harus dari unit ini.',
+            'unit_kerja.required' => 'Pilih bagian yang membutuhkan pegawai.',
+            'unit_kerja.in' => 'Bagian harus bagian yang Anda pimpin.',
+            'diganti.required_if' => 'Pilih pegawai yang digantikan pada bagan bagian.',
+            'diganti.*.in' => 'Pegawai yang digantikan harus dari bagian ini.',
             'jenis_kebutuhan.required' => 'Pilih alasan kebutuhan: replacement atau penambahan karyawan.',
-            'jabatan.in' => 'Jabatan harus jabatan yang ada di unit ' . ($unit ?: 'Anda') . '.',
+            'jabatan.in' => 'Jabatan harus jabatan yang ada di bagian ' . ($unit ?: 'Anda') . '.',
             'target_waktu.required' => 'Isi tanggal dibutuhkan.',
             'target_waktu.after_or_equal' => 'Tanggal dibutuhkan tidak boleh sebelum hari ini.',
             'min_pendidikan.required' => 'Pilih minimal pendidikan.',
@@ -264,7 +264,7 @@ class PengajuanFormasiController extends Controller
         Notifikasi::formasiBaru($formasi);
 
         $penyetuju = $formasi->butuhDuaPersetujuan()
-            ? (RekrutmenAccess::perluGm($formasi) ? 'GM unit, lalu Owner' : 'Owner')
+            ? (RekrutmenAccess::perluGm($formasi) ? 'GM bagian, lalu Owner' : 'Owner')
             : ($user->isKepalaSdm() ? 'GM' : 'Kepala SDM/GM');
 
         return redirect()

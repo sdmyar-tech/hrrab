@@ -260,7 +260,7 @@ return [
         'target_waktu' => 'target waktu',
         'tempat_lahir' => 'tempat lahir',
         'tipe_kerja' => 'tipe kerja',
-        'unit_kerja' => 'unit kerja',
+        'unit_kerja' => 'bagian',
         'uraian_tugas' => 'uraian tugas',
         'upload_buku_tabungan' => 'buku tabungan',
         'upload_cv' => 'CV',

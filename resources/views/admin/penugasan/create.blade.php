@@ -29,10 +29,10 @@
                     {{-- Dua pilihan jenis, sama lebar. --}}
                     <div class="pn-jenis mb-3" role="group" aria-label="Jenis penugasan">
                         <a href="{{ $urlJenis('mutasi') }}" class="btn {{ $mutasi ? 'btn-primary' : 'btn-outline-primary' }}" @if ($mutasi) aria-current="page" @endif>
-                            <span><i class="bi bi-arrow-left-right me-1"></i>Mutasi</span><small>Pindah unit utama</small>
+                            <span><i class="bi bi-arrow-left-right me-1"></i>Mutasi</span><small>Pindah bagian utama</small>
                         </a>
                         <a href="{{ $urlJenis('rangkap') }}" class="btn {{ $mutasi ? 'btn-outline-primary' : 'btn-primary' }}" @unless ($mutasi) aria-current="page" @endunless>
-                            <span><i class="bi bi-diagram-3 me-1"></i>Rangkap Tugas</span><small>Tugas tambahan di unit lain</small>
+                            <span><i class="bi bi-diagram-3 me-1"></i>Rangkap Tugas</span><small>Tugas tambahan di bagian lain</small>
                         </a>
                     </div>
 
@@ -54,9 +54,9 @@
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="f-unit-kerja" class="form-label">{{ $mutasi ? 'Unit Tujuan' : 'Unit Rangkap' }}</label>
+                                <label for="f-unit-kerja" class="form-label">{{ $mutasi ? 'Bagian Tujuan' : 'Bagian Rangkap' }}</label>
                                 <select id="f-unit-kerja" name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror" required>
-                                    <option value="">-- Pilih Unit --</option>
+                                    <option value="">-- Pilih Bagian --</option>
                                     @foreach (config('kepegawaian.unit_kerja') as $unit)
                                         <option value="{{ $unit }}" @selected(old('unit_kerja') === $unit)>{{ $unit }}</option>
                                     @endforeach
@@ -65,17 +65,17 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label for="f-peran" class="form-label">Peran di Unit</label>
+                                <label for="f-peran" class="form-label">Peran di Bagian</label>
                                 <select id="f-peran" name="peran" class="form-select @error('peran') is-invalid @enderror" required>
                                     <option value="anggota" @selected(old('peran', 'anggota') === 'anggota')>Anggota / Staff</option>
-                                    <option value="kepala" @selected(old('peran') === 'kepala')>Kepala Unit</option>
+                                    <option value="kepala" @selected(old('peran') === 'kepala')>Kepala Bagian</option>
                                 </select>
-                                <div class="form-text">Kepala unit meng-approve cuti/lembur unit itu & jadi interviewer tahap 2.</div>
+                                <div class="form-text">Kepala bagian meng-approve cuti/lembur bagian itu & jadi interviewer tahap 2.</div>
                                 @error('peran')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
 
                             <div class="col-12">
-                                <label for="f-jabatan" class="form-label">Jabatan {{ $mutasi ? 'Baru' : 'di Unit Rangkap' }} @unless ($mutasi)<span class="text-muted">(opsional)</span>@endunless</label>
+                                <label for="f-jabatan" class="form-label">Jabatan {{ $mutasi ? 'Baru' : 'di Bagian Rangkap' }} @unless ($mutasi)<span class="text-muted">(opsional)</span>@endunless</label>
                                 <input id="f-jabatan" type="text" name="jabatan" list="daftarJabatan" data-jabatan-unit="[name=unit_kerja]" class="form-control @error('jabatan') is-invalid @enderror"
                                     value="{{ old('jabatan', $mutasi ? $utama?->jabatan : '') }}" {{ $mutasi ? 'required' : '' }} autocomplete="off">
                                 <datalist id="daftarJabatan">
@@ -128,11 +128,11 @@
                                         <span class="badge text-bg-{{ $jumlahPending ? 'warning' : 'secondary' }}">{{ $jumlahPending }}</span></label>
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="pengajuan_pending" id="pendingLanjut" value="lanjut" @checked(old('pengajuan_pending', 'lanjut') === 'lanjut')>
-                                        <label class="form-check-label" for="pendingLanjut">Tetap diproses kepala unit lama <span class="text-muted">(disarankan — terjadi saat masih di unit lama)</span></label>
+                                        <label class="form-check-label" for="pendingLanjut">Tetap diproses kepala bagian lama <span class="text-muted">(disarankan — terjadi saat masih di bagian lama)</span></label>
                                     </div>
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="pengajuan_pending" id="pendingTolak" value="tolak" @checked(old('pengajuan_pending') === 'tolak')>
-                                        <label class="form-check-label" for="pendingTolak">Tolak otomatis, pegawai mengajukan ulang di unit baru</label>
+                                        <label class="form-check-label" for="pendingTolak">Tolak otomatis, pegawai mengajukan ulang di bagian baru</label>
                                     </div>
                                     @error('pengajuan_pending')<div class="text-danger small">{{ $message }}</div>@enderror
                                 </div>
@@ -172,11 +172,11 @@
                     <ul class="small text-muted mb-0 ps-3">
                         @if ($mutasi)
                             <li>Penugasan utama lama ditutup sehari sebelum tanggal efektif; rangkap tugas tetap berjalan.</li>
-                            <li>Pengajuan yang sudah dibuat tetap tercatat di unit lama (laporan tidak berubah).</li>
-                            <li>Bila pegawai ini kepala di unit lama, sistem mengingatkan unit yang jadi tanpa kepala.</li>
+                            <li>Pengajuan yang sudah dibuat tetap tercatat di bagian lama (laporan tidak berubah).</li>
+                            <li>Bila pegawai ini kepala di bagian lama, sistem mengingatkan bagian yang jadi tanpa kepala.</li>
                         @else
-                            <li>Cuti tetap di-approve kepala unit utama; kepala unit rangkap ikut melihat.</li>
-                            <li>Lembur: pegawai memilih unit tempat lembur, di-approve kepala unit itu.</li>
+                            <li>Cuti tetap di-approve kepala bagian utama; kepala bagian rangkap ikut melihat.</li>
+                            <li>Lembur: pegawai memilih bagian tempat lembur, di-approve kepala bagian itu.</li>
                             <li>Peran Kepala: akun Staff otomatis dinaikkan menjadi Kepala Bagian.</li>
                         @endif
                     </ul>

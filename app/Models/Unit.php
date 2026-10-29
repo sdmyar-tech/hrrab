@@ -84,7 +84,7 @@ class Unit extends Model
             return 0;
         }
         if ($dipakaiConfig = self::dipakaiConfig($lama)) {
-            throw ValidationException::withMessages(['nama' => "Unit {$lama} dipakai di pengaturan sistem ({$dipakaiConfig}). Nama unit ini tidak bisa diganti dari aplikasi."]);
+            throw ValidationException::withMessages(['nama' => "Bagian {$lama} dipakai di pengaturan sistem ({$dipakaiConfig}). Nama bagian ini tidak bisa diganti dari aplikasi."]);
         }
 
         return DB::transaction(function () use ($lama, $baru) {
@@ -113,8 +113,8 @@ class Unit extends Model
     public static function dipakaiConfig(string $nama): ?string
     {
         $label = array_filter([
-            in_array($nama, config('kepegawaian.unit_tanpa_pengajuan', []), true) ? 'unit tanpa pengajuan' : null,
-            in_array($nama, config('kepegawaian.unit_langsung_pembina', []), true) ? 'unit langsung Pembina' : null,
+            in_array($nama, config('kepegawaian.unit_tanpa_pengajuan', []), true) ? 'bagian tanpa pengajuan' : null,
+            in_array($nama, config('kepegawaian.unit_langsung_pembina', []), true) ? 'bagian langsung Pembina' : null,
         ]);
 
         return $label ? implode(', ', $label) : null;
