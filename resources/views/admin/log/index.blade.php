@@ -13,7 +13,7 @@
                 </div>
             </div>
             <div class="heading-actions">
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.log.export', 'eksporUkuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.log.export'])
             </div>
         </div>
 

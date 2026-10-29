@@ -13,7 +13,7 @@
                 </div>
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.users.export', 'eksporUkuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.users.export'])
                 <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
                     <i class="bi bi-plus-lg me-1"></i> Tambah User
                 </a>

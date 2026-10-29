@@ -37,7 +37,7 @@
                             </select>
                         </form>
                     @endif
-                    @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.dashboard.export', 'eksporUkuran' => '', 'eksporTeks' => 'Ekspor Dashboard'])
+                    @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.dashboard.export', 'eksporTeks' => 'Ekspor Dashboard'])
                 </div>
             </div>
             @if ($unitDipilih)

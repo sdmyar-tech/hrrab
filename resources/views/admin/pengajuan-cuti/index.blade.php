@@ -12,6 +12,9 @@
                     <p class="text-muted mb-0">Tinjau, setujui, atau tolak pengajuan cuti pegawai.</p>
                 </div>
             </div>
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pengajuan-cuti.export'])
+            </div>
         </div>
 
         <section class="panel">
@@ -66,9 +69,6 @@
                             </a>
                         </div>
                     @endif
-                    <div class="col-auto ms-auto text-end">
-                        @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pengajuan-cuti.export'])
-                    </div>
                 </div>
             </form>
 

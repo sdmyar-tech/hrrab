@@ -12,6 +12,9 @@
                     <p class="text-muted mb-0">Setujui atau tolak izin keluar. Setelah persetujuan akhir, pegawai mendapat tiket untuk ditunjukkan ke security.</p>
                 </div>
             </div>
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.izin-keluar.export'])
+            </div>
         </div>
 
         <section class="panel">
@@ -57,9 +60,6 @@
                             <a href="{{ route('admin.izin-keluar.index') }}" class="btn btn-outline-secondary btn-sm" title="Reset filter"><i class="bi bi-x-lg"></i></a>
                         </div>
                     @endif
-                    <div class="col-auto ms-auto text-end">
-                        @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.izin-keluar.export'])
-                    </div>
                 </div>
             </form>
 

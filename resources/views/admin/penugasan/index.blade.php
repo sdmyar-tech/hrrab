@@ -13,7 +13,7 @@
                 </div>
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.penugasan.export', 'eksporUkuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.penugasan.export'])
                 <a href="{{ route('admin.penugasan.tambah') }}" class="btn btn-primary">
                     <i class="bi bi-plus-lg me-1"></i> Tambah Mutasi / Rangkap
                 </a>

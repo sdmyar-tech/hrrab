@@ -13,7 +13,7 @@
                 </div>
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'notifikasi.export', 'eksporUkuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'notifikasi.export'])
                 @can('kirim-notifikasi')
                     <a href="{{ route('notifikasi.kirim') }}" class="btn btn-outline-primary"><i class="bi bi-send me-1"></i> Kirim Notifikasi</a>
                 @endcan

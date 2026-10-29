@@ -13,7 +13,7 @@
                 </div>
             </div>
             <div class="heading-actions">
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.data.export-semua', 'eksporTeks' => 'Ekspor Semua Data', 'eksporIkon' => 'bi-database-down'])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.data.export-semua', 'eksporTeks' => 'Ekspor Semua Data'])
             </div>
         </div>
 

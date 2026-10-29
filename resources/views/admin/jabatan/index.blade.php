@@ -17,7 +17,7 @@
                 </div>
             </div>
             <div class="heading-actions">
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.jabatan.export', 'eksporUkuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.jabatan.export'])
                 <a href="{{ route('admin.jabatan.hak-akses') }}" class="btn btn-outline-secondary"><i class="bi bi-person-badge"></i> Hak Akses Jabatan</a>
             </div>
         </div>

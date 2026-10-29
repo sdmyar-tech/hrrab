@@ -236,7 +236,7 @@
                         <a href="{{ route('admin.pegawai.index') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
-                        @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pegawai.export-detail', 'eksporParam' => ['pegawai' => $pegawai->id]])
+                        @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pegawai.export-detail', 'eksporParam' => ['pegawai' => $pegawai->id], 'eksporUkuran' => 'btn-sm'])
                         @can('kelola-pegawai')
                             <a href="{{ route('admin.pegawai.edit', $pegawai) }}" class="btn btn-primary btn-sm">
                                 <i class="bi bi-pencil-square"></i> Edit Data

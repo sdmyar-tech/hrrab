@@ -14,7 +14,7 @@
             </div>
             <div class="heading-actions">
                 @include('partials.urut')
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'interview.saya.export', 'eksporTeks' => 'Ekspor Jadwal', 'eksporUkuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'interview.saya.export', 'eksporTeks' => 'Ekspor Jadwal'])
             </div>
         </div>
 

@@ -13,7 +13,7 @@
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
                 @if ($urutOpsi) @include('partials.urut') @endif
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'pelamar.lamaran.export', 'eksporTeks' => 'Ekspor Lamaran & Jadwal', 'eksporUkuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'pelamar.lamaran.export', 'eksporTeks' => 'Ekspor Lamaran & Jadwal'])
                 <a href="{{ route('lowongan.index') }}" class="btn btn-primary">
                     <i class="bi bi-briefcase me-1"></i> Cari Lowongan
                 </a>

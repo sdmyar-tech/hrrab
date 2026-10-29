@@ -19,7 +19,7 @@
                 </div>
             </div>
             <div class="heading-actions">
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.absensi.rekap.export', 'eksporParam' => request()->only(['unit', 'q', 'urut']) + ['dari' => $dari->toDateString(), 'sampai' => $sampai->toDateString()], 'eksporUkuran' => ''])
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.absensi.rekap.export', 'eksporParam' => request()->only(['unit', 'q', 'urut']) + ['dari' => $dari->toDateString(), 'sampai' => $sampai->toDateString()]])
             </div>
         </div>
 

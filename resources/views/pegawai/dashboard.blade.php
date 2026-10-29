@@ -35,7 +35,7 @@
                         <div class="n">{{ $masaKerja }}</div>
                         <div class="l">Masa kerja</div>
                     </div>
-                    @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.dashboard.export', 'eksporUkuran' => '', 'eksporTeks' => 'Ekspor'])
+                    @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.dashboard.export', 'eksporTeks' => 'Ekspor'])
                 </div>
             </div>
         </section>

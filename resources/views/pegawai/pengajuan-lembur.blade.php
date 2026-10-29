@@ -11,6 +11,9 @@
                     <h1 class="mb-0">Pengajuan Lembur</h1>
                 </div>
             </div>
+            <div class="heading-actions">
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.pengajuan-lembur.export'])
+            </div>
         </div>
 
         <div class="row g-3">
@@ -100,7 +103,6 @@
                         <h2 class="h6 fw-bold mb-0">Riwayat Pengajuan</h2>
                         <div class="d-flex flex-wrap gap-2 align-items-center">
                             @if ($urutOpsi) @include('partials.urut') @endif
-                            @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.pengajuan-lembur.export'])
                         </div>
                     </div>
                     <div class="table-responsive">

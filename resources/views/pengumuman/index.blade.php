@@ -14,7 +14,7 @@
             </div>
             @if ($bisaKelola)
                 <div class="heading-actions d-flex flex-wrap gap-2">
-                    @include('partials.tombol-ekspor', ['eksporRoute' => 'pengumuman.export', 'eksporUkuran' => ''])
+                    @include('partials.tombol-ekspor', ['eksporRoute' => 'pengumuman.export'])
                     <a href="{{ route('pengumuman.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Buat Pengumuman</a>
                 </div>
             @endif
