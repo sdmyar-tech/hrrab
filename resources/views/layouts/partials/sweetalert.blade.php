@@ -1,4 +1,12 @@
 <script>
+// Dialog SweetAlert di atas modal Bootstrap: focus trap modal menarik fokus kembali ke tombol × modal,
+// sehingga Enter menutup modal alih-alih mengonfirmasi dialog. Fokus di dalam dialog tidak diteruskan ke Bootstrap.
+window.addEventListener('focusin', function (e) {
+    if (e.target instanceof Element && e.target.closest('.swal2-container')) {
+        e.stopImmediatePropagation();
+    }
+}, true);
+
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof Swal === 'undefined') {
         return;
