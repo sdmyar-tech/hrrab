@@ -1,6 +1,10 @@
 @extends('layouts.admin.app')
 
 @section('content')
+@php
+    $adaFilter = request()->hasAny(['q', 'status']);
+    $isAdmin = auth()->user()->isAdmin();
+@endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
         <div class="page-heading">
@@ -20,35 +24,36 @@
             </div>
         </div>
 
-        <section class="panel">
-            <form action="{{ route('admin.lowongan.index') }}" method="GET" id="filterLowonganForm" class="panel-filter px-3 pt-3 pb-2">
+        <section class="panel" aria-label="Daftar lowongan">
+            <form action="{{ route('admin.lowongan.index') }}" method="GET" id="filterLowonganForm" class="panel-filter px-3 pt-3 pb-2" role="search">
                 <div class="row g-2 align-items-center">
-                    <div class="col-md-4">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="search" name="q" id="searchInput" class="form-control border-start-0"
-                                placeholder="Cari judul, jabatan, atau unit kerja..." value="{{ request('q') }}" autocomplete="off">
-                        </div>
+                    <div class="col-12 col-md-6 col-xl-4">
+                        @include('partials.daftar-cari', [
+                            'cariTeks' => 'Cari lowongan, contoh: Guru Matematika',
+                            'cariLabel' => 'Cari lowongan menurut judul, jabatan, atau unit kerja',
+                        ])
                     </div>
-                    <div class="col-md-3">
-                        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <div class="col-12 col-md-3">
+                        <select name="status" class="form-select form-select-sm" aria-label="Status lowongan" onchange="this.form.submit()">
                             <option value="">Semua Status</option>
                             <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Draft</option>
                             <option value="dipublikasikan" {{ request('status') == 'dipublikasikan' ? 'selected' : '' }}>Dipublikasikan</option>
                             <option value="ditutup" {{ request('status') == 'ditutup' ? 'selected' : '' }}>Ditutup</option>
                         </select>
                     </div>
-                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterLowonganForm'])</div>
+                    <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterLowonganForm'])</div>
                 </div>
+                @include('partials.daftar-ringkas', [
+                    'ringkasJumlah' => $lowongans->total(), 'ringkasSatuan' => 'lowongan',
+                    'ringkasFilter' => $adaFilter, 'ringkasReset' => route('admin.lowongan.index'),
+                ])
             </form>
 
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead>
                         <tr>
-                            <th>Judul</th>
-                            <th>Unit Kerja</th>
-                            <th>Kebutuhan</th>
+                            <th>Lowongan</th>
                             <th>Pelamar</th>
                             <th>Tanggal Tutup</th>
                             <th>Status</th>
@@ -57,51 +62,90 @@
                     </thead>
                     <tbody>
                         @forelse ($lowongans as $item)
+                            @php
+                                $bisaDitutup = $item->status === 'dipublikasikan';
+                                $adaMenu = $bisaDitutup || $isAdmin;
+                            @endphp
                             <tr>
                                 <td>
-                                    <span class="fw-semibold d-block">{{ $item->judul }}</span>
-                                    <small class="text-muted">{{ $item->jabatan }}</small>
+                                    <a href="{{ route('admin.lowongan.edit', $item) }}" class="nama-tautan d-block">{{ $item->judul }}</a>
+                                    <small class="text-muted">{{ $item->jabatan }} · {{ $item->unit_kerja }}</small>
                                 </td>
-                                <td>{{ $item->unit_kerja }}</td>
-                                <td>{{ $item->jumlah_terisi }}/{{ $item->jumlah_dibutuhkan }} orang</td>
-                                <td>{{ $item->lamarans_count }}</td>
-                                <td>{{ optional($item->tanggal_tutup)->translatedFormat('d M Y') ?? '-' }}</td>
+                                <td>
+                                    {{ $item->lamarans_count }} pelamar
+                                    <small class="text-muted d-block">Terisi {{ $item->jumlah_terisi }}/{{ $item->jumlah_dibutuhkan }} orang</small>
+                                </td>
+                                <td class="text-nowrap">{{ optional($item->tanggal_tutup)->translatedFormat('d M Y') ?? '-' }}</td>
                                 <td><span class="badge {{ $item->status === 'dipublikasikan' ? 'text-bg-success' : ($item->status === 'ditutup' ? 'text-bg-secondary' : 'text-bg-warning') }}">{{ $item->statusLabel() }}</span></td>
                                 <td class="text-end">
-                                    <div class="d-flex gap-1 justify-content-end">
-                                        <a href="{{ route('admin.lowongan.edit', $item) }}" class="btn btn-outline-secondary btn-sm">
-                                            <i class="bi bi-pencil"></i> Edit
+                                    {{-- Ubah + aksi utama sesuai status terlihat; Tutup & aksi khusus Admin di menu ⋮. --}}
+                                    <div class="d-inline-flex align-items-center gap-1">
+                                        <a href="{{ route('admin.lowongan.edit', $item) }}" class="btn btn-light btn-sm">
+                                            <i class="bi bi-pencil" aria-hidden="true"></i>Ubah
                                         </a>
                                         @if ($item->status === 'draft')
-                                            <form action="{{ route('admin.lowongan.publish', $item) }}" method="POST"
-                                                data-confirm="Publikasikan lowongan ini ke publik?">
+                                            <form action="{{ route('admin.lowongan.publish', $item) }}" method="POST" class="m-0"
+                                                data-confirm="Publikasikan lowongan {{ $item->judul }}? Lowongan akan tampil di halaman publik.">
                                                 @csrf
                                                 <button type="submit" class="btn btn-success btn-sm">
-                                                    <i class="bi bi-megaphone"></i> Publikasikan
+                                                    <i class="bi bi-megaphone" aria-hidden="true"></i>Publikasikan
                                                 </button>
                                             </form>
-                                        @elseif ($item->status === 'dipublikasikan')
-                                            <form action="{{ route('admin.lowongan.close', $item) }}" method="POST"
-                                                data-confirm="Tutup lowongan ini?">
-                                                @csrf
-                                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                                    <i class="bi bi-lock"></i> Tutup
-                                                </button>
-                                            </form>
-                                        @else
+                                        @elseif ($item->status !== 'dipublikasikan')
                                             @include('admin.lowongan._reopen-button', ['lowongan' => $item, 'small' => true])
                                         @endif
-                                        @include('admin.editor-data._tombol', ['entitas' => 'lowongan', 'id' => $item->id, 'teks' => ''])
+                                        @if ($adaMenu)
+                                            <div class="dropdown">
+                                                @include('partials.tombol-aksi-lain', ['aksiUntuk' => $item->judul])
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    @if ($bisaDitutup)
+                                                        <li>
+                                                            <form action="{{ route('admin.lowongan.close', $item) }}" method="POST">
+                                                                @csrf
+                                                                <button type="submit" class="dropdown-item text-danger"
+                                                                    data-confirm="true" data-icon="warning" data-title="Tutup lowongan?"
+                                                                    data-text="Lowongan {{ $item->judul }} tidak lagi menerima lamaran baru."
+                                                                    data-confirm-text="Ya, Tutup" data-confirm-color="#dc3545" data-cancel-text="Batal">
+                                                                    <i class="bi bi-lock me-2"></i>Tutup Lowongan
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                    @endif
+                                                    @if ($isAdmin)
+                                                        @if ($bisaDitutup)<li><hr class="dropdown-divider"></li>@endif
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ route('admin.data.edit', ['lowongan', $item->id, 'kembali' => request()->fullUrl()]) }}">
+                                                                <i class="bi bi-shield-lock me-2"></i>Ubah Semua Kolom (Admin)
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <form action="{{ route('admin.data.destroy', ['lowongan', $item->id]) }}" method="POST">
+                                                                @csrf @method('DELETE')
+                                                                <input type="hidden" name="kembali" value="{{ request()->fullUrl() }}">
+                                                                <button type="submit" class="dropdown-item text-danger"
+                                                                    data-confirm="true" data-icon="warning" data-title="Hapus lowongan permanen?"
+                                                                    data-text="Lowongan {{ $item->judul }} akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."
+                                                                    data-confirm-text="Ya, Hapus" data-confirm-color="#dc3545" data-cancel-text="Batal">
+                                                                    <i class="bi bi-trash me-2"></i>Hapus Permanen (Admin)
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                    @endif
+                                                </ul>
+                                            </div>
+                                        @else
+                                            <span class="btn-ikon" aria-hidden="true"></span>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
-                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                    Belum ada lowongan.
-                                </td>
-                            </tr>
+                            @include('partials.kosong-tabel', [
+                                'kosongKolom' => 5,
+                                'kosongTeks' => $adaFilter ? 'Tidak ada lowongan yang cocok dengan pencarian/filter ini.' : 'Belum ada lowongan.',
+                                'kosongIkon' => $adaFilter ? 'bi-search' : 'bi-briefcase',
+                                'kosongReset' => $adaFilter ? route('admin.lowongan.index') : null,
+                            ])
                         @endforelse
                     </tbody>
                 </table>
@@ -115,21 +159,4 @@
         </section>
     </div>
 </main>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const searchInput = document.getElementById('searchInput');
-        const filterForm = document.getElementById('filterLowonganForm');
-        let debounceTimer;
-
-        if (searchInput && filterForm) {
-            searchInput.addEventListener('input', function () {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(function () {
-                    filterForm.submit();
-                }, 500);
-            });
-        }
-    });
-</script>
 @endsection

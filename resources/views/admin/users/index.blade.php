@@ -1,34 +1,39 @@
 @extends('layouts.admin.app')
 
 @section('content')
+@php
+    $adaFilter = request()->hasAny(['q', 'role']);
+@endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
         <div class="page-heading">
             <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-people"></i></span>
+                <span class="page-icon"><i class="bi bi-person-lock"></i></span>
                 <div>
                     <p class="eyebrow mb-1">Sistem</p>
-                    <h1 class="h3 mb-1">Data User</h1>
-                    <p class="text-muted mb-0">Kelola akun login (nama, email, role, password).</p>
+                    <h1 class="h3 mb-1">Kelola Akun</h1>
+                    <p class="text-muted mb-0">Akun untuk masuk ke HRRAB: nama, email, role, dan kata sandi.</p>
                 </div>
             </div>
             <div class="heading-actions d-flex flex-wrap gap-2">
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.users.export'])
                 <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i> Tambah User
+                    <i class="bi bi-plus-lg me-1"></i> Tambah Akun
                 </a>
             </div>
         </div>
 
-        <section class="panel">
-            <form action="{{ route('admin.users.index') }}" method="GET" id="filterUserForm" class="panel-filter px-3 pt-3 pb-2">
+        <section class="panel" aria-label="Daftar akun">
+            <form action="{{ route('admin.users.index') }}" method="GET" id="filterUserForm" class="panel-filter px-3 pt-3 pb-2" role="search">
                 <div class="row g-2 align-items-center">
-                    <div class="col-md-5">
-                        <input type="search" name="q" class="form-control form-control-sm"
-                            placeholder="Cari nama, email, atau NIP..." value="{{ request('q') }}">
+                    <div class="col-12 col-md-6 col-xl-4">
+                        @include('partials.daftar-cari', [
+                            'cariTeks' => 'Cari akun, contoh: Siti atau siti@gmail.com',
+                            'cariLabel' => 'Cari akun menurut nama, email, atau NIP',
+                        ])
                     </div>
-                    <div class="col-md-3">
-                        <select name="role" class="form-select form-select-sm" onchange="document.getElementById('filterUserForm').submit()">
+                    <div class="col-12 col-md-3">
+                        <select name="role" class="form-select form-select-sm" aria-label="Role" onchange="document.getElementById('filterUserForm').submit()">
                             <option value="">Semua Role</option>
                             @foreach ($roles as $role)
                                 <option value="{{ $role }}" {{ request('role') == $role ? 'selected' : '' }}>
@@ -40,40 +45,33 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-1">
-                        <button type="submit" class="btn btn-outline-secondary btn-sm" aria-label="Cari" title="Cari"><i class="bi bi-search" aria-hidden="true"></i></button>
-                    </div>
-                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterUserForm'])</div>
-                    @if (request()->hasAny(['q', 'role']))
-                        <div class="col-md-1">
-                            <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary btn-sm" title="Reset filter">
-                                <i class="bi bi-x-lg"></i>
-                            </a>
-                        </div>
-                    @endif
+                    <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterUserForm'])</div>
                 </div>
+                @include('partials.daftar-ringkas', [
+                    'ringkasJumlah' => $users->total(), 'ringkasSatuan' => 'akun',
+                    'ringkasFilter' => $adaFilter, 'ringkasReset' => route('admin.users.index'),
+                ])
             </form>
 
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead>
                         <tr>
-                            <th>Nama</th>
-                            <th>Email</th>
+                            <th>Akun</th>
                             <th>Role</th>
-                            <th>NIP</th>
-                            <th>Terhubung Dengan</th>
+                            <th>Terhubung dengan</th>
                             <th class="text-end">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($users as $item)
                             <tr>
-                                <td class="fw-semibold">{{ $item->name }}</td>
                                 <td>
-                                    {{ $item->email }}
+                                    {{-- Nama membuka halaman ubah (aksi paling sering untuk akun). --}}
+                                    <a href="{{ route('admin.users.edit', $item) }}" class="nama-tautan d-block">{{ $item->name }}</a>
+                                    <small class="text-muted">{{ $item->email }}</small>
                                     @if ($item->wajib_ganti_password)
-                                        <span class="badge text-bg-warning d-inline-block mt-1"><i class="bi bi-shield-exclamation me-1"></i>Wajib ganti password</span>
+                                        <span class="badge text-bg-warning d-table mt-1"><i class="bi bi-shield-exclamation me-1"></i>Wajib ganti kata sandi</span>
                                     @endif
                                 </td>
                                 <td>
@@ -85,39 +83,62 @@
                                         @if ($unitsKepala = $item->unitsDipimpin())<small class="text-muted d-block">Kepala {{ implode(', ', $unitsKepala) }}</small>@endif
                                     @endif
                                 </td>
-                                <td class="angka-utuh">{{ $item->nip ?? '-' }}</td>
                                 <td>
                                     @if ($item->dataPegawai)
-                                        <small class="text-muted">Pegawai: {{ $item->dataPegawai->nama_lengkap }}</small>
+                                        <span class="d-block">Pegawai</span>
+                                        @if ($item->dataPegawai->nama_lengkap !== $item->name)
+                                            <small class="text-muted d-block">{{ $item->dataPegawai->nama_lengkap }}</small>
+                                        @endif
                                     @elseif ($item->dataPelamar)
-                                        <small class="text-muted">Pelamar: {{ $item->dataPelamar->nama_lengkap }}</small>
+                                        <span class="d-block">Pelamar</span>
+                                        @if ($item->dataPelamar->nama_lengkap !== $item->name)
+                                            <small class="text-muted d-block">{{ $item->dataPelamar->nama_lengkap }}</small>
+                                        @endif
                                     @else
-                                        <span class="text-muted">-</span>
+                                        <span class="text-muted d-block">Belum terhubung</span>
+                                    @endif
+                                    @if ($item->nip)
+                                        <small class="text-muted angka-utuh">NIP {{ $item->nip }}</small>
                                     @endif
                                 </td>
                                 <td class="text-end">
-                                    <a href="{{ route('admin.users.edit', $item) }}" class="btn btn-outline-secondary btn-sm">
-                                        <i class="bi bi-pencil"></i> Edit
-                                    </a>
-                                    @if ($item->id !== auth()->id())
-                                        <form action="{{ route('admin.users.destroy', $item) }}" method="POST" class="d-inline"
-                                            data-confirm="Hapus akun {{ $item->name }}? Tindakan ini tidak bisa dibatalkan.">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Hapus akun {{ $item->name }}" title="Hapus akun">
-                                                <i class="bi bi-trash" aria-hidden="true"></i>
-                                            </button>
-                                        </form>
-                                    @endif
+                                    <div class="d-inline-flex align-items-center gap-1">
+                                        <a href="{{ route('admin.users.edit', $item) }}" class="btn btn-light btn-sm">
+                                            <i class="bi bi-pencil" aria-hidden="true"></i>Ubah
+                                        </a>
+                                        @if ($item->id !== auth()->id())
+                                            <div class="dropdown">
+                                                @include('partials.tombol-aksi-lain', ['aksiUntuk' => $item->name])
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li>
+                                                        <form action="{{ route('admin.users.destroy', $item) }}" method="POST">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="dropdown-item text-danger"
+                                                                data-confirm="true" data-icon="warning"
+                                                                data-title="Hapus akun?"
+                                                                data-text="Akun {{ $item->name }} akan dihapus dan tidak bisa dipakai masuk lagi. Tindakan ini tidak bisa dibatalkan."
+                                                                data-confirm-text="Ya, Hapus" data-confirm-color="#dc3545" data-cancel-text="Batal">
+                                                                <i class="bi bi-trash me-2"></i>Hapus Akun
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        @else
+                                            {{-- Akun sendiri tidak bisa dihapus: pengganti kosong agar tombol Ubah tetap sejajar. --}}
+                                            <span class="btn-ikon" aria-hidden="true"></span>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">
-                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                    Belum ada data user.
-                                </td>
-                            </tr>
+                            @include('partials.kosong-tabel', [
+                                'kosongKolom' => 4,
+                                'kosongTeks' => $adaFilter ? 'Tidak ada akun yang cocok dengan pencarian/filter ini.' : 'Belum ada akun.',
+                                'kosongIkon' => $adaFilter ? 'bi-search' : 'bi-person-lock',
+                                'kosongReset' => $adaFilter ? route('admin.users.index') : null,
+                            ])
                         @endforelse
                     </tbody>
                 </table>

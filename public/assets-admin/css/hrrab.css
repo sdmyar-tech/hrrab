@@ -69,7 +69,7 @@ html[data-theme="dark"] .btn-outline-primary { --bs-btn-border-color: #c9474a; }
 .bg-primary { background-color: rgba(136, 15, 18, var(--bs-bg-opacity, 1)) !important; }
 .border-primary { border-color: var(--hr-primary) !important; }
 .text-bg-primary { color: #fff !important; background-color: rgba(136, 15, 18, var(--bs-bg-opacity, 1)) !important; }
-.text-bg-info { color: var(--hr-primary-soft-text) !important; background-color: var(--hr-primary-soft) !important; }
+.text-bg-info { color: #1d4f91 !important; background-color: #e7f0fd !important; }
 
 .nav-pills {
     --bs-nav-pills-link-active-bg: var(--hr-primary);

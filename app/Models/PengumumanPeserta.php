@@ -104,11 +104,11 @@ class PengumumanPeserta extends Model
 
         return match (true) {
             $this->status === self::STATUS_HADIR => ['kunci' => 'valid', 'label' => 'Valid', 'kelas' => 'text-bg-success', 'ikon' => 'bi-check-circle-fill'],
-            $this->status === self::STATUS_MANUAL => ['kunci' => 'manual', 'label' => 'Ditandai hadir', 'kelas' => 'text-bg-primary', 'ikon' => 'bi-person-check'],
+            $this->status === self::STATUS_MANUAL => ['kunci' => 'manual', 'label' => 'Ditandai hadir', 'kelas' => 'text-bg-success', 'ikon' => 'bi-person-check'],
             $this->status === self::STATUS_IZIN => ['kunci' => 'izin', 'label' => 'Izin', 'kelas' => 'text-bg-info', 'ikon' => 'bi-envelope-paper'],
-            $this->status === self::STATUS_SAKIT => ['kunci' => 'sakit', 'label' => 'Sakit', 'kelas' => 'text-bg-warning', 'ikon' => 'bi-bandaid'],
+            $this->status === self::STATUS_SAKIT => ['kunci' => 'sakit', 'label' => 'Sakit', 'kelas' => 'text-bg-info', 'ikon' => 'bi-bandaid'],
             $this->status === self::STATUS_DINAS => ['kunci' => 'dinas', 'label' => 'Dinas luar', 'kelas' => 'text-bg-info', 'ikon' => 'bi-briefcase'],
-            $this->status === self::STATUS_CUTI => ['kunci' => 'cuti', 'label' => 'Cuti', 'kelas' => 'text-bg-secondary', 'ikon' => 'bi-calendar2-x'],
+            $this->status === self::STATUS_CUTI => ['kunci' => 'cuti', 'label' => 'Cuti', 'kelas' => 'text-bg-info', 'ikon' => 'bi-calendar2-x'],
             $tutup => ['kunci' => 'kedaluwarsa', 'label' => 'Kedaluwarsa', 'kelas' => 'text-bg-secondary', 'ikon' => 'bi-hourglass-bottom'],
             default => ['kunci' => 'belum', 'label' => 'Belum absen', 'kelas' => 'text-bg-light border', 'ikon' => 'bi-circle'],
         };

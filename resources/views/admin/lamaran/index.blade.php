@@ -1,6 +1,9 @@
 @extends('layouts.admin.app')
 
 @section('content')
+@php
+    $adaFilter = request()->hasAny(['q', 'status', 'jalur']);
+@endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
         <div class="page-heading">
@@ -23,18 +26,17 @@
             </div>
         </div>
 
-        <section class="panel">
-            <form action="{{ route('admin.lamaran.index') }}" method="GET" id="filterLamaranForm" class="panel-filter px-3 pt-3 pb-2">
+        <section class="panel" aria-label="Daftar lamaran">
+            <form action="{{ route('admin.lamaran.index') }}" method="GET" id="filterLamaranForm" class="panel-filter px-3 pt-3 pb-2" role="search">
                 <div class="row g-2 align-items-center">
-                    <div class="col-md-4">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="search" name="q" id="searchInput" class="form-control border-start-0"
-                                placeholder="Cari nama atau email pelamar..." value="{{ request('q') }}" autocomplete="off">
-                        </div>
+                    <div class="col-12 col-md-6 col-xl-4">
+                        @include('partials.daftar-cari', [
+                            'cariTeks' => 'Cari pelamar, contoh: Budi Santoso',
+                            'cariLabel' => 'Cari lamaran menurut nama atau email pelamar',
+                        ])
                     </div>
-                    <div class="col-md-3">
-                        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <div class="col-6 col-md-3 col-xl-3">
+                        <select name="status" class="form-select form-select-sm" aria-label="Status lamaran" onchange="this.form.submit()">
                             <option value="">Semua Status</option>
                             <option value="menunggu_verifikasi" {{ request('status') == 'menunggu_verifikasi' ? 'selected' : '' }}>Menunggu Verifikasi</option>
                             <option value="proses" {{ request('status') == 'proses' ? 'selected' : '' }}>Proses</option>
@@ -43,15 +45,19 @@
                             <option value="dibatalkan" {{ request('status') == 'dibatalkan' ? 'selected' : '' }}>Dibatalkan Pelamar</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <select name="jalur" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <div class="col-6 col-md-3 col-xl-2">
+                        <select name="jalur" class="form-select form-select-sm" aria-label="Jalur lamaran" onchange="this.form.submit()">
                             <option value="">Semua Jalur</option>
                             <option value="umum" {{ request('jalur') == 'umum' ? 'selected' : '' }}>Jalur Umum (Lowongan)</option>
                             <option value="internal" {{ request('jalur') == 'internal' ? 'selected' : '' }}>Jalur Langsung</option>
                         </select>
                     </div>
-                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterLamaranForm'])</div>
+                    <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterLamaranForm'])</div>
                 </div>
+                @include('partials.daftar-ringkas', [
+                    'ringkasJumlah' => $lamarans->total(), 'ringkasSatuan' => 'lamaran',
+                    'ringkasFilter' => $adaFilter, 'ringkasReset' => route('admin.lamaran.index'),
+                ])
             </form>
 
             <div class="table-responsive">
@@ -62,7 +68,6 @@
                             <th>Posisi</th>
                             <th>Tanggal Masuk</th>
                             <th>Status</th>
-                            <th>Tahap</th>
                             <th class="text-end">Aksi</th>
                         </tr>
                     </thead>
@@ -76,14 +81,11 @@
                             @endphp
                             <tr>
                                 <td>
-                                    <div class="d-flex align-items-start gap-2">
-                                        @if ($item->dataPelamar?->foto_path)
-                                            <img src="{{ \App\Support\Berkas::url($item->dataPelamar->foto_path) }}"
-                                                alt="Pas Foto {{ $item->dataPelamar?->nama_lengkap }}"
-                                                class="rounded flex-shrink-0" style="width:40px;height:40px;object-fit:cover;">
-                                        @endif
-                                        <div class="flex-grow-1">
-                                            <span class="fw-semibold d-block">{{ $item->namaKandidat() }}</span>
+                                    <div class="table-media align-items-start">
+                                        <img class="product-thumb rounded-circle" loading="lazy" alt=""
+                                            src="{{ $item->dataPelamar?->foto_path ? \App\Support\Berkas::url($item->dataPelamar->foto_path) : asset('assets-admin/images/avatar/avatar-fallback.jpg') }}">
+                                        <div class="min-w-0 flex-grow-1">
+                                            <a href="{{ route('admin.lamaran.show', $item) }}" class="nama-tautan d-block">{{ $item->namaKandidat() }}</a>
                                             <small class="text-muted d-block">{{ $item->emailKandidat() }}</small>
                                             @if ($item->isJalurInternal())
                                                 <span class="badge text-bg-light border mt-1">
@@ -92,14 +94,14 @@
                                             @endif
 
                                             @if ($riwayat->isNotEmpty())
-                                                <button type="button" class="btn btn-link btn-sm p-0 mt-1 text-decoration-none"
+                                                <button type="button" class="btn btn-link btn-sm p-0 mt-1 d-block text-decoration-none"
                                                     data-bs-toggle="collapse" data-bs-target="#riwayat-{{ $item->id }}"
                                                     aria-expanded="false" aria-controls="riwayat-{{ $item->id }}">
                                                     <i class="bi bi-clock-history me-1"></i>{{ $riwayat->count() }}x lamaran sebelumnya
                                                     <i class="bi bi-chevron-down small"></i>
                                                 </button>
                                                 <div class="collapse mt-2" id="riwayat-{{ $item->id }}">
-                                                    <div class="border rounded p-2 bg-light" style="font-size:.8rem;">
+                                                    <div class="border rounded p-2" style="font-size:.8rem; background: var(--admin-surface-soft);">
                                                         @foreach ($riwayat as $r)
                                                             <div class="d-flex justify-content-between align-items-start gap-2 py-1 {{ ! $loop->last ? 'border-bottom' : '' }}">
                                                                 <div>
@@ -123,22 +125,27 @@
                                         {{ $item->unitKerjaTujuan() }}{{ $item->lowongan ? '' : ' · tanpa lowongan' }}
                                     </small>
                                 </td>
-                                <td>{{ optional($item->created_at)->translatedFormat('d M Y') }}</td>
-                                <td><span class="badge {{ $item->badgeClass() }}">{{ $item->statusLabel() }}</span></td>
-                                <td>{{ $item->isProses() ? $item->tahapLabel() : '-' }}</td>
+                                <td class="text-nowrap">{{ optional($item->created_at)->translatedFormat('d M Y') }}</td>
+                                <td>
+                                    {{-- Status + tahap dalam satu kolom: tahap hanya relevan saat lamaran sedang diproses. --}}
+                                    <span class="badge {{ $item->badgeClass() }}">{{ $item->statusLabel() }}</span>
+                                    @if ($item->isProses())
+                                        <small class="text-muted d-block mt-1">{{ $item->tahapLabel() }}</small>
+                                    @endif
+                                </td>
                                 <td class="text-end">
-                                    <a href="{{ route('admin.lamaran.show', $item) }}" class="btn btn-outline-secondary btn-sm">
-                                        <i class="bi bi-eye"></i> Detail
+                                    <a href="{{ route('admin.lamaran.show', $item) }}" class="btn btn-light btn-sm">
+                                        <i class="bi bi-eye" aria-hidden="true"></i>Detail
                                     </a>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">
-                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                    Belum ada lamaran masuk.
-                                </td>
-                            </tr>
+                            @include('partials.kosong-tabel', [
+                                'kosongKolom' => 5,
+                                'kosongTeks' => $adaFilter ? 'Tidak ada lamaran yang cocok dengan pencarian/filter ini.' : 'Belum ada lamaran masuk.',
+                                'kosongIkon' => $adaFilter ? 'bi-search' : 'bi-inbox',
+                                'kosongReset' => $adaFilter ? route('admin.lamaran.index') : null,
+                            ])
                         @endforelse
                     </tbody>
                 </table>
@@ -152,21 +159,4 @@
         </section>
     </div>
 </main>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const searchInput = document.getElementById('searchInput');
-        const filterForm = document.getElementById('filterLamaranForm');
-        let debounceTimer;
-
-        if (searchInput && filterForm) {
-            searchInput.addEventListener('input', function () {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(function () {
-                    filterForm.submit();
-                }, 500);
-            });
-        }
-    });
-</script>
 @endsection

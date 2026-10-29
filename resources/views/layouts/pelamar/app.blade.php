@@ -31,6 +31,7 @@
             @include('layouts.partials.navbar')
 
             <div id="konten-utama" tabindex="-1"></div>
+            @include('layouts.partials.umpan-balik')
             @yield('content')
 
             @include('layouts.partials.footer')
@@ -39,7 +40,7 @@
 
     @include('layouts.partials.js')
 
-    @include('layouts.partials.sweetalert')
+    @include('layouts.partials.sweetalert', ['pakaiBanner' => true])
 @include('layouts.partials.tanpa-spasi')
 @include('layouts.partials.geser-tab')
 </body>

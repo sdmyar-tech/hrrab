@@ -98,6 +98,8 @@
                 <p class="small text-muted mb-0 mt-2">Hanya isian yang masih kosong yang ditampilkan. Data yang sudah terisi diubah lewat Admin SDM.</p>
             </div>
 
+            {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
+            @section('galat-di-halaman', '1')
             @if ($errors->any())
                 <div class="alert alert-danger small">
                     <strong>Periksa kembali isian berikut:</strong>

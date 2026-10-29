@@ -213,12 +213,14 @@ html[data-theme="dark"] .table tbody tr:hover { background: rgba(255, 255, 255, 
 .badge.text-bg-danger { background-color: #fde8e8 !important; color: #b42318 !important; }
 .badge.text-bg-warning { background-color: #fff3d6 !important; color: #8a5300 !important; }
 .badge.text-bg-secondary { background-color: #eef0f3 !important; color: #4b5565 !important; }
-.badge.text-bg-info { background-color: var(--hr-primary-soft) !important; color: var(--hr-primary-soft-text) !important; }
+/* Info = biru (aturan warna status: hijau sukses, kuning menunggu, merah gagal, abu nonaktif, biru info). */
+.badge.text-bg-info { background-color: #e7f0fd !important; color: #1d4f91 !important; }
 .badge.text-bg-light { background-color: #f4f5f7 !important; color: #4b5565 !important; border: 1px solid var(--admin-border); }
 .badge.text-bg-dark { background-color: #2b3240 !important; color: #fff !important; }
 html[data-theme="dark"] .badge.text-bg-success { background-color: rgba(34, 197, 94, .16) !important; color: #86efac !important; }
 html[data-theme="dark"] .badge.text-bg-danger { background-color: rgba(239, 68, 68, .16) !important; color: #fca5a5 !important; }
 html[data-theme="dark"] .badge.text-bg-warning { background-color: rgba(245, 158, 11, .16) !important; color: #fcd34d !important; }
+html[data-theme="dark"] .badge.text-bg-info { background-color: rgba(96, 165, 250, .16) !important; color: #bfdbfe !important; }
 html[data-theme="dark"] .badge.text-bg-secondary, html[data-theme="dark"] .badge.text-bg-light { background-color: rgba(148, 163, 184, .14) !important; color: #cbd5e1 !important; border-color: transparent; }
 
 /* ---------- Alert, modal, dropdown, pagination ---------- */
@@ -244,6 +246,10 @@ nav[aria-label] .small.text-muted, nav .text-muted.small { font-size: .8125rem; 
 .swal2-title { font-size: 1.2rem !important; font-weight: 700 !important; color: var(--admin-text) !important; }
 .swal2-html-container { font-size: .9rem !important; color: var(--admin-muted) !important; }
 .swal2-styled { font-weight: 600 !important; border-radius: 9px !important; font-size: .875rem !important; padding: .55rem 1.1rem !important; }
+/* Toast (pesan sukses/info): ringkas, teks biasa, tidak menutupi banyak isi. */
+.swal2-popup.swal2-toast { width: auto !important; max-width: min(380px, calc(100vw - 2rem)); padding: .7rem .9rem !important; border-radius: var(--hr-radius) !important; box-shadow: var(--admin-shadow-lg) !important; }
+.swal2-toast .swal2-title { font-size: .875rem !important; font-weight: 600 !important; line-height: 1.45; margin: 0 .5rem !important; color: var(--admin-text) !important; }
+.swal2-toast .swal2-close { font-size: 1.25rem; }
 
 /* ---------- Mode gelap: elemen yang masih memakai warna terang ---------- */
 html[data-theme="dark"] .input-group-text { background: var(--admin-surface-soft); border-color: var(--admin-border); color: var(--admin-muted); }
@@ -448,14 +454,31 @@ html[data-theme="dark"] .form-control::placeholder { color: #8a94a8; }
 html[data-theme="dark"] .dashboard-content .table tbody td :is(.btn-light, .btn-outline-secondary):is(:hover, :focus-visible, [aria-expanded="true"]) { color: var(--hr-primary-soft-text); }
 html[data-theme="dark"] .dashboard-content .table tbody td .btn-outline-danger { color: #fca5a5; }
 
-/* Tombol ikon saja (mis. menu ⋮ di baris tabel): persegi, ikon di tengah. */
+/* Tombol ikon saja (mis. menu ⋮ di baris tabel): persegi, ikon di tengah.
+   span.btn-ikon = pengganti kosong selebar tombol agar kolom aksi tetap rata saat baris tak punya menu. */
 .btn-ikon { width: 32px; padding-inline: 0 !important; justify-content: center; }
 .btn-ikon.dropdown-toggle::after { display: none; }
+span.btn-ikon { display: inline-block; height: 1px; }
+
+/* Sedang memuat (filter/cari dikirim): daftar meredup & tak bisa diklik, ikon cari berputar. */
+.dashboard-content .panel.memuat :is(.table-responsive, .list-group, .panel-footer) { opacity: .5; pointer-events: none; transition: opacity .15s ease; }
+
+/* Banner galat/peringatan di atas isi halaman (pengganti dialog): pesan + tombol Coba lagi. */
+.banner-umpan { display: flex; align-items: flex-start; gap: .75rem; margin-bottom: 1rem; }
+.banner-umpan > .bi { flex: none; font-size: 1.1rem; line-height: 1.4; }
+.banner-umpan-isi { flex: 1 1 auto; min-width: 0; }
+.banner-umpan-isi ul { margin: .35rem 0 0; padding-left: 1.1rem; }
+.banner-umpan-aksi { flex: none; display: flex; gap: .35rem; align-items: center; }
+.banner-umpan .btn-close { width: .7em; height: .7em; }
+@media (max-width: 575.98px) {
+    .banner-umpan { flex-wrap: wrap; }
+    .banner-umpan-aksi { width: 100%; justify-content: flex-end; }
+}
 
 /* Identitas di sel tabel (foto + nama + keterangan). */
 .dashboard-content .table-media { min-width: 0; }
-.dashboard-content .table-media .nama-tautan { font-weight: 600; color: var(--admin-text); text-decoration: none; }
-.dashboard-content .table-media .nama-tautan:hover { color: var(--hr-primary); text-decoration: underline; }
+.dashboard-content a.nama-tautan { font-weight: 600; color: var(--admin-text); text-decoration: none; }
+.dashboard-content a.nama-tautan:hover { color: var(--hr-primary); text-decoration: underline; }
 
 /* Judul halaman di HP: tombol aksi berdampingan (bukan bertumpuk selebar layar). */
 @media (max-width: 575.98px) {
@@ -467,4 +490,10 @@ html[data-theme="dark"] .dashboard-content .table tbody td .btn-outline-danger {
     .dashboard-content table.table-mobile-cards td:has(> .table-media)::before,
     .dashboard-content table.table-mobile-cards td.text-end:last-child:has(.btn, .dropdown)::before { display: none; }
     .dashboard-content table.table-mobile-cards td.text-end:last-child:has(.btn, .dropdown) { padding-top: .6rem; }
+    /* Angka yang di desktop rata tengah ikut rata kiri di kartu, sejajar dengan label kolomnya. */
+    .dashboard-content table.table-mobile-cards td.text-center:not([colspan]) { text-align: left !important; }
+    /* Kolom nomor urut tidak berguna di kartu. */
+    .dashboard-content table.table-mobile-cards .kolom-no { display: none !important; }
+    /* Pengganti tombol kosong tidak perlu memakan tempat di kartu. */
+    .dashboard-content table.table-mobile-cards span.btn-ikon { display: none; }
 }

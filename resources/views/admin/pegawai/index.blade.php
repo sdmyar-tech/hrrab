@@ -23,12 +23,11 @@
                     class="panel-filter px-3 pt-3 pb-2" role="search">
                     <div class="row g-2 align-items-center">
                         <div class="col-12 col-md-6 col-xl-4">
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search" aria-hidden="true"></i></span>
-                                <input type="search" name="q" id="searchInput" class="form-control border-start-0"
-                                    placeholder="Cari nama, NIP, email, atau jabatan..." value="{{ request('q') }}"
-                                    autocomplete="off" aria-label="Cari pegawai">
-                            </div>
+                            @include('partials.daftar-cari', [
+                                'cariTeks' => 'Cari pegawai, contoh: Siti atau 115010920001',
+                                'cariLabel' => 'Cari pegawai menurut nama, NIP, email, atau jabatan',
+                                'cariId' => 'searchInput',
+                            ])
                         </div>
                         <div class="col-6 col-md-3 col-xl-3">
                             <select name="unit_kerja" class="form-select form-select-sm" aria-label="Unit kerja"
@@ -67,19 +66,10 @@
                     @endif
 
                     {{-- Jumlah data selalu terlihat: pengguna tahu cakupan daftar tanpa menggulir ke paginasi. --}}
-                    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
-                        <p class="small text-muted mb-0" aria-live="polite">
-                            <strong class="text-body">{{ $pegawais->total() }}</strong> pegawai{{ $adaFilter ? ' ditemukan' : '' }}
-                            @if (request('q'))
-                                untuk "<strong class="text-body">{{ request('q') }}</strong>"
-                            @endif
-                        </p>
-                        @if ($adaFilter)
-                            <a href="{{ route('admin.pegawai.index') }}" class="btn btn-link btn-sm">
-                                <i class="bi bi-x-circle" aria-hidden="true"></i>Reset filter
-                            </a>
-                        @endif
-                    </div>
+                    @include('partials.daftar-ringkas', [
+                        'ringkasJumlah' => $pegawais->total(), 'ringkasSatuan' => 'pegawai',
+                        'ringkasFilter' => $adaFilter, 'ringkasReset' => route('admin.pegawai.index'),
+                    ])
                 </form>
 
                 <div class="table-responsive">
@@ -150,15 +140,11 @@
                                             </a>
                                             @can('kelola-pegawai')
                                                 <div class="dropdown">
-                                                    <button class="btn btn-light btn-sm btn-ikon dropdown-toggle" type="button"
-                                                        data-bs-toggle="dropdown" aria-expanded="false"
-                                                        aria-label="Aksi lain untuk {{ $pegawai->nama_lengkap }}" title="Aksi lain">
-                                                        <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
-                                                    </button>
+                                                    @include('partials.tombol-aksi-lain', ['aksiUntuk' => $pegawai->nama_lengkap])
                                                     <ul class="dropdown-menu dropdown-menu-end">
                                                         <li>
                                                             <a class="dropdown-item" href="{{ route('admin.pegawai.edit', $pegawai->id) }}">
-                                                                <i class="bi bi-pencil me-2"></i>Edit
+                                                                <i class="bi bi-pencil me-2"></i>Ubah Data
                                                             </a>
                                                         </li>
                                                         @if (($pegawai->kepegawaian->status_rekrutmen ?? null) === 'Aktif')
@@ -193,17 +179,12 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="6">
-                                        @include('partials.kosong', [
-                                            'teks' => $adaFilter ? 'Tidak ada pegawai yang cocok dengan pencarian/filter ini.' : 'Belum ada data pegawai.',
-                                            'ikonKosong' => $adaFilter ? 'bi-search' : 'bi-people',
-                                        ])
-                                        @if ($adaFilter)
-                                            <p class="text-center small mb-3"><a href="{{ route('admin.pegawai.index') }}">Reset filter</a></p>
-                                        @endif
-                                    </td>
-                                </tr>
+                                @include('partials.kosong-tabel', [
+                                    'kosongKolom' => 6,
+                                    'kosongTeks' => $adaFilter ? 'Tidak ada pegawai yang cocok dengan pencarian/filter ini.' : 'Belum ada data pegawai.',
+                                    'kosongIkon' => $adaFilter ? 'bi-search' : 'bi-people',
+                                    'kosongReset' => $adaFilter ? route('admin.pegawai.index') : null,
+                                ])
                             @endforelse
                         </tbody>
                     </table>
@@ -220,24 +201,15 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const searchInput = document.getElementById('searchInput');
-            const filterForm = document.getElementById('filterPegawaiForm');
-            let debounceTimer;
-
-            if (searchInput && filterForm) {
-                searchInput.addEventListener('input', function () {
-                    clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(function () {
-                        filterForm.submit();
-                    }, 500);
-                });
-            }
+            // Cari otomatis saat mengetik ditangani global (main.js: data-cari-otomatis).
 
             // Resign / Keluar dari daftar: isi dialog dimuat saat diklik (dampak dihitung per pegawai), lalu dibuka di halaman ini.
             const wadah = document.getElementById('wadahModalKeluar');
             document.querySelectorAll('[data-buka-keluar]').forEach(function (tombol) {
                 tombol.addEventListener('click', async function () {
+                    const teksAsli = tombol.innerHTML;
                     tombol.disabled = true;
+                    tombol.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Memuat…';
                     try {
                         const res = await fetch(tombol.dataset.bukaKeluar, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
                         if (!res.ok) throw new Error(res.status === 404 ? 'Pegawai ini sudah tidak aktif.' : 'Dialog gagal dimuat (' + res.status + ').');
@@ -261,9 +233,14 @@
                         });
                         bootstrap.Modal.getOrCreateInstance(modal).show();
                     } catch (err) {
-                        Swal.fire({ icon: 'error', title: 'Gagal', text: err.message, confirmButtonColor: '#880f12' });
+                        // Gagal memuat dialog (mis. koneksi putus): tawarkan coba lagi tanpa memuat ulang halaman.
+                        Swal.fire({
+                            icon: 'error', title: 'Dialog gagal dimuat', text: err.message, showCancelButton: true, reverseButtons: true,
+                            confirmButtonText: 'Coba lagi', cancelButtonText: 'Tutup', confirmButtonColor: '#880f12', cancelButtonColor: '#6c757d',
+                        }).then(function (r) { if (r.isConfirmed) tombol.click(); });
                     } finally {
                         tombol.disabled = false;
+                        tombol.innerHTML = teksAsli;
                     }
                 });
             });

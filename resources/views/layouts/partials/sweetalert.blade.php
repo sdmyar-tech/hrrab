@@ -4,61 +4,65 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
+    // Sukses & info: toast di pojok kanan bawah (tidak menghalangi kerja), berhenti saat disorot.
+    const toast = Swal.mixin({
+        toast: true,
+        position: 'bottom-end',
+        showConfirmButton: false,
+        showCloseButton: true,
+        timer: 4500,
+        timerProgressBar: true,
+        didOpen: function (el) {
+            el.addEventListener('mouseenter', Swal.stopTimer);
+            el.addEventListener('mouseleave', Swal.resumeTimer);
+        },
+    });
+
     @if (session('success'))
-        Swal.fire({
-            icon: 'success',
-            title: 'Berhasil!',
-            text: @json(session('success')),
-            confirmButtonColor: '#880f12',
-            confirmButtonText: 'OK',
-            timer: 4000,
-            timerProgressBar: true,
-        });
-    @endif
-
-    @if (session('error'))
-        Swal.fire({
-            icon: 'error',
-            title: 'Gagal!',
-            text: @json(session('error')),
-            confirmButtonColor: '#880f12',
-            confirmButtonText: 'OK',
-        });
-    @endif
-
-    @if (session('warning'))
-        Swal.fire({
-            icon: 'warning',
-            title: 'Perhatian!',
-            text: @json(session('warning')),
-            confirmButtonColor: '#880f12',
-            confirmButtonText: 'OK',
-        });
+        toast.fire({ icon: 'success', titleText: @json(session('success')) });
     @endif
 
     @if (session('info'))
-        Swal.fire({
-            icon: 'info',
-            title: 'Informasi',
-            text: @json(session('info')),
-            confirmButtonColor: '#880f12',
-            confirmButtonText: 'OK',
-        });
+        toast.fire({ icon: 'info', titleText: @json(session('info')) });
     @endif
 
-    @if ($errors->any())
-        Swal.fire({
-            icon: 'error',
-            title: 'Ada {{ $errors->count() }} Kesalahan',
-            html: `<ul style="text-align:left; padding-left:20px; margin:0;">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>`,
-            confirmButtonColor: '#880f12',
-            confirmButtonText: 'Perbaiki',
-        });
-    @endif
+    {{-- Layout panel menampilkan galat & peringatan sebagai banner di area konten (layouts.partials.umpan-balik).
+         Halaman tamu/publik belum punya banner → tetap memakai dialog. --}}
+    @unless ($pakaiBanner ?? false)
+        @if (session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal',
+                text: @json(session('error')),
+                confirmButtonColor: '#880f12',
+                confirmButtonText: 'Tutup',
+            });
+        @endif
+
+        @if (session('warning'))
+            Swal.fire({
+                icon: 'warning',
+                title: 'Perhatian',
+                text: @json(session('warning')),
+                confirmButtonColor: '#880f12',
+                confirmButtonText: 'Mengerti',
+            });
+        @endif
+
+        @if ($errors->any())
+            Swal.fire({
+                icon: 'error',
+                title: 'Periksa kembali isian Anda',
+                html: `<ul style="text-align:left; padding-left:20px; margin:0;">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>`,
+                confirmButtonColor: '#880f12',
+                confirmButtonText: 'Perbaiki',
+            });
+        @endif
+    @endunless
 
     document.querySelectorAll('.btn-confirm-delete').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
@@ -68,12 +72,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
             Swal.fire({
                 icon: 'warning',
-                title: 'Yakin ingin menghapus?',
+                title: 'Hapus data ini?',
                 html: `Data <strong>"${nama}"</strong> akan dihapus permanen.<br>Tindakan ini tidak bisa dibatalkan.`,
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="bi bi-trash"></i> Ya, Hapus!',
+                confirmButtonText: '<i class="bi bi-trash"></i> Ya, Hapus',
                 cancelButtonText: 'Batal',
                 reverseButtons: true,
             }).then((result) => {
@@ -91,12 +95,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
             Swal.fire({
                 icon: 'question',
-                title: 'Yakin ingin logout?',
-                text: 'Anda akan keluar dari sistem.',
+                title: 'Keluar dari HRRAB?',
+                text: 'Anda perlu masuk lagi untuk melanjutkan.',
                 showCancelButton: true,
                 confirmButtonColor: '#880f12',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Ya, Logout',
+                confirmButtonText: 'Ya, Keluar',
                 cancelButtonText: 'Batal',
                 reverseButtons: true,
             }).then((result) => {

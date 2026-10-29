@@ -206,7 +206,8 @@ class Lamaran extends Model
         return match ($this->status) {
             self::STATUS_PROSES => 'text-bg-info',
             self::STATUS_DITERIMA => 'text-bg-success',
-            self::STATUS_DITOLAK, self::STATUS_DIBATALKAN => 'text-bg-danger',
+            self::STATUS_DITOLAK => 'text-bg-danger',
+            self::STATUS_DIBATALKAN => 'text-bg-secondary',
             default => 'text-bg-warning',
         };
     }

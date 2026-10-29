@@ -92,8 +92,9 @@
                     @endif
                 </form>
 
-                <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2 border-bottom">
-                    <span class="small text-muted">{{ $jumlahFilter }} pegawai · centang beberapa untuk mengubah sekaligus</span>
+                {{-- Sejajar dengan bilah filter & tabel (tanpa jorok kiri tambahan). --}}
+                <div class="d-flex flex-wrap align-items-center gap-2 py-2">
+                    <span class="small text-muted"><strong class="text-body">{{ $jumlahFilter }}</strong> pegawai · centang beberapa untuk mengubah sekaligus</span>
                     <button type="button" class="btn btn-sm btn-light ms-auto" data-bs-toggle="modal" data-bs-target="#modalDaftar" title="Centang banyak pegawai sekaligus dari daftar NIP/nama (Excel)">
                         <i class="bi bi-clipboard-plus me-1"></i>Tempel daftar
                     </button>

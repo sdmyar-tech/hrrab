@@ -530,6 +530,8 @@
                 });
             });
 
+            {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
+            @section('galat-di-halaman', '1')
             @if ($errors->any())
                 // Tandai juga field yang ditolak server tapi belum diberi kelas is-invalid di Blade, agar tab-nya ikut ditandai & dibuka.
                 Object.entries(@json($errors->toArray())).forEach(([nama, pesan]) => {

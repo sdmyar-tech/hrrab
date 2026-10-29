@@ -24,6 +24,8 @@
             @csrf
             @unless ($baru) @method('PUT') @endunless
 
+            {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
+            @section('galat-di-halaman', '1')
             @if ($errors->any())
                 <div class="alert alert-danger small"><ul class="mb-0 ps-3">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
             @endif

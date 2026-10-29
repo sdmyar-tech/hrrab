@@ -28,15 +28,15 @@ class PenilaianAbsensi
 {
     public const STATUS = [
         'on_time' => ['On Time', 'text-bg-success'],
-        'telat' => ['Telat', 'text-bg-danger'],
-        'telat_izin' => ['Telat Izin', 'text-bg-warning'],
-        'hadir' => ['Hadir', 'text-bg-primary'],
-        'alpa' => ['Alpa', 'text-bg-dark'],
+        'telat' => ['Telat', 'text-bg-warning'],
+        'telat_izin' => ['Telat Izin', 'text-bg-info'],
+        'hadir' => ['Hadir', 'text-bg-success'],
+        'alpa' => ['Alpa', 'text-bg-danger'],
         'cuti' => ['Cuti', 'text-bg-info'],
         'libur' => ['Libur', 'text-bg-light border'],
         'izin' => ['Izin', 'text-bg-info'],
         'sakit' => ['Sakit', 'text-bg-info'],
-        'dinas_luar' => ['Dinas Luar', 'text-bg-primary'],
+        'dinas_luar' => ['Dinas Luar', 'text-bg-info'],
         'belum_scan' => ['Belum scan', 'text-bg-light border'],
         'belum' => ['Belum ada data', 'text-bg-light border text-muted'],
     ];

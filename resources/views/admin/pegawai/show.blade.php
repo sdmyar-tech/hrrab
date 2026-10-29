@@ -372,6 +372,8 @@
                                 </ul>
                             </div>
                         @endif
+                        {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
+                        @section('galat-di-halaman', '1')
                         @if ($errors->any())
                             <div class="alert alert-danger small mb-3"><i class="bi bi-x-circle-fill me-1"></i>{{ $errors->first() }}</div>
                         @endif

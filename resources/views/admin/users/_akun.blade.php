@@ -39,16 +39,16 @@
 
 <div class="row g-3 mb-3">
     <div class="col-sm-6">
-        <label class="form-label">Password @unless ($wajibPassword)<span class="text-muted fw-normal">(opsional)</span>@endunless</label>
+        <label class="form-label">Kata Sandi @unless ($wajibPassword)<span class="text-muted fw-normal">(opsional)</span>@endunless</label>
         <input type="password" name="password" class="form-control @error('password') is-invalid @enderror" autocomplete="new-password" @required($wajibPassword)>
         @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
     <div class="col-sm-6">
-        <label class="form-label">Konfirmasi Password</label>
+        <label class="form-label">Ulangi Kata Sandi</label>
         <input type="password" name="password_confirmation" class="form-control" autocomplete="new-password">
     </div>
     @unless ($wajibPassword)
-        <div class="col-12 form-text mt-1">Kosongkan bila password tidak diubah.</div>
+        <div class="col-12 form-text mt-1">Kosongkan bila kata sandi tidak diubah.</div>
     @endunless
     @if (! $akun || $akun->id !== auth()->id())
         <div class="col-12">
@@ -57,8 +57,8 @@
                 <input class="form-check-input" type="checkbox" role="switch" name="wajib_ganti_password" value="1" id="wajib_ganti_password"
                     @checked(old('wajib_ganti_password', $akun?->wajib_ganti_password ?? false))>
                 <label class="form-check-label" for="wajib_ganti_password">
-                    Wajib ganti password saat membuka sistem
-                    <span class="d-block small text-muted">Pemilik akun tidak bisa memakai halaman apa pun sebelum mengganti password.</span>
+                    Wajib ganti kata sandi saat pertama masuk
+                    <span class="d-block small text-muted">Pemilik akun tidak bisa memakai halaman apa pun sebelum mengganti kata sandi.</span>
                 </label>
             </div>
         </div>

@@ -117,6 +117,8 @@
                                     <input type="text" name="keterangan" class="form-control form-control-sm" maxlength="255" value="{{ old('keterangan') }}" placeholder="Keterangan (opsional)" aria-label="Keterangan">
                                 </div>
                             </div>
+                            {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
+                            @section('galat-di-halaman', '1')
                             @if ($errors->any())<div class="text-danger small mt-2">{{ $errors->first() }}</div>@endif
                             <button type="submit" class="btn btn-primary btn-sm w-100 mt-3"><i class="bi bi-calendar-plus"></i> Simpan tanggal merah</button>
                             <p class="form-text mb-0 mt-2">Tip: klik tanggal di kalender untuk mengisi tanggal otomatis. Tanggal merah manual tidak pernah diubah sinkron API.</p>

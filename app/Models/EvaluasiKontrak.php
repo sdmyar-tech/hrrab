@@ -91,7 +91,7 @@ class EvaluasiKontrak extends Model
     {
         return match ($this->status) {
             self::STATUS_MENUNGGU_ATASAN => 'text-bg-warning',
-            self::STATUS_MENUNGGU_SDM => 'text-bg-info',
+            self::STATUS_MENUNGGU_SDM => 'text-bg-warning',
             default => 'text-bg-success',
         };
     }

@@ -33,6 +33,8 @@
                 <input type="text" name="catatan_admin" class="form-control form-control-sm" maxlength="1000" value="{{ old('catatan_admin', $pengajuanLembur->catatan_admin) }}">
             </div>
         </div>
+        {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
+        @section('galat-di-halaman', '1')
         @if ($errors->any())
             <div class="alert alert-danger small mt-2 mb-0">{{ $errors->first() }}</div>
         @endif

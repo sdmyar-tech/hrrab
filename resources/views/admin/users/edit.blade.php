@@ -8,7 +8,7 @@
                 <span class="page-icon"><i class="bi bi-person-gear"></i></span>
                 <div>
                     <p class="eyebrow mb-1">Sistem</p>
-                    <h1 class="h3 mb-1">Edit User</h1>
+                    <h1 class="h3 mb-1">Ubah Akun</h1>
                     <p class="text-muted mb-0">{{ $user->email }}</p>
                 </div>
             </div>

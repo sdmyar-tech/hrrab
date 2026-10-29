@@ -53,6 +53,8 @@
                 <textarea name="keterangan" rows="2" class="form-control form-control-sm" maxlength="1000">{{ old('keterangan', $pengajuanCuti->keterangan) }}</textarea>
             </div>
         </div>
+        {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
+        @section('galat-di-halaman', '1')
         @if ($errors->any())
             <div class="alert alert-danger small mt-2 mb-0">{{ $errors->first() }}</div>
         @endif

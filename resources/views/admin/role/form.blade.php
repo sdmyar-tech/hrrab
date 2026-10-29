@@ -28,6 +28,8 @@
             </div>
         </div>
 
+        {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
+        @section('galat-di-halaman', '1')
         @if ($errors->any())
             <div class="alert alert-danger small">{{ $errors->first() }}</div>
         @endif

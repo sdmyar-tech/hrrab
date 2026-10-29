@@ -215,8 +215,79 @@
       });
     }
 
+    // Kotak cari daftar ([data-cari-otomatis]): form dikirim 0,5 detik setelah pengguna berhenti mengetik.
+    function initCariOtomatis() {
+      var inputs = document.querySelectorAll("input[data-cari-otomatis]");
+
+      Array.prototype.forEach.call(inputs, function (input) {
+        var timer;
+        input.addEventListener("input", function (event) {
+          if (event.isComposing || !input.form) {
+            return;
+          }
+          clearTimeout(timer);
+          timer = setTimeout(function () {
+            input.form.requestSubmit ? input.form.requestSubmit() : input.form.submit();
+          }, 500);
+        });
+      });
+    }
+
+    // Umpan balik saat filter daftar dikirim (cari, pilihan, urutan): daftar meredup & ikon cari berputar
+    // sampai halaman baru tampil. Pilihan memanggil form.submit() (tanpa event submit) → ditangkap lewat "change".
+    function initFilterMemuat() {
+      var forms = document.querySelectorAll("form.panel-filter");
+
+      function tandai(form) {
+        var panel = form.closest(".panel");
+        if (panel) {
+          panel.classList.add("memuat");
+          panel.setAttribute("aria-busy", "true");
+        }
+        var ikon = form.querySelector(".input-group-text .bi-search");
+        if (ikon) {
+          ikon.className = "spinner-border spinner-border-sm";
+          ikon.setAttribute("role", "status");
+          ikon.setAttribute("aria-label", "Memuat");
+        }
+      }
+
+      Array.prototype.forEach.call(forms, function (form) {
+        form.addEventListener("submit", function (event) {
+          setTimeout(function () {
+            if (!event.defaultPrevented) {
+              tandai(form);
+            }
+          }, 0);
+        });
+        form.addEventListener("change", function (event) {
+          if (event.target.matches("select")) {
+            tandai(form);
+          }
+        });
+      });
+
+      // Kembali lewat tombol Back (halaman dari cache): hapus tanda memuat.
+      window.addEventListener("pageshow", function (event) {
+        if (!event.persisted) {
+          return;
+        }
+        Array.prototype.forEach.call(document.querySelectorAll(".panel.memuat"), function (panel) {
+          panel.classList.remove("memuat");
+          panel.removeAttribute("aria-busy");
+        });
+        Array.prototype.forEach.call(document.querySelectorAll("form.panel-filter .input-group-text .spinner-border"), function (ikon) {
+          ikon.className = "bi bi-search";
+          ikon.removeAttribute("role");
+          ikon.removeAttribute("aria-label");
+        });
+      });
+    }
+
     initValidation();
     initLokasiMaps();
+    initCariOtomatis();
+    initFilterMemuat();
     initTableDropdowns();
     initTableSearch();
     initResponsiveTables();

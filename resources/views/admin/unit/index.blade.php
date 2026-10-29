@@ -23,6 +23,8 @@
                 <i class="bi bi-info-circle me-1"></i>{{ implode(' ', $peringatan) }}
             </div>
         @endif
+        {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
+        @section('galat-di-halaman', '1')
         @if ($errors->any())
             <div class="alert alert-danger small">{{ $errors->first() }}</div>
         @endif
@@ -50,7 +52,7 @@
                 <table class="table align-middle mb-0">
                     <thead>
                         <tr>
-                            <th style="width:56px">No</th>
+                            <th class="kolom-no" style="width:56px">No</th>
                             <th>Unit</th>
                             <th>Koordinator</th>
                             <th class="text-center">Pegawai</th>
@@ -68,12 +70,12 @@
                                     ->concat($gm->map(fn ($g) => ['nilai' => 'gm:' . $g->id, 'nama' => $g->name, 'ket' => ' (GM)']))->values();
                             @endphp
                             <tr data-cari="{{ mb_strtolower($u->nama . ' ' . $koor->pluck('dataPegawai.nama_lengkap')->implode(' ') . ' ' . $gm->pluck('name')->implode(' ')) }}">
-                                <td class="text-muted">{{ $u->urutan }}</td>
-                                <td>
+                                <td class="text-muted kolom-no">{{ $u->urutan }}</td>
+                                <td class="kolom-penuh">
                                     <span class="fw-semibold d-block">{{ $u->nama }}</span>
                                     @if ($u->keterangan)<small class="text-muted">{{ $u->keterangan }}</small>@endif
                                 </td>
-                                <td>
+                                <td class="kolom-penuh">
                                     @forelse ($koor as $p)
                                         <span class="un-koor">
                                             <i class="bi bi-person-badge"></i>{{ $p->dataPegawai?->nama_lengkap ?? '-' }}
@@ -212,7 +214,8 @@
     .un-bilah { display: flex; flex-wrap: wrap; gap: .75rem; padding: 1rem; border-bottom: 1px solid var(--admin-border); background: var(--admin-surface-soft); }
     .un-tambah { flex: 2 1 420px; margin: 0; }
     .un-cari { flex: 1 1 260px; }
-    .un-koor { display: inline-flex; align-items: center; gap: .35rem; margin: .1rem .5rem .1rem 0; font-weight: 600; font-size: .86rem; }
+    /* Nama koordinator dibungkus per kata (bukan per huruf) bila kolom sempit, badge ikut turun baris. */
+.un-koor { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin: .1rem .5rem .1rem 0; font-weight: 600; font-size: .86rem; max-width: 100%; overflow-wrap: normal; word-break: normal; }
     .un-koor > .bi { color: var(--hr-primary); }
     #modalKoordinator select[size] { font-size: .86rem; }
     /* Tombol aksi sebaris (tidak membungkus) agar ukurannya seragam; tabel bisa digeser di layar sempit. */

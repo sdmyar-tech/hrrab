@@ -8,8 +8,8 @@
                 <span class="page-icon"><i class="bi bi-person-plus"></i></span>
                 <div>
                     <p class="eyebrow mb-1">Sistem</p>
-                    <h1 class="h3 mb-1">Tambah User</h1>
-                    <p class="text-muted mb-0">Buat akun login baru. Pilih dari Data Pegawai agar nama, email & NIP terisi dan akun langsung tertaut.</p>
+                    <h1 class="h3 mb-1">Tambah Akun</h1>
+                    <p class="text-muted mb-0">Buat akun baru untuk masuk ke HRRAB. Pilih dari Data Pegawai agar nama, email & NIP terisi dan akun langsung tertaut.</p>
                 </div>
             </div>
             <div class="heading-actions">
