@@ -62,33 +62,33 @@
                                     @error('nama_lengkap')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">NIK</label>
-                                    <input type="text" name="nik" class="form-control @error('nik') is-invalid @enderror" value="{{ old('nik') }}" maxlength="20">
+                                    <label for="f-nik" class="form-label">NIK</label>
+                                    <input id="f-nik" type="text" name="nik" class="form-control @error('nik') is-invalid @enderror" value="{{ old('nik') }}" maxlength="20">
                                     @error('nik')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Email</label>
-                                    <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}">
+                                    <label for="f-email" class="form-label">Email</label>
+                                    <input id="f-email" type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}">
                                     @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">No. HP / WhatsApp</label>
-                                    <input type="text" name="no_hp" class="form-control @error('no_hp') is-invalid @enderror" value="{{ old('no_hp') }}">
+                                    <label for="f-no-hp" class="form-label">No. HP / WhatsApp</label>
+                                    <input id="f-no-hp" type="text" name="no_hp" class="form-control @error('no_hp') is-invalid @enderror" value="{{ old('no_hp') }}">
                                     @error('no_hp')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Tempat Lahir</label>
-                                    <input type="text" name="tempat_lahir" class="form-control @error('tempat_lahir') is-invalid @enderror" value="{{ old('tempat_lahir') }}">
+                                    <label for="f-tempat-lahir" class="form-label">Tempat Lahir</label>
+                                    <input id="f-tempat-lahir" type="text" name="tempat_lahir" class="form-control @error('tempat_lahir') is-invalid @enderror" value="{{ old('tempat_lahir') }}">
                                     @error('tempat_lahir')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Tanggal Lahir</label>
-                                    <input type="date" name="tanggal_lahir" class="form-control @error('tanggal_lahir') is-invalid @enderror" value="{{ old('tanggal_lahir') }}">
+                                    <label for="f-tanggal-lahir" class="form-label">Tanggal Lahir</label>
+                                    <input id="f-tanggal-lahir" type="date" name="tanggal_lahir" class="form-control @error('tanggal_lahir') is-invalid @enderror" value="{{ old('tanggal_lahir') }}">
                                     @error('tanggal_lahir')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Jenis Kelamin</label>
-                                    <select name="jenis_kelamin" class="form-select @error('jenis_kelamin') is-invalid @enderror">
+                                    <label for="f-jenis-kelamin" class="form-label">Jenis Kelamin</label>
+                                    <select id="f-jenis-kelamin" name="jenis_kelamin" class="form-select @error('jenis_kelamin') is-invalid @enderror">
                                         <option value="">-- Pilih --</option>
                                         @foreach (['Laki-laki', 'Perempuan'] as $jk)
                                             <option value="{{ $jk }}" {{ old('jenis_kelamin') === $jk ? 'selected' : '' }}>{{ $jk }}</option>
@@ -97,8 +97,8 @@
                                     @error('jenis_kelamin')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Agama</label>
-                                    <select name="agama" class="form-select @error('agama') is-invalid @enderror">
+                                    <label for="f-agama" class="form-label">Agama</label>
+                                    <select id="f-agama" name="agama" class="form-select @error('agama') is-invalid @enderror">
                                         <option value="">-- Pilih --</option>
                                         @foreach (['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu'] as $ag)
                                             <option value="{{ $ag }}" {{ old('agama') === $ag ? 'selected' : '' }}>{{ $ag }}</option>
@@ -107,8 +107,8 @@
                                     @error('agama')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Status Pernikahan</label>
-                                    <select name="status_pernikahan" class="form-select @error('status_pernikahan') is-invalid @enderror">
+                                    <label for="f-status-pernikahan" class="form-label">Status Pernikahan</label>
+                                    <select id="f-status-pernikahan" name="status_pernikahan" class="form-select @error('status_pernikahan') is-invalid @enderror">
                                         @foreach (['Belum Menikah', 'Menikah', 'Cerai Hidup', 'Cerai Mati'] as $sp)
                                             <option value="{{ $sp }}" {{ old('status_pernikahan', 'Belum Menikah') === $sp ? 'selected' : '' }}>{{ $sp }}</option>
                                         @endforeach
@@ -116,22 +116,22 @@
                                     @error('status_pernikahan')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Nama Ibu Kandung</label>
-                                    <input type="text" name="nama_ibu_kandung" class="form-control @error('nama_ibu_kandung') is-invalid @enderror" value="{{ old('nama_ibu_kandung') }}">
+                                    <label for="f-nama-ibu-kandung" class="form-label">Nama Ibu Kandung</label>
+                                    <input id="f-nama-ibu-kandung" type="text" name="nama_ibu_kandung" class="form-control @error('nama_ibu_kandung') is-invalid @enderror" value="{{ old('nama_ibu_kandung') }}">
                                     @error('nama_ibu_kandung')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Pendidikan Terakhir</label>
-                                    <input type="text" name="pendidikan_terakhir" class="form-control @error('pendidikan_terakhir') is-invalid @enderror" value="{{ old('pendidikan_terakhir') }}" placeholder="Contoh: S1 Akuntansi">
+                                    <label for="f-pendidikan-terakhir" class="form-label">Pendidikan Terakhir</label>
+                                    <input id="f-pendidikan-terakhir" type="text" name="pendidikan_terakhir" class="form-control @error('pendidikan_terakhir') is-invalid @enderror" value="{{ old('pendidikan_terakhir') }}" placeholder="Contoh: S1 Akuntansi">
                                     @error('pendidikan_terakhir')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">No. KK <span class="text-muted">(opsional)</span></label>
-                                    <input type="text" name="no_kk" class="form-control" value="{{ old('no_kk') }}" maxlength="20">
+                                    <label for="f-no-kk" class="form-label">No. KK <span class="text-muted">(opsional)</span></label>
+                                    <input id="f-no-kk" type="text" name="no_kk" class="form-control" value="{{ old('no_kk') }}" maxlength="20">
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label">Alamat KTP</label>
-                                    <textarea name="alamat_ktp" rows="2" class="form-control @error('alamat_ktp') is-invalid @enderror">{{ old('alamat_ktp') }}</textarea>
+                                    <label for="f-alamat-ktp" class="form-label">Alamat KTP</label>
+                                    <textarea id="f-alamat-ktp" name="alamat_ktp" rows="2" class="form-control @error('alamat_ktp') is-invalid @enderror">{{ old('alamat_ktp') }}</textarea>
                                     @error('alamat_ktp')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                             </div>
@@ -189,8 +189,8 @@
                                 @error('jabatan_tujuan')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div>
-                                <label class="form-label">Lokasi Kerja <span class="text-muted">(opsional)</span></label>
-                                <select name="lokasi_kerja_tujuan" class="form-select">
+                                <label for="f-lokasi-kerja-tujuan" class="form-label">Lokasi Kerja <span class="text-muted">(opsional)</span></label>
+                                <select id="f-lokasi-kerja-tujuan" name="lokasi_kerja_tujuan" class="form-select">
                                     <option value="">-- Pilih Lokasi --</option>
                                     <option value="">Tidak ditentukan</option>
                                     @foreach (config('kepegawaian.lokasi_kerja') as $lk)

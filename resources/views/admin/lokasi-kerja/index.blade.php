@@ -103,8 +103,8 @@
                         <input type="text" name="nama" class="form-control text-uppercase" maxlength="100" required>
                     </div>
                     <div class="col-4">
-                        <label class="form-label">Urutan</label>
-                        <input type="number" name="urutan" class="form-control" min="0" max="9999" required>
+                        <label for="f-urutan" class="form-label">Urutan</label>
+                        <input id="f-urutan" type="number" name="urutan" class="form-control" min="0" max="9999" required>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Keterangan <span class="text-muted fw-normal">(opsional)</span></label>

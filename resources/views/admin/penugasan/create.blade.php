@@ -54,8 +54,8 @@
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">{{ $mutasi ? 'Unit Tujuan' : 'Unit Rangkap' }}</label>
-                                <select name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror" required>
+                                <label for="f-unit-kerja" class="form-label">{{ $mutasi ? 'Unit Tujuan' : 'Unit Rangkap' }}</label>
+                                <select id="f-unit-kerja" name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror" required>
                                     <option value="">-- Pilih Unit --</option>
                                     @foreach (config('kepegawaian.unit_kerja') as $unit)
                                         <option value="{{ $unit }}" @selected(old('unit_kerja') === $unit)>{{ $unit }}</option>
@@ -65,8 +65,8 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Peran di Unit</label>
-                                <select name="peran" class="form-select @error('peran') is-invalid @enderror" required>
+                                <label for="f-peran" class="form-label">Peran di Unit</label>
+                                <select id="f-peran" name="peran" class="form-select @error('peran') is-invalid @enderror" required>
                                     <option value="anggota" @selected(old('peran', 'anggota') === 'anggota')>Anggota / Staff</option>
                                     <option value="kepala" @selected(old('peran') === 'kepala')>Kepala Unit</option>
                                 </select>
@@ -75,8 +75,8 @@
                             </div>
 
                             <div class="col-12">
-                                <label class="form-label">Jabatan {{ $mutasi ? 'Baru' : 'di Unit Rangkap' }} @unless ($mutasi)<span class="text-muted">(opsional)</span>@endunless</label>
-                                <input type="text" name="jabatan" list="daftarJabatan" data-jabatan-unit="[name=unit_kerja]" class="form-control @error('jabatan') is-invalid @enderror"
+                                <label for="f-jabatan" class="form-label">Jabatan {{ $mutasi ? 'Baru' : 'di Unit Rangkap' }} @unless ($mutasi)<span class="text-muted">(opsional)</span>@endunless</label>
+                                <input id="f-jabatan" type="text" name="jabatan" list="daftarJabatan" data-jabatan-unit="[name=unit_kerja]" class="form-control @error('jabatan') is-invalid @enderror"
                                     value="{{ old('jabatan', $mutasi ? $utama?->jabatan : '') }}" {{ $mutasi ? 'required' : '' }} autocomplete="off">
                                 <datalist id="daftarJabatan">
                                     @foreach (\App\Models\Jabatan::daftar() as $j)
@@ -88,22 +88,22 @@
 
                             @if ($mutasi)
                                 <div class="col-md-6">
-                                    <label class="form-label">Tanggal Efektif</label>
-                                    <input type="date" name="tanggal_efektif" class="form-control @error('tanggal_efektif') is-invalid @enderror"
+                                    <label for="f-tanggal-efektif" class="form-label">Tanggal Efektif</label>
+                                    <input id="f-tanggal-efektif" type="date" name="tanggal_efektif" class="form-control @error('tanggal_efektif') is-invalid @enderror"
                                         value="{{ old('tanggal_efektif', $hariIni) }}" required>
                                     <div class="form-text">Tanggal ke depan = mutasi terjadwal, berlaku otomatis pada tanggal itu.</div>
                                     @error('tanggal_efektif')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                             @else
                                 <div class="col-md-6">
-                                    <label class="form-label">Tanggal Mulai</label>
-                                    <input type="date" name="tanggal_mulai" class="form-control @error('tanggal_mulai') is-invalid @enderror"
+                                    <label for="f-tanggal-mulai" class="form-label">Tanggal Mulai</label>
+                                    <input id="f-tanggal-mulai" type="date" name="tanggal_mulai" class="form-control @error('tanggal_mulai') is-invalid @enderror"
                                         value="{{ old('tanggal_mulai', $hariIni) }}" required>
                                     @error('tanggal_mulai')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Tanggal Selesai <span class="text-muted">(opsional)</span></label>
-                                    <input type="date" name="tanggal_selesai" class="form-control @error('tanggal_selesai') is-invalid @enderror"
+                                    <label for="f-tanggal-selesai" class="form-label">Tanggal Selesai <span class="text-muted">(opsional)</span></label>
+                                    <input id="f-tanggal-selesai" type="date" name="tanggal_selesai" class="form-control @error('tanggal_selesai') is-invalid @enderror"
                                         value="{{ old('tanggal_selesai') }}">
                                     <div class="form-text">Kosongkan bila belum ditentukan; bisa diakhiri kapan saja.</div>
                                     @error('tanggal_selesai')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -111,14 +111,14 @@
                             @endif
 
                             <div class="col-md-6">
-                                <label class="form-label">No. SK <span class="text-muted">(opsional)</span></label>
-                                <input type="text" name="no_sk" class="form-control @error('no_sk') is-invalid @enderror" value="{{ old('no_sk') }}" maxlength="100">
+                                <label for="f-no-sk" class="form-label">No. SK <span class="text-muted">(opsional)</span></label>
+                                <input id="f-no-sk" type="text" name="no_sk" class="form-control @error('no_sk') is-invalid @enderror" value="{{ old('no_sk') }}" maxlength="100">
                                 @error('no_sk')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
 
                             <div class="col-12">
-                                <label class="form-label">Keterangan <span class="text-muted">(opsional)</span></label>
-                                <textarea name="keterangan" rows="2" class="form-control @error('keterangan') is-invalid @enderror">{{ old('keterangan') }}</textarea>
+                                <label for="f-keterangan" class="form-label">Keterangan <span class="text-muted">(opsional)</span></label>
+                                <textarea id="f-keterangan" name="keterangan" rows="2" class="form-control @error('keterangan') is-invalid @enderror">{{ old('keterangan') }}</textarea>
                                 @error('keterangan')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
 

@@ -24,8 +24,8 @@
                 @method('PUT')
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label">Unit Kerja</label>
-                        <select name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror">
+                        <label for="f-unit-kerja" class="form-label">Unit Kerja</label>
+                        <select id="f-unit-kerja" name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror">
                             @foreach (config('kepegawaian.unit_kerja') as $unit)
                                 <option value="{{ $unit }}" @selected(old('unit_kerja', $penugasan->unit_kerja) === $unit)>{{ $unit }}</option>
                             @endforeach
@@ -33,8 +33,8 @@
                         @error('unit_kerja')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Jabatan</label>
-                        <select name="jabatan" class="form-select" data-jabatan-unit="[name=unit_kerja]">
+                        <label for="f-jabatan" class="form-label">Jabatan</label>
+                        <select id="f-jabatan" name="jabatan" class="form-select" data-jabatan-unit="[name=unit_kerja]">
                             <option value="">-</option>
                             @foreach (\App\Models\Jabatan::daftar() as $j)
                                 <option value="{{ $j }}" @selected(old('jabatan', $penugasan->jabatan) === $j)>{{ $j }}</option>
@@ -45,31 +45,31 @@
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Peran</label>
-                        <select name="peran" class="form-select">
+                        <label for="f-peran" class="form-label">Peran</label>
+                        <select id="f-peran" name="peran" class="form-select">
                             <option value="anggota" @selected(old('peran', $penugasan->peran) === 'anggota')>Anggota</option>
                             <option value="kepala" @selected(old('peran', $penugasan->peran) === 'kepala')>Kepala</option>
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Tanggal Mulai</label>
-                        <input type="date" name="tanggal_mulai" class="form-control @error('tanggal_mulai') is-invalid @enderror"
+                        <label for="f-tanggal-mulai" class="form-label">Tanggal Mulai</label>
+                        <input id="f-tanggal-mulai" type="date" name="tanggal_mulai" class="form-control @error('tanggal_mulai') is-invalid @enderror"
                             value="{{ old('tanggal_mulai', $penugasan->tanggal_mulai->format('Y-m-d')) }}" required>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Tanggal Selesai</label>
-                        <input type="date" name="tanggal_selesai" class="form-control @error('tanggal_selesai') is-invalid @enderror"
+                        <label for="f-tanggal-selesai" class="form-label">Tanggal Selesai</label>
+                        <input id="f-tanggal-selesai" type="date" name="tanggal_selesai" class="form-control @error('tanggal_selesai') is-invalid @enderror"
                             value="{{ old('tanggal_selesai', $penugasan->tanggal_selesai?->format('Y-m-d')) }}">
                         @error('tanggal_selesai')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         <div class="form-text">Kosongkan = masih berlaku.</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">No. SK</label>
-                        <input type="text" name="no_sk" class="form-control" maxlength="100" value="{{ old('no_sk', $penugasan->no_sk) }}">
+                        <label for="f-no-sk" class="form-label">No. SK</label>
+                        <input id="f-no-sk" type="text" name="no_sk" class="form-control" maxlength="100" value="{{ old('no_sk', $penugasan->no_sk) }}">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Keterangan</label>
-                        <input type="text" name="keterangan" class="form-control" maxlength="1000" value="{{ old('keterangan', $penugasan->keterangan) }}">
+                        <label for="f-keterangan" class="form-label">Keterangan</label>
+                        <input id="f-keterangan" type="text" name="keterangan" class="form-control" maxlength="1000" value="{{ old('keterangan', $penugasan->keterangan) }}">
                     </div>
                 </div>
                 <div class="d-flex gap-2 mt-4">

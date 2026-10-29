@@ -54,51 +54,51 @@
                             <div class="tab-pane fade show active" id="pribadi" role="tabpanel">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label required">Nama Lengkap & Gelar</label>
-                                        <input type="text" name="nama_lengkap" class="form-control @error('nama_lengkap') is-invalid @enderror"
+                                        <label for="f-nama-lengkap" class="form-label required">Nama Lengkap & Gelar</label>
+                                        <input id="f-nama-lengkap" type="text" name="nama_lengkap" class="form-control @error('nama_lengkap') is-invalid @enderror"
                                             value="{{ old('nama_lengkap', $pegawai->nama_lengkap) }}" required>
                                         <div class="invalid-feedback">@error('nama_lengkap'){{ $message }}@else Nama lengkap wajib diisi. @enderror</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label required">Email</label>
-                                        <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
+                                        <label for="f-email" class="form-label required">Email</label>
+                                        <input id="f-email" type="email" name="email" class="form-control @error('email') is-invalid @enderror"
                                             value="{{ old('email', $pegawai->email) }}" required>
                                         <div class="invalid-feedback">@error('email'){{ $message }}@else Masukkan alamat email yang valid. @enderror</div>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label required">NIK (No. KTP)</label>
-                                        <input type="text" name="nik" maxlength="16" minlength="16" pattern="\d{16}" inputmode="numeric"
+                                        <label for="f-nik" class="form-label required">NIK (No. KTP)</label>
+                                        <input id="f-nik" type="text" name="nik" maxlength="16" minlength="16" pattern="\d{16}" inputmode="numeric"
                                             class="form-control @error('nik') is-invalid @enderror"
                                             value="{{ old('nik', $pegawai->nik) }}" required>
                                         <div class="invalid-feedback">@error('nik'){{ $message }}@else NIK harus 16 digit angka. @enderror</div>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">No. KK</label>
-                                        <input type="text" name="no_kk" maxlength="20" class="form-control @error('no_kk') is-invalid @enderror"
+                                        <label for="f-no-kk" class="form-label">No. KK</label>
+                                        <input id="f-no-kk" type="text" name="no_kk" maxlength="20" class="form-control @error('no_kk') is-invalid @enderror"
                                             value="{{ old('no_kk', $pegawai->no_kk) }}" required>
                                         @error('no_kk')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">No. NPWP</label>
-                                        <input type="text" name="npwp" maxlength="25" class="form-control @error('npwp') is-invalid @enderror"
+                                        <label for="f-npwp" class="form-label">No. NPWP</label>
+                                        <input id="f-npwp" type="text" name="npwp" maxlength="25" class="form-control @error('npwp') is-invalid @enderror"
                                             value="{{ old('npwp', $pegawai->npwp) }}">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label required">Tempat Lahir</label>
-                                        <input type="text" name="tempat_lahir" class="form-control @error('tempat_lahir') is-invalid @enderror"
+                                        <label for="f-tempat-lahir" class="form-label required">Tempat Lahir</label>
+                                        <input id="f-tempat-lahir" type="text" name="tempat_lahir" class="form-control @error('tempat_lahir') is-invalid @enderror"
                                             value="{{ old('tempat_lahir', $pegawai->tempat_lahir) }}" required>
                                         <div class="invalid-feedback">Tempat lahir wajib diisi.</div>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label required">Tanggal Lahir</label>
-                                        <input type="date" name="tanggal_lahir" max="{{ now()->subYears(15)->format('Y-m-d') }}"
+                                        <label for="f-tanggal-lahir" class="form-label required">Tanggal Lahir</label>
+                                        <input id="f-tanggal-lahir" type="date" name="tanggal_lahir" max="{{ now()->subYears(15)->format('Y-m-d') }}"
                                             class="form-control @error('tanggal_lahir') is-invalid @enderror"
                                             value="{{ old('tanggal_lahir', isset($pegawai->tanggal_lahir) ? $pegawai->tanggal_lahir->format('Y-m-d') : '') }}" required>
                                         <div class="invalid-feedback">Tanggal lahir wajib diisi dan tidak boleh di masa depan.</div>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label required">Jenis Kelamin</label>
-                                        <select name="jenis_kelamin" class="form-select @error('jenis_kelamin') is-invalid @enderror" required>
+                                        <label for="f-jenis-kelamin" class="form-label required">Jenis Kelamin</label>
+                                        <select id="f-jenis-kelamin" name="jenis_kelamin" class="form-select @error('jenis_kelamin') is-invalid @enderror" required>
                                             <option value="">-- Pilih --</option>
                                             <option value="Laki-laki" {{ old('jenis_kelamin', $pegawai->jenis_kelamin) == 'Laki-laki' ? 'selected' : '' }}>Laki-laki</option>
                                             <option value="Perempuan" {{ old('jenis_kelamin', $pegawai->jenis_kelamin) == 'Perempuan' ? 'selected' : '' }}>Perempuan</option>
@@ -106,52 +106,52 @@
                                         <div class="invalid-feedback">Silakan pilih jenis kelamin.</div>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label required">Agama</label>
-                                        <input type="text" name="agama" class="form-control @error('agama') is-invalid @enderror"
+                                        <label for="f-agama" class="form-label required">Agama</label>
+                                        <input id="f-agama" type="text" name="agama" class="form-control @error('agama') is-invalid @enderror"
                                             value="{{ old('agama', $pegawai->agama) }}" required>
                                         <div class="invalid-feedback">Agama wajib diisi.</div>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Golongan Darah</label>
-                                        <select name="golongan_darah" class="form-select">
+                                        <label for="f-golongan-darah" class="form-label">Golongan Darah</label>
+                                        <select id="f-golongan-darah" name="golongan_darah" class="form-select">
                                             @foreach(\App\Models\DataPegawai::GOLONGAN_DARAH as $gol)
                                                 <option value="{{ $gol }}" {{ old('golongan_darah', $pegawai->golongan_darah) == $gol ? 'selected' : '' }}>{{ $gol }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Status Pernikahan</label>
-                                        <select name="status_pernikahan" class="form-select">
+                                        <label for="f-status-pernikahan" class="form-label">Status Pernikahan</label>
+                                        <select id="f-status-pernikahan" name="status_pernikahan" class="form-select">
                                             @foreach(['Belum Menikah', 'Menikah', 'Cerai Hidup', 'Cerai Mati'] as $status)
                                                 <option value="{{ $status }}" {{ old('status_pernikahan', $pegawai->status_pernikahan) == $status ? 'selected' : '' }}>{{ $status }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Jumlah Tanggungan</label>
-                                        <input type="number" name="jumlah_tanggungan" min="0" max="20" class="form-control"
+                                        <label for="f-jumlah-tanggungan" class="form-label">Jumlah Tanggungan</label>
+                                        <input id="f-jumlah-tanggungan" type="number" name="jumlah_tanggungan" min="0" max="20" class="form-control"
                                             value="{{ old('jumlah_tanggungan', $pegawai->jumlah_tanggungan) }}">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label required">Nama Ibu Kandung</label>
-                                        <input type="text" name="nama_ibu_kandung" class="form-control @error('nama_ibu_kandung') is-invalid @enderror"
+                                        <label for="f-nama-ibu-kandung" class="form-label required">Nama Ibu Kandung</label>
+                                        <input id="f-nama-ibu-kandung" type="text" name="nama_ibu_kandung" class="form-control @error('nama_ibu_kandung') is-invalid @enderror"
                                             value="{{ old('nama_ibu_kandung', $pegawai->nama_ibu_kandung) }}" required>
                                         <div class="invalid-feedback">Nama ibu kandung wajib diisi.</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label required">Pendidikan Terakhir</label>
-                                        <input type="text" name="pendidikan_terakhir" class="form-control @error('pendidikan_terakhir') is-invalid @enderror"
+                                        <label for="f-pendidikan-terakhir" class="form-label required">Pendidikan Terakhir</label>
+                                        <input id="f-pendidikan-terakhir" type="text" name="pendidikan_terakhir" class="form-control @error('pendidikan_terakhir') is-invalid @enderror"
                                             value="{{ old('pendidikan_terakhir', $pegawai->pendidikan_terakhir) }}" placeholder="contoh: S1 Pendidikan" required>
                                         <div class="invalid-feedback">Pendidikan terakhir wajib diisi.</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label required">Alamat KTP</label>
-                                        <textarea name="alamat_ktp" class="form-control @error('alamat_ktp') is-invalid @enderror" rows="3" required>{{ old('alamat_ktp', $pegawai->alamat_ktp) }}</textarea>
+                                        <label for="f-alamat-ktp" class="form-label required">Alamat KTP</label>
+                                        <textarea id="f-alamat-ktp" name="alamat_ktp" class="form-control @error('alamat_ktp') is-invalid @enderror" rows="3" required>{{ old('alamat_ktp', $pegawai->alamat_ktp) }}</textarea>
                                         <div class="invalid-feedback">Alamat KTP wajib diisi.</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Alamat Domisili</label>
-                                        <textarea name="alamat_domisili" class="form-control" rows="3" placeholder="Kosongkan bila sama dengan KTP. Contoh: Jl. Melati No. 5">{{ old('alamat_domisili', $pegawai->alamat_domisili) }}</textarea>
+                                        <label for="f-alamat-domisili" class="form-label">Alamat Domisili</label>
+                                        <textarea id="f-alamat-domisili" name="alamat_domisili" class="form-control" rows="3" placeholder="Kosongkan bila sama dengan KTP. Contoh: Jl. Melati No. 5">{{ old('alamat_domisili', $pegawai->alamat_domisili) }}</textarea>
                                     </div>
                                 </div>
                             </div>
@@ -159,15 +159,15 @@
                             <div class="tab-pane fade" id="kepegawaian" role="tabpanel">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label required">NIP (No. Induk Pegawai)</label>
-                                        <input type="text" name="nip" class="form-control @error('nip') is-invalid @enderror"
+                                        <label for="f-nip" class="form-label required">NIP (No. Induk Pegawai)</label>
+                                        <input id="f-nip" type="text" name="nip" class="form-control @error('nip') is-invalid @enderror"
                                             value="{{ old('nip', $pegawai->nip) }}" required>
                                         <div class="invalid-feedback">@error('nip'){{ $message }}@else NIP wajib diisi. @enderror</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Unit Kerja (Utama)</label>
+                                        <label for="f-unit-kerja" class="form-label">Unit Kerja (Utama)</label>
                                         @if (auth()->user()->isAdmin())
-                                            <select name="unit_kerja" class="form-select">
+                                            <select id="f-unit-kerja" name="unit_kerja" class="form-select">
                                                 @foreach (config('kepegawaian.unit_kerja') as $unit)
                                                     <option value="{{ $unit }}" @selected(old('unit_kerja', $pegawai->kepegawaian->unit_kerja ?? '') === $unit)>{{ $unit }}</option>
                                                 @endforeach
@@ -183,8 +183,8 @@
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label required">Jabatan Utama</label>
-                                        <select name="jabatan" class="form-select @error('jabatan') is-invalid @enderror" required data-jabatan-unit="[name=unit_kerja]">
+                                        <label for="f-jabatan" class="form-label required">Jabatan Utama</label>
+                                        <select id="f-jabatan" name="jabatan" class="form-select @error('jabatan') is-invalid @enderror" required data-jabatan-unit="[name=unit_kerja]">
                                             <option value="">-- Pilih Jabatan --</option>
                                             @foreach (\App\Models\Jabatan::daftar() as $j)
                                                 <option value="{{ $j }}" {{ old('jabatan', $pegawai->kepegawaian->jabatan ?? '') == $j ? 'selected' : '' }}>{{ $j }}</option>
@@ -193,8 +193,8 @@
                                         <div class="invalid-feedback">Jabatan wajib diisi.</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Jabatan Tambahan <span class="text-muted">(silahkan diisi bagi yang memiliki jabatan lebih dari 1)</span></label>
-                                        <select name="jabatan_tambahan" class="form-select" data-jabatan-unit="[name=unit_kerja]">
+                                        <label for="f-jabatan-tambahan" class="form-label">Jabatan Tambahan <span class="text-muted">(silahkan diisi bagi yang memiliki jabatan lebih dari 1)</span></label>
+                                        <select id="f-jabatan-tambahan" name="jabatan_tambahan" class="form-select" data-jabatan-unit="[name=unit_kerja]">
                                             <option value="">-- Tidak Ada --</option>
                                             @foreach (\App\Models\Jabatan::daftar() as $j)
                                                 <option value="{{ $j }}" {{ old('jabatan_tambahan', $pegawai->kepegawaian->jabatan_tambahan ?? '') == $j ? 'selected' : '' }}>{{ $j }}</option>
@@ -202,8 +202,8 @@
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label required">Lokasi Kerja</label>
-                                        <select name="lokasi_kerja" class="form-select @error('lokasi_kerja') is-invalid @enderror" required>
+                                        <label for="f-lokasi-kerja" class="form-label required">Lokasi Kerja</label>
+                                        <select id="f-lokasi-kerja" name="lokasi_kerja" class="form-select @error('lokasi_kerja') is-invalid @enderror" required>
                                             <option value="">-- Pilih Lokasi Kerja --</option>
                                             @foreach (config('kepegawaian.lokasi_kerja') as $lokasi)
                                                 <option value="{{ $lokasi }}" {{ old('lokasi_kerja', $pegawai->kepegawaian->lokasi_kerja ?? '') == $lokasi ? 'selected' : '' }}>{{ $lokasi }}</option>
@@ -212,8 +212,8 @@
                                         <div class="invalid-feedback">Lokasi kerja wajib diisi.</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label required">Tanggal Masuk</label>
-                                        <input type="date" name="tanggal_masuk" max="{{ now()->format('Y-m-d') }}"
+                                        <label for="f-tanggal-masuk" class="form-label required">Tanggal Masuk</label>
+                                        <input id="f-tanggal-masuk" type="date" name="tanggal_masuk" max="{{ now()->format('Y-m-d') }}"
                                             class="form-control @error('tanggal_masuk') is-invalid @enderror"
                                             value="{{ old('tanggal_masuk', isset($pegawai->kepegawaian->tanggal_masuk) ? $pegawai->kepegawaian->tanggal_masuk->format('Y-m-d') : '') }}" required>
                                         <div class="invalid-feedback">Tanggal masuk wajib diisi.</div>
@@ -228,16 +228,16 @@
                                     @endif
 
                                     <div class="col-md-4">
-                                        <label class="form-label required">Status Rekrutmen</label>
-                                        <select name="status_rekrutmen" class="form-select @error('status_rekrutmen') is-invalid @enderror" required>
+                                        <label for="f-status-rekrutmen" class="form-label required">Status Rekrutmen</label>
+                                        <select id="f-status-rekrutmen" name="status_rekrutmen" class="form-select @error('status_rekrutmen') is-invalid @enderror" required>
                                             <option value="Aktif" {{ old('status_rekrutmen', $pegawai->kepegawaian->status_rekrutmen ?? '') == 'Aktif' ? 'selected' : '' }}>Aktif</option>
                                             <option value="Tidak Aktif" {{ old('status_rekrutmen', $pegawai->kepegawaian->status_rekrutmen ?? '') == 'Tidak Aktif' ? 'selected' : '' }}>Tidak Aktif</option>
                                         </select>
                                         <div class="invalid-feedback">Silakan pilih status rekrutmen.</div>
                                     </div>
                                     <div class="col-md-4" data-tanggal-keluar>
-                                        <label class="form-label">Tanggal Keluar</label>
-                                        <input type="date" name="tanggal_keluar" max="{{ now()->format('Y-m-d') }}"
+                                        <label for="f-tanggal-keluar" class="form-label">Tanggal Keluar</label>
+                                        <input id="f-tanggal-keluar" type="date" name="tanggal_keluar" max="{{ now()->format('Y-m-d') }}"
                                             class="form-control @error('tanggal_keluar') is-invalid @enderror"
                                             value="{{ old('tanggal_keluar', optional($pegawai->kepegawaian->tanggal_keluar ?? null)->format('Y-m-d')) }}">
                                         @error('tanggal_keluar')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -252,8 +252,8 @@
                                         });
                                     </script>
                                     <div class="col-md-4">
-                                        <label class="form-label required">Status Kerja</label>
-                                        <select name="status_kerja" class="form-select @error('status_kerja') is-invalid @enderror" required>
+                                        <label for="f-status-kerja" class="form-label required">Status Kerja</label>
+                                        <select id="f-status-kerja" name="status_kerja" class="form-select @error('status_kerja') is-invalid @enderror" required>
                                             @foreach(['Tetap', 'Kontrak', 'Magang', 'Harian Lepas', 'Probation'] as $sk)
                                                 <option value="{{ $sk }}" {{ old('status_kerja', $pegawai->kepegawaian->status_kerja ?? '') == $sk ? 'selected' : '' }}>{{ $sk }}</option>
                                             @endforeach
@@ -261,8 +261,8 @@
                                         <div class="invalid-feedback">Silakan pilih status kerja.</div>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Tanggal Habis Kontrak</label>
-                                        <input type="date" name="tanggal_habis_kontrak" class="form-control"
+                                        <label for="f-tanggal-habis-kontrak" class="form-label">Tanggal Habis Kontrak</label>
+                                        <input id="f-tanggal-habis-kontrak" type="date" name="tanggal_habis_kontrak" class="form-control"
                                             value="{{ old('tanggal_habis_kontrak', isset($pegawai->kepegawaian->tanggal_habis_kontrak) ? $pegawai->kepegawaian->tanggal_habis_kontrak->format('Y-m-d') : '') }}">
                                     </div>
                                 </div>
@@ -272,26 +272,26 @@
                                 <div class="row g-3">
                                     <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-telephone me-2"></i>Kontak Darurat (Kerabat)</h6>
                                     <div class="col-md-4">
-                                        <label class="form-label required">No. HP Pegawai (Aktif/WA)</label>
-                                        <input type="text" name="no_hp" class="form-control @error('no_hp') is-invalid @enderror"
+                                        <label for="f-no-hp" class="form-label required">No. HP Pegawai (Aktif/WA)</label>
+                                        <input id="f-no-hp" type="text" name="no_hp" class="form-control @error('no_hp') is-invalid @enderror"
                                             value="{{ old('no_hp', $pegawai->no_hp) }}" required>
                                         <div class="invalid-feedback">No. HP wajib diisi.</div>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label required">Nama Kerabat</label>
-                                        <input type="text" name="nama_kerabat" class="form-control @error('nama_kerabat') is-invalid @enderror"
+                                        <label for="f-nama-kerabat" class="form-label required">Nama Kerabat</label>
+                                        <input id="f-nama-kerabat" type="text" name="nama_kerabat" class="form-control @error('nama_kerabat') is-invalid @enderror"
                                             value="{{ old('nama_kerabat', $pegawai->kontakDarurat->nama_kerabat ?? '') }}" required>
                                         <div class="invalid-feedback">Nama kerabat wajib diisi.</div>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label required">No. HP Kerabat</label>
-                                        <input type="text" name="no_hp_kerabat" class="form-control @error('no_hp_kerabat') is-invalid @enderror"
+                                        <label for="f-no-hp-kerabat" class="form-label required">No. HP Kerabat</label>
+                                        <input id="f-no-hp-kerabat" type="text" name="no_hp_kerabat" class="form-control @error('no_hp_kerabat') is-invalid @enderror"
                                             value="{{ old('no_hp_kerabat', $pegawai->kontakDarurat->no_hp_kerabat ?? '') }}" required>
                                         <div class="invalid-feedback">No. HP kerabat wajib diisi.</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label required">Hubungan Dengan Kerabat</label>
-                                        <input type="text" name="hubungan_kerabat" class="form-control @error('hubungan_kerabat') is-invalid @enderror"
+                                        <label for="f-hubungan-kerabat" class="form-label required">Hubungan Dengan Kerabat</label>
+                                        <input id="f-hubungan-kerabat" type="text" name="hubungan_kerabat" class="form-control @error('hubungan_kerabat') is-invalid @enderror"
                                             value="{{ old('hubungan_kerabat', $pegawai->kontakDarurat->hubungan_kerabat ?? '') }}" placeholder="contoh: Istri / Suami / Ibu Kandung" required>
                                         <div class="invalid-feedback">Hubungan dengan kerabat wajib diisi.</div>
                                     </div>
@@ -299,18 +299,18 @@
                                     <hr class="my-3">
                                     <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-card-checklist me-2"></i>Data BPJS</h6>
                                     <div class="col-md-4">
-                                        <label class="form-label">No. BPJS Kesehatan</label>
-                                        <input type="text" name="no_bpjs_kesehatan" class="form-control"
+                                        <label for="f-no-bpjs-kesehatan" class="form-label">No. BPJS Kesehatan</label>
+                                        <input id="f-no-bpjs-kesehatan" type="text" name="no_bpjs_kesehatan" class="form-control"
                                             value="{{ old('no_bpjs_kesehatan', $pegawai->bpjs->no_bpjs_kesehatan ?? '') }}">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">No. BPJS Ketenagakerjaan</label>
-                                        <input type="text" name="no_bpjs_ketenagakerjaan" class="form-control"
+                                        <label for="f-no-bpjs-ketenagakerjaan" class="form-label">No. BPJS Ketenagakerjaan</label>
+                                        <input id="f-no-bpjs-ketenagakerjaan" type="text" name="no_bpjs_ketenagakerjaan" class="form-control"
                                             value="{{ old('no_bpjs_ketenagakerjaan', $pegawai->bpjs->no_bpjs_ketenagakerjaan ?? '') }}">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Faskes Tingkat 1</label>
-                                        <input type="text" name="faskes_tingkat_1" class="form-control @error('faskes_tingkat_1') is-invalid @enderror"
+                                        <label for="f-faskes-tingkat-1" class="form-label">Faskes Tingkat 1</label>
+                                        <input id="f-faskes-tingkat-1" type="text" name="faskes_tingkat_1" class="form-control @error('faskes_tingkat_1') is-invalid @enderror"
                                             placeholder="Nama RS/klinik, contoh: Klinik Abdurrab" value="{{ old('faskes_tingkat_1', $pegawai->bpjs->faskes_tingkat_1 ?? '') }}">
                                         @error('faskes_tingkat_1')
                                             <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -322,48 +322,48 @@
                             <div class="tab-pane fade" id="dokumen" role="tabpanel">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">Pas Foto (JPG/PNG)</label>
-                                        <input type="file" name="pas_foto" class="form-control @error('pas_foto') is-invalid @enderror" accept="image/*">
+                                        <label for="f-pas-foto" class="form-label">Pas Foto (JPG/PNG)</label>
+                                        <input id="f-pas-foto" type="file" name="pas_foto" class="form-control @error('pas_foto') is-invalid @enderror" accept="image/*">
                                         @error('pas_foto') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                         @if(optional($pegawai->dokumen)->pas_foto)
                                             <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->pas_foto) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
                                         @endif
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Unggah KTP (PDF/JPG)</label>
-                                        <input type="file" name="upload_ktp" class="form-control @error('upload_ktp') is-invalid @enderror">
+                                        <label for="f-upload-ktp" class="form-label">Unggah KTP (PDF/JPG)</label>
+                                        <input id="f-upload-ktp" type="file" name="upload_ktp" class="form-control @error('upload_ktp') is-invalid @enderror">
                                         @error('upload_ktp') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                         @if(optional($pegawai->dokumen)->upload_ktp)
                                             <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_ktp) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
                                         @endif
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Unggah KK (PDF/JPG)</label>
-                                        <input type="file" name="upload_kk" class="form-control @error('upload_kk') is-invalid @enderror">
+                                        <label for="f-upload-kk" class="form-label">Unggah KK (PDF/JPG)</label>
+                                        <input id="f-upload-kk" type="file" name="upload_kk" class="form-control @error('upload_kk') is-invalid @enderror">
                                         @error('upload_kk') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                         @if(optional($pegawai->dokumen)->upload_kk)
                                             <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_kk) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
                                         @endif
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Unggah CV (PDF)</label>
-                                        <input type="file" name="upload_cv" class="form-control @error('upload_cv') is-invalid @enderror">
+                                        <label for="f-upload-cv" class="form-label">Unggah CV (PDF)</label>
+                                        <input id="f-upload-cv" type="file" name="upload_cv" class="form-control @error('upload_cv') is-invalid @enderror">
                                         @error('upload_cv') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                         @if(optional($pegawai->dokumen)->upload_cv)
                                             <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_cv) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
                                         @endif
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Unggah Ijazah Terakhir (PDF)</label>
-                                        <input type="file" name="upload_ijazah_terakhir" class="form-control @error('upload_ijazah_terakhir') is-invalid @enderror">
+                                        <label for="f-upload-ijazah-terakhir" class="form-label">Unggah Ijazah Terakhir (PDF)</label>
+                                        <input id="f-upload-ijazah-terakhir" type="file" name="upload_ijazah_terakhir" class="form-control @error('upload_ijazah_terakhir') is-invalid @enderror">
                                         @error('upload_ijazah_terakhir') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                         @if(optional($pegawai->dokumen)->upload_ijazah_terakhir)
                                             <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_ijazah_terakhir) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
                                         @endif
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Unggah Buku Tabungan (PDF/JPG)</label>
-                                        <input type="file" name="upload_buku_tabungan" class="form-control @error('upload_buku_tabungan') is-invalid @enderror">
+                                        <label for="f-upload-buku-tabungan" class="form-label">Unggah Buku Tabungan (PDF/JPG)</label>
+                                        <input id="f-upload-buku-tabungan" type="file" name="upload_buku_tabungan" class="form-control @error('upload_buku_tabungan') is-invalid @enderror">
                                         @error('upload_buku_tabungan') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                         @if(optional($pegawai->dokumen)->upload_buku_tabungan)
                                             <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_buku_tabungan) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>

@@ -40,9 +40,9 @@
                             @if ($pengajuanCuti->current_level === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_DIVISI)
                                 <form action="{{ route('admin.pengajuan-cuti.approve', $pengajuanCuti->id) }}" method="POST" class="form-approve-kepala mb-2">
                                     @csrf
-                                    <label class="form-label small mb-1">Pengganti Tugas</label>
+                                    <label for="f-pengganti-nama" class="form-label small mb-1">Pengganti Tugas</label>
                                     <div class="input-group">
-                                        <select name="pengganti_nama" class="form-select" required>
+                                        <select id="f-pengganti-nama" name="pengganti_nama" class="form-select" required>
                                             <option value="">Pilih pengganti...</option>
                                             @foreach ($pengajuanCuti->substituteOptions() as $nama)
                                                 <option value="{{ $nama }}">{{ $nama }}</option>

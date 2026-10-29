@@ -602,8 +602,8 @@
                                         <div class="modal-body">
                                             <div class="row g-2">
                                                 <div class="col-12">
-                                                    <label class="form-label small mb-1">Pengawas Harian</label>
-                                                    <select name="pengawas_id" class="form-select form-select-sm" required>
+                                                    <label for="f-pengawas-id" class="form-label small mb-1">Pengawas Harian</label>
+                                                    <select id="f-pengawas-id" name="pengawas_id" class="form-select form-select-sm" required>
                                                         <option value="">-- Pilih --</option>
                                                         @foreach ($pengawasOptions as $opt)
                                                             <option value="{{ $opt->id }}">{{ $opt->name }} ({{ $opt->roleLabel() }})</option>
@@ -611,12 +611,12 @@
                                                     </select>
                                                 </div>
                                                 <div class="col-md-7">
-                                                    <label class="form-label small mb-1">Hari Pertama</label>
+                                                    <label for="onboarding-mulai" class="form-label small mb-1">Hari Pertama</label>
                                                     <input type="date" name="tanggal_mulai" id="onboarding-mulai" class="form-control form-control-sm"
                                                         value="{{ \App\Support\Kalender::hariKerjaTerdekat(now())->format('Y-m-d') }}" @unless (auth()->user()->isAdmin()) min="{{ now()->format('Y-m-d') }}" @endunless required>
                                                 </div>
                                                 <div class="col-md-5">
-                                                    <label class="form-label small mb-1">Durasi (hari)</label>
+                                                    <label for="onboarding-durasi" class="form-label small mb-1">Durasi (hari)</label>
                                                     <input type="number" name="durasi_hari" id="onboarding-durasi" class="form-control form-control-sm"
                                                         value="{{ \App\Models\ScreeningOnboarding::DURASI_HARI }}" min="{{ \App\Support\OnboardingFlow::DURASI_MIN }}" max="{{ $admin ? 365 : \App\Support\OnboardingFlow::DURASI_MAX }}" required>
                                                 </div>
@@ -796,7 +796,7 @@
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label small mb-1">Tanggal Efektif</label>
+                                        <label for="rekrut-tanggal-masuk" class="form-label small mb-1">Tanggal Efektif</label>
                                         @if ($adminBebas)<input type="date" name="tanggal_masuk" id="rekrut-tanggal-masuk" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>@else<input type="date" id="rekrut-tanggal-masuk" class="form-control form-control-sm bg-light" value="{{ $onboardingLulus?->tanggal_mulai?->format('Y-m-d') }}" readonly>@endif
                                         <div class="form-text" style="font-size:.72rem;">{{ $adminBebas ? 'Diisi manual (mode Admin)' : 'Otomatis: hari pertama onboarding' }}</div>
                                     </div>
@@ -810,11 +810,11 @@
                                     </div>
                                 @else
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-1">NIP Baru</label>
-                                    <input type="text" name="nip" class="form-control form-control-sm" required>
+                                    <label for="f-nip" class="form-label small mb-1">NIP Baru</label>
+                                    <input id="f-nip" type="text" name="nip" class="form-control form-control-sm" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small mb-1">Tanggal Masuk</label>
+                                    <label for="rekrut-tanggal-masuk" class="form-label small mb-1">Tanggal Masuk</label>
                                     @if ($adminBebas)<input type="date" name="tanggal_masuk" id="rekrut-tanggal-masuk" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>@else<input type="date" id="rekrut-tanggal-masuk" class="form-control form-control-sm bg-light" value="{{ $onboardingLulus?->tanggal_mulai?->format('Y-m-d') }}" readonly>@endif
                                     <div class="form-text" style="font-size:.72rem;">{{ $adminBebas ? 'Diisi manual (mode Admin)' : 'Otomatis: hari pertama onboarding' }}</div>
                                 </div>
@@ -830,7 +830,7 @@
                                 </div>
                                 @endif
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-1">Masa Kontrak <span class="text-muted">(opsional)</span></label>
+                                    <label for="rekrut-masa-kontrak" class="form-label small mb-1">Masa Kontrak <span class="text-muted">(opsional)</span></label>
                                     <select name="masa_kontrak_bulan" id="rekrut-masa-kontrak" class="form-select form-select-sm">
                                         <option value="">-- Tidak ditentukan --</option>
                                         @foreach (range(3, 36, 3) as $bulan)
@@ -839,7 +839,7 @@
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small mb-1">Tanggal Habis Kontrak</label>
+                                    <label for="rekrut-tanggal-habis" class="form-label small mb-1">Tanggal Habis Kontrak</label>
                                     <input type="text" id="rekrut-tanggal-habis" class="form-control form-control-sm" disabled placeholder="Terisi otomatis">
                                 </div>
                                 <div class="col-12 d-flex gap-2 pt-3 mt-1 border-top">
@@ -880,8 +880,8 @@
                             @csrf
                             @method('PUT')
                             <div class="col-md-6">
-                                <label class="form-label small mb-1">Tahap</label>
-                                <select name="tahap" class="form-select form-select-sm">
+                                <label for="f-tahap" class="form-label small mb-1">Tahap</label>
+                                <select id="f-tahap" name="tahap" class="form-select form-select-sm">
                                     @foreach (['verifikasi' => 'Verifikasi', 'interview' => 'Interview', 'screening' => 'Screening / Onboarding', 'kontrak' => 'Kontrak', 'selesai' => 'Selesai'] as $nilai => $label)
                                         <option value="{{ $nilai }}" @selected($lamaran->tahap === $nilai)>{{ $label }}</option>
                                     @endforeach

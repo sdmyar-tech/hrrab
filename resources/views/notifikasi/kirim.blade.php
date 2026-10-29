@@ -135,8 +135,8 @@
                     <section class="panel p-4">
                         <h2 class="h6 fw-bold mb-3">2. Pesan</h2>
                         <div class="mb-3">
-                            <label class="form-label small">Jenis</label>
-                            <select name="jenis" class="form-select">
+                            <label for="f-jenis" class="form-label small">Jenis</label>
+                            <select id="f-jenis" name="jenis" class="form-select">
                                 <option value="pengingat" @selected(old('jenis', 'pengingat') === 'pengingat')>Pengingat</option>
                                 <option value="tugas" @selected(old('jenis') === 'tugas')>Tugas</option>
                                 <option value="info" @selected(old('jenis') === 'info')>Info</option>
