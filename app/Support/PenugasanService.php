@@ -305,8 +305,15 @@ class PenugasanService
 
             if ($baru) {
                 $sekarang = $baru->penugasans()->aktif()->where('unit_kerja', $unit)->orderByDesc('is_utama')->first();
+                // Data lama tanpa penugasan utama aktif, padahal bagian di kepegawaian = bagian ini → dia anggota utama, bukan rangkap.
+                $kep = $baru->kepegawaian()->first();
+                $utamaDiSini = ! $baru->penugasans()->aktif()->where('is_utama', true)->exists()
+                    && $kep && mb_strtoupper(trim((string) $kep->unit_kerja)) === mb_strtoupper(trim($unit));
                 if ($sekarang) {
-                    $sekarang->update(['peran' => Penugasan::PERAN_KEPALA] + ($jabatan ? ['jabatan' => $jabatan] : []));
+                    $sekarang->update(['peran' => Penugasan::PERAN_KEPALA] + ($jabatan ? ['jabatan' => $jabatan] : [])
+                        + ($utamaDiSini && ! $sekarang->is_utama ? ['is_utama' => true, 'jenis' => Penugasan::JENIS_AWAL] : []));
+                } elseif ($utamaDiSini) {
+                    self::buatUtama($baru, $unit, $jabatan ?: $kep->jabatan, $kep->tanggal_masuk ?? null, Penugasan::PERAN_KEPALA, $oleh);
                 } else {
                     $baru->penugasans()->create([
                         'unit_kerja' => $unit,
