@@ -22,7 +22,7 @@
         <div class="mb-3" style="max-width:360px">
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="search" class="form-control" placeholder="Cari jenis data… (mis. interview)" data-cari-entitas aria-label="Cari jenis data">
+                <input type="search" class="form-control" placeholder="Cari jenis data, contoh: Interview" data-cari-entitas aria-label="Cari jenis data">
             </div>
         </div>
 

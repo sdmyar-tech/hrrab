@@ -58,7 +58,7 @@
                             <label for="uraian_tugas" class="form-label">Uraian Tugas</label>
                             <textarea name="uraian_tugas" id="uraian_tugas" rows="3"
                                 class="form-control @error('uraian_tugas') is-invalid @enderror"
-                                placeholder="Jelaskan pekerjaan yang dilembur..." required>{{ old('uraian_tugas') }}</textarea>
+                                placeholder="Contoh: rekap dokumen akreditasi untuk audit besok pagi" required>{{ old('uraian_tugas') }}</textarea>
                             @error('uraian_tugas')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -110,8 +110,7 @@
                             <thead>
                                 <tr>
                                     <th>Tanggal</th>
-                                    <th>Jam</th>
-                                    <th>Jml Jam</th>
+                                    <th>Waktu</th>
                                     <th>Status</th>
                                     <th>Catatan Admin</th>
                                 </tr>
@@ -123,18 +122,15 @@
                                             {{ optional($item->tanggal)->translatedFormat('d M Y') }}
                                             <small class="text-muted d-block">{{ $item->hari }}@if (count($unitOptions) > 1 && $item->unit_kerja) &middot; {{ $item->unit_kerja }}@endif</small>
                                         </td>
-                                        <td>{{ substr((string) $item->jam_mulai, 0, 5) }} - {{ substr((string) $item->jam_selesai, 0, 5) }}</td>
-                                        <td>{{ $item->jumlah_jam }} jam</td>
+                                        <td>
+                                            <span class="text-nowrap">{{ substr((string) $item->jam_mulai, 0, 5) }}&ndash;{{ substr((string) $item->jam_selesai, 0, 5) }}</span>
+                                            <small class="text-muted d-block">{{ $item->jumlah_jam }} jam</small>
+                                        </td>
                                         <td><span class="badge {{ $item->badgeClass() }}">{{ $item->statusLabel() }}</span></td>
                                         <td>{{ $item->catatan_admin ?? '-' }}</td>
                                     </tr>
                                 @empty
-                                    <tr>
-                                        <td colspan="5" class="text-center py-4 text-muted">
-                                            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                            Belum ada pengajuan lembur.
-                                        </td>
-                                    </tr>
+                                    @include('partials.kosong-tabel', ['kosongKolom' => 4, 'kosongTeks' => 'Belum ada pengajuan lembur. Ajukan lewat formulir di samping.', 'kosongIkon' => 'bi-clock-history'])
                                 @endforelse
                             </tbody>
                         </table>

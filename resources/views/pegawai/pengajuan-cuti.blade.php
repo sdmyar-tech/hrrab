@@ -163,7 +163,6 @@
                                 <tr>
                                     <th>Jenis</th>
                                     <th>Tanggal</th>
-                                    <th>Lama</th>
                                     <th>Pengganti</th>
                                     <th>Status</th>
                                     <th>Catatan Admin</th>
@@ -178,8 +177,14 @@
                                                 <small class="text-muted d-block">{{ $item->kategoriBesarLabel() }}</small>
                                             @endif
                                         </td>
-                                        <td>{{ $item->tanggal_mulai->translatedFormat('d M Y') }} - {{ $item->tanggal_selesai->translatedFormat('d M Y') }}</td>
-                                        <td>{{ $item->lama_cuti }} hari</td>
+                                        <td>
+                                            {{-- Satu hari cukup satu tanggal; lama cuti di bawahnya. --}}
+                                            <span class="text-nowrap">{{ $item->tanggal_mulai->translatedFormat('d M Y') }}</span>
+                                            @unless ($item->tanggal_mulai->isSameDay($item->tanggal_selesai))
+                                                &ndash; <span class="text-nowrap">{{ $item->tanggal_selesai->translatedFormat('d M Y') }}</span>
+                                            @endunless
+                                            <small class="text-muted d-block">{{ $item->lama_cuti }} hari</small>
+                                        </td>
                                         <td>{{ $item->pengganti_nama ?? '-' }}</td>
                                         <td>
                                             <span class="badge {{ $item->badgeClass() }}">{{ $item->statusLabel() }}</span>
@@ -190,12 +195,7 @@
                                         <td>{{ $item->catatan_admin ?? '-' }}</td>
                                     </tr>
                                 @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center py-4 text-muted">
-                                            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                            Belum ada pengajuan cuti.
-                                        </td>
-                                    </tr>
+                                    @include('partials.kosong-tabel', ['kosongKolom' => 5, 'kosongTeks' => 'Belum ada pengajuan cuti. Ajukan lewat formulir di samping.', 'kosongIkon' => 'bi-calendar2-check'])
                                 @endforelse
                             </tbody>
                         </table>

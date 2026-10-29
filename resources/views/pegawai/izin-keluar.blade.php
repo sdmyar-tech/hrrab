@@ -65,7 +65,7 @@
                         <div class="mb-3">
                             <label for="alasan" class="form-label">Alasan / Tujuan</label>
                             <textarea name="alasan" id="alasan" rows="3" maxlength="500" class="form-control @error('alasan') is-invalid @enderror"
-                                placeholder="mis. ke bank untuk urusan gaji, ke puskesmas, menjemput anak..." required>{{ old('alasan') }}</textarea>
+                                placeholder="Contoh: ke bank untuk urusan gaji" required>{{ old('alasan') }}</textarea>
                             @error('alasan')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
@@ -134,12 +134,7 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr>
-                                        <td colspan="5" class="text-center py-4 text-muted">
-                                            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                            Belum ada izin keluar.
-                                        </td>
-                                    </tr>
+                                    @include('partials.kosong-tabel', ['kosongKolom' => 5, 'kosongTeks' => 'Belum ada izin keluar. Ajukan lewat formulir di samping.', 'kosongIkon' => 'bi-door-open'])
                                 @endforelse
                             </tbody>
                         </table>

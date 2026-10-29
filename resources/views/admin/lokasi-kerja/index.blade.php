@@ -29,22 +29,23 @@
                     @csrf
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-plus-lg"></i></span>
-                        <input type="text" name="nama" class="form-control" placeholder="Tambah lokasi baru, mis. KAMPUS JL. RIAU" maxlength="100" required autocomplete="off" value="{{ old('nama') }}">
-                        <input type="text" name="keterangan" class="form-control d-none d-md-block" placeholder="Keterangan / alamat (opsional)" maxlength="255" value="{{ old('keterangan') }}">
+                        <input type="text" name="nama" class="form-control" placeholder="Lokasi baru, contoh: SMK" aria-label="Nama lokasi kerja baru" maxlength="100" required autocomplete="off" value="{{ old('nama') }}">
+                        <input type="text" name="keterangan" class="form-control d-none d-md-block" placeholder="Alamat, contoh: Jl. Riau 73" aria-label="Keterangan atau alamat lokasi (opsional)" maxlength="255" value="{{ old('keterangan') }}">
                         <button type="submit" class="btn btn-primary">Tambah</button>
                     </div>
                 </form>
                 <div class="input-group lk-cari">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="search" class="form-control" id="lk-cari" placeholder="Cari lokasi…" autocomplete="off">
+                    <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                    <input type="search" class="form-control" id="lk-cari" placeholder="Cari lokasi, contoh: Kampus" aria-label="Cari lokasi kerja menurut nama atau alamat" autocomplete="off" data-saring="#lk-daftar">
                 </div>
             </div>
+            <p class="small text-muted mb-0 px-3 pt-3" aria-live="polite"><strong class="text-body" data-saring-jumlah="#lk-daftar">{{ $lokasi->count() }}</strong> dari {{ $lokasi->count() }} lokasi</p>
 
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead>
                         <tr>
-                            <th style="width:56px">No</th>
+                            <th class="kolom-no" style="width:56px">No</th>
                             <th>Lokasi Kerja</th>
                             <th class="text-center">Pegawai Aktif</th>
                             <th class="text-center">Lowongan</th>
@@ -54,8 +55,8 @@
                     <tbody id="lk-daftar">
                         @forelse ($lokasi as $l)
                             <tr data-cari="{{ mb_strtolower($l->nama . ' ' . $l->keterangan) }}">
-                                <td class="text-muted">{{ $l->urutan }}</td>
-                                <td>
+                                <td class="text-muted kolom-no">{{ $l->urutan }}</td>
+                                <td class="kolom-penuh">
                                     <span class="fw-semibold d-block">{{ $l->nama }}</span>
                                     @if ($l->keterangan)<small class="text-muted">{{ $l->keterangan }}</small>@endif
                                 </td>
@@ -67,21 +68,19 @@
                                             data-url="{{ route('admin.lokasi-kerja.update', $l) }}" data-nama="{{ $l->nama }}" data-urutan="{{ $l->urutan }}" data-keterangan="{{ $l->keterangan }}">
                                             <i class="bi bi-pencil"></i> Ubah
                                         </button>
-                                        <form action="{{ route('admin.lokasi-kerja.destroy', $l) }}" method="POST" data-confirm="Hapus lokasi kerja {{ $l->nama }}? (Hanya bisa bila tidak dipakai data apa pun.)">
+                                        <form action="{{ route('admin.lokasi-kerja.destroy', $l) }}" method="POST">
                                             @csrf @method('DELETE')
-                                            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Hapus</button>
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="true" data-icon="warning" data-title="Hapus lokasi kerja?"
+                                                data-text="Lokasi {{ $l->nama }} akan dihapus. Penghapusan hanya bisa bila lokasi ini tidak dipakai data apa pun."
+                                                data-confirm-text="Ya, Hapus" data-confirm-color="#dc3545" data-cancel-text="Batal"><i class="bi bi-trash"></i> Hapus</button>
                                         </form>
                                     </div>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">
-                                    <i class="bi bi-geo-alt fs-3 d-block mb-2"></i>
-                                    Belum ada lokasi kerja.
-                                </td>
-                            </tr>
+                            @include('partials.kosong-tabel', ['kosongKolom' => 5, 'kosongTeks' => 'Belum ada lokasi kerja.', 'kosongIkon' => 'bi-geo-alt'])
                         @endforelse
+                        <tr data-saring-kosong="#lk-daftar" hidden><td colspan="5">@include('partials.kosong', ['teks' => 'Tidak ada lokasi yang cocok dengan pencarian ini.', 'ikonKosong' => 'bi-search'])</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -131,11 +130,7 @@
 </style>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const cari = document.getElementById('lk-cari');
-        cari.addEventListener('input', () => {
-            const kata = cari.value.trim().toLowerCase();
-            document.querySelectorAll('#lk-daftar tr[data-cari]').forEach((tr) => { tr.hidden = !tr.dataset.cari.includes(kata); });
-        });
+        // Saring langsung ditangani global (main.js: data-saring).
 
         const modalUbah = document.getElementById('modalUbahLokasi');
         modalUbah.addEventListener('show.bs.modal', (e) => {

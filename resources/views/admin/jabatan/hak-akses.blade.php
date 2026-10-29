@@ -41,10 +41,7 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
-                        <input type="search" name="q" class="form-control" value="{{ request('q') }}" placeholder="Cari jabatan…" aria-label="Cari jabatan">
-                    </div>
+                    @include('partials.daftar-cari', ['cariTeks' => 'Cari jabatan, contoh: Kepala', 'cariLabel' => 'Cari hak akses menurut nama jabatan'])
                 </div>
                 <div class="col-md-auto">
                     <div class="form-check mb-0">
@@ -53,6 +50,12 @@
                     </div>
                 </div>
             </form>
+            <div class="mb-2">
+                @include('partials.daftar-ringkas', [
+                    'ringkasJumlah' => method_exists($baris, 'total') ? $baris->total() : $baris->count(), 'ringkasSatuan' => 'jabatan',
+                    'ringkasFilter' => request()->hasAny(['unit', 'q', 'ada']), 'ringkasReset' => route('admin.jabatan.hak-akses'),
+                ])
+            </div>
 
             <div class="table-responsive">
                 <table class="table align-middle mb-0 table-mobile-cards">

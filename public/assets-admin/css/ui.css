@@ -434,25 +434,25 @@ html[data-theme="dark"] .form-control::placeholder { color: #8a94a8; }
 
 /* Aksi sekunder di baris tabel tampil ringan (tanpa bingkai) agar daftar tidak ramai;
    latar lembut muncul saat disorot/dibuka. Grup tombol & tombol menempel input tidak diubah. */
-.dashboard-content .table tbody td :is(.btn-light, .btn-outline-secondary, .btn-outline-danger):not(.input-group > *, .btn-group > *, .btn-check + .btn) {
+.dashboard-content :is(.table tbody td, .aksi-ringan) :is(.btn-light, .btn-outline-secondary, .btn-outline-danger):not(.input-group > *, .btn-group > *, .btn-check + .btn) {
     --bs-btn-bg: transparent;
     --bs-btn-border-color: transparent;
     background: transparent;
     border-color: transparent;
     box-shadow: none;
 }
-.dashboard-content .table tbody td :is(.btn-light, .btn-outline-secondary):not(.input-group > *, .btn-group > *, .btn-check + .btn):is(:hover, :focus-visible, [aria-expanded="true"]) {
+.dashboard-content :is(.table tbody td, .aksi-ringan) :is(.btn-light, .btn-outline-secondary):not(.input-group > *, .btn-group > *, .btn-check + .btn):is(:hover, :focus-visible, [aria-expanded="true"]) {
     background: var(--hr-primary-soft);
     border-color: transparent;
     color: var(--hr-primary-dark);
 }
-.dashboard-content .table tbody td .btn-outline-danger:not(.input-group > *, .btn-group > *, .btn-check + .btn):is(:hover, :focus-visible) {
+.dashboard-content :is(.table tbody td, .aksi-ringan) .btn-outline-danger:not(.input-group > *, .btn-group > *, .btn-check + .btn):is(:hover, :focus-visible) {
     background: rgba(220, 53, 69, .1);
     border-color: transparent;
     color: #b42318;
 }
-html[data-theme="dark"] .dashboard-content .table tbody td :is(.btn-light, .btn-outline-secondary):is(:hover, :focus-visible, [aria-expanded="true"]) { color: var(--hr-primary-soft-text); }
-html[data-theme="dark"] .dashboard-content .table tbody td .btn-outline-danger { color: #fca5a5; }
+html[data-theme="dark"] .dashboard-content :is(.table tbody td, .aksi-ringan) :is(.btn-light, .btn-outline-secondary):is(:hover, :focus-visible, [aria-expanded="true"]) { color: var(--hr-primary-soft-text); }
+html[data-theme="dark"] .dashboard-content :is(.table tbody td, .aksi-ringan) .btn-outline-danger { color: #fca5a5; }
 
 /* Tombol ikon saja (mis. menu ⋮ di baris tabel): persegi, ikon di tengah.
    span.btn-ikon = pengganti kosong selebar tombol agar kolom aksi tetap rata saat baris tak punya menu. */

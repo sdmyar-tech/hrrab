@@ -39,7 +39,7 @@
                     @csrf
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-plus-lg"></i></span>
-                        <input type="text" name="nama" class="form-control @error('nama') is-invalid @enderror" placeholder="Tambah jabatan baru, mis. STAFF LEGAL"
+                        <input type="text" name="nama" class="form-control @error('nama') is-invalid @enderror" placeholder="Jabatan baru, contoh: GURU" aria-label="Nama jabatan baru"
                             value="{{ $errors->ubah->any() ? '' : old('nama') }}" maxlength="150" required autocomplete="off">
                         {{-- Jabatan dibuat langsung di unitnya (unit lain bisa ditambah lewat Ubah). --}}
                         <select name="unit_id" class="form-select jb-unit-tambah" aria-label="Unit jabatan">
@@ -56,7 +56,7 @@
                 <div class="jb-cari">
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="search" id="jb-cari" class="form-control" placeholder="Cari jabatan…" value="{{ request('q') }}" autocomplete="off">
+                        <input type="search" id="jb-cari" class="form-control" placeholder="Cari jabatan, contoh: Guru" aria-label="Cari jabatan menurut nama" value="{{ request('q') }}" autocomplete="off">
                     </div>
                     <select id="jb-saring-unit" class="form-select" aria-label="Saring per unit">
                         <option value="">Semua unit</option>
@@ -102,7 +102,7 @@
                             @else
                                 <span class="jb-pakai kosong">tidak dipakai</span>
                             @endif
-                            <span class="jb-aksi">
+                            <span class="jb-aksi aksi-ringan">
                                 <button type="button" class="btn btn-outline-secondary btn-sm jb-ubah" title="Ubah nama" data-ubah-jabatan>
                                     <i class="bi bi-pencil"></i><span class="d-none d-sm-inline">Ubah</span>
                                 </button>
@@ -113,10 +113,12 @@
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 @else
-                                    <form action="{{ route('admin.jabatan.destroy', $j) }}" method="POST" class="d-inline" data-confirm="Hapus jabatan {{ $j->nama }}?">
+                                    <form action="{{ route('admin.jabatan.destroy', $j) }}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Hapus"><i class="bi bi-trash"></i></button>
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Hapus" aria-label="Hapus jabatan {{ $j->nama }}"
+                                            data-confirm="true" data-icon="warning" data-title="Hapus jabatan?" data-text="Jabatan {{ $j->nama }} akan dihapus dari daftar."
+                                            data-confirm-text="Ya, Hapus" data-confirm-color="#dc3545" data-cancel-text="Batal"><i class="bi bi-trash" aria-hidden="true"></i></button>
                                     </form>
                                 @endif
                             </span>
@@ -124,11 +126,9 @@
 
                     </li>
                 @empty
-                    <li class="text-center text-muted py-5">Belum ada jabatan.</li>
+                    <li>@include('partials.kosong', ['teks' => 'Belum ada jabatan.', 'ikonKosong' => 'bi-diagram-3'])</li>
                 @endforelse
-                <li class="jb-kosong text-center text-muted py-5" hidden>
-                    <i class="bi bi-search d-block fs-3 mb-2"></i>Tidak ada jabatan yang cocok.
-                </li>
+                <li class="jb-kosong" hidden>@include('partials.kosong', ['teks' => 'Tidak ada jabatan yang cocok dengan pencarian/saringan ini.', 'ikonKosong' => 'bi-search'])</li>
             </ul>
         </section>
     </div>
@@ -148,7 +148,7 @@
                     <strong data-nama></strong> masih dipakai di <strong data-dipakai></strong> data (pegawai, mutasi, lowongan, formasi, atau lamaran).
                 </div>
                 <label class="form-label">Pindahkan data tersebut ke jabatan</label>
-                <input type="search" class="form-control form-control-sm mb-2" placeholder="Cari jabatan pengganti…" data-cari-pengganti autocomplete="off">
+                <input type="search" class="form-control form-control-sm mb-2" placeholder="Saring daftar, contoh: Staff" aria-label="Saring daftar jabatan pengganti" data-cari-pengganti autocomplete="off">
                 <select name="pengganti_id" class="form-select" size="7" required>
                     @foreach ($semuaJabatan as $opsi)
                         <option value="{{ $opsi->id }}">{{ $opsi->nama }}</option>
@@ -196,7 +196,7 @@
                         <label class="form-label mb-0">Unit</label>
                         <span class="form-text m-0" data-jumlah-unit></span>
                     </div>
-                    <input type="search" class="form-control form-control-sm mb-2" placeholder="Cari unit…" data-cari-unit autocomplete="off">
+                    <input type="search" class="form-control form-control-sm mb-2" placeholder="Saring unit, contoh: SMK" aria-label="Saring daftar unit" data-cari-unit autocomplete="off">
                     <div class="jb-pilih-unit" data-pilih-unit>
                         @foreach ($units as $un)
                             <label class="form-check" data-nama-unit="{{ $un->nama }}">

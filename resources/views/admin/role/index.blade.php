@@ -39,7 +39,7 @@
             <div class="rl-bilah">
                 <div class="input-group rl-cari" data-panel="daftar">
                     <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
-                    <input type="search" class="form-control" id="rl-cari" placeholder="Cari role…" autocomplete="off" aria-label="Cari role">
+                    <input type="search" class="form-control" id="rl-cari" placeholder="Cari role, contoh: Staff" autocomplete="off" aria-label="Cari role menurut nama">
                 </div>
                 <div class="btn-group rl-tampilan ms-auto" role="group" aria-label="Pilih tampilan">
                     <button type="button" class="btn btn-outline-secondary active" data-tampilan="daftar"><i class="bi bi-list-ul"></i> Daftar</button>

@@ -98,27 +98,24 @@
                 <input type="hidden" name="tanggal" value="{{ $tanggal->toDateString() }}">
                 @if ($statusAktif)<input type="hidden" name="status" value="{{ $statusAktif }}">@endif
                 <div class="row g-2 align-items-center">
-                    <div class="col-md-5">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="search" name="q" class="form-control border-start-0" placeholder="Cari nama, NIP, ID mesin, unit, atau jabatan..." value="{{ request('q') }}">
-                        </div>
+                    <div class="col-12 col-md-6 col-xl-5">
+                        @include('partials.daftar-cari', ['cariTeks' => 'Cari pegawai, contoh: Siti atau SMK', 'cariLabel' => 'Cari absensi menurut nama, NIP, ID mesin, unit, atau jabatan'])
                     </div>
                     @if (count($unitOpsi) > 1)
-                        <div class="col-md-3">
+                        <div class="col-12 col-md-3">
                             <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Unit">
                                 <option value="">Semua unit</option>
                                 @foreach ($unitOpsi as $u)<option value="{{ $u }}" @selected(request('unit') === $u)>{{ $u }}</option>@endforeach
                             </select>
                         </div>
                     @endif
-                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterHarian'])</div>
-                    @if ($statusAktif || request()->filled('q') || request()->filled('unit'))
-                        <div class="col-auto">
-                            <a href="{{ route('admin.absensi.harian', ['tanggal' => $tanggal->toDateString()]) }}" class="btn btn-sm btn-link text-secondary"><i class="bi bi-x-circle me-1"></i>Hapus filter</a>
-                        </div>
-                    @endif
+                    <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterHarian'])</div>
                 </div>
+                @include('partials.daftar-ringkas', [
+                    'ringkasJumlah' => count($baris), 'ringkasSatuan' => 'pegawai',
+                    'ringkasFilter' => $statusAktif || request()->filled('q') || request()->filled('unit'),
+                    'ringkasReset' => route('admin.absensi.harian', ['tanggal' => $tanggal->toDateString()]),
+                ])
             </form>
 
             <div class="table-responsive">

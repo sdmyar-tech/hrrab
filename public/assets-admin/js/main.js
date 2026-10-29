@@ -284,8 +284,48 @@
       });
     }
 
+    // Saring langsung di halaman (tanpa muat ulang): input[data-saring="#idDaftar"] menyembunyikan baris [data-cari]
+    // yang tidak cocok, memperbarui [data-saring-jumlah="#idDaftar"], dan menampilkan [data-saring-kosong="#idDaftar"].
+    function initSaringLangsung() {
+      var inputs = document.querySelectorAll("input[data-saring]");
+
+      Array.prototype.forEach.call(inputs, function (input) {
+        var sasaran = input.getAttribute("data-saring");
+        var daftar = document.querySelector(sasaran);
+        if (!daftar) {
+          return;
+        }
+        var jumlah = document.querySelector('[data-saring-jumlah="' + sasaran + '"]');
+        var kosong = document.querySelector('[data-saring-kosong="' + sasaran + '"]');
+
+        function saring() {
+          var kata = input.value.trim().toLowerCase();
+          var tampil = 0;
+          Array.prototype.forEach.call(daftar.querySelectorAll("[data-cari]"), function (baris) {
+            var cocok = baris.getAttribute("data-cari").indexOf(kata) !== -1;
+            baris.hidden = !cocok;
+            if (cocok) {
+              tampil++;
+            }
+          });
+          if (jumlah) {
+            jumlah.textContent = tampil;
+          }
+          if (kosong) {
+            kosong.hidden = tampil > 0;
+          }
+        }
+
+        input.addEventListener("input", saring);
+        if (input.value) {
+          saring();
+        }
+      });
+    }
+
     initValidation();
     initLokasiMaps();
+    initSaringLangsung();
     initCariOtomatis();
     initFilterMemuat();
     initTableDropdowns();

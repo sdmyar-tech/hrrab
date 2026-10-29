@@ -29,9 +29,15 @@
         <ul class="nav nav-pills">
             <li class="nav-item"><a class="nav-link {{ $belum ? '' : 'active' }}" href="{{ route('notifikasi.index', ['urut' => request('urut')]) }}">Semua</a></li>
             <li class="nav-item"><a class="nav-link {{ $belum ? 'active' : '' }}" href="{{ route('notifikasi.index', ['tab' => 'belum', 'urut' => request('urut')]) }}">Belum dibaca
-                @if ($jumlahBelum)<span class="badge text-bg-danger ms-1">{{ $jumlahBelum }}</span>@endif</a></li>
+                @if ($jumlahBelum)<span class="badge text-bg-primary ms-1">{{ $jumlahBelum }}</span>@endif</a></li>
         </ul>
         @include('partials.urut')
+        </div>
+        <div class="mb-2">
+            @include('partials.daftar-ringkas', [
+                'ringkasJumlah' => $notifikasi->total(), 'ringkasSatuan' => $belum ? 'notifikasi belum dibaca' : 'notifikasi',
+                'ringkasFilter' => false, 'ringkasReset' => route('notifikasi.index'),
+            ])
         </div>
 
         <section class="panel p-0">
@@ -39,10 +45,10 @@
                 @forelse ($notifikasi as $n)
                     @php
                         $jenis = $n->data['jenis'] ?? 'info';
-                        $label = ['tugas' => ['Tugas', 'text-bg-warning'], 'pengingat' => ['Pengingat', 'text-bg-primary'], 'info' => ['Info', 'text-bg-light border']][$jenis] ?? ['Info', 'text-bg-light border'];
+                        $label = ['tugas' => ['Tugas', 'text-bg-warning'], 'pengingat' => ['Pengingat', 'text-bg-info'], 'info' => ['Info', 'text-bg-light border']][$jenis] ?? ['Info', 'text-bg-light border'];
                     @endphp
-                    <a href="{{ route('notifikasi.buka', $n->id) }}" class="list-group-item list-group-item-action d-flex gap-3 py-3 {{ $n->read_at ? '' : 'bg-body-tertiary' }}">
-                        <span class="page-icon flex-none" style="width:40px;height:40px;font-size:1.1rem;"><i class="bi {{ $n->data['ikon'] ?? 'bi-bell' }}"></i></span>
+                    <a href="{{ route('notifikasi.buka', $n->id) }}" class="list-group-item list-group-item-action d-flex gap-3 py-3" @unless ($n->read_at) style="background: var(--admin-surface-soft);" @endunless>
+                        <span class="page-icon flex-none" style="width:40px;height:40px;font-size:1.1rem;"><i class="bi {{ $n->data['ikon'] ?? 'bi-bell' }}" aria-hidden="true"></i></span>
                         <span class="flex-grow-1">
                             <span class="d-flex flex-wrap align-items-center gap-2">
                                 <span class="fw-semibold">{{ $n->data['judul'] ?? '' }}</span>
@@ -50,7 +56,7 @@
                                 @if (! $n->read_at && isset($n->data['tugas']))
                                     <span class="badge text-bg-warning" title="Tanda hilang otomatis setelah tugas diselesaikan"><i class="bi bi-hourglass-split me-1"></i>Belum selesai</span>
                                 @elseif (! $n->read_at)
-                                    <span class="badge text-bg-danger">Baru</span>
+                                    <span class="badge text-bg-info">Baru</span>
                                 @endif
                             </span>
                             <span class="d-block text-muted small mt-1">{{ $n->data['pesan'] ?? '' }}</span>
@@ -62,10 +68,7 @@
                         @if (! empty($n->data['url']))<i class="bi bi-chevron-right text-muted align-self-center"></i>@endif
                     </a>
                 @empty
-                    <div class="text-center text-muted py-5">
-                        <i class="bi bi-check2-circle fs-1 d-block mb-2"></i>
-                        {{ $belum ? 'Semua notifikasi sudah dibaca.' : 'Belum ada notifikasi.' }}
-                    </div>
+                    @include('partials.kosong', ['teks' => $belum ? 'Semua notifikasi sudah dibaca.' : 'Belum ada notifikasi.', 'ikonKosong' => 'bi-check2-circle'])
                 @endforelse
             </div>
         </section>

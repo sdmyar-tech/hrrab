@@ -27,7 +27,6 @@
                         <tr>
                             <th>Lowongan</th>
                             <th>Status</th>
-                            <th>Tahap</th>
                             <th>Catatan Admin</th>
                             <th class="text-end">Aksi</th>
                         </tr>
@@ -36,21 +35,25 @@
                         @forelse ($lamarans as $lamaran)
                             <tr>
                                 <td>
-                                    <span class="fw-semibold d-block">{{ $lamaran->lowongan?->judul }}</span>
+                                    <a href="{{ route('pelamar.lamaran.show', $lamaran) }}" class="nama-tautan d-block">{{ $lamaran->lowongan?->judul }}</a>
                                     <small class="text-muted">{{ $lamaran->lowongan?->unit_kerja }}</small>
                                 </td>
-                                <td><span class="badge {{ $lamaran->badgeClass() }}">{{ $lamaran->statusLabel() }}</span></td>
-                                <td>{{ $lamaran->isProses() ? $lamaran->tahapLabel() : '-' }}</td>
+                                <td>
+                                    <span class="badge {{ $lamaran->badgeClass() }}">{{ $lamaran->statusLabel() }}</span>
+                                    @if ($lamaran->isProses())<small class="text-muted d-block mt-1">{{ $lamaran->tahapLabel() }}</small>@endif
+                                </td>
                                 <td>{{ $lamaran->catatan_admin ?? '-' }}</td>
                                 <td class="text-end">
-                                    <a href="{{ route('pelamar.lamaran.show', $lamaran) }}" class="btn btn-outline-secondary btn-sm">
+                                    <a href="{{ route('pelamar.lamaran.show', $lamaran) }}" class="btn btn-light btn-sm">
                                         <i class="bi bi-eye"></i> Detail
                                     </a>
                                     @if (! $lamaran->isSelesai())
-                                        <form action="{{ route('pelamar.lamaran.tolak', $lamaran) }}" method="POST"
-                                            data-confirm="Batalkan lamaran ini?" class="d-inline">
+                                        <form action="{{ route('pelamar.lamaran.tolak', $lamaran) }}" method="POST" class="d-inline">
                                             @csrf
-                                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                data-confirm="true" data-icon="warning" data-title="Batalkan lamaran?"
+                                                data-text="Lamaran untuk {{ $lamaran->lowongan?->judul }} akan dibatalkan dan tidak diproses lagi."
+                                                data-confirm-text="Ya, Batalkan" data-confirm-color="#dc3545" data-cancel-text="Kembali">
                                                 <i class="bi bi-x-lg"></i> Batalkan
                                             </button>
                                         </form>
@@ -58,12 +61,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">
-                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                    Anda belum melamar lowongan apapun.
-                                </td>
-                            </tr>
+                            @include('partials.kosong-tabel', ['kosongKolom' => 4, 'kosongTeks' => 'Anda belum melamar lowongan apa pun.', 'kosongIkon' => 'bi-briefcase'])
                         @endforelse
                     </tbody>
                 </table>

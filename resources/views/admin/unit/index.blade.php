@@ -36,17 +36,18 @@
                         @csrf
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-plus-lg"></i></span>
-                            <input type="text" name="nama" class="form-control" placeholder="Tambah unit baru, mis. LEGAL" maxlength="100" required autocomplete="off" value="{{ old('nama') }}">
-                            <input type="text" name="keterangan" class="form-control d-none d-md-block" placeholder="Keterangan (opsional)" maxlength="255" value="{{ old('keterangan') }}">
+                            <input type="text" name="nama" class="form-control" placeholder="Unit baru, contoh: LEGAL" aria-label="Nama unit baru" maxlength="100" required autocomplete="off" value="{{ old('nama') }}">
+                            <input type="text" name="keterangan" class="form-control d-none d-md-block" placeholder="Keterangan, contoh: Bagian hukum" aria-label="Keterangan unit (opsional)" maxlength="255" value="{{ old('keterangan') }}">
                             <button type="submit" class="btn btn-primary">Tambah</button>
                         </div>
                     </form>
                 @endif
                 <div class="input-group un-cari">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="search" class="form-control" id="un-cari" placeholder="Cari unit atau koordinator…" autocomplete="off">
+                    <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                    <input type="search" class="form-control" id="un-cari" placeholder="Cari unit, contoh: SDM atau Siti" aria-label="Cari unit menurut nama unit atau koordinator" autocomplete="off" data-saring="#un-daftar">
                 </div>
             </div>
+            <p class="small text-muted mb-0 px-3 pt-3" aria-live="polite"><strong class="text-body" data-saring-jumlah="#un-daftar">{{ $units->count() }}</strong> dari {{ $units->count() }} unit</p>
 
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
@@ -104,17 +105,20 @@
                                                 data-url="{{ route('admin.unit.update', $u) }}" data-nama="{{ $u->nama }}" data-urutan="{{ $u->urutan }}" data-keterangan="{{ $u->keterangan }}">
                                                 <i class="bi bi-pencil"></i> Ubah
                                             </button>
-                                            <form action="{{ route('admin.unit.destroy', $u) }}" method="POST" data-confirm="Hapus unit {{ $u->nama }}? (Hanya bisa bila tidak dipakai data apa pun.)">
+                                            <form action="{{ route('admin.unit.destroy', $u) }}" method="POST">
                                                 @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Hapus</button>
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="true" data-icon="warning" data-title="Hapus unit?"
+                                                    data-text="Unit {{ $u->nama }} akan dihapus. Penghapusan hanya bisa bila unit ini tidak dipakai data apa pun."
+                                                    data-confirm-text="Ya, Hapus" data-confirm-color="#dc3545" data-cancel-text="Batal"><i class="bi bi-trash"></i> Hapus</button>
                                             </form>
                                         @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="text-center text-muted py-4">Belum ada unit.</td></tr>
+                            @include('partials.kosong-tabel', ['kosongKolom' => 6, 'kosongTeks' => 'Belum ada unit.', 'kosongIkon' => 'bi-building'])
                         @endforelse
+                        <tr data-saring-kosong="#un-daftar" hidden><td colspan="6">@include('partials.kosong', ['teks' => 'Tidak ada unit yang cocok dengan pencarian ini.', 'ikonKosong' => 'bi-search'])</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -224,11 +228,7 @@
 </style>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const cari = document.getElementById('un-cari');
-        cari.addEventListener('input', () => {
-            const kata = cari.value.trim().toLowerCase();
-            document.querySelectorAll('#un-daftar tr[data-cari]').forEach((tr) => { tr.hidden = !tr.dataset.cari.includes(kata); });
-        });
+        // Saring langsung ditangani global (main.js: data-saring).
 
         const jabatanPerUnit = @json($jabatanPerUnit);
         const modal = document.getElementById('modalKoordinator');

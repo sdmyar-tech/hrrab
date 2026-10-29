@@ -66,8 +66,8 @@
                             </select>
                         </div>
                     @endif
-                    <div class="col-6 col-md-2">
-                        <input type="search" name="q" class="form-control form-control-sm" placeholder="Cari nama, NIP, unit..." value="{{ request('q') }}">
+                    <div class="col-12 col-md-4 col-xl-3">
+                        @include('partials.daftar-cari', ['cariTeks' => 'Cari pegawai, contoh: Siti', 'cariLabel' => 'Cari rekap menurut nama, NIP, atau unit'])
                     </div>
                     <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterRekap'])</div>
                     <div class="col-md-auto">
@@ -75,12 +75,17 @@
                     </div>
                 </div>
                 <div class="d-flex flex-wrap gap-1 mt-2">
-                    <span class="small text-muted me-1 align-self-center">Cepat:</span>
+                    <span class="small text-muted me-1 align-self-center">Periode cepat:</span>
                     @foreach ($preset as $label => [$pDari, $pSampai])
                         <a href="{{ route('admin.absensi.rekap', ['dari' => $pDari->toDateString(), 'sampai' => $pSampai->toDateString()] + request()->only(['unit', 'q', 'urut'])) }}"
                             class="abs-chip text-decoration-none {{ $dari->isSameDay($pDari) && $sampai->isSameDay($pSampai) ? 'aktif' : '' }}">{{ $label }}</a>
                     @endforeach
                 </div>
+                @include('partials.daftar-ringkas', [
+                    'ringkasJumlah' => count($baris), 'ringkasSatuan' => 'pegawai',
+                    'ringkasFilter' => request()->filled('q') || request()->filled('unit'),
+                    'ringkasReset' => route('admin.absensi.rekap', ['dari' => $dari->toDateString(), 'sampai' => $sampai->toDateString()]),
+                ])
             </form>
 
             <div class="table-responsive">
