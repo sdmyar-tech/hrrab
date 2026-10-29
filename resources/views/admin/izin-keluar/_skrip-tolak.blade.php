@@ -5,8 +5,8 @@
             btn.addEventListener('click', function () {
                 const form = btn.closest('form');
                 Swal.fire({
-                    icon: 'question',
-                    title: 'Tolak Izin Keluar?',
+                    icon: 'warning',
+                    title: 'Tolak izin keluar?',
                     input: 'textarea',
                     inputLabel: 'Alasan penolakan',
                     inputPlaceholder: 'Tuliskan alasan penolakan...',

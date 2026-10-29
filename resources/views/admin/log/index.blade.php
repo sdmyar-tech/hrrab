@@ -30,31 +30,35 @@
         </div>
 
         <section class="panel p-0 overflow-hidden">
-            <form method="GET" action="{{ route('admin.log.index') }}" class="log-filter" id="filterLogForm">
+            @php $adaFilter = request()->hasAny(['q', 'modul', 'aksi', 'role', 'status', 'dari', 'sampai']); @endphp
+            {{-- Semua isian langsung diterapkan (pilihan saat diganti, cari saat berhenti mengetik); data-filter-daftar = tanda memuat. --}}
+            <form method="GET" action="{{ route('admin.log.index') }}" class="log-filter" id="filterLogForm" role="search" data-filter-daftar>
                 <div class="input-group log-cari">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="search" name="q" class="form-control" placeholder="Cari nama pengguna atau deskripsi…" value="{{ request('q') }}">
+                    <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                    <input type="search" name="q" class="form-control" placeholder="Cari aktivitas, contoh: Siti atau cuti" value="{{ request('q') }}"
+                        aria-label="Cari log menurut nama pengguna atau deskripsi aktivitas" title="Cari log menurut nama pengguna atau deskripsi aktivitas"
+                        autocomplete="off" data-cari-otomatis>
                 </div>
-                <select name="modul" class="form-select" onchange="this.form.submit()">
+                <select name="modul" class="form-select" aria-label="Modul" onchange="this.form.submit()">
                     <option value="">Semua modul</option>
                     @foreach ($modulOpsi as $m)
                         <option value="{{ $m }}" @selected(request('modul') === $m)>{{ $m }}</option>
                     @endforeach
                 </select>
-                <select name="aksi" class="form-select" onchange="this.form.submit()">
+                <select name="aksi" class="form-select" aria-label="Jenis aksi" onchange="this.form.submit()">
                     <option value="">Semua aksi</option>
                     @foreach (\App\Models\LogAktivitas::AKSI as $kunci => [$labelAksi])
                         @continue($kunci === 'lainnya')
                         <option value="{{ $kunci }}" @selected(request('aksi') === $kunci)>{{ $labelAksi }}</option>
                     @endforeach
                 </select>
-                <select name="role" class="form-select" onchange="this.form.submit()">
+                <select name="role" class="form-select" aria-label="Role pengguna" onchange="this.form.submit()">
                     <option value="">Semua role</option>
                     @foreach (array_diff([...\App\Models\User::INTERNAL_ROLES, \App\Models\User::ROLE_PELAMAR], [\App\Models\User::ROLE_ADMIN]) as $r)
                         <option value="{{ $r }}" @selected(request('role') === $r)>{{ \App\Models\User::roleLabelFor($r) }}</option>
                     @endforeach
                 </select>
-                <select name="status" class="form-select" onchange="this.form.submit()">
+                <select name="status" class="form-select" aria-label="Status aktivitas" onchange="this.form.submit()">
                     <option value="">Semua status</option>
                     <option value="berhasil" @selected(request('status') === 'berhasil')>Berhasil</option>
                     <option value="gagal" @selected(request('status') === 'gagal')>Gagal</option>
@@ -62,14 +66,16 @@
                 <div class="input-group log-rentang"><span class="input-group-text">Dari</span><input type="date" name="dari" class="form-control" value="{{ request('dari') }}" title="Dari tanggal" aria-label="Dari tanggal" onchange="this.form.submit()"></div>
                 <div class="input-group log-rentang"><span class="input-group-text">s/d</span><input type="date" name="sampai" class="form-control" value="{{ request('sampai') }}" title="Sampai tanggal" aria-label="Sampai tanggal" onchange="this.form.submit()"></div>
                 @include('partials.urut', ['urutForm' => 'filterLogForm'])
-                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i>Terapkan</button>
-                @if (request()->hasAny(['q', 'modul', 'aksi', 'role', 'status', 'dari', 'sampai']))
-                    <a href="{{ route('admin.log.index') }}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i>Reset</a>
-                @endif
+                <div class="w-100">
+                    @include('partials.daftar-ringkas', [
+                        'ringkasJumlah' => $logs->total(), 'ringkasSatuan' => 'aktivitas',
+                        'ringkasFilter' => $adaFilter, 'ringkasReset' => route('admin.log.index'),
+                    ])
+                </div>
             </form>
 
             @php $tanggalSebelumnya = null; @endphp
-            <ul class="list-unstyled mb-0 log-daftar">
+            <ul class="list-unstyled mb-0 log-daftar" data-isi-daftar>
                 @forelse ($logs as $log)
                     @php
                         [$labelAksi, $badgeAksi, $ikonAksi] = $log->aksiInfo();
@@ -126,15 +132,20 @@
                         </div>
                     </li>
                 @empty
-                    <li class="text-center text-muted py-5">
-                        <i class="bi bi-journal d-block fs-2 mb-2"></i>
-                        {{ request()->hasAny(['q', 'modul', 'aksi', 'role', 'status', 'dari', 'sampai']) ? 'Tidak ada aktivitas yang cocok dengan filter.' : 'Belum ada aktivitas tercatat.' }}
+                    <li class="py-3">
+                        @include('partials.kosong', [
+                            'teks' => $adaFilter ? 'Tidak ada aktivitas yang cocok dengan pencarian/filter ini.' : 'Belum ada aktivitas tercatat.',
+                            'ikonKosong' => $adaFilter ? 'bi-search' : 'bi-journal',
+                        ])
+                        @if ($adaFilter)
+                            <p class="text-center small mb-0"><a href="{{ route('admin.log.index') }}">Reset filter</a></p>
+                        @endif
                     </li>
                 @endforelse
             </ul>
 
             @if ($logs->hasPages())
-                <div class="px-3 py-2 border-top">{{ $logs->links('pagination::bootstrap-5') }}</div>
+                <div class="panel-footer px-3 py-2 border-top">{{ $logs->links('pagination::bootstrap-5') }}</div>
             @endif
         </section>
 

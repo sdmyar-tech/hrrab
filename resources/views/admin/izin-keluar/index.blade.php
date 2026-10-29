@@ -1,6 +1,9 @@
 @extends('layouts.admin.app')
 
 @section('content')
+@php
+    $adaFilter = request()->hasAny(['q', 'status', 'tanggal_dari', 'tanggal_sampai']);
+@endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
         <div class="page-heading">
@@ -25,42 +28,40 @@
                     <input type="hidden" name="bidang" value="{{ request('bidang', 'saya') }}">
                 @endif
                 <div class="row g-2 align-items-center">
-                    <div class="col-md-3">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="search" name="q" id="searchInput" class="form-control border-start-0"
-                                placeholder="Cari nama, NIP, kode tiket..." value="{{ request('q') }}" autocomplete="off">
-                        </div>
+                    <div class="col-12 col-md-6 col-xl-4">
+                        @include('partials.daftar-cari', [
+                            'cariTeks' => 'Cari pegawai atau tiket, contoh: Siti',
+                            'cariLabel' => 'Cari izin keluar menurut nama, NIP, atau kode tiket',
+                        ])
                     </div>
-                    <div class="col-md-3">
-                        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <div class="col-12 col-md-6 col-xl-2">
+                        <select name="status" class="form-select form-select-sm" aria-label="Status izin" onchange="this.form.submit()">
                             <option value="">Semua Status</option>
                             <option value="pending" @selected(request('status') == 'pending')>Menunggu</option>
                             <option value="approved" @selected(request('status') == 'approved')>Disetujui</option>
                             <option value="rejected" @selected(request('status') == 'rejected')>Ditolak</option>
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-md-3">
+                    <div class="col-6 col-md-4 col-xl-2">
                         <div class="input-group input-group-sm">
                             <span class="input-group-text">Dari</span>
                             <input type="date" name="tanggal_dari" class="form-control form-control-sm" aria-label="Tanggal dari"
                                 value="{{ request('tanggal_dari') }}" onchange="this.form.submit()">
                         </div>
                     </div>
-                    <div class="col-12 col-sm-6 col-md-3">
+                    <div class="col-6 col-md-4 col-xl-2">
                         <div class="input-group input-group-sm">
                             <span class="input-group-text">s/d</span>
                             <input type="date" name="tanggal_sampai" class="form-control form-control-sm" aria-label="Tanggal sampai"
                                 value="{{ request('tanggal_sampai') }}" onchange="this.form.submit()">
                         </div>
                     </div>
-                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterIzinKeluarForm'])</div>
-                    @if (request()->hasAny(['q', 'status', 'tanggal_dari', 'tanggal_sampai']))
-                        <div class="col-md-1">
-                            <a href="{{ route('admin.izin-keluar.index') }}" class="btn btn-outline-secondary btn-sm" title="Reset filter"><i class="bi bi-x-lg"></i></a>
-                        </div>
-                    @endif
+                    <div class="col-12 col-md-4 col-xl-auto">@include('partials.urut', ['urutForm' => 'filterIzinKeluarForm'])</div>
                 </div>
+                @include('partials.daftar-ringkas', [
+                    'ringkasJumlah' => $izinKeluars->total(), 'ringkasSatuan' => 'izin keluar',
+                    'ringkasFilter' => $adaFilter, 'ringkasReset' => route('admin.izin-keluar.index', $bidangTabs ? ['bidang' => request('bidang', 'saya')] : []),
+                ])
             </form>
 
             <div class="table-responsive">
@@ -68,8 +69,7 @@
                     <thead>
                         <tr>
                             <th>Pegawai</th>
-                            <th>Tanggal</th>
-                            <th>Jam</th>
+                            <th>Waktu</th>
                             <th>Keperluan</th>
                             <th>Status</th>
                             <th class="text-end">Aksi</th>
@@ -79,14 +79,13 @@
                         @forelse ($izinKeluars as $item)
                             <tr>
                                 <td>
-                                    <span class="fw-semibold d-block">{{ $item->dataPegawai?->nama_lengkap ?? '-' }}</span>
-                                    <small class="text-muted">{{ $item->dataPegawai?->nip ?? '-' }}@if ($item->unit_kerja) &middot; {{ $item->unit_kerja }}@endif</small>
+                                    <a href="{{ route('admin.izin-keluar.show', $item) }}" class="nama-tautan d-block">{{ $item->dataPegawai?->nama_lengkap ?? '-' }}</a>
+                                    <small class="text-muted"><span class="angka-utuh">{{ $item->dataPegawai?->nip ?? '-' }}</span>@if ($item->unit_kerja) &middot; {{ $item->unit_kerja }}@endif</small>
                                 </td>
                                 <td>
-                                    {{ $item->tanggal->translatedFormat('d M Y') }}
-                                    <small class="text-muted d-block">{{ $item->tanggal->translatedFormat('l') }}</small>
+                                    <span class="text-nowrap">{{ $item->tanggal->translatedFormat('d M Y') }}</span>
+                                    <small class="text-muted d-block">{{ $item->tanggal->translatedFormat('l') }} &middot; {{ $item->jamLabel() }}</small>
                                 </td>
-                                <td>{{ $item->jamLabel() }}</td>
                                 <td>
                                     {{ $item->keperluanLabel() }}
                                     <small class="text-muted d-block">{{ \Illuminate\Support\Str::limit($item->alasan, 60) }}</small>
@@ -117,15 +116,15 @@
                             </tr>
                         {{-- Rincian untuk penyetuju: tampil sebelum tombol Setujui/Tolak diklik. --}}
                         @if ($item->isPending() && \App\Support\PengajuanWorkflow::canAct(auth()->user(), $item))
-                            @include('admin.pengajuan._ringkasan-baris', ['r' => \App\Support\RingkasanPengajuan::izinKeluar($item), 'kolom' => 6])
+                            @include('admin.pengajuan._ringkasan-baris', ['r' => \App\Support\RingkasanPengajuan::izinKeluar($item), 'kolom' => 5])
                         @endif
                         @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">
-                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                    Belum ada izin keluar.
-                                </td>
-                            </tr>
+                            @include('partials.kosong-tabel', [
+                                'kosongKolom' => 5,
+                                'kosongTeks' => $adaFilter ? 'Tidak ada izin keluar yang cocok dengan pencarian/filter ini.' : 'Belum ada izin keluar.',
+                                'kosongIkon' => $adaFilter ? 'bi-search' : 'bi-door-open',
+                                'kosongReset' => $adaFilter ? route('admin.izin-keluar.index') : null,
+                            ])
                         @endforelse
                     </tbody>
                 </table>
@@ -140,16 +139,6 @@
     </div>
 </main>
 
+{{-- Cari otomatis ditangani global (main.js: data-cari-otomatis). --}}
 @include('admin.izin-keluar._skrip-tolak')
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const searchInput = document.getElementById('searchInput');
-        const filterForm = document.getElementById('filterIzinKeluarForm');
-        let jeda;
-        searchInput?.addEventListener('input', function () {
-            clearTimeout(jeda);
-            jeda = setTimeout(() => filterForm.submit(), 500);
-        });
-    });
-</script>
 @endsection

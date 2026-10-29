@@ -1,6 +1,10 @@
 @extends('layouts.admin.app')
 
 @section('content')
+@php
+    $adaFilter = request()->hasAny(['q', 'status']);
+    $isAdmin = auth()->user()->isAdmin();
+@endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
         <div class="page-heading">
@@ -23,17 +27,16 @@
         </div>
 
         <section class="panel">
-            <form action="{{ route('admin.pengajuan-formasi.index') }}" method="GET" id="filterFormasiForm" class="panel-filter px-3 pt-3 pb-2">
+            <form action="{{ route('admin.pengajuan-formasi.index') }}" method="GET" id="filterFormasiForm" class="panel-filter px-3 pt-3 pb-2" role="search">
                 <div class="row g-2 align-items-center">
-                    <div class="col-md-4">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="search" name="q" id="searchInput" class="form-control border-start-0"
-                                placeholder="Cari jabatan atau unit kerja..." value="{{ request('q') }}" autocomplete="off">
-                        </div>
+                    <div class="col-12 col-md-6 col-xl-4">
+                        @include('partials.daftar-cari', [
+                            'cariTeks' => 'Cari formasi, contoh: Guru SMK',
+                            'cariLabel' => 'Cari pengajuan formasi menurut jabatan atau unit kerja',
+                        ])
                     </div>
-                    <div class="col-md-3">
-                        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <div class="col-12 col-md-3">
+                        <select name="status" class="form-select form-select-sm" aria-label="Status pengajuan" onchange="this.form.submit()">
                             <option value="">Semua Status</option>
                             <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Menunggu</option>
                             <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Disetujui</option>
@@ -41,20 +44,24 @@
                             <option value="dibatalkan" {{ request('status') == 'dibatalkan' ? 'selected' : '' }}>Dibatalkan</option>
                         </select>
                     </div>
-                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterFormasiForm'])</div>
+                    <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterFormasiForm'])</div>
                 </div>
+                @include('partials.daftar-ringkas', [
+                    'ringkasJumlah' => $pengajuanFormasis->total(), 'ringkasSatuan' => 'pengajuan',
+                    'ringkasFilter' => $adaFilter, 'ringkasReset' => route('admin.pengajuan-formasi.index'),
+                ])
             </form>
 
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead>
                         <tr>
+                            <th>Posisi</th>
                             <th>Diajukan Oleh</th>
-                            <th>Unit Kerja</th>
-                            <th>Jabatan</th>
                             <th>Jumlah</th>
                             <th>Status</th>
-                            <th>Lowongan</th>
+                            {{-- Disembunyikan di tablet agar kolom aksi tidak terjepit; tetap ada di desktop & kartu HP. --}}
+                            <th class="d-md-none d-lg-table-cell">Lowongan</th>
                             <th class="text-end">Aksi</th>
                         </tr>
                     </thead>
@@ -62,16 +69,13 @@
                         @forelse ($pengajuanFormasis as $item)
                             <tr>
                                 <td>
-                                    <span class="fw-semibold d-block">{{ $item->diajukanOleh?->name }}</span>
-                                    <small class="text-muted">{{ optional($item->created_at)->translatedFormat('d M Y') }}</small>
-                                </td>
-                                <td>{{ $item->unit_kerja }}</td>
-                                <td>
-                                    {{ $item->jabatan }}
-                                    <button type="button" class="btn btn-link btn-sm p-0 ms-1 btn-detail-formasi" data-detail="detail-formasi-{{ $item->id }}" title="Lihat detail">
-                                        <i class="bi bi-info-circle"></i>
+                                    {{-- Judul baris = posisi yang diminta; detail lengkap lewat tombol info (satu klik). --}}
+                                    <span class="fw-semibold">{{ $item->jabatan }}</span>
+                                    <button type="button" class="btn btn-link btn-sm p-0 ms-1 btn-detail-formasi" data-detail="detail-formasi-{{ $item->id }}"
+                                        title="Lihat detail" aria-label="Lihat detail formasi {{ $item->jabatan }}">
+                                        <i class="bi bi-info-circle" aria-hidden="true"></i>
                                     </button>
-                                    @if ($item->jenis_kebutuhan)<small class="text-muted d-block">{{ $item->jenis_kebutuhan === 'penambahan' ? 'Penambahan' : 'Replacement' }}</small>@endif
+                                    <small class="text-muted d-block">{{ $item->unit_kerja }}@if ($item->jenis_kebutuhan) &middot; {{ $item->jenis_kebutuhan === 'penambahan' ? 'Penambahan' : 'Pengganti' }}@endif</small>
                                     <template id="detail-formasi-{{ $item->id }}">
                                         <dl class="detail-formasi">
                                             @foreach ([
@@ -103,6 +107,10 @@
                                         @endif
                                     </template>
                                 </td>
+                                <td>
+                                    {{ $item->diajukanOleh?->name }}
+                                    <small class="text-muted d-block">{{ optional($item->created_at)->translatedFormat('d M Y') }}</small>
+                                </td>
                                 <td>{{ $item->jumlahLabel() }}</td>
                                 <td>
                                     <span class="badge {{ $item->badgeClass() }}">{{ $item->statusLabel() }}</span>
@@ -127,60 +135,85 @@
                                         <small class="text-muted d-block mt-1">{{ $item->catatan_admin }}</small>
                                     @endif
                                 </td>
-                                <td>
+                                <td class="d-md-none d-lg-table-cell">
                                     @if ($item->lowongan)
                                         <a href="{{ route('admin.lowongan.edit', $item->lowongan) }}">{{ $item->lowongan->statusLabel() }}</a>
                                     @else
-                                        -
+                                        <span class="text-muted">Belum ada</span>
                                     @endif
                                 </td>
                                 <td class="text-end">
-                                    {{-- Tumpukan sama lebar seperti daftar cuti/lembur/izin keluar (.aksi-pengajuan di hrrab.css). --}}
+                                    {{-- Tumpukan sama lebar seperti daftar cuti/lembur/izin keluar (.aksi-pengajuan di hrrab.css).
+                                         Setujui menonjol; Tolak ringan; aksi khusus Admin dikumpulkan di menu Lainnya. --}}
                                     <div class="aksi-pengajuan">
-                                        @if (($item->isPending() || auth()->user()->isAdmin()) && \App\Support\RekrutmenAccess::canReviewFormasi(auth()->user(), $item))
-                                            <form action="{{ route('admin.pengajuan-formasi.approve', $item) }}" method="POST"
-                                                data-confirm="Setujui pengajuan formasi ini?">
+                                        @if (($item->isPending() || $isAdmin) && \App\Support\RekrutmenAccess::canReviewFormasi(auth()->user(), $item))
+                                            <form action="{{ route('admin.pengajuan-formasi.approve', $item) }}" method="POST">
                                                 @csrf
-                                                <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check-lg"></i> Setujui</button>
+                                                <button type="submit" class="btn btn-success btn-sm"
+                                                    data-confirm="true" data-icon="question" data-title="Setujui pengajuan formasi?"
+                                                    data-text="Formasi {{ $item->jabatan }} ({{ $item->unit_kerja }}) akan disetujui pada tahap ini."
+                                                    data-confirm-text="Ya, Setujui" data-confirm-color="#198754" data-cancel-text="Batal">
+                                                    <i class="bi bi-check-lg"></i> Setujui
+                                                </button>
                                             </form>
                                             <form action="{{ route('admin.pengajuan-formasi.reject', $item) }}" method="POST" class="form-reject-formasi">
                                                 @csrf
                                                 <input type="hidden" name="catatan_admin" value="">
                                                 <button type="button" class="btn btn-outline-danger btn-sm btn-reject-formasi"><i class="bi bi-x-lg"></i> Tolak</button>
                                             </form>
-                                            @if (auth()->user()->isAdmin())
-                                                <a href="{{ route('admin.data.edit', ['formasi', $item->id, 'kembali' => request()->fullUrl()]) }}" class="btn btn-outline-warning btn-sm"
-                                                    title="Ubah langsung semua kolom (Admin)"><i class="bi bi-shield-lock"></i> Ubah (Admin)</a>
-                                                <form action="{{ route('admin.pengajuan-formasi.destroy', $item) }}" method="POST"
-                                                    data-confirm="Hapus permanen pengajuan formasi {{ $item->jabatan }}?">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-trash"></i> Hapus</button>
-                                                </form>
+                                            @if ($isAdmin)
+                                                <div class="dropdown">
+                                                    <button class="btn btn-light btn-sm dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                                        aria-label="Aksi lain untuk formasi {{ $item->jabatan }}">Lainnya</button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ route('admin.data.edit', ['formasi', $item->id, 'kembali' => request()->fullUrl()]) }}">
+                                                                <i class="bi bi-shield-lock me-2"></i>Ubah Semua Kolom (Admin)
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <form action="{{ route('admin.pengajuan-formasi.destroy', $item) }}" method="POST">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="dropdown-item text-danger"
+                                                                    data-confirm="true" data-icon="warning" data-title="Hapus pengajuan formasi?"
+                                                                    data-text="Pengajuan formasi {{ $item->jabatan }} akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."
+                                                                    data-confirm-text="Ya, Hapus" data-confirm-color="#dc3545" data-cancel-text="Batal">
+                                                                    <i class="bi bi-trash me-2"></i>Hapus Permanen (Admin)
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                    </ul>
+                                                </div>
                                             @endif
                                         @elseif ($item->diajukan_oleh === auth()->id() && $item->isPending())
-                                            <form action="{{ route('admin.pengajuan-formasi.batalkan', $item) }}" method="POST"
-                                                data-confirm="Batalkan pengajuan formasi ini?">
+                                            <form action="{{ route('admin.pengajuan-formasi.batalkan', $item) }}" method="POST">
                                                 @csrf
-                                                <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i> Batalkan</button>
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                                    data-confirm="true" data-icon="warning" data-title="Batalkan pengajuan formasi?"
+                                                    data-text="Pengajuan formasi {{ $item->jabatan }} akan dibatalkan dan tidak diproses lagi."
+                                                    data-confirm-text="Ya, Batalkan" data-confirm-color="#dc3545" data-cancel-text="Kembali">
+                                                    <i class="bi bi-x-lg"></i> Batalkan
+                                                </button>
                                             </form>
                                         @else
-                                            <span class="aksi-status">{{ $item->isPending() ? 'Menunggu review' : 'Sudah diproses' }}</span>
+                                            {{-- Tidak ada aksi untuk Anda; status & tahap tampil di kolom Status. --}}
+                                            <span class="text-muted small text-center">—</span>
                                         @endif
                                     </div>
                                 </td>
                             </tr>
                         {{-- Rincian untuk penyetuju: tampil sebelum tombol Setujui/Tolak diklik. --}}
                         @if ($item->isPending() && \App\Support\RekrutmenAccess::canReviewFormasi(auth()->user(), $item))
-                            @include('admin.pengajuan._ringkasan-baris', ['r' => \App\Support\RingkasanPengajuan::formasi($item), 'kolom' => 7])
+                            @include('admin.pengajuan._ringkasan-baris', ['r' => \App\Support\RingkasanPengajuan::formasi($item), 'kolom' => 6])
                         @endif
                         @empty
-                            <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
-                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                    Belum ada pengajuan formasi.
-                                </td>
-                            </tr>
+                            @include('partials.kosong-tabel', [
+                                'kosongKolom' => 6,
+                                'kosongTeks' => $adaFilter ? 'Tidak ada pengajuan formasi yang cocok dengan pencarian/filter ini.' : 'Belum ada pengajuan formasi.',
+                                'kosongIkon' => $adaFilter ? 'bi-search' : 'bi-person-plus',
+                                'kosongReset' => $adaFilter ? route('admin.pengajuan-formasi.index') : null,
+                            ])
                         @endforelse
                     </tbody>
                 </table>
@@ -197,26 +230,14 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const searchInput = document.getElementById('searchInput');
-        const filterForm = document.getElementById('filterFormasiForm');
-        let debounceTimer;
-
-        if (searchInput && filterForm) {
-            searchInput.addEventListener('input', function () {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(function () {
-                    filterForm.submit();
-                }, 500);
-            });
-        }
-
+        // Cari otomatis ditangani global (main.js: data-cari-otomatis).
         document.querySelectorAll('.btn-reject-formasi').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 const form = btn.closest('form');
 
                 Swal.fire({
-                    icon: 'question',
-                    title: 'Tolak Pengajuan Formasi?',
+                    icon: 'warning',
+                    title: 'Tolak pengajuan formasi?',
                     input: 'textarea',
                     inputLabel: 'Alasan penolakan',
                     inputPlaceholder: 'Tuliskan alasan penolakan...',

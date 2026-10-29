@@ -39,7 +39,5 @@
         <a href="{{ $url }}" class="btn btn-sm {{ $kelas }}"><i class="bi {{ $ikon }}"></i> {{ $label }}</a>
     @endforeach
     <a href="{{ $detail }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-eye"></i> Detail</a>
-    @unless ($bisaProses)
-        <span class="aksi-status">{{ $item->isPending() ? 'Menunggu: ' . $item->currentLevelLabel() : 'Sudah diproses' }}</span>
-    @endunless
+    {{-- Tahap/keadaan pengajuan sudah tampil di kolom Status; tidak diulang di sini. --}}
 </div>

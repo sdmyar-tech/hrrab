@@ -32,6 +32,12 @@
                 <i class="bi {{ $arsip ? 'bi-arrow-left' : 'bi-archive' }} me-1"></i>{{ $arsip ? 'Kembali ke yang berlaku' : 'Arsip' }}
             </a>
         </div>
+        <div class="mb-3">
+            @include('partials.daftar-ringkas', [
+                'ringkasJumlah' => $pengumumans->total(), 'ringkasSatuan' => $arsip ? 'pengumuman di arsip' : 'pengumuman',
+                'ringkasFilter' => (bool) $kategori, 'ringkasReset' => route('pengumuman.index', ['arsip' => $arsip ?: null]),
+            ])
+        </div>
 
         <div class="row g-3">
             @forelse ($pengumumans as $p)
@@ -46,10 +52,15 @@
                             </div>
                             @if ($bisaKelola && ($p->dibuat_oleh === auth()->id() || auth()->user()->isAdmin() || auth()->user()->isKepalaSdm()))
                                 <div class="d-flex gap-1">
-                                    <a href="{{ route('pengumuman.edit', $p) }}" class="btn btn-light btn-sm" title="Ubah"><i class="bi bi-pencil"></i></a>
-                                    <form action="{{ route('pengumuman.destroy', $p) }}" method="POST" data-confirm="Hapus pengumuman ini?">
+                                    <a href="{{ route('pengumuman.edit', $p) }}" class="btn btn-light btn-sm" title="Ubah" aria-label="Ubah pengumuman {{ $p->judul }}"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                                    <form action="{{ route('pengumuman.destroy', $p) }}" method="POST" class="m-0">
                                         @csrf @method('DELETE')
-                                        <button type="submit" class="btn btn-light btn-sm text-danger" title="Hapus"><i class="bi bi-trash"></i></button>
+                                        <button type="submit" class="btn btn-light btn-sm text-danger" title="Hapus" aria-label="Hapus pengumuman {{ $p->judul }}"
+                                            data-confirm="true" data-icon="warning" data-title="Hapus pengumuman?"
+                                            data-text="Pengumuman &quot;{{ $p->judul }}&quot; akan dihapus beserta data absennya. Tindakan ini tidak bisa dibatalkan."
+                                            data-confirm-text="Ya, Hapus" data-confirm-color="#dc3545" data-cancel-text="Batal">
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                        </button>
                                     </form>
                                 </div>
                             @endif
@@ -83,9 +94,11 @@
                 </div>
             @empty
                 <div class="col-12">
-                    <div class="panel p-5 text-center text-muted">
-                        <i class="bi bi-megaphone fs-1 d-block mb-2"></i>
-                        {{ $arsip ? 'Arsip pengumuman masih kosong.' : 'Belum ada pengumuman.' }}
+                    <div class="panel">
+                        @include('partials.kosong', [
+                            'teks' => $kategori ? 'Belum ada pengumuman di kategori ini.' : ($arsip ? 'Arsip pengumuman masih kosong.' : 'Belum ada pengumuman.'),
+                            'ikonKosong' => 'bi-megaphone',
+                        ])
                     </div>
                 </div>
             @endforelse

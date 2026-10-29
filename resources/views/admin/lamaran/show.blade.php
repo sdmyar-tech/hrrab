@@ -950,8 +950,8 @@
                 const form = btn.form || btn.closest('form');
 
                 Swal.fire({
-                    icon: 'question',
-                    title: 'Tolak Pelamar?',
+                    icon: 'warning',
+                    title: 'Tolak pelamar?',
                     input: 'textarea',
                     inputLabel: 'Alasan penolakan',
                     inputPlaceholder: 'Tuliskan alasan penolakan...',

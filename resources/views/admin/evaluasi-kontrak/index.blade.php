@@ -1,6 +1,10 @@
 @extends('layouts.admin.app')
 
 @section('content')
+@php
+    $adaFilter = request()->filled('q');
+    $jumlahDaftar = method_exists($daftar, 'total') ? $daftar->total() : $daftar->count();
+@endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
         <div class="page-heading">
@@ -18,22 +22,31 @@
         </div>
 
         <section class="panel">
-            <ul class="nav nav-tabs px-3 pt-3" role="tablist">
+            <ul class="nav nav-tabs" role="tablist">
                 @foreach (\App\Http\Controllers\Admin\EvaluasiKontrakController::TAB as $kode => $label)
                     <li class="nav-item">
                         <a class="nav-link {{ $tab === $kode ? 'active' : '' }}" href="{{ route('admin.evaluasi-kontrak.index', ['tab' => $kode, 'q' => request('q')]) }}">
-                            {{ $label }} <span class="badge {{ $kode === 'tugas' && $jumlahTab[$kode] ? 'text-bg-danger' : 'text-bg-light' }} ms-1">{{ $jumlahTab[$kode] }}</span>
+                            {{-- Tugas yang menunggu = kuning (aturan warna status). --}}
+                            {{ $label }} <span class="badge {{ $kode === 'tugas' && $jumlahTab[$kode] ? 'text-bg-warning' : 'text-bg-light' }} ms-1">{{ $jumlahTab[$kode] }}</span>
                         </a>
                     </li>
                 @endforeach
             </ul>
 
-            <form action="{{ route('admin.evaluasi-kontrak.index') }}" method="GET" class="panel-filter px-3 pt-3 pb-2">
+            <form action="{{ route('admin.evaluasi-kontrak.index') }}" method="GET" class="panel-filter px-3 pt-3 pb-2 mt-3" role="search">
                 <input type="hidden" name="tab" value="{{ $tab }}">
-                <div class="input-group input-group-sm" style="max-width: 360px;">
-                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                    <input type="search" name="q" class="form-control border-start-0" placeholder="Cari nama atau unit…" value="{{ request('q') }}">
+                <div class="row g-2">
+                    <div class="col-12 col-md-6 col-xl-4">
+                        @include('partials.daftar-cari', [
+                            'cariTeks' => 'Cari pegawai, contoh: Siti atau SMK',
+                            'cariLabel' => 'Cari evaluasi kontrak menurut nama pegawai atau unit',
+                        ])
+                    </div>
                 </div>
+                @include('partials.daftar-ringkas', [
+                    'ringkasJumlah' => $jumlahDaftar, 'ringkasSatuan' => 'evaluasi',
+                    'ringkasFilter' => $adaFilter, 'ringkasReset' => route('admin.evaluasi-kontrak.index', ['tab' => $tab]),
+                ])
             </form>
 
             <div class="table-responsive">
@@ -53,11 +66,11 @@
                             @php $sisa = $e->sisaHari(); @endphp
                             <tr>
                                 <td>
-                                    <span class="fw-semibold d-block">{{ $e->dataPegawai?->nama_lengkap ?? '-' }}</span>
+                                    <a href="{{ route('admin.evaluasi-kontrak.show', $e) }}" class="nama-tautan d-block">{{ $e->dataPegawai?->nama_lengkap ?? '-' }}</a>
                                     <small class="text-muted">{{ $e->dataPegawai?->kepegawaian?->jabatan }} · {{ $e->unit_kerja }}</small>
                                 </td>
                                 <td>
-                                    {{ $e->tanggal_habis_kontrak->translatedFormat('d M Y') }}
+                                    <span class="text-nowrap">{{ $e->tanggal_habis_kontrak->translatedFormat('d M Y') }}</span>
                                     @if ($e->status !== \App\Models\EvaluasiKontrak::STATUS_SELESAI)
                                         <small class="d-block {{ $sisa < 0 ? 'text-danger fw-semibold' : ($sisa <= 7 ? 'text-warning-emphasis fw-semibold' : 'text-muted') }}">
                                             {{ $sisa < 0 ? 'lewat ' . abs($sisa) . ' hari' : ($sisa === 0 ? 'hari ini' : $sisa . ' hari lagi') }}
@@ -76,19 +89,21 @@
                                 <td>{{ $e->keputusan ? $e->labelKeputusan() : '-' }}@if ($e->labelTtd())<small class="d-block text-muted"><i class="bi bi-pen me-1"></i>TTD {{ $e->labelTtd() }}</small>@endif</td>
                                 <td class="text-end">
                                     @php $tugas = \App\Support\EvaluasiKontrakAlur::tugasUntuk(auth()->user(), $e); @endphp
-                                    <a href="{{ route('admin.evaluasi-kontrak.show', $e) }}" class="btn btn-sm {{ $tugas ? 'btn-primary' : 'btn-outline-secondary' }}">
-                                        <i class="bi {{ $tugas ? 'bi-pencil-square' : 'bi-eye' }} me-1"></i>{{ $tugas ? ($e->status === \App\Models\EvaluasiKontrak::STATUS_MENUNGGU_SDM ? 'Putuskan' : 'Beri nilai') : 'Lihat' }}
+                                    {{-- Ada tugas untuk Anda → tombol utama (menonjol); selain itu cukup Detail (ringan). --}}
+                                    <a href="{{ route('admin.evaluasi-kontrak.show', $e) }}" class="btn btn-sm {{ $tugas ? 'btn-primary' : 'btn-light' }}">
+                                        <i class="bi {{ $tugas ? 'bi-pencil-square' : 'bi-eye' }}" aria-hidden="true"></i>{{ $tugas ? ($e->status === \App\Models\EvaluasiKontrak::STATUS_MENUNGGU_SDM ? 'Putuskan' : 'Beri Nilai') : 'Detail' }}
                                     </a>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">
-                                    <i class="bi bi-clipboard-check fs-3 d-block mb-2"></i>
-                                    {{ $tab === 'tugas' ? 'Tidak ada evaluasi yang menunggu tindakan Anda.' : 'Belum ada evaluasi kontrak di sini.' }}
-                                    <small class="d-block mt-1">Evaluasi dibuat otomatis {{ \App\Models\EvaluasiKontrak::HARI_SEBELUM }} hari sebelum kontrak pegawai habis.</small>
-                                </td>
-                            </tr>
+                            @include('partials.kosong-tabel', [
+                                'kosongKolom' => 6,
+                                'kosongTeks' => $adaFilter ? 'Tidak ada evaluasi yang cocok dengan pencarian ini.'
+                                    : ($tab === 'tugas' ? 'Tidak ada evaluasi yang menunggu tindakan Anda.' : 'Belum ada evaluasi kontrak di sini.')
+                                        . ' Evaluasi dibuat otomatis ' . \App\Models\EvaluasiKontrak::HARI_SEBELUM . ' hari sebelum kontrak pegawai habis.',
+                                'kosongIkon' => $adaFilter ? 'bi-search' : 'bi-clipboard-check',
+                                'kosongReset' => $adaFilter ? route('admin.evaluasi-kontrak.index', ['tab' => $tab]) : null,
+                            ])
                         @endforelse
                     </tbody>
                 </table>

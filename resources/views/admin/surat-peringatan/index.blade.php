@@ -24,8 +24,9 @@
                         <h2 class="h6 fw-bold mb-3"><i class="bi bi-plus-circle"></i>Beri SP</h2>
                         <form action="{{ route('admin.surat-peringatan.store') }}" method="POST" id="formSp" data-confirm="Berikan surat peringatan ini? Pegawai akan menerima notifikasi.">
                             @csrf
-                            <label class="form-label small fw-semibold" for="cari-pegawai">Pegawai</label>
-                            <input type="search" id="cari-pegawai" class="form-control form-control-sm mb-1" placeholder="Cari nama…" data-cari-sp>
+                            {{-- Label untuk pilihan pegawai (wajib); kotak saring di atasnya punya label pembaca layar sendiri. --}}
+                            <label class="form-label small fw-semibold required" for="sp-pegawai">Pegawai</label>
+                            <input type="search" id="cari-pegawai" class="form-control form-control-sm mb-1" placeholder="Saring daftar, contoh: Siti" aria-label="Saring daftar pegawai menurut nama" data-cari-sp>
                             <select name="data_pegawai_id" id="sp-pegawai" class="form-select mb-1" required>
                                 <option value="">-- Pilih pegawai --</option>
                                 @foreach ($pegawai as $p)
@@ -40,10 +41,10 @@
                             <input type="date" name="tanggal" id="sp-tanggal" class="form-control mb-3" value="{{ old('tanggal', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required>
 
                             <label class="form-label small fw-semibold" for="sp-alasan">Alasan / pelanggaran</label>
-                            <input type="text" name="alasan" id="sp-alasan" class="form-control mb-3" maxlength="255" value="{{ old('alasan') }}" placeholder="mis. terlambat 5 kali dalam sebulan" required>
+                            <input type="text" name="alasan" id="sp-alasan" class="form-control mb-3" maxlength="255" value="{{ old('alasan') }}" placeholder="Contoh: terlambat 5 kali dalam sebulan" required>
 
                             <label class="form-label small fw-semibold" for="sp-keterangan">Keterangan <span class="fw-normal text-muted">(opsional)</span></label>
-                            <textarea name="keterangan" id="sp-keterangan" rows="3" class="form-control mb-3" maxlength="2000" placeholder="Kronologi, tindak lanjut yang diharapkan…">{{ old('keterangan') }}</textarea>
+                            <textarea name="keterangan" id="sp-keterangan" rows="3" class="form-control mb-3" maxlength="2000" placeholder="Contoh: terlambat tanggal 3, 7, dan 12; diminta hadir tepat waktu mulai bulan depan.">{{ old('keterangan') }}</textarea>
 
                             <button type="submit" class="btn btn-danger w-100" data-tombol-sp><i class="bi bi-exclamation-octagon me-1"></i>Berikan SP</button>
                         </form>
@@ -53,22 +54,32 @@
 
             <div class="{{ $pegawai->isNotEmpty() ? 'col-lg-8' : 'col-12' }}">
                 <section class="panel">
-                    <form method="GET" action="{{ route('admin.surat-peringatan.index') }}" class="panel-filter d-flex flex-wrap gap-2 align-items-center mb-3">
-                        <div class="input-group input-group-sm" style="max-width: 220px;">
-                            <span class="input-group-text">Bulan</span>
-                            <input type="month" name="bulan" class="form-control" value="{{ $bulan->format('Y-m') }}" onchange="this.form.submit()" aria-label="Bulan">
-                        </div>
-                        <div class="input-group input-group-sm" style="max-width: 260px;">
-                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="search" name="q" class="form-control border-start-0" placeholder="Cari nama…" value="{{ request('q') }}">
+                    <form method="GET" action="{{ route('admin.surat-peringatan.index') }}" class="panel-filter mb-2" role="search">
+                        <div class="row g-2">
+                            <div class="col-12 col-sm-5">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">Bulan</span>
+                                    <input type="month" name="bulan" class="form-control" value="{{ $bulan->format('Y-m') }}" onchange="this.form.submit()" aria-label="Bulan">
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-7">
+                                @include('partials.daftar-cari', [
+                                    'cariTeks' => 'Cari pegawai, contoh: Siti',
+                                    'cariLabel' => 'Cari surat peringatan menurut nama pegawai',
+                                ])
+                            </div>
                         </div>
                     </form>
 
-                    <div class="sp-ringkas mb-3">
-                        <span><b>{{ $daftar->count() }}</b> SP pada {{ $bulan->translatedFormat('F Y') }}</span>
+                    {{-- Ringkasan bulan: jumlah per tingkat + reset pencarian. --}}
+                    <div class="sp-ringkas mb-3" aria-live="polite">
+                        <span class="text-muted"><b class="text-body">{{ $daftar->count() }}</b> SP pada {{ $bulan->translatedFormat('F Y') }}@if (request('q')) untuk "<b class="text-body">{{ request('q') }}</b>"@endif</span>
                         @foreach ([1, 2, 3] as $t)
                             <span class="badge {{ (new \App\Models\SuratPeringatan(['tingkat' => $t]))->badgeClass() }}">SP{{ $t }}: {{ $daftar->where('tingkat', $t)->count() }}</span>
                         @endforeach
+                        @if (request()->filled('q'))
+                            <a href="{{ route('admin.surat-peringatan.index', ['bulan' => $bulan->format('Y-m')]) }}" class="btn btn-link btn-sm"><i class="bi bi-x-circle" aria-hidden="true"></i>Reset filter</a>
+                        @endif
                     </div>
 
                     <div class="table-responsive">
@@ -96,21 +107,29 @@
                                         <td><small>{{ $sp->pemberi?->name ?? '-' }}</small></td>
                                         <td class="text-end">
                                             @if (\App\Support\SuratPeringatanAkses::bisaHapus(auth()->user(), $sp))
-                                                <form action="{{ route('admin.surat-peringatan.destroy', $sp) }}" method="POST" class="d-inline" data-confirm="Hapus {{ $sp->label() }} {{ $sp->dataPegawai?->nama_lengkap }}?">
+                                                <form action="{{ route('admin.surat-peringatan.destroy', $sp) }}" method="POST" class="d-inline">
                                                     @csrf @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Hapus"><i class="bi bi-trash"></i></button>
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Hapus" aria-label="Hapus {{ $sp->label() }} {{ $sp->dataPegawai?->nama_lengkap }}"
+                                                        data-confirm="true" data-icon="warning" data-title="Hapus {{ $sp->label() }}?"
+                                                        data-text="{{ $sp->label() }} untuk {{ $sp->dataPegawai?->nama_lengkap }} akan dihapus. Tindakan ini tidak bisa dibatalkan."
+                                                        data-confirm-text="Ya, Hapus" data-confirm-color="#dc3545" data-cancel-text="Batal">
+                                                        <i class="bi bi-trash" aria-hidden="true"></i>
+                                                    </button>
                                                 </form>
                                             @else
-                                                <span class="text-muted small">-</span>
+                                                <span class="text-muted small">—</span>
                                             @endif
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center py-4 text-muted">
-                                            <i class="bi bi-check-circle fs-3 d-block mb-2"></i>Tidak ada surat peringatan pada {{ $bulan->translatedFormat('F Y') }}.
-                                        </td>
-                                    </tr>
+                                    @include('partials.kosong-tabel', [
+                                        'kosongKolom' => 6,
+                                        'kosongTeks' => request()->filled('q')
+                                            ? 'Tidak ada surat peringatan yang cocok dengan pencarian ini.'
+                                            : 'Tidak ada surat peringatan pada ' . $bulan->translatedFormat('F Y') . '.',
+                                        'kosongIkon' => request()->filled('q') ? 'bi-search' : 'bi-check-circle',
+                                        'kosongReset' => request()->filled('q') ? route('admin.surat-peringatan.index', ['bulan' => $bulan->format('Y-m')]) : null,
+                                    ])
                                 @endforelse
                             </tbody>
                         </table>

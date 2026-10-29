@@ -236,7 +236,7 @@
     // Umpan balik saat filter daftar dikirim (cari, pilihan, urutan): daftar meredup & ikon cari berputar
     // sampai halaman baru tampil. Pilihan memanggil form.submit() (tanpa event submit) → ditangkap lewat "change".
     function initFilterMemuat() {
-      var forms = document.querySelectorAll("form.panel-filter");
+      var forms = document.querySelectorAll("form.panel-filter, form[data-filter-daftar]");
 
       function tandai(form) {
         var panel = form.closest(".panel");
@@ -276,7 +276,7 @@
           panel.classList.remove("memuat");
           panel.removeAttribute("aria-busy");
         });
-        Array.prototype.forEach.call(document.querySelectorAll("form.panel-filter .input-group-text .spinner-border"), function (ikon) {
+        Array.prototype.forEach.call(document.querySelectorAll("form.panel-filter .input-group-text .spinner-border, form[data-filter-daftar] .input-group-text .spinner-border"), function (ikon) {
           ikon.className = "bi bi-search";
           ikon.removeAttribute("role");
           ikon.removeAttribute("aria-label");

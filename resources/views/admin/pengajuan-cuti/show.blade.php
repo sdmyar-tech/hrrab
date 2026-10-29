@@ -128,8 +128,8 @@
                 const form = btn.closest('form');
 
                 Swal.fire({
-                    icon: 'question',
-                    title: 'Tolak Pengajuan Cuti?',
+                    icon: 'warning',
+                    title: 'Tolak pengajuan cuti?',
                     input: 'textarea',
                     inputLabel: 'Alasan penolakan',
                     inputPlaceholder: 'Tuliskan alasan penolakan...',

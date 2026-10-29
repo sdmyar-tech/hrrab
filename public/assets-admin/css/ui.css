@@ -461,7 +461,7 @@ html[data-theme="dark"] .dashboard-content .table tbody td .btn-outline-danger {
 span.btn-ikon { display: inline-block; height: 1px; }
 
 /* Sedang memuat (filter/cari dikirim): daftar meredup & tak bisa diklik, ikon cari berputar. */
-.dashboard-content .panel.memuat :is(.table-responsive, .list-group, .panel-footer) { opacity: .5; pointer-events: none; transition: opacity .15s ease; }
+.dashboard-content .panel.memuat :is(.table-responsive, .list-group, .panel-footer, [data-isi-daftar]) { opacity: .5; pointer-events: none; transition: opacity .15s ease; }
 
 /* Banner galat/peringatan di atas isi halaman (pengganti dialog): pesan + tombol Coba lagi. */
 .banner-umpan { display: flex; align-items: flex-start; gap: .75rem; margin-bottom: 1rem; }

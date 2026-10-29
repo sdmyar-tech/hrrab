@@ -79,8 +79,8 @@
                 const form = btn.closest('form');
 
                 Swal.fire({
-                    icon: 'question',
-                    title: 'Tolak Pengajuan Lembur?',
+                    icon: 'warning',
+                    title: 'Tolak pengajuan lembur?',
                     input: 'textarea',
                     inputLabel: 'Alasan penolakan',
                     inputPlaceholder: 'Tuliskan alasan penolakan...',
