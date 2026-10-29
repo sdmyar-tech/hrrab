@@ -2,7 +2,7 @@
 
 @section('content')
 @php
-    $adaFilter = request()->hasAny(['q', 'jenis', 'status']);
+    $adaFilter = request()->hasAny(['q', 'jenis', 'status', 'tanggal_dari', 'tanggal_sampai']);
     $isAdmin = auth()->user()->isAdmin();
 @endphp
 <main class="dashboard-content">
@@ -74,6 +74,7 @@
                             <option value="selesai" @selected(request('status') === 'selesai')>Selesai</option>
                         </select>
                     </div>
+                    <div class="col-12 col-md-6 col-xl-4">@include('partials.filter-tanggal', ['tanggalLabel' => 'Mulai'])</div>
                     <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterPenugasanForm'])</div>
                 </div>
                 @include('partials.daftar-ringkas', [

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pengumuman;
 use App\Models\User;
 use App\Notifications\Pemberitahuan;
+use App\Support\FilterTanggal;
 use App\Support\KelengkapanData;
 use App\Support\Notifikasi;
 use App\Support\TugasNotifikasi;
@@ -37,6 +38,8 @@ class NotifikasiController extends Controller
         $belum = $request->query('tab') === 'belum';
 
         $query = $belum ? $user->unreadNotifications() : $user->notifications();
+        // Rentang tanggal notifikasi diterima.
+        FilterTanggal::terapkan($query, 'notifications.created_at', $request);
         $urut = Urutan::terapkan($query, [
             ...Urutan::tanggal('waktu', 'Waktu', 'notifications.created_at'),
             ...Urutan::abjad('judul', 'Judul', "json_unquote(json_extract(notifications.data, '$.judul'))"),

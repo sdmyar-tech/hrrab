@@ -7,6 +7,7 @@ use App\Models\PengumumanPeserta;
 use App\Models\User;
 use App\Support\AbsenAcara;
 use App\Support\ExcelExporter;
+use App\Support\FilterTanggal;
 use App\Support\Urutan;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -35,6 +36,8 @@ class PengumumanController extends Controller
             ->when(! $arsip, fn ($q) => $q->berlaku())
             ->when($arsip, fn ($q) => $q->whereNotNull('tampil_sampai')->whereDate('tampil_sampai', '<', now()))
             ->when($kategori, fn ($q) => $q->where('kategori', $kategori))
+            // Rentang tanggal diterbitkan.
+            ->when(FilterTanggal::aktif($request), fn ($q) => FilterTanggal::terapkan($q, 'pengumumans.created_at', $request))
             ->withExists(['pembaca as sudah_dibaca' => fn ($q) => $q->where('users.id', $user->id)])
             // Baris absen milik pengguna ini (untuk tombol 'Absen Sekarang') + rekap untuk pengelola.
             ->with(['peserta' => fn ($q) => $q->where('user_id', $user->id)])
@@ -71,6 +74,7 @@ class PengumumanController extends Controller
         $rows = Pengumuman::with('pembuat')->withCount(['pembaca', 'peserta as peserta_total',
             'peserta as peserta_sudah' => fn ($q) => $q->whereIn('status', [PengumumanPeserta::STATUS_HADIR, PengumumanPeserta::STATUS_MANUAL])])->untuk($user)
             ->when($kategori, fn ($q) => $q->where('kategori', $kategori))
+            ->when(FilterTanggal::aktif($request), fn ($q) => FilterTanggal::terapkan($q, 'pengumumans.created_at', $request))
             ->orderBy('id')->get()
             ->map(fn (Pengumuman $p) => [
                 optional($p->created_at)->format('d-m-Y H:i'),

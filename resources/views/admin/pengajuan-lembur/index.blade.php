@@ -42,20 +42,7 @@
                             <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Ditolak</option>
                         </select>
                     </div>
-                    <div class="col-6 col-md-4 col-xl-2">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text">Dari</span>
-                            <input type="date" name="tanggal_dari" class="form-control form-control-sm" aria-label="Tanggal dari"
-                                value="{{ request('tanggal_dari') }}" title="Tanggal dari" onchange="this.form.submit()">
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-4 col-xl-2">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text">s/d</span>
-                            <input type="date" name="tanggal_sampai" class="form-control form-control-sm" aria-label="Tanggal sampai"
-                                value="{{ request('tanggal_sampai') }}" title="Tanggal sampai" onchange="this.form.submit()">
-                        </div>
-                    </div>
+                    <div class="col-12 col-md-8 col-xl-4">@include('partials.filter-tanggal', ['tanggalLabel' => 'Tanggal'])</div>
                     <div class="col-12 col-md-4 col-xl-auto">@include('partials.urut', ['urutForm' => 'filterLemburForm'])</div>
                 </div>
                 @include('partials.daftar-ringkas', [

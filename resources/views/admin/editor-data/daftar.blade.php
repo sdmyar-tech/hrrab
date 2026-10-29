@@ -26,10 +26,14 @@
                     <div class="col-12 col-md-6 col-xl-4">
                         @include('partials.daftar-cari', ['cariTeks' => 'Cari data, contoh: Siti atau 125', 'cariLabel' => 'Cari data menurut nama, kata kunci, atau ID'])
                     </div>
+                    {{-- Rentang tanggal dibuat — hanya untuk jenis data yang mencatat waktu dibuat. --}}
+                    @if (\App\Support\EditorData::model($k)->usesTimestamps())
+                        <div class="col-12 col-md-6 col-xl-4">@include('partials.filter-tanggal', ['tanggalLabel' => 'Dibuat'])</div>
+                    @endif
                 </div>
                 @include('partials.daftar-ringkas', [
                     'ringkasJumlah' => $baris->total(), 'ringkasSatuan' => 'data',
-                    'ringkasFilter' => request()->filled('q'), 'ringkasReset' => route('admin.data.daftar', $entitas),
+                    'ringkasFilter' => request()->filled('q') || \App\Support\FilterTanggal::aktif(request()), 'ringkasReset' => route('admin.data.daftar', $entitas),
                 ])
             </form>
 
@@ -67,9 +71,9 @@
                         @empty
                             @include('partials.kosong-tabel', [
                                 'kosongKolom' => count($k['kolom']) + 3,
-                                'kosongTeks' => request()->filled('q') ? 'Tidak ada data yang cocok dengan pencarian ini.' : 'Belum ada data.',
-                                'kosongIkon' => request()->filled('q') ? 'bi-search' : 'bi-database',
-                                'kosongReset' => request()->filled('q') ? route('admin.data.daftar', $entitas) : null,
+                                'kosongTeks' => request()->hasAny(['q', 'tanggal_dari', 'tanggal_sampai']) ? 'Tidak ada data yang cocok dengan pencarian/filter ini.' : 'Belum ada data.',
+                                'kosongIkon' => request()->hasAny(['q', 'tanggal_dari', 'tanggal_sampai']) ? 'bi-search' : 'bi-database',
+                                'kosongReset' => request()->hasAny(['q', 'tanggal_dari', 'tanggal_sampai']) ? route('admin.data.daftar', $entitas) : null,
                             ])
                         @endforelse
                     </tbody>

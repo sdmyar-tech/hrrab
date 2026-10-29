@@ -2,7 +2,7 @@
 
 @section('content')
 @php
-    $adaFilter = request()->hasAny(['q', 'status']);
+    $adaFilter = request()->hasAny(['q', 'status', 'tanggal_dari', 'tanggal_sampai']);
     $isAdmin = auth()->user()->isAdmin();
 @endphp
 <main class="dashboard-content">
@@ -41,6 +41,7 @@
                             <option value="ditutup" {{ request('status') == 'ditutup' ? 'selected' : '' }}>Ditutup</option>
                         </select>
                     </div>
+                    <div class="col-12 col-md-6 col-xl-4">@include('partials.filter-tanggal', ['tanggalLabel' => 'Tutup'])</div>
                     <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterLowonganForm'])</div>
                 </div>
                 @include('partials.daftar-ringkas', [

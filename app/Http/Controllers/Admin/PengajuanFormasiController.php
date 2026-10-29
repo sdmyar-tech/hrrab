@@ -8,6 +8,7 @@ use App\Models\Lowongan;
 use App\Models\PengajuanFormasi;
 use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\FilterTanggal;
 use App\Support\Notifikasi;
 use App\Support\RekrutmenAccess;
 use App\Support\Urutan;
@@ -99,6 +100,9 @@ class PengajuanFormasiController extends Controller
         if ($request->filled('status')) {
             $query->where('status', $request->string('status'));
         }
+
+        // Rentang tanggal diajukan.
+        FilterTanggal::terapkan($query, 'pengajuan_formasis.created_at', $request);
 
         return $query;
     }

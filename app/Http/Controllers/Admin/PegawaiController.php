@@ -10,6 +10,7 @@ use App\Models\Jabatan;
 use App\Models\User;
 use App\Support\EksporPegawai;
 use App\Support\ExcelExporter;
+use App\Support\FilterTanggal;
 use App\Support\KelompokPegawai;
 use App\Support\PegawaiKeluar;
 use App\Support\PengajuanWorkflow;
@@ -143,6 +144,11 @@ class PegawaiController extends Controller
             $query->whereHas('kepegawaian', function ($q) use ($status) {
                 $q->where('status_rekrutmen', $status);
             });
+        }
+
+        // Rentang tanggal masuk (kepegawaian.tanggal_masuk).
+        if (FilterTanggal::aktif($request)) {
+            $query->whereHas('kepegawaian', fn ($q) => FilterTanggal::terapkan($q, 'tanggal_masuk', $request));
         }
 
         // Filter dari grafik dashboard (status kerja, jenis kelamin, masa kerja, usia, pendidikan, area, bulan masuk/keluar, kontrak).

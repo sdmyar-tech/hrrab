@@ -7,6 +7,7 @@ use App\Models\Jabatan;
 use App\Models\Lowongan;
 use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\FilterTanggal;
 use App\Support\RekrutmenAccess;
 use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
@@ -79,6 +80,9 @@ class LowonganController extends Controller
         if ($request->filled('status')) {
             $query->where('status', $request->string('status'));
         }
+
+        // Rentang tanggal tutup lowongan.
+        FilterTanggal::terapkan($query, 'tanggal_tutup', $request);
 
         return $query;
     }

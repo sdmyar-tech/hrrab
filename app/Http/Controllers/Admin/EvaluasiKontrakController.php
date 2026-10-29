@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\Absensi\PenilaianAbsensi;
 use App\Support\EvaluasiKontrakAlur;
 use App\Support\ExcelExporter;
+use App\Support\FilterTanggal;
 use App\Support\Notifikasi;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -101,6 +102,8 @@ class EvaluasiKontrakController extends Controller
 
         $daftar = $kelompok[$tab]
             ->filter(fn ($e) => $kata === '' || str_contains(mb_strtolower(($e->dataPegawai?->nama_lengkap ?? '') . ' ' . $e->unit_kerja), $kata))
+            // Rentang tanggal habis kontrak.
+            ->filter(fn ($e) => FilterTanggal::cocok($e->tanggal_habis_kontrak, $request))
             // Yang berjalan: paling dekat habis dulu; yang selesai: terbaru dulu.
             ->sortBy(fn ($e) => $tab === 'selesai' ? -$e->diputuskan_pada?->timestamp : $e->tanggal_habis_kontrak->timestamp)
             ->values();

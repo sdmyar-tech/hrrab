@@ -2,7 +2,7 @@
 
 @section('content')
 @php
-    $adaFilter = request()->hasAny(['q', 'role']);
+    $adaFilter = request()->hasAny(['q', 'role', 'tanggal_dari', 'tanggal_sampai']);
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
@@ -45,6 +45,7 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="col-12 col-md-6 col-xl-4">@include('partials.filter-tanggal', ['tanggalLabel' => 'Dibuat'])</div>
                     <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterUserForm'])</div>
                 </div>
                 @include('partials.daftar-ringkas', [

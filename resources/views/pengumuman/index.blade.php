@@ -21,21 +21,25 @@
         </div>
 
         <div class="d-flex flex-wrap gap-2 mb-3">
-            <a href="{{ route('pengumuman.index', ['arsip' => $arsip ?: null, 'urut' => request('urut')]) }}" class="btn btn-sm {{ ! $kategori ? 'btn-primary' : 'btn-outline-secondary' }}">Semua</a>
+            <a href="{{ route('pengumuman.index', ['arsip' => $arsip ?: null, 'urut' => request('urut'), 'tanggal_dari' => request('tanggal_dari'), 'tanggal_sampai' => request('tanggal_sampai')]) }}" class="btn btn-sm {{ ! $kategori ? 'btn-primary' : 'btn-outline-secondary' }}">Semua</a>
             @foreach (\App\Models\Pengumuman::KATEGORI as $key => $k)
-                <a href="{{ route('pengumuman.index', ['kategori' => $key, 'arsip' => $arsip ?: null, 'urut' => request('urut')]) }}" class="btn btn-sm {{ $kategori === $key ? 'btn-primary' : 'btn-outline-secondary' }}">
+                <a href="{{ route('pengumuman.index', ['kategori' => $key, 'arsip' => $arsip ?: null, 'urut' => request('urut'), 'tanggal_dari' => request('tanggal_dari'), 'tanggal_sampai' => request('tanggal_sampai')]) }}" class="btn btn-sm {{ $kategori === $key ? 'btn-primary' : 'btn-outline-secondary' }}">
                     <i class="bi {{ $k['ikon'] }} me-1"></i>{{ $k['label'] }}
                 </a>
             @endforeach
             <div class="ms-auto">@include('partials.urut')</div>
-            <a href="{{ route('pengumuman.index', ['kategori' => $kategori, 'arsip' => $arsip ? null : 1, 'urut' => request('urut')]) }}" class="btn btn-sm btn-outline-secondary">
+            <a href="{{ route('pengumuman.index', ['kategori' => $kategori, 'arsip' => $arsip ? null : 1, 'urut' => request('urut'), 'tanggal_dari' => request('tanggal_dari'), 'tanggal_sampai' => request('tanggal_sampai')]) }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi {{ $arsip ? 'bi-arrow-left' : 'bi-archive' }} me-1"></i>{{ $arsip ? 'Kembali ke yang berlaku' : 'Arsip' }}
             </a>
         </div>
         <div class="mb-3">
+            <form method="GET" action="{{ route('pengumuman.index') }}" class="mb-1" style="max-width: 440px;" role="search">
+                @foreach (request()->only(['kategori', 'arsip', 'urut']) as $kunci => $nilai)<input type="hidden" name="{{ $kunci }}" value="{{ $nilai }}">@endforeach
+                @include('partials.filter-tanggal', ['tanggalLabel' => 'Diterbitkan'])
+            </form>
             @include('partials.daftar-ringkas', [
                 'ringkasJumlah' => $pengumumans->total(), 'ringkasSatuan' => $arsip ? 'pengumuman di arsip' : 'pengumuman',
-                'ringkasFilter' => (bool) $kategori, 'ringkasReset' => route('pengumuman.index', ['arsip' => $arsip ?: null]),
+                'ringkasFilter' => $kategori || \App\Support\FilterTanggal::aktif(request()), 'ringkasReset' => route('pengumuman.index', ['arsip' => $arsip ?: null]),
             ])
         </div>
 

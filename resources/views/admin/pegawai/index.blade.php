@@ -3,7 +3,7 @@
 @section('content')
     @php
         // Ada saringan aktif (pencarian, dropdown, atau klik grafik dashboard) → tampilkan tombol reset & teks "ditemukan".
-        $adaFilter = request()->hasAny(['q', 'unit_kerja', 'status_rekrutmen']) || $saringanDashboard;
+        $adaFilter = request()->hasAny(['q', 'unit_kerja', 'status_rekrutmen', 'tanggal_dari', 'tanggal_sampai']) || $saringanDashboard;
     @endphp
     <main class="dashboard-content">
         <div class="container-fluid px-3 px-lg-4 py-4">
@@ -47,7 +47,8 @@
                                 <option value="Tidak Aktif" {{ request('status_rekrutmen') == 'Tidak Aktif' ? 'selected' : '' }}>Tidak Aktif</option>
                             </select>
                         </div>
-                        <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterPegawaiForm'])</div>
+                        <div class="col-12 col-md-6 col-xl-4">@include('partials.filter-tanggal', ['tanggalLabel' => 'Tgl masuk'])</div>
+                    <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterPegawaiForm'])</div>
                     </div>
 
                     {{-- Filter yang datang dari klik grafik dashboard: tetap terbawa saat mencari, bisa dilepas satu per satu. --}}

@@ -7,6 +7,7 @@ use App\Models\DataPegawai;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\FilterTanggal;
 use App\Support\PenugasanService;
 use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
@@ -82,6 +83,9 @@ class UserController extends Controller
                 ? $query->where('role_id', (int) substr($role, 7))
                 : $query->where('role', $role)->whereNull('role_id');
         }
+
+        // Rentang tanggal akun dibuat.
+        FilterTanggal::terapkan($query, 'users.created_at', $request);
 
         return $query;
     }

@@ -27,16 +27,20 @@
 
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <ul class="nav nav-pills">
-            <li class="nav-item"><a class="nav-link {{ $belum ? '' : 'active' }}" href="{{ route('notifikasi.index', ['urut' => request('urut')]) }}">Semua</a></li>
-            <li class="nav-item"><a class="nav-link {{ $belum ? 'active' : '' }}" href="{{ route('notifikasi.index', ['tab' => 'belum', 'urut' => request('urut')]) }}">Belum dibaca
+            <li class="nav-item"><a class="nav-link {{ $belum ? '' : 'active' }}" href="{{ route('notifikasi.index', ['urut' => request('urut'), 'tanggal_dari' => request('tanggal_dari'), 'tanggal_sampai' => request('tanggal_sampai')]) }}">Semua</a></li>
+            <li class="nav-item"><a class="nav-link {{ $belum ? 'active' : '' }}" href="{{ route('notifikasi.index', ['tab' => 'belum', 'urut' => request('urut'), 'tanggal_dari' => request('tanggal_dari'), 'tanggal_sampai' => request('tanggal_sampai')]) }}">Belum dibaca
                 @if ($jumlahBelum)<span class="badge text-bg-primary ms-1">{{ $jumlahBelum }}</span>@endif</a></li>
         </ul>
         @include('partials.urut')
         </div>
         <div class="mb-2">
+            <form method="GET" action="{{ route('notifikasi.index') }}" class="mb-1" style="max-width: 440px;" role="search">
+                @foreach (request()->only(['tab', 'urut']) as $kunci => $nilai)<input type="hidden" name="{{ $kunci }}" value="{{ $nilai }}">@endforeach
+                @include('partials.filter-tanggal', ['tanggalLabel' => 'Diterima'])
+            </form>
             @include('partials.daftar-ringkas', [
                 'ringkasJumlah' => $notifikasi->total(), 'ringkasSatuan' => $belum ? 'notifikasi belum dibaca' : 'notifikasi',
-                'ringkasFilter' => false, 'ringkasReset' => route('notifikasi.index'),
+                'ringkasFilter' => \App\Support\FilterTanggal::aktif(request()), 'ringkasReset' => route('notifikasi.index', $belum ? ['tab' => 'belum'] : []),
             ])
         </div>
 

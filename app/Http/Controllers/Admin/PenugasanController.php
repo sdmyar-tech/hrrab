@@ -8,6 +8,7 @@ use App\Models\PengajuanCuti;
 use App\Models\PengajuanLembur;
 use App\Models\Penugasan;
 use App\Support\ExcelExporter;
+use App\Support\FilterTanggal;
 use App\Support\Notifikasi;
 use App\Support\PenugasanService;
 use App\Support\Urutan;
@@ -88,6 +89,9 @@ class PenugasanController extends Controller
             $query->where(fn ($q) => $q->where('unit_kerja', 'like', "%{$search}%")
                 ->orWhereHas('dataPegawai', fn ($p) => $p->where('nama_lengkap', 'like', "%{$search}%")->orWhere('nip', 'like', "%{$search}%")));
         }
+
+        // Rentang tanggal mulai berlaku.
+        FilterTanggal::terapkan($query, 'tanggal_mulai', $request);
 
         return $query;
     }

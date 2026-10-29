@@ -8,6 +8,8 @@ use App\Models\PengajuanIzinKeluar;
 use App\Models\User;
 use App\Support\EksporPegawai;
 use App\Support\ExcelExporter;
+use App\Support\FilterTanggal;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -111,9 +113,10 @@ class EksporController extends Controller
         ], $rows, 'Riwayat Izin Keluar');
     }
 
-    public function notifikasi(): BinaryFileResponse
+    public function notifikasi(Request $request): BinaryFileResponse
     {
-        $rows = $this->user()->notifications()->reorder()->orderBy('created_at')->get()->map(fn ($n) => [
+        // Ikut rentang tanggal yang sedang disaring di halaman Notifikasi.
+        $rows = FilterTanggal::terapkan($this->user()->notifications(), 'notifications.created_at', $request)->reorder()->orderBy('created_at')->get()->map(fn ($n) => [
             $n->created_at->format('d-m-Y H:i'),
             $n->data['judul'] ?? '',
             $n->data['pesan'] ?? '',

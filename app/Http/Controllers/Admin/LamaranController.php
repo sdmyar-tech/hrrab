@@ -13,6 +13,7 @@ use App\Models\Penugasan;
 use App\Models\ScreeningOnboarding;
 use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\FilterTanggal;
 use App\Support\InterviewFlow;
 use App\Support\Kalender;
 use App\Support\Notifikasi;
@@ -146,6 +147,9 @@ class LamaranController extends Controller
         if ($request->filled('lowongan_id')) {
             $query->where('lowongan_id', $request->integer('lowongan_id'));
         }
+
+        // Rentang tanggal lamaran masuk.
+        FilterTanggal::terapkan($query, 'lamarans.created_at', $request);
 
         return $query;
     }

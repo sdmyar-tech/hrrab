@@ -7,6 +7,7 @@ use App\Models\DataPegawai;
 use App\Models\PengajuanCuti;
 use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\FilterTanggal;
 use App\Support\Notifikasi;
 use App\Support\PengajuanWorkflow;
 use App\Support\Urutan;
@@ -102,13 +103,8 @@ class PengajuanCutiController extends Controller
             $query->where('jenis_cuti', $request->string('jenis_cuti'));
         }
 
-        if ($request->filled('tanggal_dari')) {
-            $query->whereDate('tanggal_mulai', '>=', $request->date('tanggal_dari'));
-        }
-
-        if ($request->filled('tanggal_sampai')) {
-            $query->whereDate('tanggal_mulai', '<=', $request->date('tanggal_sampai'));
-        }
+        // Rentang tanggal (urutan terbalik ditukar, tanggal tidak sah diabaikan).
+        FilterTanggal::terapkan($query, 'tanggal_mulai', $request);
 
         // Dari kartu dashboard "Cuti Hari Ini": cuti disetujui yang sedang berlangsung.
         if ($request->boolean('berlangsung')) {

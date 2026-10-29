@@ -2,7 +2,7 @@
 
 @section('content')
 @php
-    $adaFilter = request()->filled('q');
+    $adaFilter = request()->filled('q') || \App\Support\FilterTanggal::aktif(request());
     $jumlahDaftar = method_exists($daftar, 'total') ? $daftar->total() : $daftar->count();
 @endphp
 <main class="dashboard-content">
@@ -25,7 +25,7 @@
             <ul class="nav nav-tabs" role="tablist">
                 @foreach (\App\Http\Controllers\Admin\EvaluasiKontrakController::TAB as $kode => $label)
                     <li class="nav-item">
-                        <a class="nav-link {{ $tab === $kode ? 'active' : '' }}" href="{{ route('admin.evaluasi-kontrak.index', ['tab' => $kode, 'q' => request('q')]) }}">
+                        <a class="nav-link {{ $tab === $kode ? 'active' : '' }}" href="{{ route('admin.evaluasi-kontrak.index', ['tab' => $kode] + request()->only(['q', 'tanggal_dari', 'tanggal_sampai'])) }}">
                             {{-- Tugas yang menunggu = kuning (aturan warna status). --}}
                             {{ $label }} <span class="badge {{ $kode === 'tugas' && $jumlahTab[$kode] ? 'text-bg-warning' : 'text-bg-light' }} ms-1">{{ $jumlahTab[$kode] }}</span>
                         </a>
@@ -42,6 +42,7 @@
                             'cariLabel' => 'Cari evaluasi kontrak menurut nama pegawai atau unit',
                         ])
                     </div>
+                    <div class="col-12 col-md-6 col-xl-4">@include('partials.filter-tanggal', ['tanggalLabel' => 'Habis kontrak'])</div>
                 </div>
                 @include('partials.daftar-ringkas', [
                     'ringkasJumlah' => $jumlahDaftar, 'ringkasSatuan' => 'evaluasi',

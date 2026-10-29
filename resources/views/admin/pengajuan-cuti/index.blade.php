@@ -49,20 +49,7 @@
                             <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Ditolak</option>
                         </select>
                     </div>
-                    <div class="col-6 col-md-4 col-xl-2">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text">Dari</span>
-                            <input type="date" name="tanggal_dari" class="form-control form-control-sm" aria-label="Tanggal mulai dari"
-                                value="{{ request('tanggal_dari') }}" title="Tanggal mulai dari" onchange="this.form.submit()">
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-4 col-xl-2">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text">s/d</span>
-                            <input type="date" name="tanggal_sampai" class="form-control form-control-sm" aria-label="Tanggal mulai sampai"
-                                value="{{ request('tanggal_sampai') }}" title="Tanggal mulai sampai" onchange="this.form.submit()">
-                        </div>
-                    </div>
+                    <div class="col-12 col-md-8 col-xl-4">@include('partials.filter-tanggal', ['tanggalLabel' => 'Tgl mulai'])</div>
                     <div class="col-12 col-md-4 col-xl-auto">@include('partials.urut', ['urutForm' => 'filterCutiForm'])</div>
                 </div>
                 @include('partials.daftar-ringkas', [

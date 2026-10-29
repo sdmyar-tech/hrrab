@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PengajuanIzinKeluar;
 use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\FilterTanggal;
 use App\Support\Notifikasi;
 use App\Support\PengajuanWorkflow;
 use App\Support\Urutan;
@@ -81,12 +82,8 @@ class IzinKeluarController extends Controller
         if ($request->filled('status')) {
             $query->where('status', $request->string('status'));
         }
-        if ($request->filled('tanggal_dari')) {
-            $query->whereDate('tanggal', '>=', $request->date('tanggal_dari'));
-        }
-        if ($request->filled('tanggal_sampai')) {
-            $query->whereDate('tanggal', '<=', $request->date('tanggal_sampai'));
-        }
+        // Rentang tanggal (urutan terbalik ditukar, tanggal tidak sah diabaikan).
+        FilterTanggal::terapkan($query, 'tanggal', $request);
 
         return $query;
     }

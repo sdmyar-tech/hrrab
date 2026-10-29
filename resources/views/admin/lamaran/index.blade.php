@@ -2,7 +2,7 @@
 
 @section('content')
 @php
-    $adaFilter = request()->hasAny(['q', 'status', 'jalur']);
+    $adaFilter = request()->hasAny(['q', 'status', 'jalur', 'tanggal_dari', 'tanggal_sampai']);
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
@@ -52,6 +52,7 @@
                             <option value="internal" {{ request('jalur') == 'internal' ? 'selected' : '' }}>Jalur Langsung</option>
                         </select>
                     </div>
+                    <div class="col-12 col-md-6 col-xl-4">@include('partials.filter-tanggal', ['tanggalLabel' => 'Masuk'])</div>
                     <div class="col-12 col-md-auto">@include('partials.urut', ['urutForm' => 'filterLamaranForm'])</div>
                 </div>
                 @include('partials.daftar-ringkas', [

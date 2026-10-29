@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\EditorData;
 use App\Support\ExcelExporter;
+use App\Support\FilterTanggal;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -41,7 +43,7 @@ class EditorDataController extends Controller
         return view('admin.editor-data.daftar', [
             'entitas' => $entitas,
             'k' => $k,
-            'baris' => EditorData::query($k, $request->query('q'))->paginate(25)->withQueryString(),
+            'baris' => $this->saringTanggal(EditorData::query($k, $request->query('q')), $k, $request)->paginate(25)->withQueryString(),
         ]);
     }
 
@@ -52,7 +54,7 @@ class EditorDataController extends Controller
         $k = EditorData::konfig($entitas);
 
         return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('data-' . $entitas),
-            [EditorData::lembarEkspor($k, EditorData::query($k, $request->query('q'))->reorder()->orderBy(EditorData::model($k)->getKeyName())->lazy())]);
+            [EditorData::lembarEkspor($k, $this->saringTanggal(EditorData::query($k, $request->query('q')), $k, $request)->reorder()->orderBy(EditorData::model($k)->getKeyName())->lazy())]);
     }
 
     /** Ekspor seluruh data aplikasi: satu lembar per jenis data. */
@@ -309,6 +311,16 @@ class EditorDataController extends Controller
         $model = EditorData::model($k);
 
         return $model->newQuery()->whereKey($id)->firstOrFail();
+    }
+
+    /** Rentang tanggal dibuat (?tanggal_dari/?tanggal_sampai) — hanya untuk data yang punya kolom waktu dibuat. */
+    private function saringTanggal(Builder $q, array $k, Request $request): Builder
+    {
+        $model = EditorData::model($k);
+
+        return $model->usesTimestamps() && $model->getCreatedAtColumn()
+            ? FilterTanggal::terapkan($q, $model->getTable() . '.' . $model->getCreatedAtColumn(), $request)
+            : $q;
     }
 
     private function hanyaAdmin(): void
