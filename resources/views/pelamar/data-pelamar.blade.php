@@ -1,195 +1,174 @@
 @extends('layouts.pelamar.app')
 
+@section('title', 'Data Pelamar')
+
 @section('content')
-<div class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-person-vcard"></i></span>
-                <div>
-                    <div class="eyebrow">Pelamar</div>
-                    <h1 class="mb-0">Data Pelamar</h1>
-                </div>
-            </div>
+@php
+    $p = $pelamar;
+    // Kelengkapan profil (panduan untuk pelamar; tidak mengubah aturan validasi server).
+    $cek = [
+        'biodata' => ['Nama lengkap' => $p?->nama_lengkap, 'NIK' => $p?->nik, 'No. HP' => $p?->no_hp, 'No. KK' => $p?->no_kk,
+            'Tempat lahir' => $p?->tempat_lahir, 'Tanggal lahir' => $p?->tanggal_lahir, 'Jenis kelamin' => $p?->jenis_kelamin,
+            'Agama' => $p?->agama, 'Status pernikahan' => $p?->status_pernikahan, 'Nama ibu kandung' => $p?->nama_ibu_kandung,
+            'Pendidikan terakhir' => $p?->pendidikan_terakhir],
+        'alamat' => ['Alamat KTP' => $p?->alamat_ktp],
+        'dokumen' => ['Pas foto' => $p?->foto_path, 'CV' => $p?->cv_path, 'Ijazah' => $p?->ijazah_path],
+        'riwayat_pendidikan' => ['Riwayat pendidikan' => $p?->riwayatPendidikan?->isNotEmpty() ? 'ada' : null],
+    ];
+    $semua = collect($cek)->flatMap(fn ($x) => $x);
+    $terisi = $semua->filter(fn ($v) => filled($v))->count();
+    $persen = (int) round($terisi / max(1, $semua->count()) * 100);
+    $kurang = $semua->filter(fn ($v) => blank($v))->keys();
+    $bagianLengkap = fn (string $k) => isset($cek[$k]) ? collect($cek[$k])->every(fn ($v) => filled($v)) : null;
+
+    $navBagian = [
+        ['biodata', 'Biodata', 'bi-person'],
+        ['alamat', 'Alamat', 'bi-house'],
+        ['dokumen', 'Dokumen', 'bi-folder2'],
+        ['riwayat_pendidikan', 'Pendidikan', 'bi-mortarboard'],
+        ['riwayat_pekerjaan', 'Pekerjaan', 'bi-briefcase'],
+        ['sosial_media', 'Sosial Media', 'bi-link-45deg'],
+    ];
+    $opsiNikah = array_combine($x = ['Belum Menikah', 'Menikah', 'Cerai Hidup', 'Cerai Mati'], $x);
+    $opsiDarah = array_combine($x = ['O+', 'A+', 'B+', 'AB+', 'O-', 'A-', 'B-', 'AB-', 'Rh-Null', 'Belum Diketahui'], $x);
+    $dokumen = [
+        ['foto', 'f-foto', 'Pas Foto', 'foto_path', 'image/*', 'JPG/PNG, maks. 2 MB.'],
+        ['cv', 'f-cv', 'CV / Resume', 'cv_path', '.pdf,.doc,.docx', 'PDF/DOC, maks. 4 MB.'],
+        ['ijazah', 'f-ijazah', 'Ijazah', 'ijazah_path', '.pdf,.jpg,.jpeg,.png', 'PDF/JPG/PNG, maks. 4 MB.'],
+        ['sertifikat', 'f-sertifikat', 'Sertifikat', 'sertifikat_path', '.pdf,.jpg,.jpeg,.png', 'PDF/JPG/PNG, maks. 4 MB.'],
+    ];
+@endphp
+<main class="dashboard-content">
+    <div class="container-fluid">
+        <x-page-header title="Data Pelamar" eyebrow="Pelamar"
+            subtitle="Data ini dipakai untuk verifikasi lamaran dan, bila Anda diterima, menjadi dasar Data Pegawai.">
             @if ($pelamar)
-                <div class="heading-actions">
+                <x-slot:actions>
                     @include('partials.tombol-ekspor', ['eksporRoute' => 'pelamar.data-pelamar.export', 'eksporTeks' => 'Ekspor Data Saya'])
-                </div>
+                </x-slot:actions>
             @endif
-        </div>
+        </x-page-header>
 
-        <div class="panel p-4">
-            <p class="text-muted small mb-4">
-                Lengkapi data diri Anda dengan benar. Data ini akan digunakan untuk verifikasi lamaran dan,
-                jika Anda diterima bekerja, akan menjadi dasar Data Pegawai Anda.
-            </p>
-
-            <form action="{{ route('pelamar.data-pelamar.update') }}" method="POST" enctype="multipart/form-data" data-confirm="Simpan data pelamar ini?">
-                @csrf
-
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="f-nama-lengkap" class="form-label">Nama Lengkap</label>
-                        <input id="f-nama-lengkap" type="text" name="nama_lengkap" class="form-control @error('nama_lengkap') is-invalid @enderror"
-                            value="{{ old('nama_lengkap', $pelamar?->nama_lengkap) }}" required>
-                        @error('nama_lengkap')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        <div class="row g-4 align-items-start">
+            {{-- ============ Kiri: kelengkapan + navigasi bagian ============ --}}
+            <aside class="col-lg-3 pelamar-samping">
+                <x-card class="mb-3">
+                    <div class="d-flex justify-content-between align-items-baseline mb-2">
+                        <span class="hr-stat-label">Kelengkapan profil</span>
+                        <strong class="pelamar-persen">{{ $persen }}%</strong>
                     </div>
-
-                    <div class="col-md-6">
-                        <label for="f-nik" class="form-label">NIK (No. KTP)</label>
-                        <input id="f-nik" type="text" name="nik" class="form-control @error('nik') is-invalid @enderror"
-                            value="{{ old('nik', $pelamar?->nik) }}" maxlength="20" required>
-                        @error('nik')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="progress" style="height: 6px;" role="progressbar" aria-label="Kelengkapan profil" aria-valuenow="{{ $persen }}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar {{ $persen >= 100 ? 'bg-success' : '' }}" style="width: {{ $persen }}%"></div>
                     </div>
+                    <p class="small text-muted mt-2 mb-0">
+                        @if ($kurang->isEmpty())
+                            <i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i>Profil lengkap. Siap melamar.
+                        @else
+                            Belum diisi: {{ $kurang->take(3)->implode(', ') }}{{ $kurang->count() > 3 ? ', +' . ($kurang->count() - 3) . ' lainnya' : '' }}.
+                        @endif
+                    </p>
+                </x-card>
+                <nav class="hr-tabs hr-tabs-vertikal pelamar-nav" aria-label="Bagian data pelamar">
+                    @foreach ($navBagian as [$kunci, $label, $ikon])
+                        @php $status = $bagianLengkap($kunci); @endphp
+                        <a href="#bagian-{{ $kunci }}" class="hr-tab {{ $loop->first ? 'active' : '' }}" data-nav-bagian>
+                            <i class="bi {{ $ikon }}" aria-hidden="true"></i><span>{{ $label }}</span>
+                            @if ($status === true)
+                                <i class="bi bi-check-circle-fill text-success ms-auto" aria-label="lengkap"></i>
+                            @elseif ($status === false)
+                                <i class="bi bi-exclamation-circle text-warning ms-auto" aria-label="belum lengkap"></i>
+                            @endif
+                        </a>
+                    @endforeach
+                </nav>
+            </aside>
 
-                    <div class="col-md-6">
-                        <label for="f-no-hp" class="form-label">No. HP</label>
-                        <input id="f-no-hp" type="text" name="no_hp" class="form-control @error('no_hp') is-invalid @enderror"
-                            value="{{ old('no_hp', $pelamar?->no_hp) }}" required>
-                        @error('no_hp')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
+            {{-- ============ Kanan: form per bagian ============ --}}
+            <div class="col-lg-9">
+                <form action="{{ route('pelamar.data-pelamar.update') }}" method="POST" enctype="multipart/form-data" data-confirm="Simpan data pelamar ini?" class="d-grid gap-3">
+                    @csrf
 
-                    <div class="col-md-6">
-                        <label for="f-npwp" class="form-label">NPWP <span class="text-muted">(opsional)</span></label>
-                        <input id="f-npwp" type="text" name="npwp" class="form-control" value="{{ old('npwp', $pelamar?->npwp) }}">
-                    </div>
+                    <x-card id="bagian-biodata" title="Biodata" subtitle="Sesuai KTP & Kartu Keluarga." icon="bi-person" class="pelamar-bagian">
+                        <div class="row gx-3">
+                            <div class="col-md-6"><x-input name="nama_lengkap" id="f-nama-lengkap" label="Nama Lengkap" :value="$p?->nama_lengkap" placeholder="Sesuai KTP, contoh: Siti Aminah" maxlength="150" required /></div>
+                            <div class="col-md-6"><x-input name="nik" id="f-nik" label="NIK (No. KTP)" :value="$p?->nik" placeholder="16 digit, contoh: 3201010101010001" inputmode="numeric" maxlength="20" required /></div>
+                            <div class="col-md-6"><x-input name="no_hp" id="f-no-hp" type="tel" label="No. HP" :value="$p?->no_hp" icon="bi-phone" placeholder="Contoh: 081234567890" maxlength="20" required /></div>
+                            <div class="col-md-6"><x-input name="no_kk" id="f-no-kk" label="No. KK" :value="$p?->no_kk" placeholder="16 digit, contoh: 3201010101010002" inputmode="numeric" maxlength="20" required /></div>
+                            <div class="col-md-6"><x-input name="tempat_lahir" id="f-tempat-lahir" label="Tempat Lahir" :value="$p?->tempat_lahir" placeholder="Contoh: Pekanbaru" maxlength="150" required /></div>
+                            <div class="col-md-6"><x-input name="tanggal_lahir" id="f-tanggal-lahir" type="date" label="Tanggal Lahir" :value="optional($p?->tanggal_lahir)->format('Y-m-d')" required /></div>
+                            <div class="col-md-6"><x-select name="jenis_kelamin" id="f-jenis-kelamin" label="Jenis Kelamin" :options="['Laki-laki' => 'Laki-laki', 'Perempuan' => 'Perempuan']" :selected="$p?->jenis_kelamin" placeholder="Pilih jenis kelamin" required /></div>
+                            <div class="col-md-6"><x-input name="agama" id="f-agama" label="Agama" :value="$p?->agama" placeholder="Contoh: Islam" maxlength="50" required /></div>
+                            <div class="col-md-6"><x-select name="status_pernikahan" id="f-status-pernikahan" label="Status Pernikahan" :options="$opsiNikah" :selected="$p?->status_pernikahan ?? 'Belum Menikah'" required /></div>
+                            <div class="col-md-6"><x-input name="jumlah_tanggungan" id="f-jumlah-tanggungan" type="number" label="Jumlah Tanggungan" :value="$p?->jumlah_tanggungan ?? 0" min="0" max="20" help="Anak/anggota keluarga yang ditanggung." /></div>
+                            <div class="col-md-6"><x-input name="nama_ibu_kandung" id="f-nama-ibu-kandung" label="Nama Ibu Kandung" :value="$p?->nama_ibu_kandung" placeholder="Sesuai Kartu Keluarga" maxlength="150" required /></div>
+                            <div class="col-md-6"><x-input name="pendidikan_terakhir" id="f-pendidikan-terakhir" label="Pendidikan Terakhir" :value="$p?->pendidikan_terakhir" placeholder="Contoh: S1 Manajemen" maxlength="100" required /></div>
+                            <div class="col-md-6"><x-select name="golongan_darah" id="f-golongan-darah" label="Golongan Darah" optional :options="$opsiDarah" :selected="$p?->golongan_darah" placeholder="Pilih golongan darah" /></div>
+                            <div class="col-md-6"><x-input name="npwp" id="f-npwp" label="NPWP" optional :value="$p?->npwp" placeholder="Contoh: 12.345.678.9-012.000" maxlength="25" /></div>
+                        </div>
+                    </x-card>
 
-                    <div class="col-md-6">
-                        <label for="f-no-kk" class="form-label">No. KK</label>
-                        <input id="f-no-kk" type="text" name="no_kk" class="form-control @error('no_kk') is-invalid @enderror"
-                            value="{{ old('no_kk', $pelamar?->no_kk) }}" required>
-                        @error('no_kk')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
+                    <x-card id="bagian-alamat" title="Alamat" subtitle="Alamat domisili diisi hanya bila berbeda dari KTP." icon="bi-house" class="pelamar-bagian">
+                        <x-textarea name="alamat_ktp" id="f-alamat-ktp" label="Alamat KTP" :value="$p?->alamat_ktp" rows="2" placeholder="Jalan, RT/RW, kelurahan, kecamatan, kota" maxlength="1000" required />
+                        <x-textarea name="alamat_domisili" id="f-alamat-domisili" label="Alamat Domisili" optional :value="$p?->alamat_domisili" rows="2" placeholder="Kosongkan bila sama dengan alamat KTP" maxlength="1000" field-class="mb-0" />
+                    </x-card>
 
-                    <div class="col-md-6">
-                        <label for="f-tempat-lahir" class="form-label">Tempat Lahir</label>
-                        <input id="f-tempat-lahir" type="text" name="tempat_lahir" class="form-control @error('tempat_lahir') is-invalid @enderror"
-                            value="{{ old('tempat_lahir', $pelamar?->tempat_lahir) }}" required>
-                        @error('tempat_lahir')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="f-tanggal-lahir" class="form-label">Tanggal Lahir</label>
-                        <input id="f-tanggal-lahir" type="date" name="tanggal_lahir" class="form-control @error('tanggal_lahir') is-invalid @enderror"
-                            value="{{ old('tanggal_lahir', optional($pelamar?->tanggal_lahir)->format('Y-m-d')) }}" required>
-                        @error('tanggal_lahir')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="f-jenis-kelamin" class="form-label">Jenis Kelamin</label>
-                        <select id="f-jenis-kelamin" name="jenis_kelamin" class="form-select @error('jenis_kelamin') is-invalid @enderror" required>
-                            <option value="">-- Pilih --</option>
-                            @foreach (['Laki-laki', 'Perempuan'] as $opt)
-                                <option value="{{ $opt }}" {{ old('jenis_kelamin', $pelamar?->jenis_kelamin) == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                    <x-card id="bagian-dokumen" title="Dokumen" subtitle="Unggah ulang hanya bila ingin mengganti berkas yang sudah ada." icon="bi-folder2" class="pelamar-bagian">
+                        <div class="row g-3">
+                            @foreach ($dokumen as [$nama, $id, $label, $kolom, $terima, $bantuan])
+                                @php $ada = $p?->{$kolom}; @endphp
+                                <div class="col-md-6">
+                                    <div class="pelamar-berkas {{ $ada ? 'is-ada' : '' }}">
+                                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                            <label for="{{ $id }}" class="form-label mb-0">{{ $label }} <span class="hr-field-opsional">(opsional)</span></label>
+                                            @if ($ada)
+                                                <a href="{{ \App\Support\Berkas::url($ada) }}" target="_blank" rel="noopener" class="hr-badge hr-badge-success text-decoration-none">
+                                                    <i class="bi bi-check2" aria-hidden="true"></i>Sudah diunggah · Lihat
+                                                </a>
+                                            @else
+                                                <x-badge tone="neutral">Belum ada</x-badge>
+                                            @endif
+                                        </div>
+                                        <input id="{{ $id }}" type="file" name="{{ $nama }}" accept="{{ $terima }}"
+                                            class="form-control @error($nama) is-invalid @enderror" aria-describedby="{{ $id }}-bantuan">
+                                        @error($nama)
+                                            <div class="invalid-feedback d-block"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
+                                        @else
+                                            <div class="form-text" id="{{ $id }}-bantuan">{{ $bantuan }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
                             @endforeach
-                        </select>
-                        @error('jenis_kelamin')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                    </x-card>
+
+                    @include('partials.pelamar-riwayat', ['pelamar' => $pelamar])
+
+                    <div class="pelamar-simpan">
+                        <p class="small text-muted mb-0 d-none d-sm-block"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Kolom bertanda <span class="text-danger">*</span> wajib diisi.</p>
+                        <x-button type="submit" icon="bi-check-lg">Simpan Data Pelamar</x-button>
                     </div>
-
-                    <div class="col-md-6">
-                        <label for="f-agama" class="form-label">Agama</label>
-                        <input id="f-agama" type="text" name="agama" class="form-control @error('agama') is-invalid @enderror"
-                            value="{{ old('agama', $pelamar?->agama) }}" required>
-                        @error('agama')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="f-golongan-darah" class="form-label">Golongan Darah <span class="text-muted">(opsional)</span></label>
-                        <select id="f-golongan-darah" name="golongan_darah" class="form-select">
-                            <option value="">-- Pilih --</option>
-                            @foreach (['O+', 'A+', 'B+', 'AB+', 'O-', 'A-', 'B-', 'AB-', 'Rh-Null', 'Belum Diketahui'] as $opt)
-                                <option value="{{ $opt }}" {{ old('golongan_darah', $pelamar?->golongan_darah) == $opt ? 'selected' : '' }}>{{ $opt }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="f-status-pernikahan" class="form-label">Status Pernikahan</label>
-                        <select id="f-status-pernikahan" name="status_pernikahan" class="form-select @error('status_pernikahan') is-invalid @enderror" required>
-                            @foreach (['Belum Menikah', 'Menikah', 'Cerai Hidup', 'Cerai Mati'] as $opt)
-                                <option value="{{ $opt }}" {{ old('status_pernikahan', $pelamar?->status_pernikahan ?? 'Belum Menikah') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
-                            @endforeach
-                        </select>
-                        @error('status_pernikahan')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="f-jumlah-tanggungan" class="form-label">Jumlah Tanggungan</label>
-                        <input id="f-jumlah-tanggungan" type="number" name="jumlah_tanggungan" class="form-control" min="0" max="20"
-                            value="{{ old('jumlah_tanggungan', $pelamar?->jumlah_tanggungan ?? 0) }}">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="f-nama-ibu-kandung" class="form-label">Nama Ibu Kandung</label>
-                        <input id="f-nama-ibu-kandung" type="text" name="nama_ibu_kandung" class="form-control @error('nama_ibu_kandung') is-invalid @enderror"
-                            value="{{ old('nama_ibu_kandung', $pelamar?->nama_ibu_kandung) }}" required>
-                        @error('nama_ibu_kandung')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="f-pendidikan-terakhir" class="form-label">Pendidikan Terakhir</label>
-                        <input id="f-pendidikan-terakhir" type="text" name="pendidikan_terakhir" class="form-control @error('pendidikan_terakhir') is-invalid @enderror"
-                            value="{{ old('pendidikan_terakhir', $pelamar?->pendidikan_terakhir) }}" placeholder="Contoh: S1 Manajemen" required>
-                        @error('pendidikan_terakhir')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-
-                    <div class="col-12">
-                        <label for="f-alamat-ktp" class="form-label">Alamat KTP</label>
-                        <textarea id="f-alamat-ktp" name="alamat_ktp" rows="2" class="form-control @error('alamat_ktp') is-invalid @enderror" required>{{ old('alamat_ktp', $pelamar?->alamat_ktp) }}</textarea>
-                        @error('alamat_ktp')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-
-                    <div class="col-12">
-                        <label for="f-alamat-domisili" class="form-label">Alamat Domisili <span class="text-muted">(opsional, isi jika berbeda dari KTP)</span></label>
-                        <textarea id="f-alamat-domisili" name="alamat_domisili" rows="2" class="form-control">{{ old('alamat_domisili', $pelamar?->alamat_domisili) }}</textarea>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="f-foto" class="form-label">Pas Foto <span class="text-muted">(opsional)</span></label>
-                        <input id="f-foto" type="file" name="foto" class="form-control @error('foto') is-invalid @enderror" accept="image/*">
-                        @error('foto')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        @if ($pelamar?->foto_path)
-                            <small class="text-muted d-block mt-1"><i class="bi bi-check-circle text-success"></i> Foto sudah diunggah. Unggah ulang jika ingin mengganti.</small>
-                        @endif
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="f-cv" class="form-label">CV / Resume <span class="text-muted">(PDF/DOC, opsional)</span></label>
-                        <input id="f-cv" type="file" name="cv" class="form-control @error('cv') is-invalid @enderror" accept=".pdf,.doc,.docx">
-                        @error('cv')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        @if ($pelamar?->cv_path)
-                            <small class="text-muted d-block mt-1"><i class="bi bi-check-circle text-success"></i> CV sudah diunggah.</small>
-                        @endif
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="f-ijazah" class="form-label">Ijazah <span class="text-muted">(opsional)</span></label>
-                        <input id="f-ijazah" type="file" name="ijazah" class="form-control @error('ijazah') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png">
-                        @error('ijazah')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        @if ($pelamar?->ijazah_path)
-                            <small class="text-muted d-block mt-1"><i class="bi bi-check-circle text-success"></i> Ijazah sudah diunggah.</small>
-                        @endif
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="f-sertifikat" class="form-label">Sertifikat <span class="text-muted">(opsional)</span></label>
-                        <input id="f-sertifikat" type="file" name="sertifikat" class="form-control @error('sertifikat') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png">
-                        @error('sertifikat')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        @if ($pelamar?->sertifikat_path)
-                            <small class="text-muted d-block mt-1"><i class="bi bi-check-circle text-success"></i> Sertifikat sudah diunggah.</small>
-                        @endif
-                    </div>
-                </div>
-
-                <hr class="my-4">
-
-                @include('partials.pelamar-riwayat', ['pelamar' => $pelamar])
-
-                <button type="submit" class="btn btn-primary mt-4">
-                    <i class="bi bi-check-lg me-1"></i> Simpan Data Pelamar
-                </button>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
-</div>
+</main>
+
+<script>
+    // Navigasi bagian: tandai bagian yang sedang terlihat saat menggulir.
+    document.addEventListener('DOMContentLoaded', function () {
+        const tautan = Array.from(document.querySelectorAll('[data-nav-bagian]'));
+        if (!('IntersectionObserver' in window) || !tautan.length) return;
+        const pengamat = new IntersectionObserver(function (entri) {
+            entri.forEach(function (e) {
+                if (!e.isIntersecting) return;
+                tautan.forEach((a) => {
+                    const aktif = a.getAttribute('href') === '#' + e.target.id;
+                    a.classList.toggle('active', aktif);
+                    aktif ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current');
+                });
+            });
+        }, { rootMargin: '-30% 0px -60% 0px' });
+        tautan.forEach((a) => { const t = document.querySelector(a.getAttribute('href')); if (t) pengamat.observe(t); });
+    });
+</script>
 @endsection

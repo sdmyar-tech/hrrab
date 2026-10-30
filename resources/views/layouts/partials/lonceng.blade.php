@@ -4,9 +4,10 @@
 @endphp
 <style>
     .lonceng-btn { position: relative; }
-    .lonceng-badge { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--hr-radius-pill);
+    /* Angka menempel di pojok kanan atas ikon (tidak menutupi lonceng). */
+    .lonceng-badge { position: absolute; top: 3px; left: calc(50% + 3px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--hr-radius-pill);
         border: 2px solid var(--admin-surface); box-sizing: content-box;
-        background: #b42318; color: #fff; font-size: .6875rem; font-weight: 700; line-height: 18px; text-align: center; }
+        background: #b42318; color: #fff; font-size: .625rem; font-weight: 700; line-height: 16px; text-align: center; }
     .lonceng-menu { width: min(380px, calc(100vw - 24px)); max-width: calc(100vw - 24px); padding: 0; overflow: hidden; }
     @media (max-width: 575.98px) {
         .lonceng-menu.show { position: fixed !important; inset: calc(var(--hr-topbar-h) + 4px) 12px auto 12px !important; transform: none !important; width: auto; }

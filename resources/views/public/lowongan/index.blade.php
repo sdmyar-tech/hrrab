@@ -3,148 +3,161 @@
 @section('title', 'Lowongan Karir')
 
 @section('content')
-<section class="public-hero">
-    <div class="container">
-        <div class="row align-items-center g-4">
-            <div class="col-lg-8">
-                <p class="hero-eyebrow mb-2">Karir di Yayasan Abdurrab</p>
-                <h1 class="display-5 mb-3">Bangun karir, tumbuh bersama kami.</h1>
-                <p class="lead mb-4" style="opacity:.9; max-width:560px;">
-                    Temukan posisi yang sesuai dengan keahlian Anda dan jadilah bagian dari keluarga besar Yayasan Abdurrab.
-                </p>
-                <div class="d-flex flex-wrap gap-2">
-                    <span class="stat-pill"><i class="bi bi-briefcase me-1"></i> {{ $lowongans->total() }} lowongan terbuka</span>
-                    <span class="stat-pill"><i class="bi bi-diagram-3 me-1"></i> {{ $unitKerjaOptions->count() }} bagian</span>
-                </div>
-                @unless (Auth::user()?->isPelamar())
-                    <div class="d-flex flex-wrap gap-2 mt-4">
-                        <a href="{{ route('register') }}" class="btn btn-light fw-semibold px-4" style="color:var(--brand-dark);">Daftar Sekarang</a>
-                        <a href="{{ route('pelamar.login') }}" class="btn btn-outline-light fw-semibold px-4">Masuk</a>
-                    </div>
-                @endunless
-            </div>
-            <div class="col-lg-4 d-none d-lg-flex justify-content-end">
-                <img class="hero-logo" src="{{ asset('assets-admin/images/png/logo_abd.png') }}" alt="Logo Yayasan Abdurrab"
-                    style="width:180px; height:180px; border-radius:40px; padding:18px;">
-            </div>
-        </div>
+@php
+    $adaFilter = request()->hasAny(['q', 'unit_kerja']);
+    // Chip bagian: pertahankan kata kunci & urutan, reset halaman.
+    $urlBagian = fn (?string $unit) => route('lowongan.index', array_filter([
+        'q' => request('q'), 'unit_kerja' => $unit, 'urut' => request('urut'),
+    ]));
+@endphp
+
+{{-- ============ Hero: judul + kotak cari besar ============ --}}
+<section class="pub-hero">
+    <div class="pub-wadah">
+        <x-badge tone="primary" icon="bi-stars">Karir di Yayasan Abdurrab</x-badge>
+        <h1 class="pub-hero-judul">Bangun karir, tumbuh bersama kami.</h1>
+        <p class="pub-hero-sub">Temukan posisi yang sesuai dengan keahlian Anda dan jadilah bagian dari keluarga besar Yayasan Abdurrab.</p>
+
+        <form action="{{ route('lowongan.index') }}" method="GET" id="filterLowonganPublik" class="pub-cari" role="search" data-muat-lowongan>
+            @if (request('unit_kerja'))<input type="hidden" name="unit_kerja" value="{{ request('unit_kerja') }}">@endif
+            <label for="cari-lowongan" class="visually-hidden">Cari lowongan</label>
+            <i class="bi bi-search pub-cari-ikon" aria-hidden="true"></i>
+            <input type="search" id="cari-lowongan" name="q" value="{{ request('q') }}" class="pub-cari-isian"
+                placeholder="Cari posisi, contoh: Guru" autocomplete="off">
+            <x-button type="submit" size="lg" icon="bi-search" class="pub-cari-tombol">Cari</x-button>
+        </form>
+
+        <p class="pub-hero-statistik">
+            <span><strong>{{ number_format($lowongans->total(), 0, ',', '.') }}</strong> lowongan {{ $adaFilter ? 'cocok' : 'terbuka' }}</span>
+            <span aria-hidden="true">·</span>
+            <span><strong>{{ $unitKerjaOptions->count() }}</strong> bagian membuka posisi</span>
+        </p>
     </div>
 </section>
 
-<div class="container pb-4">
-    <form action="{{ route('lowongan.index') }}" method="GET" id="filterLowonganPublik" class="search-card mb-4">
-        <div class="row g-2">
-            <div class="col-md-6">
-                <div class="input-group">
-                    <span class="input-group-text bg-white" style="border-color:#e4d3d3; border-radius:10px 0 0 10px;"><i class="bi bi-search text-muted"></i></span>
-                    <input type="search" name="q" class="form-control border-start-0" style="border-radius:0 10px 10px 0;"
-                        placeholder="Cari lowongan, contoh: Guru Matematika" aria-label="Cari lowongan menurut posisi, jabatan, atau bagian" value="{{ request('q') }}">
-                </div>
-            </div>
-            <div class="col-md-4">
-                <select name="unit_kerja" class="form-select" onchange="this.form.submit()">
-                    <option value="">Semua Bagian</option>
-                    @foreach ($unitKerjaOptions as $opt)
-                        <option value="{{ $opt }}" {{ request('unit_kerja') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-2 d-grid">
-                <button type="submit" class="btn btn-brand" style="border-radius:10px;"><i class="bi bi-search me-1"></i> Cari</button>
-            </div>
-        </div>
-    </form>
+<div class="pub-wadah pub-isi">
+    {{-- ============ Filter chip bagian + urutan ============ --}}
+    @if ($unitKerjaOptions->isNotEmpty())
+        <nav class="pub-chips" aria-label="Saring menurut bagian" data-muat-lowongan>
+            <x-chip :href="$urlBagian(null)" :active="! request('unit_kerja')" icon="bi-grid">Semua bagian</x-chip>
+            @foreach ($unitKerjaOptions as $opt)
+                <x-chip :href="$urlBagian($opt)" :active="request('unit_kerja') === $opt">{{ $opt }}</x-chip>
+            @endforeach
+        </nav>
+    @endif
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <h2 class="h5 fw-bold mb-0">
-            @if (request()->hasAny(['q', 'unit_kerja']))
-                Hasil pencarian <span class="text-muted fw-normal">({{ $lowongans->total() }})</span>
-            @else
-                Lowongan Terbaru
-            @endif
-        </h2>
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            @include('partials.urut', ['urutForm' => 'filterLowonganPublik'])
-            @if (request()->hasAny(['q', 'unit_kerja']))
-                <a href="{{ route('lowongan.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg me-1"></i> Tampilkan semua</a>
-            @endif
+    <div class="hr-section-head mt-4">
+        <div>
+            <h2 class="hr-section-title">{{ $adaFilter ? 'Hasil pencarian' : 'Lowongan terbaru' }}</h2>
+            <p class="hr-section-sub">
+                @if ($adaFilter)
+                    {{ $lowongans->total() }} lowongan
+                    @if (request('q')) untuk “{{ request('q') }}”@endif
+                    @if (request('unit_kerja')) di bagian {{ request('unit_kerja') }}@endif
+                    · <a href="{{ route('lowongan.index') }}" class="fw-semibold">Hapus filter</a>
+                @else
+                    Diperbarui otomatis saat lowongan baru dibuka.
+                @endif
+            </p>
         </div>
+        @include('partials.urut', ['urutForm' => 'filterLowonganPublik'])
     </div>
 
-    <div class="row g-4">
+    {{-- ============ Grid kartu lowongan ============ --}}
+    <div class="row g-3" data-daftar-lowongan>
         @forelse ($lowongans as $lowongan)
             @php
                 $sisa = max(0, $lowongan->jumlah_dibutuhkan - $lowongan->jumlah_terisi);
                 $baru = $lowongan->dipublikasikan_pada && $lowongan->dipublikasikan_pada->gt(now()->subDays(7));
-                $segeraTutup = $lowongan->tanggal_tutup && $lowongan->tanggal_tutup->between(now()->startOfDay(), now()->addDays(7));
+                $hariTutup = $lowongan->tanggal_tutup ? (int) now()->startOfDay()->diffInDays($lowongan->tanggal_tutup, false) : null;
+                $segeraTutup = ! is_null($hariTutup) && $hariTutup <= 7;
             @endphp
-            <div class="col-md-6 col-lg-4">
-                <a href="{{ route('lowongan.show', $lowongan) }}" class="text-decoration-none text-reset">
-                    <div class="card job-card h-100 bg-white">
-                        <div class="card-body d-flex flex-column p-4">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                <span class="job-icon"><i class="bi bi-briefcase-fill"></i></span>
-                                <div class="d-flex gap-1">
-                                    @if ($baru)
-                                        <span class="badge badge-baru">Baru</span>
-                                    @endif
-                                    @if ($segeraTutup)
-                                        <span class="badge badge-segera">Segera tutup</span>
-                                    @endif
-                                </div>
-                            </div>
-
-                            <span class="badge badge-kategori align-self-start mb-2">{{ $lowongan->unit_kerja }}</span>
-                            <h3 class="h5 fw-bold mb-3">{{ $lowongan->judul }}</h3>
-
-                            <ul class="list-unstyled text-muted small job-meta mb-3">
-                                <li><i class="bi bi-person-badge"></i> {{ $lowongan->jabatan }}</li>
-                                @if ($lowongan->lokasi_kerja)
-                                    <li><i class="bi bi-geo-alt"></i> {{ $lowongan->lokasi_kerja }}</li>
-                                @endif
-                                @if ($lowongan->tipe_kerja)
-                                    <li><i class="bi bi-clock"></i> {{ $lowongan->tipe_kerja }}</li>
-                                @endif
-                                <li><i class="bi bi-people"></i> Butuh {{ $sisa }} orang</li>
-                            </ul>
-
-                            <div class="job-footer d-flex justify-content-between align-items-center small">
-                                <span class="text-muted">
-                                    @if ($lowongan->tanggal_tutup)
-                                        <i class="bi bi-calendar-event me-1"></i> Tutup {{ $lowongan->tanggal_tutup->translatedFormat('d M Y') }}
-                                    @else
-                                        <i class="bi bi-calendar-check me-1"></i> Dibuka
-                                    @endif
-                                </span>
-                                <span class="fw-semibold" style="color:var(--brand);">Detail <i class="bi bi-arrow-right"></i></span>
-                            </div>
+            <div class="col-md-6 col-xl-4">
+                <x-card as="article" :href="route('lowongan.show', $lowongan)" :title="$lowongan->judul" title-tag="h3"
+                    :subtitle="$lowongan->unit_kerja" class="h-100 pub-kartu-lowongan">
+                    <x-slot:actions>
+                        @if ($baru)<x-badge tone="success" dot>Baru</x-badge>@endif
+                    </x-slot:actions>
+                    <ul class="pub-meta">
+                        <li><i class="bi bi-person-badge" aria-hidden="true"></i>{{ $lowongan->jabatan }}</li>
+                        @if ($lowongan->lokasi_kerja)<li><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ $lowongan->lokasi_kerja }}</li>@endif
+                        @if ($lowongan->tipe_kerja)<li><i class="bi bi-clock" aria-hidden="true"></i>{{ $lowongan->tipe_kerja }}</li>@endif
+                        <li><i class="bi bi-people" aria-hidden="true"></i>Butuh {{ $sisa }} orang</li>
+                    </ul>
+                    <x-slot:footer>
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            @if (is_null($hariTutup))
+                                <x-badge tone="neutral" icon="bi-calendar-check">Dibuka tanpa batas</x-badge>
+                            @elseif ($segeraTutup)
+                                <x-badge tone="warning" icon="bi-hourglass-split">{{ $hariTutup === 0 ? 'Tutup hari ini' : 'Tutup ' . $hariTutup . ' hari lagi' }}</x-badge>
+                            @else
+                                <x-badge tone="neutral" icon="bi-calendar-event">Tutup {{ $lowongan->tanggal_tutup->translatedFormat('d M Y') }}</x-badge>
+                            @endif
+                            <span class="pub-lihat">Lihat detail <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
                         </div>
-                    </div>
-                </a>
+                    </x-slot:footer>
+                </x-card>
             </div>
         @empty
             <div class="col-12">
-                <div class="empty-state text-center">
-                    <img src="{{ asset('assets-admin/images/png/logo_abd.png') }}" alt="" class="mb-3" loading="lazy" decoding="async">
-                    <h3 class="h5 fw-bold">
-                        {{ request()->hasAny(['q', 'unit_kerja']) ? 'Lowongan tidak ditemukan' : 'Belum ada lowongan dibuka' }}
-                    </h3>
-                    <p class="text-muted mb-0">
-                        @if (request()->hasAny(['q', 'unit_kerja']))
-                            Coba kata kunci atau bagian lain.
-                        @else
+                <x-card>
+                    @if ($adaFilter)
+                        <x-empty-state icon="bi-search" title="Lowongan tidak ditemukan">
+                            Coba kata kunci lain atau pilih bagian yang berbeda.
+                            <x-slot:action><x-button :href="route('lowongan.index')" variant="secondary" icon="bi-x-lg">Hapus filter</x-button></x-slot:action>
+                        </x-empty-state>
+                    @else
+                        <x-empty-state icon="bi-briefcase" title="Belum ada lowongan dibuka">
                             Silakan cek kembali dalam waktu dekat. Daftarkan akun agar siap melamar saat lowongan dibuka.
-                        @endif
-                    </p>
-                </div>
+                            @unless (Auth::check())
+                                <x-slot:action><x-button :href="route('register')" icon="bi-person-plus">Daftar Akun Pelamar</x-button></x-slot:action>
+                            @endunless
+                        </x-empty-state>
+                    @endif
+                </x-card>
             </div>
         @endforelse
     </div>
 
-    @if ($lowongans->hasPages())
-        <div class="mt-4 d-flex justify-content-center">
-            {{ $lowongans->links('pagination::bootstrap-5') }}
-        </div>
-    @endif
+    {{-- Kerangka pemuatan: tampil menggantikan daftar saat filter/cari dikirim. --}}
+    <div class="row g-3" data-kerangka-lowongan hidden>
+        @for ($i = 0; $i < 3; $i++)
+            <div class="col-md-6 col-xl-4"><x-skeleton variant="card" /></div>
+        @endfor
+    </div>
+
+    <x-pagination :paginator="$lowongans" class="mt-4" />
+
+    {{-- Ajakan untuk tamu --}}
+    @unless (Auth::check())
+        <x-card class="pub-ajakan mt-5">
+            <div class="pub-ajakan-isi">
+                <span class="hr-stat-ikon hr-tone-primary"><i class="bi bi-person-plus" aria-hidden="true"></i></span>
+                <div class="flex-grow-1">
+                    <p class="hr-card-title mb-1">Siapkan profil sekali, lamar berkali-kali</p>
+                    <p class="hr-card-subtitle mb-0">Daftar akun pelamar, lengkapi data diri, lalu lamar lowongan cukup dengan satu klik.</p>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <x-button :href="route('pelamar.login')" variant="secondary">Masuk</x-button>
+                    <x-button :href="route('register')" icon="bi-person-plus">Daftar Sekarang</x-button>
+                </div>
+            </div>
+        </x-card>
+    @endunless
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    // Umpan balik saat filter/cari dikirim: daftar diganti kerangka pemuatan sampai halaman baru tampil.
+    document.addEventListener('DOMContentLoaded', function () {
+        const daftar = document.querySelector('[data-daftar-lowongan]');
+        const kerangka = document.querySelector('[data-kerangka-lowongan]');
+        const muat = function () { if (daftar && kerangka) { daftar.hidden = true; kerangka.hidden = false; } };
+        document.querySelectorAll('form[data-muat-lowongan]').forEach((f) => f.addEventListener('submit', muat));
+        document.querySelectorAll('[data-muat-lowongan] a').forEach((a) => a.addEventListener('click', (e) => { if (!e.ctrlKey && !e.metaKey) muat(); }));
+        document.querySelectorAll('select[name="urut"]').forEach((s) => s.addEventListener('change', muat));
+        window.addEventListener('pageshow', function (e) { if (e.persisted && daftar) { daftar.hidden = false; kerangka.hidden = true; } });
+    });
+</script>
 @endsection

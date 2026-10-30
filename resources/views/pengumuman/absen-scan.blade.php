@@ -1,60 +1,75 @@
+{{--
+    Hasil scan QR absen acara (pengguna sudah masuk). $keadaan: siap · sudah · belum_buka · tutup · bukan_peserta · qr_kedaluwarsa.
+    "siap" langsung mengirim absen (tanpa ketukan tambahan); tombol tetap ada bila skrip gagal.
+    $layout = panel sesuai peran, atau layout tamu untuk akun pelamar (body-class di bawah hanya dipakai layout tamu).
+--}}
 @extends($layout)
+
+@section('title', 'Absen Acara')
+@section('body-class', 'auth-body')
 
 @section('content')
 @php
     $info = [
-        'sudah' => ['ikon' => 'bi-check-circle-fill text-success', 'judul' => 'Anda sudah absen',
-            'teks' => 'Tercatat pukul ' . $peserta?->waktu_absen?->format('H:i') . '.'],
-        'belum_buka' => ['ikon' => 'bi-clock text-primary', 'judul' => 'Absen belum dibuka',
+        'sudah' => ['ikon' => 'bi-check-lg', 'tone' => 'success', 'judul' => 'Kehadiran tercatat',
+            'teks' => 'Anda tercatat hadir pukul ' . $peserta?->waktu_absen?->format('H:i') . '. Terima kasih sudah datang.'],
+        'belum_buka' => ['ikon' => 'bi-clock', 'tone' => 'info', 'judul' => 'Absen belum dibuka',
             'teks' => 'Absen dibuka ' . $pengumuman->absen_buka?->translatedFormat('l, d M Y \p\u\k\u\l H:i') . '.'],
-        'tutup' => ['ikon' => 'bi-hourglass-bottom text-secondary', 'judul' => 'Waktu absen sudah ditutup',
+        'tutup' => ['ikon' => 'bi-hourglass-bottom', 'tone' => 'neutral', 'judul' => 'Waktu absen sudah ditutup',
             'teks' => 'Absen ditutup ' . $pengumuman->absen_tutup?->translatedFormat('d M Y, H:i') . '. Hubungi SDM bila ada kendala.'],
-        'bukan_peserta' => ['ikon' => 'bi-person-x text-secondary', 'judul' => 'Anda bukan peserta absen acara ini',
+        'bukan_peserta' => ['ikon' => 'bi-person-x', 'tone' => 'neutral', 'judul' => 'Anda bukan peserta acara ini',
             'teks' => 'Absen hanya untuk pegawai yang dipilih panitia. Hubungi SDM bila seharusnya Anda ikut.'],
-        'qr_kedaluwarsa' => ['ikon' => 'bi-qr-code text-warning', 'judul' => 'Scan QR di lokasi acara',
+        'qr_kedaluwarsa' => ['ikon' => 'bi-qr-code', 'tone' => 'warning', 'judul' => 'Scan QR di lokasi acara',
             'teks' => 'QR berganti setiap 30 detik. Scan QR yang sedang tampil di layar panitia.'],
     ][$keadaan] ?? null;
 @endphp
-<div class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="absen-scan mx-auto">
-            <section class="panel p-4 text-center">
-                <p class="eyebrow mb-1"><i class="bi bi-qr-code-scan me-1"></i>Absen Acara</p>
-                <h1 class="h4 mb-1">{{ $pengumuman->judul }}</h1>
-                <p class="small text-muted mb-0">
-                    {{ $pengumuman->absenJendelaLabel() }}
-                    @if ($pengumuman->lokasi) · @include('partials.lokasi', ['lokasi' => $pengumuman->lokasi]) @endif
-                </p>
-            </section>
+<main class="dashboard-content">
+    <div class="container-fluid">
+        <div class="absen-acara mx-auto">
+            {{-- Info acara --}}
+            <x-card>
+                <div class="d-flex align-items-start gap-3">
+                    <span class="hr-stat-ikon hr-tone-primary"><i class="bi bi-qr-code-scan" aria-hidden="true"></i></span>
+                    <div class="min-w-0">
+                        <p class="eyebrow mb-1">Absen Acara</p>
+                        <h1 class="absen-acara-judul">{{ $pengumuman->judul }}</h1>
+                        <ul class="pub-rincian mt-2">
+                            <li><i class="bi bi-calendar-event" aria-hidden="true"></i>{{ $pengumuman->absenJendelaLabel() }}</li>
+                            @if ($pengumuman->lokasi)<li>@include('partials.lokasi', ['lokasi' => $pengumuman->lokasi])</li>@endif
+                        </ul>
+                    </div>
+                </div>
+            </x-card>
 
+            {{-- Status absen --}}
             @if ($keadaan === 'siap')
-                <section class="panel p-4 mt-3 text-center">
-                    <i class="bi bi-check-circle-fill text-success d-block mb-2" style="font-size:2.75rem"></i>
-                    <h2 class="h5 mb-1">QR terverifikasi</h2>
-                    <p class="text-muted mb-3" data-status-absen>Mencatat kehadiran Anda…</p>
+                <x-card class="mt-3 absen-acara-status">
+                    <span class="absen-acara-ikon hr-tone-success"><i class="bi bi-qr-code-scan" aria-hidden="true"></i></span>
+                    <h2 class="absen-acara-status-judul">QR terverifikasi</h2>
+                    <p class="text-muted mb-4" data-status-absen>
+                        <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Mencatat kehadiran Anda…
+                    </p>
                     <form method="POST" action="{{ route('acara.absen.simpan', $pengumuman) }}" id="formAbsenAcara">
                         @csrf
-                        <button type="submit" class="btn btn-primary btn-lg w-100"><i class="bi bi-person-check me-1"></i>Konfirmasi Hadir</button>
+                        <x-button type="submit" size="lg" block icon="bi-person-check">Absen Sekarang</x-button>
                     </form>
-                </section>
+                </x-card>
             @elseif ($info)
-                <section class="panel p-4 mt-3 text-center">
-                    <i class="bi {{ $info['ikon'] }} d-block mb-2" style="font-size:2.75rem"></i>
-                    <h2 class="h5">{{ $info['judul'] }}</h2>
-                    <p class="text-muted mb-3">{{ $info['teks'] }}</p>
-                    @if ($keadaan === 'qr_kedaluwarsa')
-                        <button type="button" class="btn btn-primary" data-scan-acara><i class="bi bi-camera me-1"></i>Buka Pemindai QR</button>
-                    @endif
-                    <a href="{{ route('pengumuman.index') }}#pengumuman-{{ $pengumuman->id }}" class="btn btn-outline-secondary {{ $keadaan === 'qr_kedaluwarsa' ? 'ms-1' : '' }}">Ke Pengumuman</a>
-                </section>
+                <x-card class="mt-3 absen-acara-status {{ $keadaan === 'sudah' ? 'is-sukses' : '' }}">
+                    <span class="absen-acara-ikon hr-tone-{{ $info['tone'] }}"><i class="bi {{ $info['ikon'] }}" aria-hidden="true"></i></span>
+                    <h2 class="absen-acara-status-judul">{{ $info['judul'] }}</h2>
+                    <p class="text-muted mb-4">{{ $info['teks'] }}</p>
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        @if ($keadaan === 'qr_kedaluwarsa')
+                            <x-button data-scan-acara icon="bi-camera">Buka Pemindai QR</x-button>
+                        @endif
+                        <x-button variant="secondary" :href="route('pengumuman.index') . '#pengumuman-' . $pengumuman->id" icon="bi-megaphone">Ke Pengumuman</x-button>
+                    </div>
+                </x-card>
             @endif
         </div>
     </div>
-</div>
-
-<style>
-    .absen-scan { max-width: 480px; }
-</style>
+</main>
 
 @if ($keadaan === 'qr_kedaluwarsa')
     @include('pengumuman._modal-scan')

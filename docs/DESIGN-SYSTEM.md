@@ -58,7 +58,7 @@ Semua pasangan teks/latar di atas lolos WCAG AA (≥ 4,5:1), termasuk teks statu
 |---|---|---|
 | `layouts/app.blade.php` | Semua panel yang login: Admin/SDM, Pegawai, Pelamar | `layouts.{admin,pegawai,pelamar}.app` hanya pembungkus 1 baris yang memilih menu sidebar |
 | `layouts/guest/app.blade.php` | Masuk staf/pelamar, daftar, wajib ganti kata sandi, layar absen acara | Section `body-class`, `pakai-banner`, `styles`, `scripts` |
-| `layouts/public/app.blade.php` | Situs karier (lowongan, jadwal kandidat) | Dirombak di batch halaman publik |
+| `layouts/public/app.blade.php` | Situs karier (lowongan, jadwal kandidat) | Bilah atas lengket + kaki ringan, isi `.pub-wadah` (maks 1280). Gaya di `ui.css` bagian "HALAMAN PUBLIK" (Batch 2) |
 
 Isi kerangka panel:
 
@@ -104,8 +104,10 @@ Aturan susunan:
 | `x-textarea` | `<x-textarea name="alasan" label="Alasan" maxlength="500" />` (penghitung karakter otomatis) |
 | `x-checkbox` / `x-radio` / `x-toggle` | Centang, grup pilihan (`fieldset`+`legend`), sakelar |
 | `x-form-group` | Label + kontrol kustom + galat/bantuan |
-| `x-badge` | `<x-badge tone="success\|warning\|danger\|neutral\|info\|primary" icon="…" dot>Disetujui</x-badge>` |
-| `x-card` | `<x-card title subtitle icon :padding="false" hover href>` + slot `actions`, `footer` |
+| `x-badge` | `<x-badge tone="success\|warning\|danger\|neutral\|info\|primary" icon="…" dot size="lg">Disetujui</x-badge>` (`size="lg"` untuk status utama) |
+| `x-card` | `<x-card title subtitle icon :padding="false" hover href title-tag="h3">` + slot `actions`, `footer` |
+| `x-chip` | `<x-chip :href="…" :active="…" icon :count="12">SDM</x-chip>`; tanpa `href` jadi tombol untuk saring di sisi klien |
+| `x-timeline` + `x-timeline.item` | `<x-timeline.item state="done\|active\|stopped\|pending" title meta icon>rincian</x-timeline.item>` |
 | `x-stat-card` | `<x-stat-card label value icon tone unit meta :trend="12.5" trend-label href>` |
 | `x-page-header` | `title subtitle eyebrow back back-label` + slot `actions`, `media` |
 | `x-table` | `<x-table caption compact sticky>` + slot `head`, `foot`; di HP otomatis jadi kartu |

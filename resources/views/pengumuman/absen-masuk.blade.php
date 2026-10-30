@@ -1,28 +1,27 @@
-{{-- Tamu yang scan QR absen: minta masuk dulu. Tombol login hanya tampil bila QR yang di-scan masih sah ($urlMasuk). --}}
+{{-- Tamu yang scan QR absen: minta masuk dulu (gaya kartu masuk Batch 1). Tombol login hanya tampil bila QR yang di-scan masih sah ($urlMasuk). --}}
 @extends('layouts.guest.app')
 
 @section('title', 'Absen Acara')
+@section('body-class', 'auth-body')
+@section('pakai-banner', '1')
 
 @push('head')
     <meta name="robots" content="noindex, nofollow">
 @endpush
 
 @section('content')
-<div class="min-vh-100 d-flex align-items-center justify-content-center p-3">
-    <div class="card border-0 shadow-sm text-center p-4 w-100" style="max-width:440px;border-radius:16px">
-        <i class="bi bi-qr-code-scan d-block mb-2" style="font-size:2.75rem;color:#8b1215"></i>
-        <h1 class="h5 mb-1">{{ $pengumuman->judul }}</h1>
-        <p class="small text-muted mb-3">{{ $pengumuman->absenJendelaLabel() }}</p>
-
+    <x-auth-card eyebrow="Absen Acara" eyebrow-icon="bi-qr-code-scan" :title="$pengumuman->judul" :subtitle="$pengumuman->absenJendelaLabel()">
         @if ($urlMasuk)
-            <p class="mb-3">Anda belum masuk. Masuk dulu untuk mencatat kehadiran — setelah itu Anda otomatis kembali ke sini dan absen langsung tercatat.</p>
-            <a href="{{ $urlMasuk }}" class="btn btn-primary btn-lg w-100"><i class="bi bi-box-arrow-in-right"></i> Masuk untuk Absen</a>
-            <p class="small text-muted mt-3 mb-0">QR berlaku beberapa menit. Bila kedaluwarsa, scan ulang QR di layar panitia.</p>
-        @else
-            <div class="alert alert-warning small text-start mb-0">
-                <strong>QR sudah tidak berlaku.</strong> Scan ulang QR yang sedang tampil di layar panitia, lalu masuk dari halaman yang muncul.
+            <div class="auth-akun">
+                <span class="hr-stat-ikon hr-tone-info"><i class="bi bi-person-lock" aria-hidden="true"></i></span>
+                <p class="small mb-0">Masuk dulu untuk mencatat kehadiran. Setelah masuk Anda otomatis kembali ke sini dan absen langsung tercatat.</p>
             </div>
+            <x-button :href="$urlMasuk" size="lg" block icon="bi-box-arrow-in-right">Masuk untuk Absen</x-button>
+            <p class="small text-muted text-center mt-3 mb-0"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>QR berlaku beberapa menit. Bila kedaluwarsa, scan ulang QR di layar panitia.</p>
+        @else
+            <x-alert tone="warning" title="QR sudah tidak berlaku" class="mb-0">
+                Scan ulang QR yang sedang tampil di layar panitia, lalu masuk dari halaman yang muncul.
+            </x-alert>
         @endif
-    </div>
-</div>
+    </x-auth-card>
 @endsection

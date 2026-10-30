@@ -1,147 +1,113 @@
+{{-- Jadwal seleksi kandidat (tautan token pribadi, tanpa login): status + timeline interview → screening → kontrak. --}}
 @extends('layouts.public.app')
 
 @section('title', 'Jadwal Seleksi')
 
-@section('styles')
+@push('head')
     <meta name="robots" content="noindex, nofollow">
-    <style>
-        .jadwal-item {
-            border: 1px solid #ece2e2;
-            border-radius: 14px;
-            padding: 1rem 1.1rem;
-            background: #fff;
-        }
-
-        .jadwal-item.aktif {
-            border-color: var(--brand);
-            box-shadow: 0 8px 24px rgba(136, 15, 18, .08);
-        }
-
-        .jadwal-item .ikon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            background: #f9e5e6;
-            color: var(--brand-dark);
-            display: grid;
-            place-items: center;
-            flex-shrink: 0;
-        }
-    </style>
-@endsection
+@endpush
 
 @section('content')
 @php
     $wawancara = $lamaran->interviewJadwals;
     $screening = $lamaran->screeningOnboardings->sortBy('id')->last();
     $kontrak = $lamaran->kontrakJadwals->where('status', '!=', 'dibatalkan')->sortBy('id')->last();
+    $ditolak = $lamaran->status === \App\Models\Lamaran::STATUS_DITOLAK;
+    $diterima = $lamaran->status === \App\Models\Lamaran::STATUS_DITERIMA;
+    $tone = match ($lamaran->status) {
+        \App\Models\Lamaran::STATUS_DITERIMA => 'success',
+        \App\Models\Lamaran::STATUS_PROSES => 'info',
+        \App\Models\Lamaran::STATUS_DITOLAK, \App\Models\Lamaran::STATUS_DIBATALKAN => 'neutral',
+        default => 'warning',
+    };
+    $posisi = $lamaran->jabatanTujuan() . ' · ' . $lamaran->unitKerjaTujuan();
+
+    // Tautan "Tambah ke Google Calendar" (waktu WIB; tanpa jam selesai → 1 jam).
+    $kalender = function (string $judul, $tanggal, ?string $mulai, ?string $selesai, ?string $lokasi) use ($posisi) {
+        $awal = \Illuminate\Support\Carbon::parse($tanggal->format('Y-m-d') . ' ' . ($mulai ?: '08:00'));
+        $akhir = $selesai ? \Illuminate\Support\Carbon::parse($tanggal->format('Y-m-d') . ' ' . $selesai) : $awal->copy()->addHour();
+
+        return 'https://calendar.google.com/calendar/render?' . http_build_query([
+            'action' => 'TEMPLATE', 'text' => $judul . ' — Yayasan Abdurrab',
+            'dates' => $awal->format('Ymd\THis') . '/' . $akhir->format('Ymd\THis'), 'ctz' => 'Asia/Jakarta',
+            'details' => 'Seleksi posisi ' . $posisi, 'location' => $lokasi ? \App\Support\Lokasi::label($lokasi) : '',
+        ]);
+    };
 @endphp
 
-<section class="public-hero detail-hero">
-    <div class="container" style="max-width:760px;">
-        <p class="hero-eyebrow mb-2">Jadwal Seleksi</p>
-        <h1 class="h2 mb-1">Halo, {{ $lamaran->namaKandidat() }}</h1>
-        <p class="mb-0" style="opacity:.9;">
-            Posisi: <strong>{{ $lamaran->jabatanTujuan() }}</strong> &middot; {{ $lamaran->unitKerjaTujuan() }}
-        </p>
-    </div>
-</section>
-
-<div class="container pb-4" style="max-width:760px;">
-    <div class="card detail-card bg-white">
-        <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <h2 class="h6 fw-bold mb-0">Status Seleksi</h2>
-                <span class="badge {{ $lamaran->badgeClass() }} fs-6">
-                    @if ($lamaran->status === \App\Models\Lamaran::STATUS_DITOLAK)
-                        Seleksi Selesai
-                    @else
-                        {{ $lamaran->statusLabel() }}
-                    @endif
-                </span>
+<div class="pub-wadah pub-isi">
+    <div class="pub-jadwal mx-auto">
+        <x-card class="pub-jadwal-kepala">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                <div class="min-w-0">
+                    <p class="eyebrow mb-1">Jadwal Seleksi</p>
+                    <h1 class="pub-jadwal-judul">Halo, {{ $lamaran->namaKandidat() }}</h1>
+                    <p class="text-muted mb-0">Posisi <strong class="text-body">{{ $lamaran->jabatanTujuan() }}</strong> · {{ $lamaran->unitKerjaTujuan() }}</p>
+                </div>
+                <x-badge :tone="$tone" size="lg">{{ $ditolak ? 'Seleksi Selesai' : $lamaran->statusLabel() }}</x-badge>
             </div>
+        </x-card>
 
-            @if ($lamaran->status === \App\Models\Lamaran::STATUS_DITERIMA)
-                <div class="alert alert-success mb-3">
-                    <i class="bi bi-check-circle me-1"></i> Selamat! Anda dinyatakan diterima. Informasi selanjutnya akan disampaikan oleh tim SDM.
-                </div>
-            @elseif ($lamaran->status === \App\Models\Lamaran::STATUS_DITOLAK)
-                <div class="alert alert-secondary mb-3">
-                    Terima kasih telah mengikuti proses seleksi. Proses seleksi untuk posisi ini telah selesai.
-                </div>
-            @endif
+        @if ($diterima)
+            <x-alert tone="success" title="Selamat, Anda diterima!" class="mt-3 mb-0">Informasi selanjutnya akan disampaikan oleh tim SDM.</x-alert>
+        @elseif ($ditolak)
+            <x-alert tone="info" title="Terima kasih telah mengikuti seleksi" class="mt-3 mb-0">Proses seleksi untuk posisi ini telah selesai.</x-alert>
+        @endif
 
-            <div class="d-grid gap-2">
+        <x-card title="Tahapan & Jadwal" subtitle="Diperbarui otomatis oleh tim SDM — buka kembali tautan ini secara berkala." icon="bi-signpost-split" class="mt-3">
+            <x-timeline label="Tahapan seleksi">
                 @forelse ($wawancara as $jadwal)
-                    <div class="jadwal-item {{ $jadwal->isTerjadwal() ? 'aktif' : '' }}">
-                        <div class="d-flex gap-3">
-                            <span class="ikon"><i class="bi bi-chat-square-text"></i></span>
-                            <div class="flex-grow-1">
-                                <div class="d-flex justify-content-between flex-wrap gap-1">
-                                    <strong>Interview {{ $jadwal->tahap_interview }}</strong>
-                                    @if ($jadwal->isTerjadwal())
-                                        <span class="badge text-bg-primary">Terjadwal</span>
-                                    @else
-                                        <span class="badge text-bg-light border">Selesai</span>
-                                    @endif
-                                </div>
-                                <div class="text-muted small mt-1">
-                                    <i class="bi bi-calendar-event me-1"></i>{{ $jadwal->tanggal->translatedFormat('l, d F Y') }}
-                                    &middot; <i class="bi bi-clock me-1"></i>{{ substr($jadwal->waktu_mulai, 0, 5) }}{{ $jadwal->waktu_selesai ? ' – ' . substr($jadwal->waktu_selesai, 0, 5) : '' }} WIB
-                                </div>
-                                @if ($jadwal->lokasi)
-                                    <div class="small mt-1">@include('partials.lokasi', ['lokasi' => $jadwal->lokasi])</div>
-                                @endif
-                                @if ($jadwal->interviewer)
-                                    <div class="small text-muted mt-1"><i class="bi bi-person me-1"></i>Pewawancara: {{ $jadwal->interviewer->name }}</div>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
+                    @php $aktif = $jadwal->isTerjadwal(); @endphp
+                    <x-timeline.item :state="$aktif ? 'active' : 'done'" :title="'Interview ' . $jadwal->tahap_interview"
+                        :meta="$aktif ? 'Terjadwal' : 'Selesai'">
+                        <ul class="pub-rincian">
+                            <li><i class="bi bi-calendar-event" aria-hidden="true"></i>{{ $jadwal->tanggal->translatedFormat('l, d F Y') }}</li>
+                            <li><i class="bi bi-clock" aria-hidden="true"></i>{{ substr($jadwal->waktu_mulai, 0, 5) }}{{ $jadwal->waktu_selesai ? ' – ' . substr($jadwal->waktu_selesai, 0, 5) : '' }} WIB</li>
+                            @if ($jadwal->lokasi)<li>@include('partials.lokasi', ['lokasi' => $jadwal->lokasi])</li>@endif
+                            @if ($jadwal->interviewer)<li><i class="bi bi-person" aria-hidden="true"></i>Pewawancara: {{ $jadwal->interviewer->name }}</li>@endif
+                        </ul>
+                        @if ($aktif)
+                            <x-button size="sm" variant="secondary" icon="bi-calendar-plus" target="_blank" rel="noopener" class="mt-2"
+                                :href="$kalender('Interview ' . $jadwal->tahap_interview, $jadwal->tanggal, $jadwal->waktu_mulai, $jadwal->waktu_selesai, $jadwal->lokasi)">Tambah ke Google Calendar</x-button>
+                        @endif
+                    </x-timeline.item>
                 @empty
-                    <div class="jadwal-item text-center text-muted">
-                        <i class="bi bi-hourglass-split d-block fs-4 mb-1"></i>
-                        Jadwal interview sedang disiapkan. Silakan buka kembali link ini secara berkala.
-                    </div>
+                    <x-timeline.item state="active" icon="bi-hourglass-split" title="Interview">
+                        Jadwal interview sedang disiapkan. Silakan buka kembali tautan ini secara berkala.
+                    </x-timeline.item>
                 @endforelse
 
-                @if ($screening)
-                    <div class="jadwal-item">
-                        <div class="d-flex gap-3">
-                            <span class="ikon"><i class="bi bi-briefcase"></i></span>
-                            <div>
-                                <strong>Screening / Onboarding</strong>
-                                <div class="text-muted small mt-1">
-                                    <i class="bi bi-calendar-range me-1"></i>{{ $screening->tanggal_mulai->translatedFormat('d F Y') }} – {{ $screening->tanggal_selesai->translatedFormat('d F Y') }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endif
+                <x-timeline.item :state="$screening ? ($kontrak || $diterima ? 'done' : 'active') : 'pending'" title="Screening / Onboarding"
+                    :meta="$screening ? null : 'Belum dijadwalkan'">
+                    @if ($screening)
+                        <ul class="pub-rincian">
+                            <li><i class="bi bi-calendar-range" aria-hidden="true"></i>{{ $screening->tanggal_mulai->translatedFormat('d F Y') }} – {{ $screening->tanggal_selesai->translatedFormat('d F Y') }}</li>
+                        </ul>
+                    @endif
+                </x-timeline.item>
 
-                @if ($kontrak)
-                    <div class="jadwal-item">
-                        <div class="d-flex gap-3">
-                            <span class="ikon"><i class="bi bi-pen"></i></span>
-                            <div>
-                                <strong>Tanda Tangan Kontrak</strong>
-                                <div class="text-muted small mt-1">
-                                    <i class="bi bi-calendar-event me-1"></i>{{ $kontrak->tanggal->translatedFormat('l, d F Y') }}{{ $kontrak->waktu ? ', ' . substr($kontrak->waktu, 0, 5) . ' WIB' : '' }}
-                                </div>
-                                @if ($kontrak->lokasi)
-                                    <div class="small mt-1">@include('partials.lokasi', ['lokasi' => $kontrak->lokasi])</div>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                @endif
-            </div>
+                <x-timeline.item :state="$kontrak ? ($diterima ? 'done' : 'active') : 'pending'" title="Tanda Tangan Kontrak" :meta="$kontrak ? null : 'Belum dijadwalkan'">
+                    @if ($kontrak)
+                        <ul class="pub-rincian">
+                            <li><i class="bi bi-calendar-event" aria-hidden="true"></i>{{ $kontrak->tanggal->translatedFormat('l, d F Y') }}{{ $kontrak->waktu ? ', ' . substr($kontrak->waktu, 0, 5) . ' WIB' : '' }}</li>
+                            @if ($kontrak->lokasi)<li>@include('partials.lokasi', ['lokasi' => $kontrak->lokasi])</li>@endif
+                        </ul>
+                        @unless ($diterima)
+                            <x-button size="sm" variant="secondary" icon="bi-calendar-plus" target="_blank" rel="noopener" class="mt-2"
+                                :href="$kalender('Tanda tangan kontrak', $kontrak->tanggal, $kontrak->waktu ? substr($kontrak->waktu, 0, 5) : null, null, $kontrak->lokasi)">Tambah ke Google Calendar</x-button>
+                        @endunless
+                    @endif
+                </x-timeline.item>
 
-            <p class="text-muted small mt-4 mb-0">
-                <i class="bi bi-shield-lock me-1"></i>Link ini bersifat pribadi — jangan dibagikan ke orang lain.
-                Jadwal pada halaman ini selalu diperbarui otomatis oleh tim SDM.
-            </p>
-        </div>
+                <x-timeline.item :state="$diterima ? 'done' : ($ditolak ? 'stopped' : 'pending')" title="Keputusan Akhir"
+                    :meta="$diterima ? 'Diterima' : ($ditolak ? 'Selesai' : null)" />
+            </x-timeline>
+        </x-card>
+
+        <p class="pub-catatan">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+            Tautan ini bersifat pribadi — jangan dibagikan ke orang lain. Berhalangan hadir? Segera hubungi tim SDM Yayasan Abdurrab.
+        </p>
     </div>
 </div>
 @endsection
