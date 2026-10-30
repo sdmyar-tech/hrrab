@@ -1,41 +1,10 @@
-:root {
-    --hr-primary: #880f12;
-    --hr-primary-dark: #5f0708;
-    --hr-primary-soft: #f9e5e6;
-    --hr-primary-soft-text: #5f0708;
-    --hr-link: #880f12;
-    --hr-link-hover: #5f0708;
+/* Token (termasuk --hr-link & pemetaan --bs-primary) didefinisikan HANYA di ui.css. */
 
-    --bs-primary: #880f12;
-    --bs-primary-rgb: 136, 15, 18;
-    --bs-primary-text-emphasis: #5f0708;
-    --bs-primary-bg-subtle: #f9e5e6;
-    --bs-primary-border-subtle: #e8b4b5;
-    --bs-link-color: #880f12;
-    --bs-link-color-rgb: 136, 15, 18;
-    --bs-link-hover-color: #5f0708;
-    --bs-link-hover-color-rgb: 95, 7, 8;
-    --bs-focus-ring-color: rgba(136, 15, 18, .25);
-}
-
-html[data-theme="dark"] {
-    --hr-primary-soft: #3b2020;
-    --hr-primary-soft-text: #f5d4d5;
-    --hr-link: #f08a8c;
-    --hr-link-hover: #f5b3b4;
-
-    --bs-primary-text-emphasis: #f5c2c3;
-    --bs-primary-bg-subtle: #3b2020;
-    --bs-primary-border-subtle: #6b2a2c;
-    --bs-link-color: #f08a8c;
-    --bs-link-color-rgb: 240, 138, 140;
-    --bs-link-hover-color: #f5b3b4;
-}
-
-.dashboard-content a:where(:not(.btn, .nav-link, .dropdown-item, .list-group-item, .page-link, .badge, .stretched-link)) {
+/* Tautan teks di area konten berwarna merek; komponen ber-kelas hr-/dash- mengatur warnanya sendiri. */
+.dashboard-content a:where(:not(.btn, .nav-link, .dropdown-item, .list-group-item, .page-link, .badge, .stretched-link, [class*="hr-"], [class*="dash-"])) {
     color: var(--hr-link);
 }
-.dashboard-content a:where(:not(.btn, .nav-link, .dropdown-item, .list-group-item, .page-link, .badge, .stretched-link)):hover {
+.dashboard-content a:where(:not(.btn, .nav-link, .dropdown-item, .list-group-item, .page-link, .badge, .stretched-link, [class*="hr-"], [class*="dash-"])):hover {
     color: var(--hr-link-hover);
 }
 
@@ -103,58 +72,15 @@ html[data-theme="dark"] .btn-outline-primary { --bs-btn-border-color: #c9474a; }
     border-color: var(--hr-primary);
 }
 
-.sidebar-nav {
-    gap: .12rem;
-    padding: .75rem .75rem 1rem;
-}
-.sidebar-nav .nav-link {
-    min-height: 38px;
-    padding: .42rem .7rem;
-    gap: .6rem;
-    font-size: .9rem;
-}
-.sidebar-nav .nav-icon {
-    width: 26px;
-    height: 26px;
-    font-size: .95rem;
-}
-.sidebar-nav .nav-section {
-    margin: .7rem .7rem .1rem;
-    font-size: .68rem;
-    font-weight: 800;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--admin-muted, #9ca3af);
-    opacity: .85;
-}
-.sidebar-nav .nav-badge {
-    margin-left: auto;
-    min-width: 22px;
-    height: 20px;
-    padding: 0 6px;
-    border-radius: 10px;
-    background: var(--hr-primary);
-    color: #fff;
-    font-size: .7rem;
-    font-weight: 800;
-    line-height: 20px;
-    text-align: center;
-}
-.sidebar-nav .nav-badge.is-warning { background: #d97706; }
-.sidebar-nav .nav-link { position: relative; }
-body.sidebar-mini .sidebar-nav .nav-section { display: none; }
-body.sidebar-mini .sidebar-nav .nav-badge {
-    position: absolute;
-    top: 4px;
-    right: calc(50% - 18px); /* menempel di pojok kanan atas ikon */
-    border: 2px solid var(--admin-surface);
-    box-sizing: content-box;
-    min-width: 10px;
-    width: 10px;
-    height: 10px;
-    padding: 0;
-    font-size: 0;
-}
+
+
+
+
+
+
+
+
+
 
 /* Tabel menyesuaikan lebar layar: teks dibungkus. Bila tetap tidak muat (mis. 1024px + sidebar), tabel digulir
    di dalam panel — bukan seluruh halaman. Dropdown di tabel aman karena memakai posisi fixed (main.js). */
@@ -336,106 +262,60 @@ body.sidebar-mini .sidebar-nav .nav-badge {
 .nav-pills .nav-link { border-radius: .6rem; font-weight: 600; }
 
 /* ---------- Sidebar ---------- */
-.admin-sidebar { display: flex; flex-direction: column; }
-.sidebar-header { padding: 1.1rem 1.1rem 1rem; }
-.brand-logo { width: 34px; height: 34px; object-fit: contain; flex: none; }
-.brand-title { font-size: 1.05rem; font-weight: 800; letter-spacing: .02em; }
-.brand-subtitle { font-size: .74rem; }
-.sidebar-nav { flex: 1 1 auto; overflow-y: auto; align-content: start; scrollbar-width: thin; }
-.sidebar-nav .nav-link { border-radius: .6rem; font-weight: 600; }
-.sidebar-nav .nav-link.active {
-    background: var(--hr-primary-soft);
-    color: var(--hr-primary-dark);
-    box-shadow: inset 3px 0 0 var(--hr-primary);
-}
-.sidebar-nav .nav-link.active .nav-icon { background: var(--hr-primary); color: #fff; }
-.sidebar-nav .nav-link:hover:not(.active) { background: var(--admin-surface-soft); }
-.sidebar-nav .nav-icon { border-radius: .45rem; }
-.sidebar-nav .nav-ext { margin-left: auto; font-size: .7rem; opacity: .6; }
-.sidebar-nav .nav-section { margin: .9rem .7rem .2rem; font-size: .66rem; letter-spacing: .08em; }
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* =========================================================
    Sidebar: bagian selalu terbuka (judul kecil + menu rapat) + mode ringkas
    ========================================================= */
 /* Teks menu boleh terpotong (…) supaya badge tidak terdorong keluar sidebar. */
-.sidebar-nav .nav-text { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
-.sidebar-nav .nav-badge { flex: none; }
 
-.sidebar-nav .nav-bagian { display: grid; gap: 1px; margin-top: .5rem; }
-.sidebar-nav .nav-bagian-judul {
-    padding: .4rem .85rem .2rem;
-    font-size: .64rem;
-    font-weight: 800;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--admin-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+
+
+
+
 /* Menu di dalam bagian lebih rapat dari menu utama agar seluruh daftar muat tanpa banyak gulir. */
-.sidebar-nav .nav-bagian .nav-link { min-height: 36px; padding-top: .2rem; padding-bottom: .2rem; font-size: .86rem; font-weight: 500; }
-.sidebar-nav .nav-bagian .nav-link.active { font-weight: 600; }
-.sidebar-nav .nav-bagian .nav-icon { width: 26px; height: 26px; font-size: .85rem; }
-html[data-theme="dark"] .sidebar-nav .nav-bagian-judul { color: rgba(255, 255, 255, .45); }
+
+
+
+
 
 /* Mode ringkas (desktop, ikon saja): judul bagian jadi garis pemisah tipis. */
-@media (min-width: 992px) {
-    body.sidebar-mini .sidebar-nav .nav-bagian { margin-top: .3rem; }
-    body.sidebar-mini .sidebar-nav .nav-bagian-judul { height: 0; padding: 0; margin: .25rem .9rem .3rem; border-top: 1px solid var(--admin-border); font-size: 0; }
-    html[data-theme="dark"] body.sidebar-mini .sidebar-nav .nav-bagian-judul { border-top-color: rgba(255, 255, 255, .1); }
-}html[data-theme="dark"] .sidebar-nav .nav-link.active { background: rgba(183, 23, 25, .18); color: #fff; }
-html[data-theme="dark"] .sidebar-nav .nav-link:hover:not(.active) { background: rgba(255, 255, 255, .05); }
 
-.sidebar-akun {
-    flex: none;
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    margin: 0;
-    padding: .75rem .75rem .9rem;
-    border-top: 1px solid var(--admin-sidebar-border, var(--admin-border));
-}
-.akun-info {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: .6rem;
-    padding: .4rem .45rem;
-    border-radius: .6rem;
-    color: var(--admin-sidebar-text-strong, var(--admin-text)) !important;
-    text-decoration: none;
-}
-.akun-info:hover { background: var(--admin-surface-soft); }
-.akun-foto { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex: none; border: 2px solid var(--hr-primary-soft); }
-.akun-teks { min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
-.akun-nama { font-size: .84rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.akun-role { font-size: .72rem; color: var(--admin-sidebar-muted, var(--admin-muted)); }
-.akun-keluar { margin: 0; flex: none; }
-.btn-akun-keluar {
-    width: 36px;
-    height: 36px;
-    display: inline-grid;
-    place-items: center;
-    border: 1px solid var(--admin-border);
-    border-radius: .6rem;
-    background: var(--admin-surface);
-    color: var(--admin-muted);
-    transition: color .15s ease, background .15s ease, border-color .15s ease;
-}
-.btn-akun-keluar:hover, .btn-akun-keluar:focus-visible { color: #b42318; background: #fdecea; border-color: #f1b0aa; outline: 0; }
-html[data-theme="dark"] .akun-info:hover { background: rgba(255, 255, 255, .05); }
-html[data-theme="dark"] .btn-akun-keluar { background: transparent; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* Sidebar ringkas (desktop): hanya ikon & foto. */
-body.sidebar-mini .brand-copy, body.sidebar-mini .akun-teks, body.sidebar-mini .akun-keluar, body.sidebar-mini .sidebar-nav .nav-ext { display: none; }
-body.sidebar-mini .sidebar-akun { justify-content: center; padding-inline: .4rem; }
-body.sidebar-mini .akun-info { flex: none; justify-content: center; padding: .25rem; }
-body.sidebar-mini .sidebar-nav .nav-link.active { box-shadow: none; }
+
+
+
+
 
 /* ---------- Navbar ---------- */
-.admin-navbar { min-height: 64px; }
-.icon-button, .profile-button, .sidebar-toggle { border-radius: .6rem; }
+
+
 
 /* ---------- Layar kecil ---------- */
 @media (max-width: 575.98px) {
@@ -478,8 +358,8 @@ body.sidebar-mini .sidebar-nav .nav-link.active { box-shadow: none; }
     table.table-mobile-cards td.text-end .dropdown-menu { width: auto; }
     table.table-mobile-cards td[colspan] { text-align: center; border-bottom: 0 !important; }
     table.table-mobile-cards td[colspan]::before { display: none; }
-    .navbar-actions { gap: .4rem; }
-    .profile-button { padding-inline: .35rem; }
+
+
 }
 /* ---------- Kartu (panel) ---------- */
 /* Judul kartu kecil: ikon dalam "chip" agar seragam dengan judul seksi. */

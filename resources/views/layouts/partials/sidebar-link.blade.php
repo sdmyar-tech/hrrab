@@ -1,18 +1,18 @@
-{{-- Satu link menu sidebar. $item = [label, ikon, route, polaAktif, tampil, badge, (opsional) badgePeringatan, (opsional) eksternal] --}}
+{{-- Satu link menu sidebar. $item = [label, ikon, route, polaAktif, tampil, badge, (opsional) badgePeringatan, (opsional) eksternal]; $bagian = nama menu induk (untuk palet Cari menu). --}}
 @php
     [$teks, $ikonMenu, $tujuan, $pola, , $jumlah] = $item;
     $peringatan = $item[6] ?? false;
     $eksternal = $item[7] ?? false;
     $aktif = ! $eksternal && request()->routeIs($pola);
 @endphp
-<a class="nav-link {{ $aktif ? 'active' : '' }}" href="{{ route($tujuan) }}" title="{{ $teks }}"
-    @if ($aktif) aria-current="page" @endif>
-    <span class="nav-icon"><i class="bi {{ $ikonMenu }}" aria-hidden="true"></i></span>
-    <span class="nav-text">{{ $teks }}</span>
+<a class="app-nav-item {{ $aktif ? 'is-active' : '' }}" href="{{ route($tujuan) }}" title="{{ $teks }}"
+    data-bagian="{{ $bagian ?? '' }}" @if ($aktif) aria-current="page" @endif>
+    <i class="bi {{ $ikonMenu }} app-nav-ikon" aria-hidden="true"></i>
+    <span class="app-nav-teks">{{ $teks }}</span>
     @if ($eksternal)
-        <i class="bi bi-box-arrow-up-right nav-ext" aria-hidden="true"></i>
+        <i class="bi bi-box-arrow-up-right app-nav-ext" aria-hidden="true"></i>
     @endif
     @if ($jumlah)
-        <span class="nav-badge {{ $peringatan ? 'is-warning' : '' }}" aria-label="{{ $jumlah }} perlu perhatian">{{ $jumlah > 99 ? '99+' : $jumlah }}</span>
+        <span class="app-nav-badge {{ $peringatan ? 'is-warning' : '' }}" aria-label="{{ $jumlah }} perlu perhatian">{{ $jumlah > 99 ? '99+' : $jumlah }}</span>
     @endif
 </a>

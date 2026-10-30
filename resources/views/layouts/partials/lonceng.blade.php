@@ -4,11 +4,12 @@
 @endphp
 <style>
     .lonceng-btn { position: relative; }
-    .lonceng-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
-        background: #dc3545; color: #fff; font-size: .68rem; font-weight: 700; line-height: 18px; text-align: center; }
+    .lonceng-badge { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--hr-radius-pill);
+        border: 2px solid var(--admin-surface); box-sizing: content-box;
+        background: #b42318; color: #fff; font-size: .6875rem; font-weight: 700; line-height: 18px; text-align: center; }
     .lonceng-menu { width: min(380px, calc(100vw - 24px)); max-width: calc(100vw - 24px); padding: 0; overflow: hidden; }
     @media (max-width: 575.98px) {
-        .lonceng-menu.show { position: fixed !important; inset: 64px 12px auto 12px !important; transform: none !important; width: auto; }
+        .lonceng-menu.show { position: fixed !important; inset: calc(var(--hr-topbar-h) + 4px) 12px auto 12px !important; transform: none !important; width: auto; }
     }
     .lonceng-menu .nav-tabs { border-bottom: 1px solid var(--bs-border-color); }
     .lonceng-menu .nav-link { color: var(--bs-secondary-color); border: 0; border-bottom: 2px solid transparent; border-radius: 0; font-size: .85rem; font-weight: 600; padding: .65rem .5rem; }
@@ -29,7 +30,7 @@
 </style>
 
 <div class="dropdown">
-    <button class="icon-button lonceng-btn" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-display="static" aria-expanded="false"
+    <button class="app-icon-btn lonceng-btn" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-display="static" aria-expanded="false"
         aria-label="Notifikasi & pengumuman" title="Notifikasi & pengumuman">
         <i class="bi bi-bell" aria-hidden="true"></i>
         <span class="lonceng-badge" data-lonceng-total @if (! $totalBelum) hidden @endif>{{ $totalBelum > 99 ? '99+' : $totalBelum }}</span>

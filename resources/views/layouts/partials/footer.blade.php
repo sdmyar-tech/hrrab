@@ -1,7 +1,5 @@
-<footer class="admin-footer">
-    <div class="container-fluid px-3 px-lg-4">
-        <span>
-            &copy; {{ now()->year }} <strong>Yayasan Abdurrab</strong> &middot; HRRAB &mdash; Sistem Informasi SDM
-        </span>
+<footer class="app-footer">
+    <div class="app-footer-isi">
+        &copy; {{ now()->year }} <strong>Yayasan Abdurrab</strong> &middot; HRRAB &mdash; Sistem Informasi SDM
     </div>
 </footer>

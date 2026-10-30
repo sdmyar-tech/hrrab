@@ -8,267 +8,165 @@
     $paletStatus = ['Tetap' => 1, 'Kontrak' => 2, 'Harian Lepas' => 3, 'Probation' => 4, 'Magang' => 5];
     $paletGender = ['Laki-laki' => 1, 'Perempuan' => 2];
     $adaAgenda = $agenda->isNotEmpty() || $user->bisaMenginterview();
-    $inisial = fn ($nama) => collect(explode(' ', preg_replace('/[^A-Za-z ]/', '', $nama)))->filter()->take(2)->map(fn ($k) => mb_substr($k, 0, 1))->implode('');
     $jam = fn ($n) => rtrim(rtrim(number_format($n, 1, ',', '.'), '0'), ',');
     $bisaPegawai = $user->can('lihat-tabel-karyawan');
+    $toneKartu = ['primary' => 'primary', 'success' => 'success', 'warning' => 'warning', 'danger' => 'danger', 'prpl' => 'info'];
+
+    // Tren: bulan penuh terakhir dibanding bulan sebelumnya (bulan berjalan belum lengkap → tidak dibandingkan).
+    $trenPersen = function (array $seri) {
+        $kini = $seri[count($seri) - 2] ?? null;
+        $lalu = $seri[count($seri) - 3] ?? null;
+        if (! $kini || ! $lalu || ! $lalu['jumlah']) {
+            return null;
+        }
+
+        return ['persen' => round(($kini['jumlah'] - $lalu['jumlah']) / $lalu['jumlah'] * 100, 1), 'kini' => $kini, 'lalu' => $lalu];
+    };
 @endphp
 <main class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
+    <div class="container-fluid">
 
-        <section class="dash-hero p-3 p-lg-4 mb-3">
-            <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
-                <div class="d-flex gap-3 align-items-start">
-                    <span class="page-icon"><i class="bi bi-speedometer2"></i></span>
-                    <div>
-                        <p class="eyebrow mb-1">Dashboard {{ $user->roleLabel() }}</p>
-                        <h1 class="h3 mb-1">Halo, {{ \Illuminate\Support\Str::of($user->name)->before(',') }}</h1>
-                        <p class="text-muted mb-0">{{ $judul }} &middot; {{ now()->translatedFormat('l, d F Y') }}</p>
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap align-items-end gap-2 align-self-lg-center">
-                    @if (count($pilihanUnit) > 1)
-                        <form method="GET" action="{{ route('admin.dashboard') }}" style="min-width: 260px;">
-                            <label for="pilih-unit" class="form-label small text-muted mb-1"><i class="bi bi-funnel me-1"></i>Tampilkan bagian</label>
+        {{-- ============ Kepala: sapaan · lingkup · ekspor ============ --}}
+        <x-page-header :eyebrow="'Dashboard ' . $user->roleLabel()" :title="'Halo, ' . \Illuminate\Support\Str::of($user->name)->before(',')"
+            :subtitle="$judul . ' · ' . now()->translatedFormat('l, d F Y')">
+            @if ($unitDipilih)
+                <x-badge tone="primary" icon="bi-funnel">Bagian: {{ $unitDipilih }}</x-badge>
+                <a href="{{ route('admin.dashboard') }}" class="small fw-semibold">Tampilkan semua bagian</a>
+            @endif
+            <x-slot:actions>
+                @if (count($pilihanUnit) > 1)
+                    <form method="GET" action="{{ route('admin.dashboard') }}" class="dash-pilih-unit">
+                        <label for="pilih-unit" class="visually-hidden">Tampilkan bagian</label>
+                        <div class="input-group hr-input-group">
+                            <span class="input-group-text"><i class="bi bi-funnel" aria-hidden="true"></i></span>
                             <select name="unit" id="pilih-unit" class="form-select" onchange="this.form.submit()">
-                                <option value="">Semua ({{ count($pilihanUnit) }} bagian)</option>
+                                <option value="">Semua bagian ({{ count($pilihanUnit) }})</option>
                                 @foreach ($pilihanUnit as $u)
                                     <option value="{{ $u }}" @selected($unitDipilih === $u)>{{ $u }}</option>
                                 @endforeach
                             </select>
-                        </form>
-                    @endif
-                    @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.dashboard.export', 'eksporTeks' => 'Ekspor Dashboard'])
-                </div>
-            </div>
-            @if ($unitDipilih)
-                <div class="mt-3 small">
-                    <span class="badge text-bg-primary">Bagian: {{ $unitDipilih }}</span>
-                    <a href="{{ route('admin.dashboard') }}" class="ms-2 dash-link">Tampilkan semua bagian</a>
-                </div>
-            @endif
-        </section>
+                        </div>
+                    </form>
+                @endif
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.dashboard.export', 'eksporTeks' => 'Ekspor'])
+            </x-slot:actions>
+        </x-page-header>
 
         @include('partials.jadwal-ttd-kontrak')
+
+        {{-- ============ 1. Kartu angka ============ --}}
         <section class="row g-3" aria-label="Ringkasan">
             @foreach ($kartu as $k)
                 <div class="col-6 col-xl-3">
-                    <article class="metric-card metric-{{ $k['warna'] }} h-100 position-relative">
-                        <div class="metric-top">
-                            <span class="metric-label">{{ $k['label'] }}</span>
-                            <span class="metric-icon"><i class="bi {{ $k['ikon'] }}" aria-hidden="true"></i></span>
-                        </div>
-                        <div class="metric-value">{{ number_format($k['nilai']) }}</div>
-                        <div class="metric-meta"><span class="text-muted text-truncate d-block">{{ $k['meta'] }}</span></div>
-                        @if ($k['url'])
-                            <a href="{{ $k['url'] }}" class="stretched-link" aria-label="Buka {{ $k['label'] }}"></a>
-                        @endif
-                    </article>
+                    <x-stat-card :label="$k['label']" :value="$k['nilai']" :icon="$k['ikon']" :tone="$toneKartu[$k['warna']] ?? 'primary'"
+                        :meta="$k['meta']" :href="$k['url']" />
                 </div>
             @endforeach
         </section>
 
-        <section class="row g-3 mt-1">
-            @if ($tugas)
-                <div class="col-12 {{ $adaAgenda ? 'col-xl-5' : '' }}">
-                    <div class="panel h-100">
-                        <div class="panel-header">
-                            <div>
-                                <h2 class="h5 mb-1 section-title"><i class="bi bi-list-check" aria-hidden="true"></i><span>Perlu Tindakan</span></h2>
-                                <p class="text-muted mb-0">Pekerjaan yang menunggu Anda.</p>
-                            </div>
-                        </div>
-                        @php
-                            // Yang ada antreannya tampil di atas; yang kosong diringkas agar tugas nyata tidak tenggelam.
-                            [$tugasAda, $tugasKosong] = collect($tugas)->partition(fn ($t) => $t['jumlah'] > 0);
-                        @endphp
-                        <div class="list-group list-group-flush">
-                            @forelse ($tugasAda as $t)
-                                <a href="{{ $t['url'] }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0">
-                                    <span><i class="bi {{ $t['ikon'] }} me-2 text-muted"></i>{{ $t['label'] }}</span>
-                                    <span class="badge rounded-pill text-bg-warning">{{ $t['jumlah'] }}</span>
-                                </a>
-                            @empty
-                                <div class="list-group-item px-0 text-success"><i class="bi bi-check2-circle me-2"></i>Semua beres — tidak ada pekerjaan yang menunggu.</div>
-                            @endforelse
-                        </div>
-                        @if ($tugasKosong->isNotEmpty())
-                            <details class="tugas-kosong mt-2">
-                                <summary class="small text-muted">{{ $tugasKosong->count() }} jenis tugas lain tanpa antrean</summary>
-                                <div class="d-flex flex-wrap gap-1 mt-2">
-                                    @foreach ($tugasKosong as $t)
-                                        <a href="{{ $t['url'] }}" class="badge rounded-pill text-bg-light border text-decoration-none fw-normal"><i class="bi {{ $t['ikon'] }} me-1"></i>{{ $t['label'] }}</a>
-                                    @endforeach
-                                </div>
-                            </details>
-                        @endif
-                    </div>
-                </div>
-            @endif
-
-            @if ($adaAgenda)
-                <div class="col-12 {{ $tugas ? 'col-xl-7' : '' }}">
-                    <div class="panel h-100">
-                        <div class="panel-header">
-                            <div>
-                                <h2 class="h5 mb-1 section-title"><i class="bi bi-calendar-event" aria-hidden="true"></i><span>Agenda 14 Hari</span></h2>
-                                <p class="text-muted mb-0">Interview, onboarding, dan tanda tangan kontrak.</p>
-                            </div>
-                        </div>
-                        <div class="activity-list">
-                            @forelse ($agenda as $a)
-                                <div class="activity-item">
-                                    <span class="activity-dot {{ $a['tanggal']->isToday() ? 'bg-danger' : 'bg-primary' }}"></span>
-                                    <div class="flex-grow-1">
-                                        <p class="mb-1 fw-semibold">
-                                            @if ($a['url'])<a href="{{ $a['url'] }}" class="text-reset">{{ $a['judul'] }}</a>@else{{ $a['judul'] }}@endif
-                                        </p>
-                                        <p class="text-muted small mb-0">
-                                            <i class="bi {{ $a['ikon'] }} me-1"></i>
-                                            {{ $a['tanggal']->isToday() ? 'Hari ini' : $a['tanggal']->translatedFormat('D, d M') }}{{ $a['jam'] ? ', ' . $a['jam'] : '' }}
-                                            @if ($a['sub']) &middot; {{ $a['sub'] }} @endif
-                                        </p>
+        {{-- ============ Pusat kerja: tugas yang menunggu + agenda ============ --}}
+        @if ($tugas || $adaAgenda)
+            <section class="row g-3 mt-0 pt-2">
+                @if ($tugas)
+                    @php
+                        // Yang ada antreannya tampil di atas; yang kosong diringkas agar tugas nyata tidak tenggelam.
+                        [$tugasAda, $tugasKosong] = collect($tugas)->partition(fn ($t) => $t['jumlah'] > 0);
+                    @endphp
+                    <div class="col-12 {{ $adaAgenda ? 'col-xl-5' : '' }}">
+                        <x-card title="Perlu Tindakan" subtitle="Pekerjaan yang menunggu Anda." icon="bi-list-check" class="h-100">
+                            @if ($tugasAda->isNotEmpty())
+                                <x-slot:actions><x-badge tone="warning">{{ $tugasAda->sum('jumlah') }} menunggu</x-badge></x-slot:actions>
+                            @endif
+                            <ul class="hr-list">
+                                @forelse ($tugasAda as $t)
+                                    <li>
+                                        <a href="{{ $t['url'] }}" class="hr-list-item">
+                                            <span class="hr-stat-ikon hr-tone-warning dash-ikon-kecil"><i class="bi {{ $t['ikon'] }}" aria-hidden="true"></i></span>
+                                            <span class="hr-list-utama"><span class="hr-list-judul">{{ $t['label'] }}</span></span>
+                                            <x-badge tone="warning">{{ $t['jumlah'] }}</x-badge>
+                                            <i class="bi bi-chevron-right text-muted" aria-hidden="true"></i>
+                                        </a>
+                                    </li>
+                                @empty
+                                    <li>
+                                        <x-empty-state icon="bi-check2-circle" title="Semua beres" compact>Tidak ada pekerjaan yang menunggu.</x-empty-state>
+                                    </li>
+                                @endforelse
+                            </ul>
+                            @if ($tugasKosong->isNotEmpty())
+                                <details class="tugas-kosong mt-3">
+                                    <summary class="small text-muted">{{ $tugasKosong->count() }} jenis tugas lain tanpa antrean</summary>
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        @foreach ($tugasKosong as $t)
+                                            <a href="{{ $t['url'] }}" class="hr-badge hr-badge-neutral text-decoration-none"><i class="bi {{ $t['ikon'] }}" aria-hidden="true"></i>{{ $t['label'] }}</a>
+                                        @endforeach
                                     </div>
-                                </div>
-                            @empty
-                                @include('partials.kosong', ['teks' => 'Tidak ada agenda dalam 14 hari ke depan.', 'ikonKosong' => 'bi-calendar-check'])
-                            @endforelse
-                        </div>
+                                </details>
+                            @endif
+                        </x-card>
                     </div>
-                </div>
-            @endif
-        </section>
+                @endif
+
+                @if ($adaAgenda)
+                    <div class="col-12 {{ $tugas ? 'col-xl-7' : '' }}">
+                        <x-card title="Agenda 14 Hari" subtitle="Interview, onboarding, dan tanda tangan kontrak." icon="bi-calendar-event" class="h-100">
+                            <ul class="hr-list">
+                                @forelse ($agenda as $a)
+                                    <li class="hr-list-item">
+                                        <span class="dash-tanggal {{ $a['tanggal']->isToday() ? 'is-hari-ini' : '' }}">
+                                            <span>{{ $a['tanggal']->translatedFormat('M') }}</span>
+                                            <strong>{{ $a['tanggal']->format('d') }}</strong>
+                                        </span>
+                                        <span class="hr-list-utama">
+                                            <span class="hr-list-judul">
+                                                @if ($a['url'])<a href="{{ $a['url'] }}" class="text-reset text-decoration-none stretched-link">{{ $a['judul'] }}</a>@else{{ $a['judul'] }}@endif
+                                            </span>
+                                            <span class="hr-list-sub">
+                                                <i class="bi {{ $a['ikon'] }} me-1" aria-hidden="true"></i>{{ $a['tanggal']->isToday() ? 'Hari ini' : $a['tanggal']->translatedFormat('l') }}{{ $a['jam'] ? ', ' . $a['jam'] : '' }}@if ($a['sub']) · {{ $a['sub'] }}@endif
+                                            </span>
+                                        </span>
+                                        @if ($a['tanggal']->isToday())<x-badge tone="danger" dot>Hari ini</x-badge>@endif
+                                    </li>
+                                @empty
+                                    <li><x-empty-state icon="bi-calendar-check" title="Agenda kosong" compact>Tidak ada agenda dalam 14 hari ke depan.</x-empty-state></li>
+                                @endforelse
+                            </ul>
+                        </x-card>
+                    </div>
+                @endif
+            </section>
+        @endif
 
         @include('partials.pengumuman-ringkas', ['pengumuman' => $pengumuman])
 
-        <section class="row g-3 mt-1">
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="panel h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h6 fw-bold mb-0"><i class="bi bi-hourglass-split me-1"></i>Kontrak Berakhir ≤ 60 Hari</h2>
-                        @if ($bisaPegawai && $kontrakHabis->isNotEmpty())<a href="{{ route('admin.pegawai.index', array_filter(['status_rekrutmen' => 'Aktif', 'kontrak' => 60, 'unit_kerja' => $unitDipilih])) }}" class="small dash-link">Lihat semua</a>@endif
-                    </div>
-                    <div class="dash-scroll" style="max-height:280px;">
-                        @forelse ($kontrakHabis as $p)
-                            @php $sisa = (int) now()->startOfDay()->diffInDays($p->kepegawaian->tanggal_habis_kontrak); @endphp
-                            <a @if ($bisaPegawai) href="{{ route('admin.pegawai.show', $p->id) }}" @endif class="dash-baris d-flex justify-content-between align-items-center small gap-2">
-                                <span class="text-truncate">
-                                    <span class="fw-semibold">{{ $p->nama_lengkap }}</span>
-                                    <span class="text-muted d-block">{{ $p->kepegawaian->unit_kerja }} &middot; {{ $p->kepegawaian->tanggal_habis_kontrak->translatedFormat('d M Y') }}</span>
-                                </span>
-                                <span class="badge {{ $sisa <= 14 ? 'text-bg-danger' : 'text-bg-warning' }} text-nowrap">{{ $sisa }} hari</span>
-                            </a>
-                        @empty
-                            @include('partials.kosong', ['teks' => 'Tidak ada kontrak yang berakhir dalam 60 hari.', 'ikonKosong' => 'bi-hourglass'])
-                        @endforelse
-                    </div>
+        {{-- ============ 2. Grafik ============ --}}
+        @if ($tren)
+            <section class="hr-section" aria-labelledby="judul-tren">
+                <div class="hr-section-head">
+                    <h2 class="hr-section-title" id="judul-tren">Tren 6 Bulan</h2>
+                    <p class="hr-section-sub">{{ $labelLingkup }} · klik batang untuk melihat daftar bulan itu</p>
                 </div>
-            </div>
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="panel h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h6 fw-bold mb-0"><i class="bi bi-calendar-x me-1"></i>Sedang Cuti Hari Ini</h2>
-                        @if ($bisaLaporan && $cutiHariIni->isNotEmpty())<a href="{{ route('admin.pengajuan-cuti.index', ['berlangsung' => 1]) }}" class="small dash-link">Lihat semua</a>@endif
-                    </div>
-                    @if (! $bisaLaporan)
-                        @include('partials.kosong', ['teks' => 'Cuti bagian ini diurus secara internal (tidak lewat sistem).', 'ikonKosong' => 'bi-info-circle'])
-                    @else
-                        @forelse ($cutiHariIni as $c)
-                            <a href="{{ route('admin.pengajuan-cuti.show', $c) }}" class="dash-baris d-flex justify-content-between small gap-2">
-                                <span class="text-truncate"><span class="fw-semibold">{{ $c->dataPegawai?->nama_lengkap }}</span>
-                                    <span class="text-muted d-block">{{ $c->unit_kerja }} &middot; {{ $c->jenisLabel() }}</span></span>
-                                <span class="text-muted text-nowrap">s/d {{ $c->tanggal_selesai->translatedFormat('d M') }}</span>
-                            </a>
-                        @empty
-                            @include('partials.kosong', ['teks' => 'Tidak ada yang cuti hari ini.', 'ikonKosong' => 'bi-calendar-x'])
-                        @endforelse
-                    @endif
-                </div>
-            </div>
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="panel h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h6 fw-bold mb-0"><i class="bi bi-person-plus me-1"></i>Pegawai Baru (90 Hari)</h2>
-                        @if ($bisaPegawai && $pegawaiBaru->isNotEmpty())<a href="{{ route('admin.pegawai.index', array_filter(['status_rekrutmen' => 'Aktif', 'urut' => 'masuk_baru', 'unit_kerja' => $unitDipilih])) }}" class="small dash-link">Lihat semua</a>@endif
-                    </div>
-                    @forelse ($pegawaiBaru as $p)
-                        <a @if ($bisaPegawai) href="{{ route('admin.pegawai.show', $p->id) }}" @endif class="dash-baris d-flex justify-content-between small gap-2">
-                            <span class="text-truncate"><span class="fw-semibold">{{ $p->nama_lengkap }}</span>
-                                <span class="text-muted d-block">{{ $p->kepegawaian->jabatan }}</span></span>
-                            <span class="text-muted text-nowrap">{{ $p->kepegawaian->tanggal_masuk->translatedFormat('d M') }}</span>
-                        </a>
-                    @empty
-                        @include('partials.kosong', ['teks' => 'Belum ada pegawai baru dalam 90 hari.', 'ikonKosong' => 'bi-person-plus'])
-                    @endforelse
-                </div>
-            </div>
-        </section>
-
-        @if ($anggota->isNotEmpty())
-            <section class="panel mt-3">
-                <div class="panel-header flex-wrap gap-2">
-                    <div>
-                        <h2 class="h5 mb-1 section-title"><i class="bi bi-person-lines-fill" aria-hidden="true"></i><span>Anggota {{ $labelLingkup }}</span></h2>
-                        <p class="text-muted mb-0">{{ $anggota->count() }} pegawai aktif &middot; {{ $anggota->where('cuti', true)->count() }} sedang cuti</p>
-                    </div>
-                    <input type="search" class="form-control form-control-sm" style="max-width:240px;" placeholder="Cari pegawai, contoh: Siti atau Guru" data-saring="#tabel-anggota" autocomplete="off" aria-label="Cari anggota menurut nama atau jabatan">
-                </div>
-                <div class="table-responsive dash-scroll">
-                    <table class="table align-middle mb-0 small" id="tabel-anggota">
-                        <thead class="sticky-top">
-                            <tr>
-                                <th>Pegawai</th>
-                                <th>Status Kerja</th>
-                                <th>Masa Kerja</th>
-                                <th>Kontrak s/d</th>
-                                <th>Keterangan</th>
-                                @can('lihat-tabel-karyawan')<th class="text-end">Aksi</th>@endcan
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($anggota as $a)
-                                <tr data-cari="{{ mb_strtolower($a['nama'] . ' ' . $a['jabatan']) }}">
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            @if ($a['foto'])
-                                                <img src="{{ \App\Support\Berkas::url($a['foto']) }}" alt="" class="dash-avatar" loading="lazy" decoding="async">
-                                            @else
-                                                <span class="dash-avatar viz" aria-hidden="true">{{ $inisial($a['nama']) }}</span>
-                                            @endif
-                                            <div>
-                                                <span class="fw-semibold d-block">{{ $a['nama'] }}</span>
-                                                <span class="text-muted">{{ $a['jabatan'] ?? '-' }}@if (! $unitDipilih && $a['unit']) &middot; {{ $a['unit'] }}@endif</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="d-inline-flex align-items-center gap-1 viz">
-                                            <span style="width:8px;height:8px;border-radius:2px;background:var(--viz-{{ $paletStatus[$a['status_kerja']] ?? 'netral' }});display:inline-block;"></span>
-                                            {{ $a['status_kerja'] ?? 'Belum diisi' }}
+                <div class="row g-3">
+                    @foreach ([['cuti', 'Hari Cuti Disetujui', 'bi-calendar2-check', 'hari', 'Cuti'], ['lembur', 'Jam Lembur Disetujui', 'bi-clock-history', 'jam', 'Lembur']] as [$kunci, $judulTren, $ikonTren, $satuan, $namaGrafik])
+                        @php $tp = $trenPersen($tren[$kunci]); @endphp
+                        <div class="col-12 col-lg-6">
+                            <x-card :title="$judulTren" :icon="$ikonTren" class="h-100">
+                                <x-slot:actions>
+                                    @if ($tp)
+                                        <span class="hr-tren {{ $tp['persen'] == 0 ? 'is-datar' : 'is-netral-arah' }}" title="{{ $tp['kini']['judul'] }} dibanding {{ $tp['lalu']['judul'] }}">
+                                            <i class="bi {{ $tp['persen'] > 0 ? 'bi-arrow-up-right' : ($tp['persen'] < 0 ? 'bi-arrow-down-right' : 'bi-dash') }}" aria-hidden="true"></i>
+                                            {{ number_format(abs($tp['persen']), abs($tp['persen']) < 10 ? 1 : 0, ',', '.') }}%
+                                            <span class="fw-normal">{{ $tp['kini']['label'] }} vs {{ $tp['lalu']['label'] }}</span>
                                         </span>
-                                    </td>
-                                    <td>{{ $a['masa_kerja'] }}</td>
-                                    <td>
-                                        @if ($a['habis_kontrak'])
-                                            <span class="{{ $a['habis_kontrak']->isPast() ? 'text-danger' : ($a['habis_kontrak']->lte(now()->addDays(60)) ? 'text-warning fw-semibold' : '') }}">
-                                                {{ $a['habis_kontrak']->translatedFormat('d M Y') }}
-                                            </span>
-                                        @else
-                                            <span class="text-muted">–</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if ($a['kepala'])<span class="badge text-bg-dark">Kepala</span>@endif
-                                        @foreach ($a['rangkap'] as $r)<span class="badge text-bg-info">Rangkap {{ $r }}</span>@endforeach
-                                        @if ($a['cuti'])<span class="badge text-bg-warning">Cuti</span>@endif
-                                    </td>
-                                    @can('lihat-tabel-karyawan')
-                                        <td class="text-end"><a href="{{ route('admin.pegawai.show', $a['id']) }}" class="btn btn-light btn-sm">Detail</a></td>
-                                    @endcan
-                                </tr>
-                            @endforeach
-                            <tr data-saring-kosong="#tabel-anggota" hidden><td colspan="{{ auth()->user()->can('lihat-tabel-karyawan') ? 6 : 5 }}">@include('partials.kosong', ['teks' => 'Tidak ada pegawai yang cocok dengan pencarian ini.', 'ikonKosong' => 'bi-search'])</td></tr>
-                        </tbody>
-                    </table>
+                                    @endif
+                                </x-slot:actions>
+                                <p class="dash-angka-ringkas">
+                                    <strong>{{ $jam(collect($tren[$kunci])->sum('jumlah')) }}</strong> {{ $satuan }} dalam 6 bulan
+                                </p>
+                                @include('partials.viz.kolom', ['items' => $tren[$kunci], 'satuan' => $satuan, 'judulGrafik' => $namaGrafik])
+                            </x-card>
+                        </div>
+                    @endforeach
                 </div>
             </section>
         @endif
@@ -310,10 +208,10 @@
         @endphp
 
         @if ($itemUnit || $itemArea)
-            <section class="mt-3" id="ringkasan-unit">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                    <h2 class="h5 mb-0 section-title"><i class="bi bi-pie-chart" aria-hidden="true"></i><span>Sebaran Pegawai Aktif</span></h2>
-                    <span class="small text-muted"><i class="bi bi-hand-index me-1"></i>Klik potongan diagram atau nama untuk rincian</span>
+            <section class="hr-section" id="ringkasan-unit" aria-labelledby="judul-sebaran">
+                <div class="hr-section-head">
+                    <h2 class="hr-section-title" id="judul-sebaran">Sebaran Pegawai Aktif</h2>
+                    <p class="hr-section-sub"><i class="bi bi-hand-index me-1" aria-hidden="true"></i>Klik potongan diagram atau nama untuk rincian</p>
                 </div>
                 <div class="row g-3">
                     @foreach (array_filter([
@@ -321,112 +219,225 @@
                         $itemArea ? ['id' => 'diagram-area', 'judul' => 'Per Area Kerja', 'ikon' => 'bi-geo-alt', 'items' => $itemArea, 'ket' => count($itemArea) . ' area kerja (lokasi)', 'tengah' => 'pegawai · area'] : null,
                     ]) as $d)
                         <div class="col-12 {{ $itemUnit && $itemArea ? 'col-xxl-6' : '' }}">
-                            <div class="panel h-100">
-                                <h3 class="h6 fw-bold mb-0"><i class="bi {{ $d['ikon'] }}"></i>{{ $d['judul'] }}</h3>
-                                <p class="small text-muted mb-3">{{ $d['ket'] }}</p>
+                            <x-card :title="$d['judul']" :subtitle="$d['ket']" :icon="$d['ikon']" class="h-100">
                                 @include('partials.viz.kipas-detail', ['id' => $d['id'], 'items' => collect($d['items'])->sortByDesc('jumlah')->values()->all(), 'palet' => $paletStatus, 'judulTotal' => $d['tengah']])
-                            </div>
+                            </x-card>
                         </div>
                     @endforeach
                 </div>
             </section>
         @endif
 
-        @include('admin.partials.keluar-masuk', ['data' => $keluarMasuk, 'labelLingkup' => $labelLingkup])
+        <div class="hr-section">
+            @include('admin.partials.keluar-masuk', ['data' => $keluarMasuk, 'labelLingkup' => $labelLingkup])
+        </div>
+
+        <section class="hr-section" aria-labelledby="judul-komposisi">
+            <div class="hr-section-head">
+                <h2 class="hr-section-title" id="judul-komposisi">Komposisi Pegawai Aktif</h2>
+                <x-badge tone="neutral" icon="bi-funnel">{{ $labelLingkup }}</x-badge>
+            </div>
+            <div class="row g-3">
+                <div class="col-12 col-md-6 col-xl-4">
+                    <x-card title="Status Kerja" class="h-100">@include('partials.viz.komposisi', ['items' => $komposisi['status'], 'palet' => $paletStatus])</x-card>
+                </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <x-card title="Jenis Kelamin" class="h-100">@include('partials.viz.komposisi', ['items' => $komposisi['gender'], 'palet' => $paletGender])</x-card>
+                </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <x-card title="Masa Kerja" class="h-100">@include('partials.viz.batang', ['items' => $komposisi['masa'], 'satuan' => 'orang'])</x-card>
+                </div>
+                <div class="col-12 col-md-6 col-xl-6">
+                    <x-card title="Kelompok Usia" class="h-100">@include('partials.viz.batang', ['items' => $komposisi['usia'], 'satuan' => 'orang'])</x-card>
+                </div>
+                <div class="col-12 col-xl-6">
+                    <x-card title="Pendidikan Terakhir" class="h-100">@include('partials.viz.batang', ['items' => $komposisi['pendidikan'], 'satuan' => 'orang'])</x-card>
+                </div>
+            </div>
+        </section>
 
         @if ($pipeline || $akunPerRole)
-            <section class="row g-3 mt-1">
+            <section class="row g-3 hr-section">
                 @if ($pipeline)
                     <div class="col-12 {{ $akunPerRole ? 'col-xl-6' : '' }}">
-                        <div class="panel h-100 d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h2 class="h6 fw-bold mb-0"><i class="bi bi-funnel me-1"></i>Rekrutmen Berjalan</h2>
-                                <a href="{{ route('admin.lamaran.index') }}" class="small dash-link">Lihat lamaran</a>
-                            </div>
-                            {{-- Berdampingan dengan "Akun per Role": grid 2x2 yang mengisi tinggi card agar keduanya sejajar. --}}
-                            <div class="row g-2 text-center flex-grow-1 align-content-stretch">
+                        <x-card title="Rekrutmen Berjalan" icon="bi-funnel" class="h-100">
+                            <x-slot:actions><a href="{{ route('admin.lamaran.index') }}">Lihat lamaran</a></x-slot:actions>
+                            <div class="dash-pipa">
                                 @foreach ($pipeline as $p)
-                                    <div class="{{ $akunPerRole ? 'col-6' : 'col-6 col-md-3' }}">
-                                        <a href="{{ route('admin.lamaran.index') }}" class="dash-mini-stat besar viz">
-                                            <div class="n {{ $p['jumlah'] ? '' : 'text-muted' }}">{{ $p['jumlah'] }}</div>
-                                            <div class="l">{{ $p['label'] }}</div>
-                                        </a>
-                                    </div>
+                                    <a href="{{ route('admin.lamaran.index') }}" class="dash-pipa-tahap {{ $p['jumlah'] ? '' : 'is-kosong' }}">
+                                        <strong>{{ $p['jumlah'] }}</strong>
+                                        <span>{{ $p['label'] }}</span>
+                                    </a>
                                 @endforeach
                             </div>
-                        </div>
+                        </x-card>
                     </div>
                 @endif
                 @if ($akunPerRole)
                     <div class="col-12 {{ $pipeline ? 'col-xl-6' : '' }}">
-                        <div class="panel h-100">
-                            <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-lock me-1"></i>Akun per Role</h2>
+                        <x-card title="Akun per Role" icon="bi-person-lock" class="h-100">
                             @include('partials.viz.batang', ['items' => collect(\App\Models\Role::bawaanAktif())->map(fn ($r) => [
                                 'label' => \App\Models\User::roleLabelFor($r), 'jumlah' => (int) ($akunPerRole[$r] ?? 0), 'url' => route('admin.users.index', ['role' => $r]),
                             ])->all(), 'satuan' => 'akun'])
-                        </div>
+                        </x-card>
                     </div>
                 @endif
             </section>
         @endif
 
-        @if ($tren)
-            <section class="row g-3 mt-1">
-                <div class="col-12 col-lg-6">
-                    <div class="panel h-100">
-                        <h2 class="h6 fw-bold mb-1"><i class="bi bi-calendar2-check me-1"></i>Hari Cuti Disetujui</h2>
-                        <p class="small text-muted mb-2">6 bulan terakhir &middot; {{ $labelLingkup }}</p>
-                        @include('partials.viz.kolom', ['items' => $tren['cuti'], 'satuan' => 'hari', 'judulGrafik' => 'Cuti'])
-                    </div>
-                </div>
-                <div class="col-12 col-lg-6">
-                    <div class="panel h-100">
-                        <h2 class="h6 fw-bold mb-1"><i class="bi bi-clock-history me-1"></i>Jam Lembur Disetujui</h2>
-                        <p class="small text-muted mb-2">6 bulan terakhir &middot; {{ $labelLingkup }}</p>
-                        @include('partials.viz.kolom', ['items' => $tren['lembur'], 'satuan' => 'jam', 'judulGrafik' => 'Lembur'])
-                    </div>
-                </div>
-            </section>
-        @endif
-
-        <section class="mt-3">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                <h2 class="h5 mb-0 section-title"><i class="bi bi-pie-chart" aria-hidden="true"></i><span>Komposisi Pegawai Aktif</span></h2>
-                <span class="badge rounded-pill text-bg-light border fw-normal"><i class="bi bi-funnel me-1"></i>{{ $labelLingkup }}</span>
+        {{-- ============ 3. Daftar & tabel ============ --}}
+        <section class="hr-section" aria-labelledby="judul-pantau">
+            <div class="hr-section-head">
+                <h2 class="hr-section-title" id="judul-pantau">Pantauan Pegawai</h2>
             </div>
             <div class="row g-3">
                 <div class="col-12 col-md-6 col-xl-4">
-                    <div class="panel h-100">
-                        <h3 class="h6 fw-bold mb-3">Status Kerja</h3>
-                        @include('partials.viz.komposisi', ['items' => $komposisi['status'], 'palet' => $paletStatus])
-                    </div>
+                    <x-card title="Kontrak Berakhir ≤ 60 Hari" icon="bi-hourglass-split" class="h-100">
+                        @if ($bisaPegawai && $kontrakHabis->isNotEmpty())
+                            <x-slot:actions><a href="{{ route('admin.pegawai.index', array_filter(['status_rekrutmen' => 'Aktif', 'kontrak' => 60, 'unit_kerja' => $unitDipilih])) }}">Lihat semua</a></x-slot:actions>
+                        @endif
+                        <ul class="hr-list dash-scroll" style="max-height: 320px;">
+                            @forelse ($kontrakHabis as $p)
+                                @php $sisa = (int) now()->startOfDay()->diffInDays($p->kepegawaian->tanggal_habis_kontrak); @endphp
+                                <li>
+                                    <a @if ($bisaPegawai) href="{{ route('admin.pegawai.show', $p->id) }}" @endif class="hr-list-item">
+                                        <x-avatar :src="$p->dokumen?->pas_foto ? \App\Support\Berkas::url($p->dokumen->pas_foto) : null" :name="$p->nama_lengkap" size="sm" />
+                                        <span class="hr-list-utama">
+                                            <span class="hr-list-judul">{{ $p->nama_lengkap }}</span>
+                                            <span class="hr-list-sub">{{ $p->kepegawaian->unit_kerja }} · {{ $p->kepegawaian->tanggal_habis_kontrak->translatedFormat('d M Y') }}</span>
+                                        </span>
+                                        <x-badge :tone="$sisa <= 14 ? 'danger' : 'warning'">{{ $sisa }} hari</x-badge>
+                                    </a>
+                                </li>
+                            @empty
+                                <li><x-empty-state icon="bi-hourglass" title="Aman" compact>Tidak ada kontrak yang berakhir dalam 60 hari.</x-empty-state></li>
+                            @endforelse
+                        </ul>
+                    </x-card>
                 </div>
                 <div class="col-12 col-md-6 col-xl-4">
-                    <div class="panel h-100">
-                        <h3 class="h6 fw-bold mb-3">Jenis Kelamin</h3>
-                        @include('partials.viz.komposisi', ['items' => $komposisi['gender'], 'palet' => $paletGender])
-                    </div>
+                    <x-card title="Sedang Cuti Hari Ini" icon="bi-calendar-x" class="h-100">
+                        @if ($bisaLaporan && $cutiHariIni->isNotEmpty())
+                            <x-slot:actions><a href="{{ route('admin.pengajuan-cuti.index', ['berlangsung' => 1]) }}">Lihat semua</a></x-slot:actions>
+                        @endif
+                        @if (! $bisaLaporan)
+                            <x-empty-state icon="bi-info-circle" compact>Cuti bagian ini diurus secara internal (tidak lewat sistem).</x-empty-state>
+                        @else
+                            <ul class="hr-list">
+                                @forelse ($cutiHariIni as $c)
+                                    <li>
+                                        <a href="{{ route('admin.pengajuan-cuti.show', $c) }}" class="hr-list-item">
+                                            <x-avatar :name="$c->dataPegawai?->nama_lengkap ?? '-'" size="sm" />
+                                            <span class="hr-list-utama">
+                                                <span class="hr-list-judul">{{ $c->dataPegawai?->nama_lengkap }}</span>
+                                                <span class="hr-list-sub">{{ $c->unit_kerja }} · {{ $c->jenisLabel() }}</span>
+                                            </span>
+                                            <span class="hr-list-ekor">s/d {{ $c->tanggal_selesai->translatedFormat('d M') }}</span>
+                                        </a>
+                                    </li>
+                                @empty
+                                    <li><x-empty-state icon="bi-calendar-check" title="Semua masuk" compact>Tidak ada yang cuti hari ini.</x-empty-state></li>
+                                @endforelse
+                            </ul>
+                        @endif
+                    </x-card>
                 </div>
                 <div class="col-12 col-md-6 col-xl-4">
-                    <div class="panel h-100">
-                        <h3 class="h6 fw-bold mb-3">Masa Kerja</h3>
-                        @include('partials.viz.batang', ['items' => $komposisi['masa'], 'satuan' => 'orang'])
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-xl-6">
-                    <div class="panel h-100">
-                        <h3 class="h6 fw-bold mb-3">Kelompok Usia</h3>
-                        @include('partials.viz.batang', ['items' => $komposisi['usia'], 'satuan' => 'orang'])
-                    </div>
-                </div>
-                <div class="col-12 col-xl-6">
-                    <div class="panel h-100">
-                        <h3 class="h6 fw-bold mb-3">Pendidikan Terakhir</h3>
-                        @include('partials.viz.batang', ['items' => $komposisi['pendidikan'], 'satuan' => 'orang'])
-                    </div>
+                    <x-card title="Pegawai Baru (90 Hari)" icon="bi-person-plus" class="h-100">
+                        @if ($bisaPegawai && $pegawaiBaru->isNotEmpty())
+                            <x-slot:actions><a href="{{ route('admin.pegawai.index', array_filter(['status_rekrutmen' => 'Aktif', 'urut' => 'masuk_baru', 'unit_kerja' => $unitDipilih])) }}">Lihat semua</a></x-slot:actions>
+                        @endif
+                        <ul class="hr-list">
+                            @forelse ($pegawaiBaru as $p)
+                                <li>
+                                    <a @if ($bisaPegawai) href="{{ route('admin.pegawai.show', $p->id) }}" @endif class="hr-list-item">
+                                        <x-avatar :src="$p->dokumen?->pas_foto ? \App\Support\Berkas::url($p->dokumen->pas_foto) : null" :name="$p->nama_lengkap" size="sm" />
+                                        <span class="hr-list-utama">
+                                            <span class="hr-list-judul">{{ $p->nama_lengkap }}</span>
+                                            <span class="hr-list-sub">{{ $p->kepegawaian->jabatan }}</span>
+                                        </span>
+                                        <span class="hr-list-ekor">{{ $p->kepegawaian->tanggal_masuk->translatedFormat('d M') }}</span>
+                                    </a>
+                                </li>
+                            @empty
+                                <li><x-empty-state icon="bi-person-plus" compact>Belum ada pegawai baru dalam 90 hari.</x-empty-state></li>
+                            @endforelse
+                        </ul>
+                    </x-card>
                 </div>
             </div>
         </section>
+
+        @if ($anggota->isNotEmpty())
+            <section class="hr-section">
+                <x-card :title="'Anggota ' . $labelLingkup" icon="bi-person-lines-fill" :padding="false"
+                    :subtitle="$anggota->count() . ' pegawai aktif · ' . $anggota->where('cuti', true)->count() . ' sedang cuti'">
+                    <x-slot:actions>
+                        <div class="input-group hr-input-group dash-cari-anggota">
+                            <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                            <input type="search" class="form-control" placeholder="Cari pegawai, contoh: Siti atau Guru" data-saring="#tabel-anggota"
+                                autocomplete="off" aria-label="Cari anggota menurut nama atau jabatan">
+                        </div>
+                    </x-slot:actions>
+                    <x-table id="tabel-anggota" caption="Anggota bagian" sticky class="dash-scroll" style="max-height: 520px;">
+                        <x-slot:head>
+                            <tr>
+                                <th>Pegawai</th>
+                                <th>Status Kerja</th>
+                                <th>Masa Kerja</th>
+                                <th>Kontrak s/d</th>
+                                <th>Keterangan</th>
+                                @can('lihat-tabel-karyawan')<th class="text-end">Aksi</th>@endcan
+                            </tr>
+                        </x-slot:head>
+                        @foreach ($anggota as $a)
+                            <tr data-cari="{{ mb_strtolower($a['nama'] . ' ' . $a['jabatan']) }}">
+                                <td>
+                                    <div class="d-flex align-items-center gap-3 table-media">
+                                        <x-avatar :src="$a['foto'] ? \App\Support\Berkas::url($a['foto']) : null" :name="$a['nama']" size="sm" />
+                                        <div class="min-w-0">
+                                            <span class="fw-semibold d-block">{{ $a['nama'] }}</span>
+                                            <span class="small text-muted">{{ $a['jabatan'] ?? '-' }}@if (! $unitDipilih && $a['unit']) · {{ $a['unit'] }}@endif</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="d-inline-flex align-items-center gap-2 viz">
+                                        <span class="dash-titik-status" style="background: var(--viz-{{ $paletStatus[$a['status_kerja']] ?? 'netral' }});" aria-hidden="true"></span>
+                                        {{ $a['status_kerja'] ?? 'Belum diisi' }}
+                                    </span>
+                                </td>
+                                <td>{{ $a['masa_kerja'] }}</td>
+                                <td class="text-nowrap">
+                                    @if ($a['habis_kontrak'])
+                                        <span class="{{ $a['habis_kontrak']->isPast() ? 'text-danger' : ($a['habis_kontrak']->lte(now()->addDays(60)) ? 'text-warning fw-semibold' : '') }}">
+                                            {{ $a['habis_kontrak']->translatedFormat('d M Y') }}
+                                        </span>
+                                    @else
+                                        <span class="text-muted">–</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @if ($a['kepala'])<x-badge tone="primary">Kepala</x-badge>@endif
+                                        @foreach ($a['rangkap'] as $r)<x-badge tone="info">Rangkap {{ $r }}</x-badge>@endforeach
+                                        @if ($a['cuti'])<x-badge tone="warning">Cuti</x-badge>@endif
+                                    </div>
+                                </td>
+                                @can('lihat-tabel-karyawan')
+                                    <td class="text-end"><x-button variant="ghost" size="sm" :href="route('admin.pegawai.show', $a['id'])" icon-right="bi-chevron-right">Detail</x-button></td>
+                                @endcan
+                            </tr>
+                        @endforeach
+                        <tr data-saring-kosong="#tabel-anggota" hidden>
+                            <td colspan="{{ auth()->user()->can('lihat-tabel-karyawan') ? 6 : 5 }}">
+                                <x-empty-state icon="bi-search" title="Tidak ditemukan" compact>Tidak ada pegawai yang cocok dengan pencarian ini.</x-empty-state>
+                            </td>
+                        </tr>
+                    </x-table>
+                </x-card>
+            </section>
+        @endif
     </div>
 </main>
 

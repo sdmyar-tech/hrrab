@@ -63,8 +63,8 @@
     var themeToggles = document.querySelectorAll("[data-theme-toggle]");
     var themeIcons = document.querySelectorAll("[data-theme-icon]");
     var closeButtons = document.querySelectorAll("[data-sidebar-close]");
-    // Hanya link tujuan yang menutup sidebar (mobile); menu induk pembuka submenu (data-bs-toggle) tidak.
-    var sidebarLinks = document.querySelectorAll(".sidebar-nav a.nav-link");
+    // Hanya link tujuan yang menutup drawer (mobile); tombol menu induk pembuka submenu tidak.
+    var sidebarLinks = document.querySelectorAll(".app-nav a.app-nav-item");
     var mediaQuery = window.matchMedia(desktopMedia);
     var storageAvailable = canUseStorage();
 
@@ -400,25 +400,7 @@
     initResponsiveTables();
     initThemeToggle();
 
-    // Initialize user profile values in UI. Provide a window.adminHMDUser object to override defaults.
-    function initUserProfile() {
-      var user = window.adminHMDUser || { name: "User", workspace: "Active Workspace", avatar: "../assets/images/avatar/avatar1.jpg" };
-
-      var sidebarNameEl = document.querySelector(".sidebar-user strong");
-      var sidebarWorkspaceEl = document.querySelector(".sidebar-user small");
-      var sidebarAvatar = document.querySelector(".sidebar-user .avatar-img");
-      var profileNameEls = document.querySelectorAll(".profile-name");
-      var profileAvatarEls = document.querySelectorAll(".profile-button .avatar-img, .profile-button img");
-
-      if (sidebarNameEl) sidebarNameEl.textContent = user.name;
-      if (sidebarWorkspaceEl) sidebarWorkspaceEl.textContent = user.workspace;
-      if (sidebarAvatar && user.avatar) { sidebarAvatar.src = user.avatar; sidebarAvatar.alt = user.name; }
-
-      Array.prototype.forEach.call(profileNameEls, function (el) { el.textContent = user.name; });
-      Array.prototype.forEach.call(profileAvatarEls, function (img) { if (user.avatar) img.src = user.avatar; if (user.name) img.alt = user.name; });
-    }
-
-    initUserProfile();
+    // Nama & foto akun dirender server (layouts.partials.navbar / sidebar): tidak perlu diisi lewat JS.
 
     if (!sidebarToggle) {
       return;

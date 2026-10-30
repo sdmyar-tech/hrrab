@@ -71,6 +71,9 @@ document.addEventListener('DOMContentLoaded', function () {
             el.addEventListener('mouseleave', Swal.resumeTimer);
         },
     });
+    // Dipakai komponen toast (components/toast.blade.php) & skrip halaman: hrToast('success'|'info'|'warning'|'error', 'Pesan').
+    window.hrToast = function (ikon, teks) { return toast.fire({ icon: ikon, titleText: teks }); };
+    document.dispatchEvent(new Event('hr:toast-siap'));
 
     @if (session('success'))
         toast.fire({ icon: 'success', titleText: @json(session('success')) });

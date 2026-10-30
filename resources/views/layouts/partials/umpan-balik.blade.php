@@ -55,7 +55,7 @@
             const isi = document.querySelector('.dashboard-content > .container-fluid');
             if (wadah && isi) {
                 // Pindah ke bawah judul halaman (dekat konteks), tanpa padding ganda.
-                const judul = isi.querySelector(':scope > .page-heading, :scope > .dash-hero');
+                const judul = isi.querySelector(':scope > .hr-page-header, :scope > .page-heading, :scope > .dash-hero');
                 const kumpulan = document.createDocumentFragment();
                 kumpulan.append(...wadah.children);
                 judul ? judul.after(kumpulan) : isi.prepend(kumpulan);
