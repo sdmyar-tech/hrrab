@@ -156,12 +156,14 @@ body.sidebar-mini .sidebar-nav .nav-badge {
     font-size: 0;
 }
 
-/* Tabel menyesuaikan lebar layar: teks dibungkus, tanpa scroll horizontal. */
+/* Tabel menyesuaikan lebar layar: teks dibungkus. Bila tetap tidak muat (mis. 1024px + sidebar), tabel digulir
+   di dalam panel — bukan seluruh halaman. Dropdown di tabel aman karena memakai posisi fixed (main.js). */
 @media (min-width: 768px) {
-    .table-responsive { overflow-x: visible; }
+    .table-responsive { overflow-x: auto; }
     .table { width: 100%; }
     .table thead th { white-space: normal; }
-    .table tbody td { min-width: 0; overflow-wrap: anywhere; }
+    /* break-word: kata utuh; hanya kata yang sendirian tak muat (mis. email panjang) yang dipotong. */
+    .table tbody td { min-width: 0; overflow-wrap: break-word; }
     .table tbody td .btn,
     .table tbody td .badge { overflow-wrap: normal; white-space: nowrap; }
     .table tbody td.text-end { white-space: normal; }

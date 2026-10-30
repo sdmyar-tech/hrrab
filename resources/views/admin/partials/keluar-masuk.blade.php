@@ -111,6 +111,8 @@
     .km-stat.is-masuk .n { color: #15803d; }
     .km-stat.is-keluar .n { color: #c0392b; }
     .km-cols { display: flex; align-items: flex-end; gap: 6px; height: 150px; padding-top: .5rem; border-bottom: 1px solid var(--viz-track); }
+    /* Tooltip tidak boleh melebarkan halaman (HP); vertikal tetap terlihat. */
+    .km-cols { overflow-x: clip; }
     .km-col { flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 2px; position: relative; outline: none; border-radius: 4px 4px 0 0; }
     .km-col.is-kini { background: var(--admin-surface-soft, #f8f9fb); }
     .km-col .bar { flex: 1; max-width: 16px; border-radius: 3px 3px 0 0; transition: opacity .15s; display: block; }
@@ -121,8 +123,8 @@
         font-size: .72rem; padding: .25rem .5rem; border-radius: 4px; pointer-events: none; opacity: 0; transition: opacity .12s; z-index: 2; }
     .km-col:hover .tip, .km-col:focus-visible .tip { opacity: 1; }
     /* Kolom di ujung: tooltip ditahan di dalam grafik agar tidak membuat halaman bergeser. */
-    .km-col:nth-child(-n+2) .tip { left: 0; transform: none; }
-    .km-col:nth-last-child(-n+2) .tip { left: auto; right: 0; transform: none; }
+    .km-col:nth-child(-n+4) .tip { left: 0; transform: none; }
+    .km-col:nth-last-child(-n+4) .tip { left: auto; right: 0; transform: none; }
     .km-daftar { border: 1px solid var(--admin-border); border-radius: 10px; padding: .7rem .85rem; height: 100%; max-height: 260px; overflow-y: auto; }
     .km-daftar.is-masuk { border-top: 3px solid #1baf7a; }
     .km-daftar.is-keluar { border-top: 3px solid #e34948; }

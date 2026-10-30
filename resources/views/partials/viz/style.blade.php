@@ -36,6 +36,7 @@
     .viz-hbar .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--viz-muted); }
 
     .viz-cols { display: flex; align-items: flex-end; gap: 10px; height: 150px; padding-top: 1.4rem; border-bottom: 1px solid var(--viz-track); }
+    .viz-cols { overflow-x: clip; } /* tooltip tidak melebarkan halaman di HP */
     .viz-col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; outline: none; }
     .viz-col .bar { width: 100%; max-width: 42px; background: var(--viz-seq); border-radius: 4px 4px 0 0; min-height: 2px; transition: opacity .15s; }
     .viz-cols:hover .viz-col .bar { opacity: .55; }
@@ -44,9 +45,18 @@
     .viz-col .tip { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--viz-text); color: var(--viz-surface);
         font-size: .72rem; padding: .25rem .5rem; border-radius: 4px; pointer-events: none; opacity: 0; transition: opacity .12s; z-index: 2; }
     .viz-col:hover .tip, .viz-col:focus-visible .tip { opacity: 1; }
+    /* Tooltip kolom paling tepi tidak keluar layar (gulir horizontal di HP). */
+    .viz-col:first-child .tip { left: 0; transform: none; }
+    .viz-col:last-child .tip { left: auto; right: 0; transform: none; }
     .viz-col:hover .tag, .viz-col:focus-visible .tag { visibility: hidden; }
     .viz-xlab { display: flex; gap: 10px; margin-top: .35rem; }
     .viz-xlab span { flex: 1; text-align: center; font-size: .72rem; color: var(--viz-muted); }
+    /* HP: label sumbu boleh menyempit; 9+ label → tampil selang-seling agar tidak menabrak / melebar. */
+    .viz-xlab span { min-width: 0; overflow: hidden; }
+    @media (max-width: 575.98px) {
+        .viz-cols, .viz-xlab { gap: 4px; }
+        .viz-xlab span:first-child:nth-last-child(n+9) ~ span:nth-child(even) { visibility: hidden; }
+    }
 
     .viz-empty { font-size: .8rem; color: var(--viz-muted); }
 

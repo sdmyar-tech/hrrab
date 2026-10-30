@@ -27,7 +27,7 @@
 
         .pelamar-auth-brand {
             flex: 1 1 46%;
-            min-width: 320px;
+            min-width: min(320px, 100%);
             position: relative;
             overflow: hidden;
             background: linear-gradient(160deg, var(--brand) 0%, var(--brand-dark) 100%);
@@ -118,7 +118,7 @@
 
         .pelamar-auth-form {
             flex: 1 1 54%;
-            min-width: 320px;
+            min-width: min(320px, 100%);
             display: flex;
             align-items: center;
             justify-content: center;

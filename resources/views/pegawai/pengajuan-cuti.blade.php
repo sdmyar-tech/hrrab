@@ -49,7 +49,7 @@
         <div class="row g-3">
                 <div class="col-12 col-xl-6">
                     <div class="panel p-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                             <h2 class="h6 fw-bold mb-0">Keterangan Cuti</h2>
                             <div class="text-end">
                                 @if ($eligible)<span class="badge text-bg-info d-block mb-1">Sisa Cuti Tahunan: {{ $sisaCuti }} / {{ $annualQuota }} hari</span>@endif

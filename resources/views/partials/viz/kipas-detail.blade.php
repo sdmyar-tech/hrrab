@@ -116,7 +116,10 @@
     html[data-theme="dark"] .baris-info li.is-danger { color: #f19a9a; }
     html[data-theme="dark"] .baris-info li.is-warning { color: #f0b85a; }
     html[data-theme="dark"] .kipas-detail-nama { color: #f08a8c; }
-    @media (max-width: 575.98px) { .kipas { grid-template-columns: 1fr; } .kipas-grafik { max-width: 190px; } }
+    /* Isi grid boleh menyempit (nama panjang dipotong), tidak mendorong lebar halaman. */
+    .kipas > *, .kipas-item .text-truncate { min-width: 0; }
+    .kipas-legenda { grid-template-columns: minmax(0, 1fr); }
+    @media (max-width: 575.98px) { .kipas { grid-template-columns: minmax(0, 1fr); } .kipas-grafik { max-width: 190px; } }
 </style>
 <script>
     // Diagram kipas: pilih potongan/legenda → sorot & tampilkan rincian; klik lagi untuk batal.
