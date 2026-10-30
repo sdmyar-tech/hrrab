@@ -15,21 +15,66 @@
     --admin-text: #1d2433;
     --admin-muted: #687083;
 
-    /* Merah marun Abdurrab sebagai satu-satunya warna aksen. */
-    --admin-primary: #8b1215;
-    --admin-primary-dark: #651012;
-    --hr-primary: #8b1215;
-    --hr-primary-dark: #651012;
+    /* Merah marun Abdurrab sebagai satu-satunya warna aksen (sama dengan --bs-primary di hrrab.css). */
+    --admin-primary: #880f12;
+    --admin-primary-dark: #5f0708;
+    --hr-primary: #880f12;
+    --hr-primary-dark: #5f0708;
     --hr-primary-soft: #fbeeee;
     --hr-primary-soft-text: #7a1013;
+
+    /* Warna status (kontras teks ≥ 4.5:1 di atas putih): hijau sukses/hadir/aktif, kuning menunggu/terlambat,
+       merah gagal/absen/ditolak, abu nonaktif/dibatalkan, biru info. */
+    --hr-success: #15803d;
+    --hr-success-soft: #e8f5ec;
+    --hr-warning: #b45309;
+    --hr-warning-soft: #fff4df;
+    --hr-danger: #b42318;
+    --hr-danger-soft: #fdecea;
+    --hr-neutral: #5b6475;
+    --hr-neutral-soft: #eef0f3;
+    --hr-info: #1d4ed8;
+    --hr-info-soft: #e8efff;
+    --admin-success: var(--hr-success);
+    --admin-warning: var(--hr-warning);
+    --admin-danger: var(--hr-danger);
 
     --admin-shadow-sm: 0 1px 2px rgba(16, 24, 40, .05);
     --admin-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 2px 8px rgba(16, 24, 40, .05);
     --admin-shadow-lg: 0 12px 32px rgba(16, 24, 40, .12);
-    --admin-ring: 0 0 0 3px rgba(139, 18, 21, .14);
+    --admin-ring: 0 0 0 3px rgba(136, 15, 18, .14);
+
+    /* Skala jarak 4/8/12/16/24/32/48/64 px. */
+    --hr-space-1: .25rem;
+    --hr-space-2: .5rem;
+    --hr-space-3: .75rem;
+    --hr-space-4: 1rem;
+    --hr-space-5: 1.5rem;
+    --hr-space-6: 2rem;
+    --hr-space-7: 3rem;
+    --hr-space-8: 4rem;
+
+    /* Skala huruf: keterangan / isi / sub-judul / judul halaman. */
+    --hr-text-xs: .75rem;
+    --hr-text-sm: .8125rem;
+    --hr-text-base: .875rem;
+    --hr-text-lg: 1rem;
+    --hr-text-xl: 1.25rem;
+    --hr-text-2xl: 1.5rem;
 
     --hr-radius: 12px;
     --hr-radius-sm: 8px;
+    --hr-radius-pill: 999px;
+
+    /* Gerak mikro: 150–200 ms, easing standar. */
+    --hr-durasi: .16s;
+    --hr-easing: cubic-bezier(.2, 0, 0, 1);
+
+    /* Lapisan (mengikuti Bootstrap): dropdown < sticky < modal < toast. */
+    --hr-z-dropdown: 1000;
+    --hr-z-sticky: 1020;
+    --hr-z-modal: 1055;
+    --hr-z-toast: 1090;
 
     --bs-body-font-family: var(--hr-font);
     --bs-body-font-size: .875rem;
@@ -47,6 +92,19 @@ html[data-theme="dark"] {
     --admin-muted: #98a2b6;
     --hr-primary-soft: #3a1c1e;
     --hr-primary-soft-text: #f6cfd0;
+    --hr-success: #4ade80;
+    --hr-success-soft: #14301f;
+    --hr-warning: #fbbf24;
+    --hr-warning-soft: #33280f;
+    --hr-danger: #f87171;
+    --hr-danger-soft: #3a1c1e;
+    --hr-neutral: #a3acbd;
+    --hr-neutral-soft: #222a3a;
+    --hr-info: #93b4ff;
+    --hr-info-soft: #1a2542;
+    --admin-success: var(--hr-success);
+    --admin-warning: var(--hr-warning);
+    --admin-danger: var(--hr-danger);
     --admin-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 2px 8px rgba(0, 0, 0, .25);
     --admin-shadow-lg: 0 12px 32px rgba(0, 0, 0, .45);
 }
@@ -153,7 +211,13 @@ html[data-theme="dark"] .admin-navbar.bg-white { background-color: rgba(23, 29, 
 .metric-card:hover { transform: none; box-shadow: var(--admin-shadow-lg); border-color: var(--admin-border); }
 .metric-label { font-size: .6875rem; letter-spacing: .06em; font-weight: 700; color: var(--admin-muted); }
 .metric-value { font-size: 1.875rem; font-weight: 800; letter-spacing: -.02em; margin-top: .65rem; }
-.metric-icon { width: 38px; height: 38px; border-radius: 10px; }
+.metric-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--hr-primary-soft); box-shadow: none; }
+.metric-success .metric-icon { background: var(--hr-success-soft); }
+.metric-warning .metric-icon { background: var(--hr-warning-soft); }
+.metric-danger .metric-icon { background: var(--hr-danger-soft); }
+/* Ungu lama di luar palet status → biru info. */
+.metric-prpl { --metric-color: var(--hr-info); }
+.metric-prpl .metric-icon { background: var(--hr-info-soft); }
 .metric-meta { font-size: .8125rem; font-weight: 600; }
 
 /* ---------- Tombol ---------- */
