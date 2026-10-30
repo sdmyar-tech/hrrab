@@ -29,7 +29,7 @@
 
                 <div class="d-flex gap-2 mt-4">
                     <button type="submit" name="submit_action" value="save" class="btn btn-primary">
-                        <i class="bi bi-save me-1"></i> Simpan Perubahan
+                        <i class="bi bi-check-lg me-1"></i> Simpan Perubahan
                     </button>
 
                     @if ($lowongan->status === 'draft')

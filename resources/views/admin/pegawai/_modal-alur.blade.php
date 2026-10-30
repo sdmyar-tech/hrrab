@@ -80,7 +80,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Simpan Alur</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Simpan Alur</button>
             </div>
         </form>
     </div>

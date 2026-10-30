@@ -27,7 +27,7 @@
                         @include('admin.users._akun', ['akun' => null, 'wajibPassword' => true])
 
                         <div class="d-flex gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-save"></i>Simpan</button>
+                            <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-check-lg"></i>Simpan</button>
                             <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">Batal</a>
                         </div>
                     </section>

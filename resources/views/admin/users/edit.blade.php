@@ -37,7 +37,7 @@
                         @endif
 
                         <div class="d-flex gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-save"></i>Simpan Perubahan</button>
+                            <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-check-lg"></i>Simpan Perubahan</button>
                             <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">Batal</a>
                         </div>
                     </section>

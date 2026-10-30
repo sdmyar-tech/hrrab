@@ -59,7 +59,7 @@
             <div class="alert alert-danger small mt-2 mb-0">{{ $errors->first() }}</div>
         @endif
         <div class="d-flex flex-wrap gap-2 mt-3">
-            <button type="submit" class="btn btn-warning btn-sm"><i class="bi bi-save me-1"></i>Simpan Langsung</button>
+            <button type="submit" class="btn btn-warning btn-sm"><i class="bi bi-check-lg me-1"></i>Simpan Langsung</button>
         </div>
     </form>
 

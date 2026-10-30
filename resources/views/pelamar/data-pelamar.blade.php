@@ -186,7 +186,7 @@
                 @include('partials.pelamar-riwayat', ['pelamar' => $pelamar])
 
                 <button type="submit" class="btn btn-primary mt-4">
-                    <i class="bi bi-save me-1"></i> Simpan Data Pelamar
+                    <i class="bi bi-check-lg me-1"></i> Simpan Data Pelamar
                 </button>
             </form>
         </div>

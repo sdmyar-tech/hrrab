@@ -101,7 +101,7 @@
                 allowEnterKey: true,
                 showCloseButton: false,
                 showDenyButton: true,
-                confirmButtonText: '<i class="bi bi-check2"></i> Simpan Password',
+                confirmButtonText: '<i class="bi bi-check-lg"></i> Simpan Password',
                 denyButtonText: 'Keluar',
                 confirmButtonColor: '#8b1215',
                 reverseButtons: true,

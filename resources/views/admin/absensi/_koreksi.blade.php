@@ -87,7 +87,7 @@
                 </button>
                 <div class="d-flex gap-2 ms-auto">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Tutup</button>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i>Simpan</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Simpan</button>
                 </div>
             </div>
         </form>

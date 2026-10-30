@@ -848,7 +848,7 @@
                                         <i class="bi bi-check-circle me-1"></i> {{ $lamaran->isKandidatPegawai() ? 'Tetapkan ke Posisi Baru' : 'Rekrut Jadi Pegawai' }}
                                     </button>
                                     <button type="button" form="form-tolak-lamaran" class="btn btn-outline-danger flex-fill btn-reject-lamaran">
-                                        <i class="bi bi-x-circle me-1"></i> Tolak Pelamar
+                                        <i class="bi bi-x-lg me-1"></i> Tolak Pelamar
                                     </button>
                                 </div>
                             </form>
@@ -900,7 +900,7 @@
                                 <input type="text" name="catatan_admin" class="form-control form-control-sm" maxlength="1000" placeholder="Catatan untuk pelamar (opsional), contoh: berkas lengkap" value="{{ $lamaran->catatan_admin }}">
                             </div>
                             <div class="col-12">
-                                <button type="submit" class="btn btn-warning btn-sm"><i class="bi bi-save me-1"></i>Simpan Langsung</button>
+                                <button type="submit" class="btn btn-warning btn-sm"><i class="bi bi-check-lg me-1"></i>Simpan Langsung</button>
                             </div>
                         </form>
 

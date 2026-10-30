@@ -7,6 +7,52 @@ window.addEventListener('focusin', function (e) {
     }
 }, true);
 
+@if (isset($errors) && $errors->any())
+// Galat validasi server → tandai isiannya langsung (merah + pesan di bawahnya) untuk form yang belum menampilkan
+// galat isiannya sendiri, mis. form di dalam modal. Hanya isian bernama unik di halaman; yang sudah ditandai dilewati.
+// Dijalankan segera (DOM sudah terurai di akhir body) agar fokus awal main.js langsung jatuh ke isian galat pertama.
+(function (galat) {
+    let terpasang = 0;
+    const sudahTampil = (wadah, pesan) => Array.prototype.some.call(
+        wadah.querySelectorAll('.invalid-feedback, .text-danger, .alert-danger:not(.banner-umpan)'),
+        (el) => el.textContent.includes(pesan)
+    );
+    Object.keys(galat).forEach(function (kunci, i) {
+        const bagian = kunci.split('.');
+        const kurung = bagian[0] + bagian.slice(1).map((b) => '[' + b + ']').join('');
+        const calon = [kunci, kurung, /^\d+$/.test(bagian[bagian.length - 1]) ? bagian.slice(0, -1).join('.') + '[]' : null].filter(Boolean);
+        let isian = [];
+        for (const nama of calon) {
+            isian = Array.prototype.filter.call(document.getElementsByName(nama), (el) => el.type !== 'hidden');
+            if (isian.length) break;
+        }
+        if (!isian.length) return;
+        if (isian.some((el) => el.classList.contains('is-invalid'))) { terpasang++; return; }
+        const pesan = galat[kunci][0];
+        const grup = isian.every((el) => el.type === 'radio' || el.type === 'checkbox');
+        if (!grup && isian.length > 1) return; // nama ganda (mis. modal per baris): tidak tahu yang mana
+        isian.forEach((el) => { el.classList.add('is-invalid'); el.setAttribute('aria-invalid', 'true'); });
+        if (!grup) terpasang++;
+        if (grup || sudahTampil(isian[0].form || document, pesan)) return;
+        const umpan = document.createElement('div');
+        umpan.className = 'invalid-feedback d-block';
+        umpan.id = 'galat-isian-' + i;
+        umpan.textContent = pesan;
+        const jangkar = isian[0].closest('.input-group') || isian[0];
+        // Isian bermargin bawah (mis. mb-3): pesan dirapatkan ke isian, jarak ke label berikutnya tetap.
+        const jarak = parseFloat(getComputedStyle(jangkar).marginBottom) || 0;
+        if (jarak) {
+            umpan.style.marginTop = (4 - jarak) + 'px';
+            umpan.style.marginBottom = jarak + 'px';
+        }
+        jangkar.after(umpan);
+        isian[0].setAttribute('aria-describedby', ((isian[0].getAttribute('aria-describedby') || '') + ' ' + umpan.id).trim());
+    });
+    // Semua galat sudah terlihat di isiannya → dialog daftar galat (halaman tamu) tidak perlu.
+    window.hrGalatInlineLengkap = terpasang === Object.keys(galat).length;
+})(@json($errors->getMessages()));
+@endif
+
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof Swal === 'undefined') {
         return;
@@ -57,8 +103,11 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         @endif
 
-        @if ($errors->any())
-            Swal.fire({
+        @if (isset($errors) && $errors->any())
+            const galatPertama = Array.prototype.find.call(document.querySelectorAll('.is-invalid'), (el) => el.offsetParent !== null);
+            if (window.hrGalatInlineLengkap && galatPertama) {
+                galatPertama.focus();
+            } else Swal.fire({
                 icon: 'error',
                 title: 'Periksa kembali isian Anda',
                 html: `<ul style="text-align:left; padding-left:20px; margin:0;">

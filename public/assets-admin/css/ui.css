@@ -23,9 +23,9 @@
     --hr-primary-soft: #fbeeee;
     --hr-primary-soft-text: #7a1013;
 
-    /* Warna status (kontras teks ≥ 4.5:1 di atas putih): hijau sukses/hadir/aktif, kuning menunggu/terlambat,
+    /* Warna status (kontras teks ≥ 4.5:1 di atas putih DAN di atas varian -soft-nya): hijau sukses/hadir/aktif, kuning menunggu/terlambat,
        merah gagal/absen/ditolak, abu nonaktif/dibatalkan, biru info. */
-    --hr-success: #15803d;
+    --hr-success: #157a3a;
     --hr-success-soft: #e8f5ec;
     --hr-warning: #b45309;
     --hr-warning-soft: #fff4df;
@@ -299,6 +299,9 @@ html[data-theme="dark"] .badge.text-bg-secondary, html[data-theme="dark"] .badge
 .dropdown-item { border-radius: 6px; padding: .45rem .7rem; }
 .pagination { font-size: .8125rem; }
 .pagination .page-link { min-width: 34px; text-align: center; }
+/* Paginator Laravel: keterangan & nomor halaman boleh turun baris di area sempit (mis. 1024px + sidebar). */
+.dashboard-content nav .flex-sm-fill.d-sm-flex { flex-wrap: wrap; gap: .5rem 1rem; }
+.dashboard-content .pagination { flex-wrap: wrap; row-gap: .25rem; }
 nav[aria-label] .small.text-muted, nav .text-muted.small { font-size: .8125rem; }
 .nav-tabs .nav-link, .nav-pills .nav-link { font-size: .875rem; }
 .progress { height: .6rem; border-radius: 999px; }

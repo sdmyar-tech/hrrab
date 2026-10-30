@@ -210,7 +210,7 @@
                         <h2 class="h5 mb-1 section-title"><i class="bi bi-person-lines-fill" aria-hidden="true"></i><span>Anggota {{ $labelLingkup }}</span></h2>
                         <p class="text-muted mb-0">{{ $anggota->count() }} pegawai aktif &middot; {{ $anggota->where('cuti', true)->count() }} sedang cuti</p>
                     </div>
-                    <input type="search" class="form-control form-control-sm" style="max-width:240px;" placeholder="Cari pegawai, contoh: Siti atau Guru" data-cari-anggota aria-label="Cari anggota">
+                    <input type="search" class="form-control form-control-sm" style="max-width:240px;" placeholder="Cari pegawai, contoh: Siti atau Guru" data-saring="#tabel-anggota" autocomplete="off" aria-label="Cari anggota menurut nama atau jabatan">
                 </div>
                 <div class="table-responsive dash-scroll">
                     <table class="table align-middle mb-0 small" id="tabel-anggota">
@@ -226,7 +226,7 @@
                         </thead>
                         <tbody>
                             @foreach ($anggota as $a)
-                                <tr data-teks="{{ strtolower($a['nama'] . ' ' . $a['jabatan']) }}">
+                                <tr data-cari="{{ mb_strtolower($a['nama'] . ' ' . $a['jabatan']) }}">
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
                                             @if ($a['foto'])
@@ -266,6 +266,7 @@
                                     @endcan
                                 </tr>
                             @endforeach
+                            <tr data-saring-kosong="#tabel-anggota" hidden><td colspan="{{ auth()->user()->can('lihat-tabel-karyawan') ? 6 : 5 }}">@include('partials.kosong', ['teks' => 'Tidak ada pegawai yang cocok dengan pencarian ini.', 'ikonKosong' => 'bi-search'])</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -429,14 +430,5 @@
     </div>
 </main>
 
-<script>
-    document.querySelectorAll('[data-cari-anggota]').forEach(function (input) {
-        input.addEventListener('input', function () {
-            const kata = input.value.trim().toLowerCase();
-            document.querySelectorAll('#tabel-anggota tbody tr').forEach(function (tr) {
-                tr.hidden = kata !== '' && ! tr.dataset.teks.includes(kata);
-            });
-        });
-    });
-</script>
+{{-- Cari anggota ditangani global (main.js: data-saring). --}}
 @endsection

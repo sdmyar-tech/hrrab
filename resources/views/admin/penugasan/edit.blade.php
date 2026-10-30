@@ -71,7 +71,7 @@
                     </div>
                 </div>
                 <div class="d-flex gap-2 mt-4">
-                    <button type="submit" class="btn btn-warning"><i class="bi bi-save me-1"></i>Simpan Langsung</button>
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-check-lg me-1"></i>Simpan Langsung</button>
                     <a href="{{ route('admin.pegawai.show', ['pegawai' => $penugasan->data_pegawai_id, 'tab' => 'penugasan']) }}" class="btn btn-outline-secondary">Batal</a>
                 </div>
             </form>

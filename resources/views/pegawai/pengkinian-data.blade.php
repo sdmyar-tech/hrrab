@@ -174,7 +174,7 @@
 
                 <div class="d-flex justify-content-end gap-2 mb-4">
                     <a href="{{ route('pegawai.dashboard') }}" class="btn btn-outline-secondary">Batal</a>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Simpan Data</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Simpan Data</button>
                 </div>
             </form>
         @endif

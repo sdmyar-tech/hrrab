@@ -396,7 +396,7 @@
                                 </button>
 
                                 <button type="submit" class="btn btn-success d-none" id="btnSubmit">
-                                    <i class="bi bi-check-circle me-1"></i> Simpan Perubahan
+                                    <i class="bi bi-check-lg me-1"></i> Simpan Perubahan
                                 </button>
                             </div>
                         </div>

@@ -312,7 +312,12 @@
             fetch(@json(route('admin.lamaran.internal.bagan')) + '?' + new URLSearchParams(param), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); })
                 .then((html) => { if (ke !== permintaan) return; wadahBagan.innerHTML = html; tulisNama(); })
-                .catch(() => { if (ke === permintaan) wadahBagan.innerHTML = '<p class="small text-danger mb-0">Bagan gagal dimuat.</p>'; });
+                .catch(() => {
+                    if (ke !== permintaan) return;
+                    wadahBagan.innerHTML = '<p class="small text-danger mb-0"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>Bagan gagal dimuat. '
+                        + '<button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-ulang-bagan>Coba lagi</button></p>';
+                    wadahBagan.querySelector('[data-ulang-bagan]').addEventListener('click', muatBagan);
+                });
         }
 
         [lowongan, unit, jabatan].forEach((el) => el.addEventListener('change', muatBagan));

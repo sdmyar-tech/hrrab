@@ -57,7 +57,7 @@
                         <input type="hidden" name="token" value="{{ $token }}">
                         <a href="{{ route('admin.absensi.import') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Ganti file</a>
                         <button type="submit" class="btn btn-primary flex-grow-1" @disabled(! $akanDisimpan)>
-                            <i class="bi bi-save me-1"></i> Simpan {{ $akanDisimpan }} hari
+                            <i class="bi bi-check-lg me-1"></i> Simpan {{ $akanDisimpan }} hari
                         </button>
                     </form>
                 </section>

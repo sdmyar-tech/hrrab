@@ -226,11 +226,11 @@
                             {{-- Penilai sekaligus pemutus: keputusan diisi bersama nilai (di dalam formIsi). --}}
                             <p class="small text-muted"><i class="bi bi-info-circle me-1"></i>Anda penilai sekaligus pemutus: nilai & keputusan disimpan sekaligus.</p>
                             @include('admin.evaluasi-kontrak._isian-keputusan', ['form' => null])
-                            <button type="submit" class="btn btn-success w-100"><i class="bi bi-check2-circle me-1"></i>Simpan nilai & tetapkan kontrak</button>
+                            <button type="submit" class="btn btn-success w-100"><i class="bi bi-check-lg-circle me-1"></i>Simpan nilai & tetapkan kontrak</button>
                         @elseif ($bisaPutuskan)
                             @if ($e->status === EK::STATUS_MENUNGGU_ATASAN)<p class="small text-warning-emphasis"><i class="bi bi-exclamation-triangle me-1"></i>Penilaian belum masuk (Admin tetap bisa memutuskan).</p>@endif
                             @include('admin.evaluasi-kontrak._isian-keputusan', ['form' => 'formPutuskan'])
-                            <button type="submit" form="formPutuskan" class="btn btn-success w-100"><i class="bi bi-check2-circle me-1"></i>Simpan keputusan</button>
+                            <button type="submit" form="formPutuskan" class="btn btn-success w-100"><i class="bi bi-check-lg-circle me-1"></i>Simpan keputusan</button>
                         @elseif (! $e->keputusan)
                             <p class="small text-muted mb-0"><i class="bi bi-hourglass-split me-1"></i>{{ $e->status === EK::STATUS_MENUNGGU_ATASAN ? 'Diputuskan setelah penilaian masuk.' : 'Menunggu keputusan ' . $labelPemutus . '.' }}</p>
                         @endif
