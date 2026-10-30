@@ -74,9 +74,9 @@
         </a>
         <form action="{{ route('logout') }}" method="POST" class="akun-keluar">
             @csrf
-            <button type="submit" class="btn-akun-keluar js-confirm" title="Keluar" aria-label="Keluar"
-                data-confirm="true" data-title="Logout" data-text="Apakah Anda yakin ingin keluar dari akun ini?"
-                data-confirm-text="Ya, logout" data-cancel-text="Batal">
+            <button type="submit" class="btn-akun-keluar" title="Keluar" aria-label="Keluar"
+                data-confirm="true" data-title="Keluar dari akun?" data-text="Anda perlu masuk lagi untuk melanjutkan."
+                data-confirm-text="Ya, Keluar" data-cancel-text="Batal">
                 <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
             </button>
         </form>

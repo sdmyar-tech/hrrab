@@ -55,8 +55,8 @@
             </div>
             <form action="{{ route('logout') }}" method="POST" class="ms-md-auto">
                 @csrf
-                <button type="submit" class="btn btn-outline-danger js-confirm" data-confirm="true" data-title="Logout"
-                    data-text="Apakah Anda yakin ingin keluar dari sesi login saat ini?" data-confirm-text="Ya, logout" data-cancel-text="Batal">
+                <button type="submit" class="btn btn-outline-danger" data-confirm="true" data-title="Keluar dari akun?"
+                    data-text="Anda perlu masuk lagi untuk melanjutkan." data-confirm-text="Ya, Keluar" data-cancel-text="Batal">
                     <i class="bi bi-box-arrow-right"></i>Keluar
                 </button>
             </form>

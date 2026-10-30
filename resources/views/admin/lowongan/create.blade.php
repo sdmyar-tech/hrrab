@@ -3,6 +3,7 @@
 @section('content')
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
+        @include('partials.kembali', ['ke' => route('admin.lowongan.index'), 'label' => 'Lowongan'])
         <div class="page-heading">
             <div class="page-heading-copy">
                 <span class="page-icon"><i class="bi bi-briefcase"></i></span>
@@ -14,7 +15,7 @@
         </div>
 
         <section class="panel p-4">
-            <form action="{{ route('admin.lowongan.store') }}" method="POST" data-confirm="Simpan lowongan ini sebagai draft?">
+            <form data-fokus-awal action="{{ route('admin.lowongan.store') }}" method="POST" data-confirm="Simpan lowongan ini sebagai draft?">
                 @csrf
 
                 @include('admin.lowongan._form')

@@ -72,85 +72,84 @@ document.addEventListener('DOMContentLoaded', function () {
         @endif
     @endunless
 
-    document.querySelectorAll('.btn-confirm-delete').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            const form = this.closest('form');
-            const nama = form?.dataset.nama || 'data ini';
+    /*
+     * Satu sistem konfirmasi untuk dua cara pemasangan:
+     *  - <form data-confirm="Pesan">                         → dialog saat form dikirim;
+     *  - <button data-confirm="true" data-title data-text …> → dialog saat tombol diklik
+     *    (opsional data-icon, data-confirm-text, data-cancel-text, data-confirm-color).
+     * Aksi destruktif (hapus, tolak, batalkan, …) otomatis: ikon peringatan + tombol merah berlabel kata kerjanya.
+     * Setelah disetujui form dikirim ulang lewat requestSubmit → validasi, spinner, dan name/value tombol tetap berlaku.
+     */
+    const KATA_BAHAYA = /\b(hapus|tolak|batalkan|nonaktifkan|kosongkan|keluarkan|cabut)\b/i;
 
-            Swal.fire({
-                icon: 'warning',
-                title: 'Hapus data ini?',
-                html: `Data <strong>"${nama}"</strong> akan dihapus permanen.<br>Tindakan ini tidak bisa dibatalkan.`,
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="bi bi-trash"></i> Ya, Hapus',
-                cancelButtonText: 'Batal',
-                reverseButtons: true,
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    form.submit();
-                }
-            });
-        });
-    });
+    function konfirmasi(o) {
+        const cocok = (o.cariBahaya || '').match(KATA_BAHAYA);
+        const bahaya = Boolean(cocok) || o.icon === 'warning';
+        const kata = cocok ? cocok[1].charAt(0).toUpperCase() + cocok[1].slice(1).toLowerCase() : null;
 
-    document.querySelectorAll('.btn-confirm-logout').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            const form = document.getElementById('logout-form');
+        return Swal.fire({
+            icon: o.icon || (bahaya ? 'warning' : 'question'),
+            title: o.judul || 'Konfirmasi',
+            text: o.teks,
+            showCancelButton: true,
+            confirmButtonColor: o.warna || (bahaya ? '#dc3545' : '#880f12'),
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: o.ya || (kata ? 'Ya, ' + kata : 'Ya, Lanjutkan'),
+            // "Batal" di samping "Ya, Batalkan" membingungkan → "Kembali".
+            cancelButtonText: o.batal || (kata === 'Batalkan' ? 'Kembali' : 'Batal'),
+            reverseButtons: true,
+        }).then((r) => r.isConfirmed);
+    }
 
-            Swal.fire({
-                icon: 'question',
-                title: 'Keluar dari HRRAB?',
-                text: 'Anda perlu masuk lagi untuk melanjutkan.',
-                showCancelButton: true,
-                confirmButtonColor: '#880f12',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Ya, Keluar',
-                cancelButtonText: 'Batal',
-                reverseButtons: true,
-            }).then((result) => {
-                if (result.isConfirmed && form) {
-                    form.submit();
-                }
-            });
-        });
-    });
+    function kirimTerkonfirmasi(form, tombol) {
+        form.dataset.confirmed = '1';
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit(tombol && tombol.form === form && tombol.type === 'submit' ? tombol : undefined);
+        } else {
+            form.submit();
+        }
+    }
 
-    document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+    document.querySelectorAll('form[data-confirm]:not([data-confirm="true"])').forEach(function (form) {
         form.addEventListener('submit', function (e) {
-            if (form.dataset.confirmed === '1') return;
-
-            if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
-                form.reportValidity();
-                e.preventDefault();
+            // Kiriman ulang setelah disetujui: lolos sekali saja.
+            if (form.dataset.confirmed === '1') {
+                delete form.dataset.confirmed;
                 return;
             }
-
             e.preventDefault();
-            const msg = form.dataset.confirm || 'Yakin ingin melanjutkan?';
-            // Aksi destruktif (hapus, tolak, batalkan, nonaktifkan, …) → ikon peringatan + tombol merah berlabel kata kerjanya.
-            const bahaya = msg.match(/\b(hapus|tolak|batalkan|nonaktifkan|kosongkan|keluarkan|cabut)\b/i);
-            const kata = bahaya ? bahaya[1].charAt(0).toUpperCase() + bahaya[1].slice(1).toLowerCase() : null;
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            const pesan = form.dataset.confirm || 'Yakin ingin melanjutkan?';
+            konfirmasi({ teks: pesan, cariBahaya: pesan }).then((ya) => ya && kirimTerkonfirmasi(form, e.submitter));
+        });
+    });
 
-            Swal.fire({
-                icon: bahaya ? 'warning' : 'question',
-                title: 'Konfirmasi',
-                text: msg,
-                showCancelButton: true,
-                confirmButtonColor: bahaya ? '#dc3545' : '#880f12',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: bahaya ? 'Ya, ' + kata : 'Ya, Lanjutkan',
-                // "Batal" di samping "Ya, Batalkan" membingungkan → "Kembali".
-                cancelButtonText: kata === 'Batalkan' ? 'Kembali' : 'Batal',
-                reverseButtons: true,
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    form.dataset.confirmed = '1';
-                    form.submit();
-                }
+    document.querySelectorAll('button[data-confirm="true"], input[type="submit"][data-confirm="true"]').forEach(function (tombol) {
+        tombol.addEventListener('click', function (e) {
+            const form = tombol.form;
+            if (!form) return;
+            e.preventDefault();
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            const d = tombol.dataset;
+            konfirmasi({
+                judul: d.title,
+                teks: d.text || 'Apakah Anda yakin ingin melanjutkan?',
+                icon: d.icon,
+                ya: d.confirmText,
+                batal: d.cancelText,
+                warna: d.confirmColor,
+                cariBahaya: [d.title, d.confirmText].join(' '),
+            }).then(function (ya) {
+                if (!ya) return;
+                // Form tanpa data-confirm tidak punya penjaga "confirmed" → hapus tanda setelah dikirim.
+                kirimTerkonfirmasi(form, tombol);
+                delete form.dataset.confirmed;
             });
         });
     });
@@ -182,6 +181,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Kembali lewat tombol Back browser (halaman dari cache): kembalikan tombol ke keadaan semula.
     window.addEventListener('pageshow', function () {
         document.querySelectorAll('[data-original-text]').forEach(pulihkanTombol);
+        document.querySelectorAll('form[data-confirmed]').forEach((f) => delete f.dataset.confirmed);
     });
 
 });

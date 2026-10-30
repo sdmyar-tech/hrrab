@@ -8,6 +8,7 @@
 @endphp
 <div class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
+        @include('partials.kembali', ['ke' => route('pengumuman.index'), 'label' => 'Pengumuman'])
         <div class="page-heading">
             <div class="page-heading-copy">
                 <span class="page-icon"><i class="bi bi-megaphone"></i></span>
@@ -19,7 +20,7 @@
             </div>
         </div>
 
-        <form action="{{ $baru ? route('pengumuman.store') : route('pengumuman.update', $pengumuman) }}" method="POST" id="formPengumuman"
+        <form @if ($baru) data-fokus-awal @endif action="{{ $baru ? route('pengumuman.store') : route('pengumuman.update', $pengumuman) }}" method="POST" id="formPengumuman"
             data-confirm="{{ $baru ? 'Terbitkan pengumuman ini?' : 'Simpan perubahan pengumuman?' }}">
             @csrf
             @unless ($baru) @method('PUT') @endunless

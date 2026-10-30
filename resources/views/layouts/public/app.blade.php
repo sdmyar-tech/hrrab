@@ -382,7 +382,8 @@
                         <li class="nav-item">
                             <form action="{{ route('logout') }}" method="POST" class="d-inline">
                                 @csrf
-                                <button type="submit" class="btn btn-outline-brand btn-sm">Logout</button>
+                                <button type="submit" class="btn btn-outline-brand btn-sm" data-confirm="true" data-title="Keluar dari akun?"
+                                    data-text="Anda perlu masuk lagi untuk melanjutkan." data-confirm-text="Ya, Keluar" data-cancel-text="Batal">Keluar</button>
                             </form>
                         </li>
                     @else
@@ -407,7 +408,7 @@
             <div class="row g-4">
                 <div class="col-md-6">
                     <div class="footer-brand">
-                        <img class="footer-logo" src="{{ asset('assets-admin/images/png/logo_abd.png') }}" alt="Logo Yayasan Abdurrab">
+                        <img class="footer-logo" loading="lazy" decoding="async" src="{{ asset('assets-admin/images/png/logo_abd.png') }}" alt="Logo Yayasan Abdurrab">
                         <span>
                             Karir HRRAB
                             <small class="d-block fw-normal" style="color:#94a3b8;">Yayasan Abdurrab</small>

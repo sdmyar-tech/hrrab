@@ -17,7 +17,7 @@
             </div>
         </div>
 
-        <form action="{{ route('admin.users.store') }}" method="POST" data-confirm="Tambah akun user baru ini?">
+        <form data-fokus-awal action="{{ route('admin.users.store') }}" method="POST" data-confirm="Tambah akun user baru ini?">
             @csrf
 
             <div class="row g-3 align-items-start">

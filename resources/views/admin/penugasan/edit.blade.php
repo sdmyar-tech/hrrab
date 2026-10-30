@@ -3,9 +3,7 @@
 @section('content')
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
-        <a href="{{ route('admin.pegawai.show', ['pegawai' => $penugasan->data_pegawai_id, 'tab' => 'penugasan']) }}" class="text-decoration-none text-muted small d-inline-block mb-2">
-            <i class="bi bi-arrow-left"></i> Kembali ke detail pegawai
-        </a>
+        @include('partials.kembali', ['ke' => route('admin.pegawai.show', ['pegawai' => $penugasan->data_pegawai_id, 'tab' => 'penugasan']), 'label' => 'detail pegawai'])
 
         <div class="page-heading">
             <div class="page-heading-copy">

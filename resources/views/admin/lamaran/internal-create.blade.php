@@ -7,9 +7,7 @@
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
-        <a href="{{ route('admin.lamaran.index') }}" class="text-decoration-none text-muted small d-inline-block mb-2">
-            <i class="bi bi-arrow-left"></i> Kembali ke Lamaran Masuk
-        </a>
+        @include('partials.kembali', ['ke' => route('admin.lamaran.index'), 'label' => 'Lamaran Masuk'])
 
         <div class="page-heading">
             <div class="page-heading-copy">
@@ -22,7 +20,7 @@
             </div>
         </div>
 
-        <form action="{{ route('admin.lamaran.internal.store') }}" method="POST" data-confirm="Tambahkan kandidat ini dan lanjut ke tahap interview?">
+        <form data-fokus-awal action="{{ route('admin.lamaran.internal.store') }}" method="POST" data-confirm="Tambahkan kandidat ini dan lanjut ke tahap interview?">
             @csrf
 
             <div class="row g-3">

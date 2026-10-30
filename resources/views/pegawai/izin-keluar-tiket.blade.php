@@ -17,9 +17,7 @@
 @endphp
 <div class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
-        <a href="{{ $milikSendiri ? route('pegawai.izin-keluar') : route('admin.izin-keluar.show', $izin) }}" class="text-decoration-none text-muted small d-inline-block mb-2">
-            <i class="bi bi-arrow-left"></i> Kembali
-        </a>
+        @include('partials.kembali', ['ke' => $milikSendiri ? route('pegawai.izin-keluar') : route('admin.izin-keluar.show', $izin)])
 
         <div class="tiket" id="tiket" data-status="{{ $status }}">
             {{-- Pita status: garis bergerak + jam berjalan = tanda tiket asli (bukan tangkapan layar). --}}

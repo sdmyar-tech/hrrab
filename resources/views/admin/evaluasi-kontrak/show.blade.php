@@ -17,8 +17,8 @@
 @section('content')
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
-        <a href="{{ route('admin.evaluasi-kontrak.index') }}" class="small text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Kembali ke Evaluasi Kontrak</a>
-        <div class="page-heading mt-2">
+        @include('partials.kembali', ['ke' => route('admin.evaluasi-kontrak.index'), 'label' => 'Evaluasi Kontrak'])
+        <div class="page-heading">
             <div class="page-heading-copy">
                 <span class="page-icon"><i class="bi bi-clipboard-check"></i></span>
                 <div>

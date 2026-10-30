@@ -125,7 +125,7 @@
         @empty
             <div class="col-12">
                 <div class="empty-state text-center">
-                    <img src="{{ asset('assets-admin/images/png/logo_abd.png') }}" alt="" class="mb-3">
+                    <img src="{{ asset('assets-admin/images/png/logo_abd.png') }}" alt="" class="mb-3" loading="lazy" decoding="async">
                     <h3 class="h5 fw-bold">
                         {{ request()->hasAny(['q', 'unit_kerja']) ? 'Lowongan tidak ditemukan' : 'Belum ada lowongan dibuka' }}
                     </h3>

@@ -364,8 +364,33 @@
       });
     }
 
+    // Fokus awal: isian galat pertama yang terlihat (setelah validasi server); bila tidak ada,
+    // isian pertama form [data-fokus-awal] — hanya di perangkat bermouse agar keyboard ponsel tidak langsung terbuka.
+    function initFokusAwal() {
+      var terlihat = function (el) { return el.offsetParent !== null && !el.disabled; };
+      var galat = Array.prototype.find.call(
+        document.querySelectorAll(".dashboard-content :is(input, select, textarea).is-invalid"), terlihat
+      );
+      if (galat) {
+        galat.focus({ preventScroll: true });
+        galat.scrollIntoView({ block: "center" });
+        return;
+      }
+      if (document.querySelector("[autofocus]") || !window.matchMedia("(pointer: fine)").matches) {
+        return;
+      }
+      var form = document.querySelector("form[data-fokus-awal]");
+      var isian = form && Array.prototype.find.call(
+        form.querySelectorAll("input:not([type=hidden]):not([readonly]), select, textarea:not([readonly])"), terlihat
+      );
+      if (isian) {
+        isian.focus({ preventScroll: true });
+      }
+    }
+
     initValidation();
     initLabelIsian();
+    initFokusAwal();
     initLokasiMaps();
     initSaringLangsung();
     initCariOtomatis();
@@ -461,43 +486,12 @@
       setToggleExpanded();
     }
 
-    function initSweetAlert() {
-      var confirmButtons = document.querySelectorAll("[data-confirm='true']");
-
-      Array.prototype.forEach.call(confirmButtons, function (button) {
-        button.addEventListener("click", function (event) {
-          var form = button.closest("form");
-
-          if (!form) {
-            return;
-          }
-
-          event.preventDefault();
-
-          Swal.fire({
-            title: button.getAttribute("data-title") || "Konfirmasi",
-            text: button.getAttribute("data-text") || "Apakah Anda yakin ingin melanjutkan?",
-            icon: button.getAttribute("data-icon") || "warning",
-            showCancelButton: true,
-            confirmButtonColor: button.getAttribute("data-confirm-color") || "#880f12",
-            cancelButtonColor: button.getAttribute("data-cancel-color") || "#6c757d",
-            confirmButtonText: button.getAttribute("data-confirm-text") || "Ya, lanjutkan",
-            cancelButtonText: button.getAttribute("data-cancel-text") || "Batal"
-          }).then(function (result) {
-            if (result.isConfirmed) {
-              form.submit();
-            }
-          });
-        });
-      });
-    }
+    // Dialog konfirmasi (data-confirm) ditangani satu tempat: layouts/partials/sweetalert.blade.php.
 
     if (mediaQuery.addEventListener) {
       mediaQuery.addEventListener("change", handleBreakpointChange);
     } else if (mediaQuery.addListener) {
       mediaQuery.addListener(handleBreakpointChange);
     }
-
-    initSweetAlert();
   });
 })();

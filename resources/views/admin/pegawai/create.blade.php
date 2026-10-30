@@ -18,7 +18,7 @@
                     </div>
 
                     <div class="panel-body p-0 pt-3 p-md-4">{{-- HP: .panel sudah berpadding --}}
-                        <form action="{{ isset($pegawai) ? route('admin.pegawai.update', $pegawai->id) : route('admin.pegawai.store') }}"
+                        <form @unless (isset($pegawai)) data-fokus-awal @endunless action="{{ isset($pegawai) ? route('admin.pegawai.update', $pegawai->id) : route('admin.pegawai.store') }}"
                             method="POST"
                             enctype="multipart/form-data"
                             id="wizardPegawaiForm"

@@ -12,6 +12,7 @@
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
+        @include('partials.kembali', ['ke' => $urlKembali, 'label' => $dariDaftar ? 'Mutasi & Rangkap' : 'detail pegawai'])
         <div class="page-heading">
             <div class="page-heading-copy">
                 <span class="page-icon"><i class="bi {{ $mutasi ? 'bi-arrow-left-right' : 'bi-diagram-3' }}"></i></span>
@@ -46,7 +47,7 @@
                     @if (! $pegawai)
                         <div class="alert alert-light border small mb-0"><i class="bi bi-person-check me-1"></i>Pilih pegawai di atas untuk mengisi data {{ $mutasi ? 'mutasi' : 'rangkap tugas' }}.</div>
                     @else
-                    <form action="{{ route('admin.penugasan.store', $pegawai) }}" method="POST"
+                    <form data-fokus-awal action="{{ route('admin.penugasan.store', $pegawai) }}" method="POST"
                         data-confirm="{{ $mutasi ? 'Simpan mutasi pegawai ini?' : 'Tambahkan rangkap tugas ini?' }}">
                         @csrf
                         <input type="hidden" name="jenis" value="{{ $jenis }}">

@@ -3,6 +3,7 @@
 @section('content')
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
+        @include('partials.kembali', ['ke' => route('admin.pengajuan-formasi.index'), 'label' => 'Pengajuan Formasi'])
         <div class="page-heading">
             <div class="page-heading-copy">
                 <span class="page-icon"><i class="bi bi-person-plus"></i></span>
@@ -17,7 +18,7 @@
         <div class="row g-3 align-items-start">
         <div class="col-xxl-8">
         <section class="panel p-4">
-            <form action="{{ route('admin.pengajuan-formasi.store') }}" method="POST" id="formFormasi" data-confirm="Kirim pengajuan formasi ini?">
+            <form data-fokus-awal action="{{ route('admin.pengajuan-formasi.store') }}" method="POST" id="formFormasi" data-confirm="Kirim pengajuan formasi ini?">
                 @csrf
                 @php
                     $unitAwal = old('unit_kerja', $unitOptions[0] ?? '');

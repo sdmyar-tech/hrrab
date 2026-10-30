@@ -11,6 +11,7 @@
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
+        @include('partials.kembali', ['ke' => route('admin.role.index'), 'label' => 'Master Role'])
         <div class="page-heading">
             <div class="page-heading-copy">
                 <span class="page-icon"><i class="bi bi-shield-check"></i></span>
@@ -34,7 +35,7 @@
             <div class="alert alert-danger small">{{ $errors->first() }}</div>
         @endif
 
-        <form action="{{ $aksi }}" method="POST" data-confirm="Simpan role ini?{{ $jumlahAkun ? ' Perubahan hak akses langsung berlaku untuk ' . $jumlahAkun . ' akun.' : '' }}">
+        <form @if ($baru) data-fokus-awal @endif action="{{ $aksi }}" method="POST" data-confirm="Simpan role ini?{{ $jumlahAkun ? ' Perubahan hak akses langsung berlaku untuk ' . $jumlahAkun . ' akun.' : '' }}">
             @csrf
             @unless ($baru) @method('PUT') @endunless
             <div class="row g-3">

@@ -3,9 +3,7 @@
 @section('content')
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
-        <a href="{{ route('admin.pengajuan-cuti.index') }}" class="text-decoration-none text-muted small d-inline-block mb-2">
-            <i class="bi bi-arrow-left"></i> Kembali ke Pengajuan Cuti
-        </a>
+        @include('partials.kembali', ['ke' => route('admin.pengajuan-cuti.index'), 'label' => 'Pengajuan Cuti'])
 
         <div class="page-heading">
             <div class="page-heading-copy">

@@ -37,7 +37,7 @@
         </div>
     @elseif ($isImage)
         <div class="text-center">
-            <img src="{{ $url }}" alt="{{ $label }}"
+            <img src="{{ $url }}" alt="{{ $label }}" loading="lazy" decoding="async"
                 class="img-fluid rounded border"
                 style="max-height: 220px; object-fit: contain; cursor: zoom-in;"
                 onclick="document.querySelector('.btn-zoom-image[data-src=\'{{ $url }}\']')?.click();">

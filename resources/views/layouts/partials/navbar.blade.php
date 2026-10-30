@@ -25,7 +25,7 @@
                                 <span class="profile-name d-none d-sm-inline">{{ Auth::user()->name ?? 'User' }}</span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="{{ route('profile') }}">Profile</a></li>
+                                <li><a class="dropdown-item" href="{{ route('profile') }}">Profil Saya</a></li>
                                 <li><span class="dropdown-item-text px-3 py-2 text-muted small">{{ Auth::user()?->roleLabel() ?? 'User' }}</span></li>
                                 <li>
                                     <hr class="dropdown-divider">
@@ -34,13 +34,13 @@
                                     <form action="{{ route('logout') }}" method="POST">
                                         @csrf
                                         <button type="submit"
-                                            class="dropdown-item text-danger js-confirm"
+                                            class="dropdown-item text-danger"
                                             data-confirm="true"
-                                            data-title="Logout"
-                                            data-text="Apakah Anda yakin ingin keluar dari akun ini?"
-                                            data-confirm-text="Ya, logout"
+                                            data-title="Keluar dari akun?"
+                                            data-text="Anda perlu masuk lagi untuk melanjutkan."
+                                            data-confirm-text="Ya, Keluar"
                                             data-cancel-text="Batal">
-                                            Logout
+                                            Keluar
                                         </button>
                                     </form>
                                 </li>
