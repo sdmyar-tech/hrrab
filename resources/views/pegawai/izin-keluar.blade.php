@@ -1,158 +1,150 @@
 @extends(Auth::user()->panelLayout())
 
-@section('content')
-<div class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-door-open"></i></span>
-                <div>
-                    <div class="eyebrow">Pegawai</div>
-                    <h1 class="mb-0">Izin Keluar Jam Kerja</h1>
-                    <p class="text-muted mb-0">Setelah disetujui, tunjukkan <strong>tiket keluar</strong> ke security di gerbang.</p>
-                </div>
-            </div>
-            <div class="heading-actions">
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.izin-keluar.export', 'eksporTeks' => 'Ekspor Riwayat'])
-            </div>
-        </div>
+@section('title', 'Izin Keluar')
 
-        <div class="row g-3">
-            <div class="col-12 col-xl-5">
-                <div class="panel p-4">
-                    <h2 class="h6 fw-bold mb-3">Form Izin Keluar</h2>
+@section('content')
+@php
+    $menunggu = $riwayat->filter(fn ($r) => $r->isPending())->count();
+    $tiketAktif = $riwayat->filter(fn ($r) => $r->isApproved() && $r->statusTiket() !== 'lewat');
+    $bulanIni = $riwayat->filter(fn ($r) => $r->tanggal->isSameMonth(now()))->count();
+@endphp
+<main class="dashboard-content">
+    <div class="container-fluid">
+        <x-page-header title="Izin Keluar Jam Kerja" eyebrow="Pengajuan Saya"
+            subtitle="Setelah disetujui, tunjukkan tiket keluar di layar HP kepada security di gerbang.">
+            <x-slot:actions>
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.izin-keluar.export', 'eksporTeks' => 'Ekspor Riwayat'])
+            </x-slot:actions>
+        </x-page-header>
+
+        {{-- ============ Ringkasan ============ --}}
+        <section class="row g-3 mb-4" aria-label="Ringkasan izin keluar">
+            <div class="col-6 col-xl-4">
+                <x-stat-card label="Tiket Siap Dipakai" :value="$tiketAktif->count()" icon="bi-ticket-perforated" :tone="$tiketAktif->isNotEmpty() ? 'success' : 'neutral'"
+                    :meta="$tiketAktif->isNotEmpty() ? 'Tampilkan di gerbang' : 'Belum ada tiket berlaku'"
+                    :href="$tiketAktif->isNotEmpty() ? route('pegawai.izin-keluar.tiket', $tiketAktif->first()) : null" />
+            </div>
+            <div class="col-6 col-xl-4">
+                <x-stat-card label="Menunggu Persetujuan" :value="$menunggu" icon="bi-hourglass-split" :tone="$menunggu ? 'warning' : 'neutral'" meta="Belum diputuskan" />
+            </div>
+            <div class="col-12 col-xl-4">
+                <x-stat-card label="Izin Bulan Ini" :value="$bulanIni" unit="kali" icon="bi-door-open" tone="info" :meta="now()->translatedFormat('F Y')" />
+            </div>
+        </section>
+
+        <div class="row g-4 align-items-start">
+            {{-- ============ Form ============ --}}
+            <div class="col-lg-7">
+                <x-card title="Formulir Izin Keluar" subtitle="Isian bertanda * wajib diisi." icon="bi-door-open">
                     <form action="{{ route('pegawai.izin-keluar.store') }}" method="POST" data-confirm="Ajukan izin keluar ini?">
                         @csrf
 
+                        <x-input name="tanggal" id="tanggal" type="date" label="Tanggal" :value="now()->toDateString()" required
+                            :min="now()->toDateString()" :max="now()->addDays($maksHari)->toDateString()"
+                            :help="'Paling lambat ' . $maksHari . ' hari ke depan.'" />
+
+                        <div class="row gx-3">
+                            <div class="col-6"><x-input name="jam_keluar" id="jam_keluar" type="time" label="Jam Keluar" required /></div>
+                            <div class="col-6"><x-input name="jam_kembali" id="jam_kembali" type="time" label="Perkiraan Kembali" /></div>
+                        </div>
                         <div class="mb-3">
-                            <label for="tanggal" class="form-label">Tanggal</label>
-                            <input type="date" name="tanggal" id="tanggal" class="form-control @error('tanggal') is-invalid @enderror"
-                                value="{{ old('tanggal', now()->toDateString()) }}" min="{{ now()->toDateString() }}"
-                                max="{{ now()->addDays($maksHari)->toDateString() }}" required>
-                            @error('tanggal')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            <x-checkbox name="tidak_kembali" id="tidak_kembali" value="1" label="Tidak kembali lagi hari ini" />
                         </div>
 
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <label for="jam_keluar" class="form-label">Jam Keluar</label>
-                                <input type="time" name="jam_keluar" id="jam_keluar" class="form-control @error('jam_keluar') is-invalid @enderror"
-                                    value="{{ old('jam_keluar') }}" required>
-                                @error('jam_keluar')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-                            <div class="col-6">
-                                <label for="jam_kembali" class="form-label">Perkiraan Kembali</label>
-                                <input type="time" name="jam_kembali" id="jam_kembali" class="form-control @error('jam_kembali') is-invalid @enderror"
-                                    value="{{ old('jam_kembali') }}">
-                                @error('jam_kembali')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-                        </div>
-                        <div class="form-check mt-2 mb-3">
-                            <input class="form-check-input" type="checkbox" name="tidak_kembali" value="1" id="tidak_kembali" @checked(old('tidak_kembali'))>
-                            <label class="form-check-label" for="tidak_kembali">Tidak kembali lagi hari ini</label>
-                        </div>
+                        <x-select name="keperluan" id="keperluan" label="Keperluan" :options="$keperluanOptions" placeholder="Pilih keperluan" required />
 
-                        <div class="mb-3">
-                            <label for="keperluan" class="form-label">Keperluan</label>
-                            <select name="keperluan" id="keperluan" class="form-select @error('keperluan') is-invalid @enderror" required>
-                                <option value="">-- Pilih keperluan --</option>
-                                @foreach ($keperluanOptions as $kode => $label)
-                                    <option value="{{ $kode }}" @selected(old('keperluan') === $kode)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            @error('keperluan')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
+                        <x-textarea name="alasan" id="alasan" label="Alasan / Tujuan" rows="3" maxlength="500" required
+                            placeholder="Contoh: ke bank untuk urusan gaji" />
 
-                        <div class="mb-3">
-                            <label for="alasan" class="form-label">Alasan / Tujuan</label>
-                            <textarea name="alasan" id="alasan" rows="3" maxlength="500" class="form-control @error('alasan') is-invalid @enderror"
-                                placeholder="Contoh: ke bank untuk urusan gaji" required>{{ old('alasan') }}</textarea>
-                            @error('alasan')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-
-                        @if ($rute)
-                            <div class="alert alert-light border small">
-                                <i class="bi bi-signpost-split me-1"></i>Disetujui oleh:
-                                <strong>{{ collect($rute)->pluck('label')->map(fn ($l) => str_replace(' (Approve Akhir)', '', $l))->implode(' → ') }}</strong>.
-                                Tiket keluar terbit setelah persetujuan terakhir.
-                            </div>
-                        @endif
-
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-send me-1"></i> Ajukan Izin Keluar
-                        </button>
+                        <x-button type="submit" size="lg" block icon="bi-send">Ajukan Izin Keluar</x-button>
                     </form>
-                </div>
+                </x-card>
             </div>
 
-            <div class="col-12 col-xl-7">
-                <div class="panel p-4">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                        <h2 class="h6 fw-bold mb-0">Riwayat Izin Keluar</h2>
-                        @if ($urutOpsi) @include('partials.urut') @endif
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Jam</th>
-                                    <th>Keperluan</th>
-                                    <th>Status</th>
-                                    <th class="text-end">Tiket</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($riwayat as $item)
-                                    <tr>
-                                        <td>
-                                            {{ $item->tanggal->translatedFormat('d M Y') }}
-                                            <small class="text-muted d-block">{{ $item->tanggal->translatedFormat('l') }}</small>
-                                        </td>
-                                        <td>{{ $item->jamLabel() }}</td>
-                                        <td>
-                                            {{ $item->keperluanLabel() }}
-                                            <small class="text-muted d-block">{{ \Illuminate\Support\Str::limit($item->alasan, 50) }}</small>
-                                        </td>
-                                        <td>
-                                            <span class="badge {{ $item->badgeClass() }}">{{ $item->statusLabel() }}</span>
-                                            @if ($item->isPending())
-                                                <small class="text-muted d-block mt-1">Tahap: {{ $item->currentLevelLabel() }}</small>
-                                            @elseif ($item->status === 'rejected' && $item->catatan_admin)
-                                                <small class="text-muted d-block mt-1">{{ $item->catatan_admin }}</small>
-                                            @endif
-                                        </td>
-                                        <td class="text-end">
-                                            @if ($item->isApproved())
-                                                @php $st = $item->statusTiket(); @endphp
-                                                <a href="{{ route('pegawai.izin-keluar.tiket', $item) }}"
-                                                    class="btn btn-sm {{ $st === 'lewat' ? 'btn-outline-secondary' : 'btn-success' }}">
-                                                    <i class="bi bi-ticket-perforated me-1"></i>{{ $st === 'lewat' ? 'Lihat' : 'Tampilkan Tiket' }}
-                                                </a>
-                                            @else
-                                                <span class="text-muted small">-</span>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @empty
-                                    @include('partials.kosong-tabel', ['kosongKolom' => 5, 'kosongTeks' => 'Belum ada izin keluar. Ajukan lewat formulir di samping.', 'kosongIkon' => 'bi-door-open'])
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            {{-- ============ Samping: alur & cara pakai ============ --}}
+            <div class="col-lg-5 d-grid gap-3">
+                @if ($rute)
+                    <x-card title="Alur Persetujuan" icon="bi-signpost-split">
+                        <x-timeline label="Alur persetujuan izin keluar">
+                            @foreach ($rute as $r)
+                                <x-timeline.item state="pending" icon="bi-person" :title="str_replace(' (Approve Akhir)', '', $r['label'])" />
+                            @endforeach
+                            <x-timeline.item state="pending" icon="bi-ticket-perforated" title="Tiket keluar terbit" />
+                        </x-timeline>
+                    </x-card>
+                @endif
+                <x-card title="Cara Memakai Tiket" icon="bi-info-circle">
+                    <ul class="hr-daftar-info">
+                        <li><i class="bi bi-phone" aria-hidden="true"></i>Buka tiket dari riwayat di bawah lalu tunjukkan layarnya ke security.</li>
+                        <li><i class="bi bi-shield-check" aria-hidden="true"></i>Tiket sah bila jam berjalan dan pita bergerak — tangkapan layar tidak berlaku.</li>
+                    </ul>
+                </x-card>
             </div>
         </div>
+
+        {{-- ============ Riwayat ============ --}}
+        <section class="hr-section">
+            <x-card title="Riwayat Izin Keluar" icon="bi-clock-history" :padding="false">
+                @if ($urutOpsi)
+                    <x-slot:actions>@include('partials.urut')</x-slot:actions>
+                @endif
+                <x-table caption="Riwayat izin keluar">
+                    <x-slot:head>
+                        <tr><th>Tanggal</th><th>Jam</th><th>Keperluan</th><th>Status</th><th class="text-end">Tiket</th></tr>
+                    </x-slot:head>
+                    @forelse ($riwayat as $item)
+                        <tr>
+                            <td>
+                                <span class="fw-semibold text-nowrap">{{ $item->tanggal->translatedFormat('d M Y') }}</span>
+                                <span class="small text-muted d-block">{{ $item->tanggal->translatedFormat('l') }}</span>
+                            </td>
+                            <td class="text-nowrap">{{ $item->jamLabel() }}</td>
+                            <td>
+                                {{ $item->keperluanLabel() }}
+                                <span class="small text-muted d-block">{{ \Illuminate\Support\Str::limit($item->alasan, 50) }}</span>
+                            </td>
+                            <td>
+                                <x-status-badge :badge="$item->badgeClass()">{{ $item->statusLabel() }}</x-status-badge>
+                                @if ($item->isPending())
+                                    <span class="small text-muted d-block mt-1">Tahap: {{ $item->currentLevelLabel() }}</span>
+                                @elseif ($item->status === 'rejected' && $item->catatan_admin)
+                                    <span class="small text-muted d-block mt-1">{{ $item->catatan_admin }}</span>
+                                @endif
+                            </td>
+                            <td class="text-end">
+                                @if ($item->isApproved())
+                                    @php $st = $item->statusTiket(); @endphp
+                                    <x-button :href="route('pegawai.izin-keluar.tiket', $item)" size="sm" :variant="$st === 'lewat' ? 'secondary' : 'success'" icon="bi-ticket-perforated">
+                                        {{ $st === 'lewat' ? 'Lihat' : 'Tampilkan Tiket' }}
+                                    </x-button>
+                                @else
+                                    <span class="text-muted small">–</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5">
+                                <x-empty-state icon="bi-door-open" title="Belum ada izin keluar" compact>Ajukan lewat formulir di atas; tiket muncul di sini setelah disetujui.</x-empty-state>
+                            </td>
+                        </tr>
+                    @endforelse
+                </x-table>
+            </x-card>
+        </section>
     </div>
-</div>
+</main>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // "Tidak kembali" → jam kembali tidak perlu diisi.
         const tidakKembali = document.getElementById('tidak_kembali');
         const jamKembali = document.getElementById('jam_kembali');
+        const label = document.querySelector('label[for="jam_kembali"]');
         const atur = () => {
             jamKembali.disabled = tidakKembali.checked;
             jamKembali.required = !tidakKembali.checked;
+            label.classList.toggle('required', !tidakKembali.checked);
             if (tidakKembali.checked) jamKembali.value = '';
         };
         tidakKembali.addEventListener('change', atur);

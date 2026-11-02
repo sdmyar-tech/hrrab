@@ -1,5 +1,7 @@
 @extends('layouts.pegawai.app')
 
+@section('title', 'Data Pegawai')
+
 @section('content')
 @php
     $pegawai = $user->dataPegawai;
@@ -16,96 +18,101 @@
         'upload_buku_tabungan' => 'Buku Tabungan',
     ];
     $jumlahDokumen = collect(array_keys($dokumenList))->filter(fn ($f) => filled($dokumen?->{$f}))->count();
+
+    $biodata = [
+        'Nama Lengkap' => $pegawai?->nama_lengkap,
+        'NIK' => $pegawai?->nik,
+        'Email' => $user->email,
+        'No. HP' => $pegawai?->no_hp,
+        'Tempat, Tanggal Lahir' => trim(($pegawai?->tempat_lahir ?? '') . ($pegawai?->tanggal_lahir ? ', ' . $pegawai->tanggal_lahir->translatedFormat('d F Y') : ''), ', '),
+        'Jenis Kelamin' => $pegawai?->jenis_kelamin,
+        'Agama' => $pegawai?->agama,
+        'Golongan Darah' => $pegawai?->golongan_darah,
+        'Status Pernikahan' => $pegawai?->status_pernikahan,
+        'Jumlah Tanggungan' => $pegawai?->jumlah_tanggungan !== null ? (string) $pegawai->jumlah_tanggungan : null,
+    ];
+    $dataKepegawaian = [
+        'Jabatan' => $kepegawaian?->jabatan,
+        'Jabatan Tambahan' => $kepegawaian?->jabatan_tambahan,
+        'Bagian' => $kepegawaian?->unit_kerja,
+        'Lokasi Kerja' => $kepegawaian?->lokasi_kerja,
+        'Tanggal Masuk' => $kepegawaian?->tanggal_masuk?->translatedFormat('d F Y'),
+        'Status Kerja' => $kepegawaian?->status_kerja,
+    ];
+    $dataKontak = [
+        'Nama Kerabat' => $kontakDarurat?->nama_kerabat,
+        'Hubungan' => $kontakDarurat?->hubungan_kerabat,
+        'No. HP Kerabat' => $kontakDarurat?->no_hp_kerabat,
+    ];
+    $dataBpjs = [
+        'BPJS Kesehatan' => $bpjs?->no_bpjs_kesehatan,
+        'BPJS Ketenagakerjaan' => $bpjs?->no_bpjs_ketenagakerjaan,
+        'Faskes Tingkat 1' => $bpjs?->faskes_tingkat_1 && $bpjs->faskes_tingkat_1 !== '-' ? $bpjs->faskes_tingkat_1 : null,
+    ];
+    $lengkap = fn (array $d) => collect($d)->except(['Jabatan Tambahan', 'Golongan Darah'])->every(fn ($v) => filled($v));
+    $nav = [
+        ['id' => 'bagian-biodata', 'label' => 'Biodata', 'icon' => 'bi-person', 'status' => $lengkap($biodata)],
+        ['id' => 'bagian-kepegawaian', 'label' => 'Kepegawaian', 'icon' => 'bi-briefcase', 'status' => $lengkap($dataKepegawaian)],
+        ['id' => 'bagian-kontak', 'label' => 'Kontak Darurat', 'icon' => 'bi-telephone', 'status' => $lengkap($dataKontak)],
+        ['id' => 'bagian-bpjs', 'label' => 'BPJS', 'icon' => 'bi-heart-pulse', 'status' => null],
+        ['id' => 'bagian-dokumen', 'label' => 'Dokumen', 'icon' => 'bi-folder2-open', 'status' => $jumlahDokumen === count($dokumenList)],
+    ];
 @endphp
-<div class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-person-vcard"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Data Saya</p>
-                    <h1 class="h3 mb-1">Data Pegawai</h1>
-                    <p class="text-muted mb-0">Data kepegawaian Anda yang tercatat di sistem.</p>
-                </div>
-            </div>
-            <div class="heading-actions">
+<main class="dashboard-content">
+    <div class="container-fluid">
+        <x-page-header title="Data Pegawai" eyebrow="Data Saya" subtitle="Data kepegawaian Anda yang tercatat di sistem.">
+            <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'profile.export', 'eksporTeks' => 'Ekspor Data Saya'])
-                <a href="{{ route('pegawai.pengkinian-data') }}" class="btn btn-primary"><i class="bi bi-pencil-square"></i>Perbarui Data</a>
-            </div>
-        </div>
+                <x-button :href="route('pegawai.pengkinian-data')" icon="bi-pencil">Perbarui Data</x-button>
+            </x-slot:actions>
+        </x-page-header>
 
-        <section class="panel mb-3 profil-kepala">
-            <img src="{{ $user->fotoUrl() }}" alt="Foto {{ $pegawai?->nama_lengkap }}" class="profil-foto">
-            <div class="min-w-0">
-                <h2 class="h5 fw-bold mb-1">{{ $pegawai?->nama_lengkap ?? $user->name }}</h2>
-                <div class="text-muted">{{ $kepegawaian?->jabatan ?? '-' }} · {{ $kepegawaian?->unit_kerja ?? '-' }}</div>
-                <div class="d-flex flex-wrap gap-2 mt-2">
-                    <span class="badge text-bg-light border"><i class="bi bi-person-badge me-1"></i>NIP {{ $user->nip ?? $pegawai?->nip ?? '-' }}</span>
-                    @if ($kepegawaian?->status_kerja)<span class="badge text-bg-light border">{{ $kepegawaian->status_kerja }}</span>@endif
-                    @if ($kepegawaian?->tanggal_masuk)<span class="badge text-bg-light border">Masuk {{ $kepegawaian->tanggal_masuk->translatedFormat('d M Y') }}</span>@endif
-                </div>
-            </div>
-        </section>
-
-        <div class="row g-3">
-            <div class="col-xl-6">
-                <section class="panel h-100">
-                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-lines-fill"></i>Identitas Pribadi</h2>
-                    @include('admin.pegawai._info-grid', ['items' => [
-                        'Nama Lengkap' => $pegawai?->nama_lengkap,
-                        'NIK' => $pegawai?->nik,
-                        'Email' => $user->email,
-                        'No. HP' => $pegawai?->no_hp,
-                        'Tempat, Tanggal Lahir' => trim(($pegawai?->tempat_lahir ?? '') . ($pegawai?->tanggal_lahir ? ', ' . $pegawai->tanggal_lahir->translatedFormat('d F Y') : ''), ', '),
-                        'Jenis Kelamin' => $pegawai?->jenis_kelamin,
-                        'Agama' => $pegawai?->agama,
-                        'Golongan Darah' => $pegawai?->golongan_darah,
-                        'Status Pernikahan' => $pegawai?->status_pernikahan,
-                        'Jumlah Tanggungan' => $pegawai?->jumlah_tanggungan !== null ? (string) $pegawai->jumlah_tanggungan : null,
-                    ]])
-                </section>
-            </div>
-            <div class="col-xl-6 d-flex flex-column gap-3">
-                <section class="panel">
-                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-briefcase"></i>Kepegawaian</h2>
-                    @include('admin.pegawai._info-grid', ['items' => [
-                        'Jabatan' => $kepegawaian?->jabatan,
-                        'Jabatan Tambahan' => $kepegawaian?->jabatan_tambahan,
-                        'Bagian' => $kepegawaian?->unit_kerja,
-                        'Lokasi Kerja' => $kepegawaian?->lokasi_kerja,
-                        'Tanggal Masuk' => $kepegawaian?->tanggal_masuk?->translatedFormat('d F Y'),
-                        'Status Kerja' => $kepegawaian?->status_kerja,
-                    ]])
-                </section>
-                <section class="panel flex-grow-1">
-                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-telephone"></i>Kontak Darurat & BPJS</h2>
-                    @include('admin.pegawai._info-grid', ['items' => [
-                        'Nama Kerabat' => $kontakDarurat?->nama_kerabat,
-                        'Hubungan' => $kontakDarurat?->hubungan_kerabat,
-                        'No. HP Kerabat' => $kontakDarurat?->no_hp_kerabat,
-                        'BPJS Kesehatan' => $bpjs?->no_bpjs_kesehatan,
-                        'BPJS Ketenagakerjaan' => $bpjs?->no_bpjs_ketenagakerjaan,
-                        'Faskes Tingkat 1' => $bpjs?->faskes_tingkat_1 && $bpjs->faskes_tingkat_1 !== '-' ? $bpjs->faskes_tingkat_1 : null,
-                    ]])
-                </section>
-            </div>
-        </div>
-
-        <section class="panel mt-3">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                <h2 class="h6 fw-bold mb-0"><i class="bi bi-folder2-open"></i>Dokumen</h2>
-                <span class="badge {{ $jumlahDokumen === count($dokumenList) ? 'text-bg-success' : 'text-bg-light border' }}">{{ $jumlahDokumen }} / {{ count($dokumenList) }} terunggah</span>
-            </div>
-            <div class="row g-3">
-                @foreach ($dokumenList as $field => $label)
-                    <div class="col-md-6 col-xl-4">
-                        @include('partials.preview-file', ['path' => $dokumen?->{$field}, 'label' => $label, 'tautanUnggah' => route('pegawai.pengkinian-data')])
+        <div class="row g-4 align-items-start">
+            {{-- ============ Kiri: identitas + navigasi bagian ============ --}}
+            <aside class="col-lg-3 hr-samping">
+                <x-card class="mb-3 text-center">
+                    <x-avatar :src="$user->fotoUrl()" :name="$pegawai?->nama_lengkap ?? $user->name" size="xl" class="mb-3" />
+                    <p class="profil-nama mb-1">{{ $pegawai?->nama_lengkap ?? $user->name }}</p>
+                    <p class="small text-muted mb-3">{{ $kepegawaian?->jabatan ?? '-' }} · {{ $kepegawaian?->unit_kerja ?? '-' }}</p>
+                    <div class="d-flex flex-wrap justify-content-center gap-1">
+                        <x-badge tone="neutral" icon="bi-person-badge">NIP {{ $user->nip ?? $pegawai?->nip ?? '-' }}</x-badge>
+                        @if ($kepegawaian?->status_kerja)<x-badge tone="primary">{{ $kepegawaian->status_kerja }}</x-badge>@endif
                     </div>
-                @endforeach
+                </x-card>
+                <x-section-nav label="Bagian data pegawai" :items="$nav" />
+            </aside>
+
+            {{-- ============ Kanan: kartu per bagian ============ --}}
+            <div class="col-lg-9 d-grid gap-3">
+                <x-card id="bagian-biodata" title="Biodata" subtitle="Identitas pribadi sesuai KTP." icon="bi-person" class="hr-bagian">
+                    @include('admin.pegawai._info-grid', ['items' => $biodata])
+                </x-card>
+                <x-card id="bagian-kepegawaian" title="Kepegawaian" subtitle="Penempatan dan status kerja." icon="bi-briefcase" class="hr-bagian">
+                    @include('admin.pegawai._info-grid', ['items' => $dataKepegawaian])
+                </x-card>
+                <x-card id="bagian-kontak" title="Kontak Darurat" subtitle="Dihubungi bila terjadi keadaan darurat." icon="bi-telephone" class="hr-bagian">
+                    @include('admin.pegawai._info-grid', ['items' => $dataKontak])
+                </x-card>
+                <x-card id="bagian-bpjs" title="BPJS" icon="bi-heart-pulse" class="hr-bagian">
+                    @include('admin.pegawai._info-grid', ['items' => $dataBpjs])
+                </x-card>
+                <x-card id="bagian-dokumen" title="Dokumen" subtitle="Klik untuk melihat atau perbesar." icon="bi-folder2-open" class="hr-bagian">
+                    <x-slot:actions>
+                        <x-badge :tone="$jumlahDokumen === count($dokumenList) ? 'success' : 'warning'">{{ $jumlahDokumen }} / {{ count($dokumenList) }} terunggah</x-badge>
+                    </x-slot:actions>
+                    <div class="row g-3">
+                        @foreach ($dokumenList as $field => $label)
+                            <div class="col-md-6 col-xl-4">
+                                @include('partials.preview-file', ['path' => $dokumen?->{$field}, 'label' => $label, 'tautanUnggah' => route('pegawai.pengkinian-data')])
+                            </div>
+                        @endforeach
+                    </div>
+                </x-card>
+                <p class="small text-muted mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Ada data yang salah? Data yang sudah terisi diubah lewat Admin SDM; data yang masih kosong bisa diisi di <a href="{{ route('pegawai.pengkinian-data') }}">Pengkinian Data</a>.</p>
             </div>
-        </section>
+        </div>
     </div>
-</div>
+</main>
 
 @include('partials.preview-file-modal')
 @endsection

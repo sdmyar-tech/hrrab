@@ -57,8 +57,10 @@
        kuning menunggu/terlambat, merah gagal/absen/ditolak, abu nonaktif/dibatalkan, biru info. ---------- */
     --hr-success: #157a3a;
     --hr-success-soft: #e8f5ec;
+    --hr-success-dark: #14532d;
     --hr-warning: #b45309;
     --hr-warning-soft: #fff4df;
+    --hr-warning-dark: #78350f;
     --hr-danger: #b42318;
     --hr-danger-soft: #fdecea;
     --hr-neutral: #5b6475;
@@ -1321,7 +1323,7 @@ a.hr-list-item:hover .hr-list-judul { color: var(--hr-primary); }
 html[data-theme="dark"] a.hr-list-item:hover .hr-list-judul { color: #f08a8c; }
 
 /* ---------- Aksi cepat (tautan ubin) ---------- */
-.hr-aksi-cepat { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: var(--hr-space-3); }
+.hr-aksi-cepat { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 168px), 1fr)); gap: var(--hr-space-3); }
 .hr-aksi-ubin {
     position: relative;
     display: flex;
@@ -1763,7 +1765,7 @@ html[data-theme="dark"] .hr-chip.is-active { border-color: #f08a8c; }
 .pelamar-berkas:focus-within { border-color: var(--hr-primary); }
 .pelamar-baris { margin: 0; padding: var(--hr-space-3) var(--hr-space-2) var(--hr-space-2); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); background: var(--admin-surface-soft); }
 .pelamar-baris .form-label { font-size: var(--hr-text-xs); margin-bottom: var(--hr-space-1); }
-.pelamar-simpan {
+.hr-bilah-aksi {
     position: sticky;
     bottom: 0;
     z-index: var(--hr-z-sticky);
@@ -1778,8 +1780,8 @@ html[data-theme="dark"] .hr-chip.is-active { border-color: #f08a8c; }
     backdrop-filter: saturate(180%) blur(12px);
     box-shadow: 0 -8px 24px -12px rgba(16, 24, 40, .18);
 }
-.pelamar-simpan > .btn { margin-left: auto; }
-html[data-theme="dark"] .pelamar-simpan { background: rgba(17, 24, 39, .94); }
+.hr-bilah-aksi > .btn:last-child, .hr-bilah-aksi > [data-langkah-lanjut] { margin-left: auto; }
+html[data-theme="dark"] .hr-bilah-aksi { background: rgba(17, 24, 39, .94); }
 @media (min-width: 992px) {
     .pelamar-samping { position: sticky; top: calc(var(--hr-topbar-h) + var(--hr-space-4)); }
 }
@@ -1789,6 +1791,11 @@ html[data-theme="dark"] .pelamar-simpan { background: rgba(17, 24, 39, .94); }
 }
 
 .lamaran-filter { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--hr-space-3); margin-bottom: var(--hr-space-4); }
+/* Baris chip sebagai item flex: boleh menyempit (lalu digeser) alih-alih melebarkan halaman. */
+.lamaran-filter > .pub-chips { min-width: 0; max-width: 100%; }
+@media (max-width: 767.98px) {
+    .lamaran-filter > .pub-chips { flex: 1 1 100%; margin-inline: calc(-1 * var(--hr-content-pad)); max-width: none; }
+}
 .lamaran-kartu .hr-card-body { padding: var(--hr-space-5); }
 .lamaran-kartu-isi { display: flex; align-items: flex-start; gap: var(--hr-space-4); }
 .lamaran-judul { margin: 0; font-size: var(--hr-text-lg); font-weight: var(--hr-weight-semibold); }
@@ -1808,4 +1815,113 @@ html[data-theme="dark"] .pelamar-simpan { background: rgba(17, 24, 39, .94); }
     .lamaran-kartu-isi > .hr-stat-ikon { display: none; }
     .lamaran-kartu-aksi { width: 100%; flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: center; }
     .lamaran-kartu-aksi > .d-flex { margin-left: auto; }
+}
+
+/* =====================================================================
+   BATCH 3: pola halaman pegawai & bersama (dipakai ulang batch berikutnya)
+   ===================================================================== */
+
+/* Kolom samping lengket & bagian tujuan navigasi (x-section-nav). */
+.hr-bagian { scroll-margin-top: calc(var(--hr-topbar-h) + var(--hr-space-4)); }
+@media (min-width: 992px) {
+    .hr-samping { position: sticky; top: calc(var(--hr-topbar-h) + var(--hr-space-4)); }
+}
+.hr-section-nav .hr-tab { text-decoration: none; }
+
+/* Penunjuk langkah (x-stepper). */
+.hr-stepper { display: flex; gap: var(--hr-space-2); margin: 0; padding: 0; list-style: none; overflow-x: auto; scrollbar-width: none; }
+.hr-stepper::-webkit-scrollbar { display: none; }
+.hr-stepper-item { flex: 1 1 0; min-width: 96px; display: flex; flex-direction: column; gap: var(--hr-space-2); padding-top: var(--hr-space-2); border-top: 3px solid var(--admin-border); color: var(--admin-muted); font-size: var(--hr-text-sm); font-weight: var(--hr-weight-medium); transition: border-color var(--hr-durasi) var(--hr-easing), color var(--hr-durasi) var(--hr-easing); }
+.hr-stepper-penanda { width: 24px; height: 24px; display: inline-grid; place-items: center; border-radius: 50%; border: 2px solid var(--admin-border-strong); background: var(--admin-surface); font-size: var(--hr-text-xs); font-weight: var(--hr-weight-bold); }
+.hr-stepper-penanda .bi { display: none; }
+.hr-stepper-label { display: inline-flex; align-items: center; gap: var(--hr-space-1); white-space: nowrap; }
+.hr-stepper-item.is-active { border-top-color: var(--hr-primary); color: var(--admin-heading); font-weight: var(--hr-weight-semibold); }
+.hr-stepper-item.is-active .hr-stepper-penanda { border-color: var(--hr-primary); background: var(--hr-primary); color: #fff; }
+.hr-stepper-item.is-done { border-top-color: var(--hr-success); color: var(--admin-text); }
+.hr-stepper-item.is-done .hr-stepper-penanda { border-color: var(--hr-success); background: var(--hr-success); color: #fff; }
+.hr-stepper-item.is-done .hr-stepper-no { display: none; }
+.hr-stepper-item.is-done .hr-stepper-penanda .bi { display: inline; }
+
+/* Pilihan berbentuk kartu (radio): jenis cuti, penerima notifikasi. */
+.hr-opsi-grup { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--hr-space-2); }
+.hr-opsi-grup-1 { grid-template-columns: 1fr; }
+.hr-opsi { display: flex; align-items: flex-start; gap: var(--hr-space-3); padding: var(--hr-space-3) var(--hr-space-4); border: 1px solid var(--admin-border-strong); border-radius: var(--hr-radius-md); background: var(--admin-surface); cursor: pointer; transition: border-color var(--hr-durasi) var(--hr-easing), background-color var(--hr-durasi) var(--hr-easing), box-shadow var(--hr-durasi) var(--hr-easing); }
+.hr-opsi:hover { border-color: var(--hr-gray-400); }
+.hr-opsi .form-check-input { flex: none; margin: 3px 0 0; }
+.hr-opsi strong { display: block; color: var(--admin-heading); font-weight: var(--hr-weight-semibold); }
+.hr-opsi small { display: block; color: var(--admin-muted); font-size: var(--hr-text-xs); margin-top: 2px; }
+.hr-opsi-ikon { color: var(--admin-muted); margin-top: 1px; }
+.hr-opsi:has(input:checked) { border-color: var(--hr-primary); background: var(--hr-primary-soft); box-shadow: 0 0 0 1px var(--hr-primary); }
+.hr-opsi:has(input:checked) .hr-opsi-ikon { color: var(--hr-primary); }
+.hr-opsi:has(input:focus-visible) { outline: 2px solid var(--hr-focus); outline-offset: 2px; }
+.hr-opsi.is-nonaktif { opacity: .6; cursor: not-allowed; }
+
+/* Nilai hasil hitungan otomatis (lama cuti, jumlah jam). */
+.hr-hitungan { display: flex; align-items: center; gap: var(--hr-space-2); padding: var(--hr-space-3) var(--hr-space-4); border-radius: var(--hr-radius-md); background: var(--admin-surface-soft); border: 1px dashed var(--admin-border-strong); font-size: var(--hr-text-sm); color: var(--admin-muted); }
+.hr-hitungan .bi { color: var(--hr-primary); }
+.hr-hitungan input { flex: 1 1 auto; min-width: 0; border: 0; background: transparent; color: var(--admin-heading); font-weight: var(--hr-weight-bold); font-size: var(--hr-text-base); text-align: right; outline: 0; }
+.hr-hitungan input::placeholder { color: var(--hr-gray-500); font-weight: var(--hr-weight-medium); }
+
+/* Daftar keterangan berikon (ketentuan, cara pakai). */
+.hr-daftar-info { display: grid; gap: var(--hr-space-3); margin: 0; padding: 0; list-style: none; font-size: var(--hr-text-sm); color: var(--hr-gray-600); }
+/* Ikon di kiri (absolut) agar teks berformat (strong, a) tetap mengalir sebagai satu paragraf. */
+.hr-daftar-info li { position: relative; padding-left: calc(var(--hr-icon) + var(--hr-space-2)); }
+.hr-daftar-info li > .bi:first-child { position: absolute; left: 0; top: 2px; color: var(--hr-primary); }
+html[data-theme="dark"] .hr-daftar-info .bi { color: #f08a8c; }
+
+/* Navigasi bulan (Absensi Saya). */
+.hr-bulan-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--hr-space-3); padding: var(--hr-space-3) var(--hr-space-4); border: 1px solid var(--admin-border); border-radius: var(--hr-radius); background: var(--admin-surface); box-shadow: var(--hr-shadow-xs); }
+.hr-bulan-nav-judul { margin: 0; font-size: var(--hr-text-xl); font-weight: var(--hr-weight-bold); color: var(--admin-heading); }
+.hr-filter-tanggal { max-width: 440px; min-width: 0; flex: 1 1 280px; }
+
+/* Segmen (pilihan tunggal mendatar): jenis jadwal pengumuman. */
+.hr-segmen { display: flex; padding: 3px; border-radius: var(--hr-radius-md); background: var(--admin-surface-hover); }
+.hr-segmen label { flex: 1 1 0; min-height: var(--hr-control-sm); display: grid; place-items: center; padding: 0 var(--hr-space-2); border-radius: var(--hr-radius-sm); font-size: var(--hr-text-sm); font-weight: var(--hr-weight-medium); color: var(--hr-gray-600); cursor: pointer; text-align: center; transition: background-color var(--hr-durasi) var(--hr-easing), color var(--hr-durasi) var(--hr-easing); }
+.hr-segmen .btn-check:checked + label { background: var(--admin-surface); color: var(--admin-heading); font-weight: var(--hr-weight-semibold); box-shadow: var(--hr-shadow-sm); }
+.hr-segmen .btn-check:focus-visible + label { outline: 2px solid var(--hr-focus); outline-offset: 1px; }
+/* Chip sebagai radio (kategori pengumuman). */
+.btn-check + .hr-chip { margin: 0; }
+.btn-check:checked + .hr-chip { border-color: var(--hr-primary); background: var(--hr-primary-soft); color: var(--hr-primary-soft-text); font-weight: var(--hr-weight-semibold); }
+.btn-check:focus-visible + .hr-chip { outline: 2px solid var(--hr-focus); outline-offset: 2px; }
+
+/* ---------- Notifikasi ---------- */
+.notif-daftar { margin: 0; padding: 0; list-style: none; }
+.notif-daftar > li + li { border-top: 1px solid var(--admin-border); }
+.notif-kartu > .hr-card-body { padding: 0; }
+.notif-item { position: relative; display: flex; align-items: flex-start; gap: var(--hr-space-3); padding: var(--hr-space-4) var(--hr-space-5); color: var(--admin-text); text-decoration: none; transition: background-color var(--hr-durasi) var(--hr-easing); }
+a.notif-item:hover { background: var(--admin-surface-soft); color: var(--admin-text); }
+.notif-item.is-baru { background: var(--hr-primary-50); }
+html[data-theme="dark"] .notif-item.is-baru { background: rgba(240, 138, 140, .06); }
+.notif-isi { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.notif-kepala { display: flex; flex-wrap: wrap; align-items: center; gap: var(--hr-space-1) var(--hr-space-2); }
+.notif-judul { font-weight: var(--hr-weight-medium); color: var(--admin-heading); }
+.notif-item.is-baru .notif-judul { font-weight: var(--hr-weight-bold); }
+.notif-pesan { font-size: var(--hr-text-sm); color: var(--hr-gray-600); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.notif-waktu { font-size: var(--hr-text-xs); color: var(--admin-muted); }
+.notif-titik { flex: none; width: 8px; height: 8px; margin-top: 8px; border-radius: 50%; background: var(--hr-primary); }
+.notif-panah { flex: none; align-self: center; color: var(--hr-gray-400); }
+.notif-pratinjau { border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); overflow: hidden; }
+.notif-penerima, .notif-pilihan { max-height: 260px; overflow-y: auto; padding: var(--hr-space-2) var(--hr-space-3); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); background: var(--admin-surface-soft); }
+.notif-penerima .hr-list-item { padding-block: var(--hr-space-2); }
+
+/* ---------- Pengumuman ---------- */
+.pengumuman-cari { flex: 1 1 260px; max-width: 360px; }
+.pengumuman-kartu { transition: box-shadow var(--hr-durasi) var(--hr-easing), border-color var(--hr-durasi) var(--hr-easing); }
+.pengumuman-kartu:hover { box-shadow: var(--hr-shadow-md); }
+.pengumuman-kartu.is-penting { border-color: var(--hr-danger); box-shadow: inset 3px 0 0 var(--hr-danger), var(--hr-shadow-xs); }
+.pengumuman-judul { margin: 0 0 var(--hr-space-2); font-size: var(--hr-text-xl); font-weight: var(--hr-weight-semibold); color: var(--admin-heading); }
+.pengumuman-isi { margin: 0 0 var(--hr-space-4); white-space: pre-line; color: var(--hr-gray-700); line-height: 1.65; }
+.pengumuman-kaki { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--hr-space-2); font-size: var(--hr-text-xs); color: var(--admin-muted); background: var(--admin-surface-soft); border-radius: 0 0 var(--hr-radius) var(--hr-radius); }
+.pengumuman-avatar.hr-avatar-sm { width: 24px; height: 24px; font-size: .625rem; }
+.kartu-absen { display: flex; flex-wrap: wrap; align-items: center; gap: var(--hr-space-2) var(--hr-space-3); margin-bottom: var(--hr-space-4); padding: var(--hr-space-3); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); background: var(--admin-surface-soft); }
+
+/* ---------- Pantau absen acara ---------- */
+.absen-progres { display: flex; align-items: center; gap: var(--hr-space-3); }
+.absen-progres .progress { flex: 1 1 auto; }
+.absen-filter { display: flex; flex-wrap: wrap; align-items: center; gap: var(--hr-space-3); padding: var(--hr-space-4) var(--hr-space-5); border-bottom: 1px solid var(--admin-border); }
+.absen-cari { width: 260px; max-width: 100%; }
+.absen-filter + .hr-table-wrap { border-top: 0 !important; }
+@media (max-width: 575.98px) {
+    .absen-filter > .d-flex { width: 100%; }
+    .absen-cari { width: 100%; }
 }

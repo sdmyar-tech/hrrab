@@ -1,40 +1,43 @@
 @extends($layout)
 
+@section('title', 'Notifikasi')
+
 @section('content')
-<div class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-bell"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Informasi</p>
-                    <h1 class="h3 mb-1">Notifikasi</h1>
-                    <p class="text-muted mb-0">Tugas yang perlu dikerjakan, kabar pengajuan, dan pengingat untuk Anda.</p>
-                </div>
-            </div>
-            <div class="heading-actions d-flex flex-wrap gap-2">
+@php
+    $jenisInfo = [
+        'tugas' => ['Tugas', 'warning'],
+        'pengingat' => ['Pengingat', 'info'],
+        'info' => ['Info', 'neutral'],
+    ];
+    $paramFilter = ['urut' => request('urut'), 'tanggal_dari' => request('tanggal_dari'), 'tanggal_sampai' => request('tanggal_sampai')];
+@endphp
+<main class="dashboard-content">
+    <div class="container-fluid">
+        <x-page-header title="Notifikasi" eyebrow="Informasi" subtitle="Tugas yang perlu dikerjakan, kabar pengajuan, dan pengingat untuk Anda.">
+            @if ($jumlahBelum)<x-badge tone="danger" dot>{{ $jumlahBelum }} belum dibaca</x-badge>@endif
+            <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'notifikasi.export'])
                 @can('kirim-notifikasi')
-                    <a href="{{ route('notifikasi.kirim') }}" class="btn btn-outline-primary"><i class="bi bi-send me-1"></i> Kirim Notifikasi</a>
+                    <x-button :href="route('notifikasi.kirim')" variant="secondary" icon="bi-send">Kirim Notifikasi</x-button>
                 @endcan
                 @if ($jumlahBelum)
-                    <form action="{{ route('notifikasi.baca-semua') }}" method="POST">@csrf
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-check2-all me-1"></i> Tandai semua dibaca</button>
+                    <form action="{{ route('notifikasi.baca-semua') }}" method="POST" class="m-0">@csrf
+                        <x-button type="submit" icon="bi-check2-all">Tandai Semua Dibaca</x-button>
                     </form>
                 @endif
-            </div>
-        </div>
+            </x-slot:actions>
+        </x-page-header>
 
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <ul class="nav nav-pills">
-            <li class="nav-item"><a class="nav-link {{ $belum ? '' : 'active' }}" href="{{ route('notifikasi.index', ['urut' => request('urut'), 'tanggal_dari' => request('tanggal_dari'), 'tanggal_sampai' => request('tanggal_sampai')]) }}">Semua</a></li>
-            <li class="nav-item"><a class="nav-link {{ $belum ? 'active' : '' }}" href="{{ route('notifikasi.index', ['tab' => 'belum', 'urut' => request('urut'), 'tanggal_dari' => request('tanggal_dari'), 'tanggal_sampai' => request('tanggal_sampai')]) }}">Belum dibaca
-                @if ($jumlahBelum)<span class="badge text-bg-primary ms-1">{{ $jumlahBelum }}</span>@endif</a></li>
-        </ul>
-        @include('partials.urut')
+        {{-- Filter: tab semua/belum dibaca · rentang tanggal · urutan --}}
+        <div class="lamaran-filter">
+            <div class="pub-chips mb-0" role="group" aria-label="Saring notifikasi">
+                <x-chip :href="route('notifikasi.index', $paramFilter)" :active="! $belum" icon="bi-inbox">Semua</x-chip>
+                <x-chip :href="route('notifikasi.index', ['tab' => 'belum'] + $paramFilter)" :active="$belum" icon="bi-envelope" :count="$jumlahBelum ?: null">Belum dibaca</x-chip>
+            </div>
+            @include('partials.urut')
         </div>
-        <div class="mb-2">
-            <form method="GET" action="{{ route('notifikasi.index') }}" class="mb-1" style="max-width: 440px;" role="search">
+        <div class="mb-3">
+            <form method="GET" action="{{ route('notifikasi.index') }}" class="mb-1 hr-filter-tanggal" role="search">
                 @foreach (request()->only(['tab', 'urut']) as $kunci => $nilai)<input type="hidden" name="{{ $kunci }}" value="{{ $nilai }}">@endforeach
                 @include('partials.filter-tanggal', ['tanggalLabel' => 'Diterima'])
             </form>
@@ -44,42 +47,49 @@
             ])
         </div>
 
-        <section class="panel p-0">
-            <div class="list-group list-group-flush">
+        <x-card :padding="false" class="notif-kartu">
+            <ul class="notif-daftar">
                 @forelse ($notifikasi as $n)
                     @php
-                        $jenis = $n->data['jenis'] ?? 'info';
-                        $label = ['tugas' => ['Tugas', 'text-bg-warning'], 'pengingat' => ['Pengingat', 'text-bg-info'], 'info' => ['Info', 'text-bg-light border']][$jenis] ?? ['Info', 'text-bg-light border'];
+                        [$labelJenis, $toneJenis] = $jenisInfo[$n->data['jenis'] ?? 'info'] ?? $jenisInfo['info'];
+                        $baru = ! $n->read_at;
                     @endphp
-                    <a href="{{ route('notifikasi.buka', $n->id) }}" class="list-group-item list-group-item-action d-flex gap-3 py-3" @unless ($n->read_at) style="background: var(--admin-surface-soft);" @endunless>
-                        <span class="page-icon flex-none" style="width:40px;height:40px;font-size:1.1rem;"><i class="bi {{ $n->data['ikon'] ?? 'bi-bell' }}" aria-hidden="true"></i></span>
-                        <span class="flex-grow-1">
-                            <span class="d-flex flex-wrap align-items-center gap-2">
-                                <span class="fw-semibold">{{ $n->data['judul'] ?? '' }}</span>
-                                <span class="badge {{ $label[1] }}">{{ $label[0] }}</span>
-                                @if (! $n->read_at && isset($n->data['tugas']))
-                                    <span class="badge text-bg-warning" title="Tanda hilang otomatis setelah tugas diselesaikan"><i class="bi bi-hourglass-split me-1"></i>Belum selesai</span>
-                                @elseif (! $n->read_at)
-                                    <span class="badge text-bg-info">Baru</span>
-                                @endif
+                    <li>
+                        <a href="{{ route('notifikasi.buka', $n->id) }}" class="notif-item {{ $baru ? 'is-baru' : '' }}">
+                            <span class="hr-stat-ikon hr-tone-{{ $toneJenis }}"><i class="bi {{ $n->data['ikon'] ?? 'bi-bell' }}" aria-hidden="true"></i></span>
+                            <span class="notif-isi">
+                                <span class="notif-kepala">
+                                    <span class="notif-judul">{{ $n->data['judul'] ?? '' }}</span>
+                                    <x-badge :tone="$toneJenis">{{ $labelJenis }}</x-badge>
+                                    @if ($baru && isset($n->data['tugas']))
+                                        <x-badge tone="warning" icon="bi-hourglass-split" title="Tanda hilang otomatis setelah tugas diselesaikan">Belum selesai</x-badge>
+                                    @endif
+                                </span>
+                                <span class="notif-pesan">{{ $n->data['pesan'] ?? '' }}</span>
+                                <span class="notif-waktu">
+                                    <time datetime="{{ $n->created_at->toIso8601String() }}" title="{{ $n->created_at->translatedFormat('d M Y, H:i') }}">{{ $n->created_at->diffForHumans() }}</time>
+                                    @if (! empty($n->data['pengirim'])) · dari {{ $n->data['pengirim'] }} @endif
+                                </span>
                             </span>
-                            <span class="d-block text-muted small mt-1">{{ $n->data['pesan'] ?? '' }}</span>
-                            <span class="d-block small text-muted mt-1">
-                                {{ $n->created_at->translatedFormat('d M Y, H:i') }} ({{ $n->created_at->diffForHumans() }})
-                                @if (! empty($n->data['pengirim'])) &middot; dari {{ $n->data['pengirim'] }} @endif
-                            </span>
-                        </span>
-                        @if (! empty($n->data['url']))<i class="bi bi-chevron-right text-muted align-self-center"></i>@endif
-                    </a>
+                            @if ($baru)<span class="notif-titik" role="img" aria-label="Belum dibaca"></span>@endif
+                            @if (! empty($n->data['url']))<i class="bi bi-chevron-right notif-panah" aria-hidden="true"></i>@endif
+                        </a>
+                    </li>
                 @empty
-                    @include('partials.kosong', ['teks' => $belum ? 'Semua notifikasi sudah dibaca.' : 'Belum ada notifikasi.', 'ikonKosong' => 'bi-check2-circle'])
+                    <li>
+                        <x-empty-state icon="bi-bell-slash" :title="$belum ? 'Semua sudah dibaca' : 'Belum ada notifikasi'">
+                            {{ $belum ? 'Tidak ada notifikasi yang menunggu dibaca.' : 'Notifikasi tugas, kabar pengajuan, dan pengingat akan tampil di sini.' }}
+                            @if ($belum)
+                                <x-slot:action><x-button :href="route('notifikasi.index')" variant="secondary">Lihat semua notifikasi</x-button></x-slot:action>
+                            @endif
+                        </x-empty-state>
+                    </li>
                 @endforelse
-            </div>
-        </section>
-
-        @if ($notifikasi->hasPages())
-            <div class="mt-3">{{ $notifikasi->links('pagination::bootstrap-5') }}</div>
-        @endif
+            </ul>
+            @if ($notifikasi->hasPages())
+                <x-slot:footer><x-pagination :paginator="$notifikasi" /></x-slot:footer>
+            @endif
+        </x-card>
     </div>
-</div>
+</main>
 @endsection

@@ -1,71 +1,82 @@
 @extends($layout)
 
-@section('content')
-<main class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-calendar2-week"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Rekrutmen</p>
-                    <h1 class="h3 mb-1">Jadwal Interview Saya</h1>
-                    <p class="text-muted mb-0">Jadwal wawancara kandidat yang ditugaskan kepada Anda.</p>
-                </div>
-            </div>
-            <div class="heading-actions">
-                @include('partials.urut')
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'interview.saya.export', 'eksporTeks' => 'Ekspor Jadwal'])
-            </div>
-        </div>
+@section('title', 'Jadwal Interview Saya')
 
-        <section class="panel">
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>Kandidat</th>
-                            <th>Lowongan</th>
-                            <th>Jadwal</th>
-                            <th>Lokasi</th>
-                            <th>Status</th>
-                            <th>Hasil</th>
-                            <th class="text-end">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($jadwals as $jadwal)
-                            <tr>
-                                <td>{{ $jadwal->lamaran?->namaKandidat() }}</td>
-                                <td>{{ $jadwal->lamaran?->judulPosisi() }}</td>
-                                <td>
-                                    {{ $jadwal->tahapLabel() }}<br>
-                                    <small class="text-muted">{{ $jadwal->tanggal->translatedFormat('d M Y') }}, {{ substr($jadwal->waktu_mulai, 0, 5) }}</small>
-                                </td>
-                                <td>@if ($jadwal->lokasi)@include('partials.lokasi', ['lokasi' => $jadwal->lokasi])@else - @endif</td>
-                                <td><span class="badge {{ $jadwal->status === 'dibatalkan' ? 'text-bg-danger' : ($jadwal->status === 'selesai' ? 'text-bg-secondary' : 'text-bg-info') }}">{{ $jadwal->statusLabel() }}</span></td>
-                                <td><span class="badge {{ $jadwal->hasilBadgeClass() }}">{{ $jadwal->hasilLabel() }}</span></td>
-                                <td class="text-end">
-                                    @if ($jadwal->isTerjadwal() && $jadwal->lamaran)
-                                        <a href="{{ route('admin.lamaran.show', $jadwal->lamaran) }}" class="btn btn-sm btn-primary">
-                                            <i class="bi bi-pencil-square me-1"></i> Isi Hasil
-                                        </a>
-                                    @elseif ($jadwal->lamaran)
-                                        <a href="{{ route('admin.lamaran.show', $jadwal->lamaran) }}" class="btn btn-sm btn-outline-secondary">Detail</a>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
-                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                    Belum ada jadwal interview yang ditugaskan kepada Anda.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+@section('content')
+@php
+    // Kelompok filter: semua jadwal sudah dimuat → disaring langsung di halaman.
+    $kelompok = fn ($j) => $j->status === 'dibatalkan' ? 'dibatalkan' : ($j->isTerjadwal() ? 'terjadwal' : 'selesai');
+    $jumlah = $jadwals->countBy($kelompok);
+    $filter = [
+        ['semua', 'Semua', 'bi-grid', $jadwals->count()],
+        ['terjadwal', 'Terjadwal', 'bi-calendar-event', $jumlah['terjadwal'] ?? 0],
+        ['selesai', 'Selesai', 'bi-check2-circle', $jumlah['selesai'] ?? 0],
+        ['dibatalkan', 'Dibatalkan', 'bi-x-circle', $jumlah['dibatalkan'] ?? 0],
+    ];
+    $toneStatus = ['terjadwal' => 'info', 'selesai' => 'neutral', 'dibatalkan' => 'danger'];
+@endphp
+<main class="dashboard-content">
+    <div class="container-fluid">
+        <x-page-header title="Jadwal Interview Saya" eyebrow="Rekrutmen" subtitle="Jadwal wawancara kandidat yang ditugaskan kepada Anda.">
+            @if ($jumlah['terjadwal'] ?? 0)<x-badge tone="info" dot>{{ $jumlah['terjadwal'] }} terjadwal</x-badge>@endif
+            <x-slot:actions>
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'interview.saya.export', 'eksporTeks' => 'Ekspor Jadwal'])
+            </x-slot:actions>
+        </x-page-header>
+
+        @if ($jadwals->isEmpty())
+            <x-card>
+                <x-empty-state icon="bi-calendar2-week" title="Belum ada jadwal interview">Jadwal wawancara yang ditugaskan kepada Anda akan tampil di sini.</x-empty-state>
+            </x-card>
+        @else
+            <div class="lamaran-filter">
+                <div class="pub-chips mb-0" role="group" aria-label="Saring menurut status">
+                    @foreach ($filter as [$kunci, $label, $ikon, $n])
+                        <x-chip :icon="$ikon" :count="$n" :active="$kunci === 'semua'" data-saring-status="{{ $kunci }}">{{ $label }}</x-chip>
+                    @endforeach
+                </div>
+                @include('partials.urut')
             </div>
-        </section>
+
+            <div class="d-grid gap-3" id="daftar-lamaran">
+                @foreach ($jadwals as $jadwal)
+                    @php $k = $kelompok($jadwal); $hariIni = $jadwal->tanggal->isToday(); @endphp
+                    <x-card as="article" class="lamaran-kartu" data-status="{{ $k }}">
+                        <div class="lamaran-kartu-isi">
+                            <span class="dash-tanggal {{ $hariIni && $k === 'terjadwal' ? 'is-hari-ini' : '' }}">
+                                <span>{{ $jadwal->tanggal->translatedFormat('M') }}</span>
+                                <strong>{{ $jadwal->tanggal->format('d') }}</strong>
+                            </span>
+                            <div class="min-w-0 flex-grow-1">
+                                <h2 class="lamaran-judul">{{ $jadwal->lamaran?->namaKandidat() ?? 'Kandidat' }}</h2>
+                                <p class="lamaran-sub">{{ $jadwal->lamaran?->judulPosisi() }} · {{ $jadwal->tahapLabel() }}</p>
+                                <ul class="pub-rincian mt-2">
+                                    <li><i class="bi bi-clock" aria-hidden="true"></i>{{ $jadwal->tanggal->translatedFormat('l, d M Y') }}, {{ substr($jadwal->waktu_mulai, 0, 5) }} WIB @if ($hariIni && $k === 'terjadwal')<x-badge tone="danger" dot class="ms-1">Hari ini</x-badge>@endif</li>
+                                    @if ($jadwal->lokasi)<li>@include('partials.lokasi', ['lokasi' => $jadwal->lokasi])</li>@endif
+                                </ul>
+                            </div>
+                            <div class="lamaran-kartu-aksi">
+                                <div class="d-flex flex-wrap justify-content-end gap-1">
+                                    <x-badge :tone="$toneStatus[$k]">{{ $jadwal->statusLabel() }}</x-badge>
+                                    <x-status-badge :badge="$jadwal->hasilBadgeClass()">{{ $jadwal->hasilLabel() }}</x-status-badge>
+                                </div>
+                                @if ($jadwal->lamaran)
+                                    @if ($jadwal->isTerjadwal())
+                                        <x-button :href="route('admin.lamaran.show', $jadwal->lamaran)" size="sm" icon="bi-pencil-square">Isi Hasil</x-button>
+                                    @else
+                                        <x-button :href="route('admin.lamaran.show', $jadwal->lamaran)" variant="secondary" size="sm" icon-right="bi-chevron-right">Detail</x-button>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
+                    </x-card>
+                @endforeach
+                <x-card data-saring-kosong-status hidden>
+                    <x-empty-state icon="bi-funnel" title="Tidak ada jadwal dengan status ini" compact>Pilih status lain atau tampilkan semua jadwal.</x-empty-state>
+                </x-card>
+            </div>
+        @endif
     </div>
 </main>
+@include('partials.saring-status')
 @endsection

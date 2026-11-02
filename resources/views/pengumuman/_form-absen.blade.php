@@ -12,13 +12,14 @@
     $pilUser = array_map('intval', old('absen_user', $kriteria['user'] ?? []));
     $kandidatJs = $absen['kandidat']->map(fn ($k) => ['id' => $k['id'], 'u' => $k['unit'], 'j' => $k['jabatan']])->values();
 @endphp
-<section class="panel p-4 mt-3" id="panelAbsen">
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
-        <div>
-            <h2 class="h6 fw-bold mb-1"><i class="bi bi-qr-code-scan me-1 text-primary"></i>Absen Acara</h2>
-            <p class="small text-muted mb-0">Panitia menampilkan QR yang berganti tiap 30 detik di lokasi acara; peserta cukup scan untuk tercatat hadir.</p>
+<section class="hr-card" id="panelAbsen">
+  <div class="hr-card-body">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div class="min-w-0">
+            <h2 class="hr-card-title"><i class="bi bi-qr-code-scan" aria-hidden="true"></i>Absen Acara</h2>
+            <p class="hr-card-subtitle">Panitia menampilkan QR yang berganti tiap 30 detik di lokasi acara; peserta cukup scan untuk tercatat hadir.</p>
         </div>
-        <div class="form-check form-switch m-0">
+        <div class="form-check form-switch hr-toggle m-0">
             <input class="form-check-input" type="checkbox" role="switch" name="absen_aktif" value="1" id="absen_aktif" @checked($aktif)>
             <label class="form-check-label fw-semibold" for="absen_aktif">Tetapkan absen untuk acara ini</label>
         </div>
@@ -87,7 +88,7 @@
                         @foreach ($absen['kandidat'] as $k)
                             <label class="form-check small mb-0" data-teks="{{ mb_strtolower($k['nama'] . ' ' . implode(' ', $k['unit']) . ' ' . implode(' ', $k['jabatan'])) }}">
                                 <input class="form-check-input" type="checkbox" name="absen_user[]" value="{{ $k['id'] }}" @checked(in_array($k['id'], $pilUser, true))>
-                                <span class="form-check-label">{{ $k['nama'] }}<span class="d-block text-muted" style="font-size:.75rem">{{ implode(', ', $k['unit']) ?: '-' }}</span></span>
+                                <span class="form-check-label">{{ $k['nama'] }}<span class="d-block text-muted small">{{ implode(', ', $k['unit']) ?: '-' }}</span></span>
                             </label>
                         @endforeach
                     </div>
@@ -95,14 +96,16 @@
             </div>
         </div>
     </div>
+  </div>
 </section>
 
 <style>
-    .daftar-pilih { max-height: 190px; overflow-y: auto; padding-right: .25rem; }
-    .daftar-pilih .form-check { display: flex; gap: .4rem; padding: .2rem .25rem; border-radius: .375rem; }
-    .daftar-pilih .form-check:hover { background: var(--bs-tertiary-bg); }
+    #panelAbsen .border.rounded-3 { border-color: var(--admin-border) !important; border-radius: var(--hr-radius-md) !important; background: var(--admin-surface-soft); }
+    .daftar-pilih { max-height: 190px; overflow-y: auto; padding-right: var(--hr-space-1); }
+    .daftar-pilih .form-check { display: flex; gap: var(--hr-space-2); padding: var(--hr-space-1); border-radius: var(--hr-radius-sm); }
+    .daftar-pilih .form-check:hover { background: var(--admin-surface-hover); }
     .daftar-pilih .form-check-input { margin-left: 0; flex-shrink: 0; }
-    .langkah-no { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: 50%; background: var(--bs-primary); color: #fff; font-size: .75rem; margin-right: .4rem; }
+    .langkah-no { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--hr-primary); color: #fff; font-size: var(--hr-text-xs); margin-right: var(--hr-space-2); }
 </style>
 <script>
     document.addEventListener('DOMContentLoaded', function () {

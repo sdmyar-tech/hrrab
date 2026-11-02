@@ -3,150 +3,130 @@
 @section('content')
 @php
     $fase = $pengumuman->absenFase();
-    $faseInfo = [
-        'belum_buka' => ['Belum dibuka', 'text-bg-secondary'],
-        'buka' => ['Sedang dibuka', 'text-bg-success'],
-        'tutup' => ['Sudah ditutup', 'text-bg-dark'],
-    ][$fase] ?? ['-', 'text-bg-light'];
+    [$faseLabel, $faseTone] = [
+        'belum_buka' => ['Belum dibuka', 'neutral'],
+        'buka' => ['Sedang dibuka', 'success'],
+        'tutup' => ['Sudah ditutup', 'neutral'],
+    ][$fase] ?? ['-', 'neutral'];
     $persen = $ringkas['total'] ? round($ringkas['sudah'] / $ringkas['total'] * 100) : 0;
+    $rincianBerhalangan = collect(['izin' => 'izin', 'sakit' => 'sakit', 'dinas' => 'dinas', 'cuti' => 'cuti'])
+        ->filter(fn ($l, $k) => $ringkas[$k])->map(fn ($l, $k) => $ringkas[$k] . ' ' . $l)->implode(' · ');
 @endphp
-<div class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-qr-code-scan"></i></span>
-                <div class="min-w-0">
-                    <p class="eyebrow mb-1"><a href="{{ route('pengumuman.index') }}#pengumuman-{{ $pengumuman->id }}" class="text-reset text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Pengumuman</a> · Absen Acara</p>
-                    <h1 class="h3 mb-1">{{ $pengumuman->judul }}</h1>
-                    <p class="text-muted mb-0">
-                        <span class="badge {{ $faseInfo[1] }} me-1">{{ $faseInfo[0] }}</span>
-                        {{ $pengumuman->absenJendelaLabel() }}@if ($pengumuman->lokasi) · {{ $pengumuman->lokasi }}@endif
-                    </p>
-                </div>
-            </div>
-            <div class="heading-actions d-flex flex-wrap gap-2">
+<main class="dashboard-content">
+    <div class="container-fluid">
+        <x-page-header :title="$pengumuman->judul" eyebrow="Absen Acara" :back="route('pengumuman.index') . '#pengumuman-' . $pengumuman->id" back-label="Pengumuman"
+            :subtitle="$pengumuman->absenJendelaLabel() . ($pengumuman->lokasi ? ' · ' . $pengumuman->lokasi : '')">
+            <x-badge :tone="$faseTone" size="lg" :dot="$fase === 'buka'">{{ $faseLabel }}</x-badge>
+            <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'pengumuman.absen.export', 'eksporParam' => ['pengumuman' => $pengumuman]])
+                <x-button :href="route('pengumuman.edit', $pengumuman)" variant="secondary" icon="bi-pencil" title="Ubah waktu atau peserta">Ubah</x-button>
                 @if ($fase !== 'tutup')
-                    <a href="{{ route('pengumuman.absen.qr', $pengumuman) }}" target="_blank" class="btn btn-primary"><i class="bi bi-qr-code me-1"></i>Tampilkan QR</a>
-                    <form action="{{ route('pengumuman.absen.ingatkan', $pengumuman) }}" method="POST"
+                    <form action="{{ route('pengumuman.absen.ingatkan', $pengumuman) }}" method="POST" class="m-0"
                         data-confirm="Kirim notifikasi pengingat ke {{ $ringkas['belum'] }} pegawai yang belum absen?">
                         @csrf
-                        <button type="submit" class="btn btn-outline-primary" @disabled($ringkas['belum'] === 0)><i class="bi bi-bell me-1"></i>Ingatkan yang belum</button>
+                        <x-button type="submit" variant="secondary" icon="bi-bell" :disabled="$ringkas['belum'] === 0">Ingatkan yang Belum</x-button>
                     </form>
+                    <x-button :href="route('pengumuman.absen.qr', $pengumuman)" target="_blank" icon="bi-qr-code">Tampilkan QR</x-button>
                 @endif
-                <a href="{{ route('pengumuman.edit', $pengumuman) }}" class="btn btn-light" title="Ubah waktu atau peserta"><i class="bi bi-pencil me-1"></i>Ubah</a>
-            </div>
-        </div>
+            </x-slot:actions>
+        </x-page-header>
 
-        <div class="row g-3 mb-3">
-            @foreach ([
-                ['Diundang', $ringkas['total'], 'bi-people', 'text-primary', null],
-                ['Sudah absen', $ringkas['sudah'], 'bi-check-circle', 'text-success', $persen . '%'],
-                ['Berhalangan', $ringkas['berhalangan'], 'bi-envelope-paper', 'text-info', collect(['izin' => 'izin', 'sakit' => 'sakit', 'dinas' => 'dinas', 'cuti' => 'cuti'])->filter(fn ($l, $k) => $ringkas[$k])->map(fn ($l, $k) => $ringkas[$k] . ' ' . $l)->implode(' · ') ?: 'izin / sakit / dinas / cuti'],
-                ['Belum absen', $ringkas['belum'], 'bi-hourglass-split', 'text-secondary', $fase === 'tutup' ? 'kedaluwarsa' : null],
-            ] as [$label, $angka, $ikon, $warna, $ket])
-                <div class="col-6 col-xl-3">
-                    <div class="panel p-3 h-100 d-flex align-items-center gap-3">
-                        <i class="bi {{ $ikon }} fs-3 {{ $warna }}"></i>
-                        <div>
-                            <div class="fs-4 fw-bold lh-1">{{ $angka }}</div>
-                            <div class="small text-muted">{{ $label }}@if ($ket) <span class="d-block">{{ $ket }}</span>@endif</div>
-                        </div>
-                    </div>
-                </div>
-            @endforeach
-        </div>
+        {{-- ============ Ringkasan ============ --}}
+        <section class="row g-3 mb-3" aria-label="Ringkasan kehadiran acara">
+            <div class="col-6 col-xl-3"><x-stat-card label="Diundang" :value="$ringkas['total']" icon="bi-people" tone="primary" meta="Peserta wajib absen" /></div>
+            <div class="col-6 col-xl-3"><x-stat-card label="Sudah Absen" :value="$ringkas['sudah']" icon="bi-check-circle" tone="success" :meta="$persen . '% dari peserta'" /></div>
+            <div class="col-6 col-xl-3"><x-stat-card label="Berhalangan" :value="$ringkas['berhalangan']" icon="bi-envelope-paper" tone="info" :meta="$rincianBerhalangan ?: 'Izin / sakit / dinas / cuti'" /></div>
+            <div class="col-6 col-xl-3"><x-stat-card label="Belum Absen" :value="$ringkas['belum']" icon="bi-hourglass-split" :tone="$ringkas['belum'] ? 'warning' : 'neutral'" :meta="$fase === 'tutup' ? 'Kedaluwarsa' : 'Masih bisa absen'" /></div>
+        </section>
         @if ($ringkas['total'])
-            <div class="progress mb-3" style="height:8px" role="progressbar" aria-label="Persentase hadir" aria-valuenow="{{ $persen }}" aria-valuemin="0" aria-valuemax="100">
-                <div class="progress-bar bg-success" style="width: {{ $persen }}%"></div>
+            <div class="absen-progres mb-4">
+                <div class="progress" style="height: 8px;" role="progressbar" aria-label="Persentase hadir" aria-valuenow="{{ $persen }}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar bg-success" style="width: {{ $persen }}%"></div>
+                </div>
+                <span class="small text-muted">{{ $persen }}% hadir</span>
             </div>
         @endif
 
-        <section class="panel p-3 p-lg-4">
-            <form method="GET" class="d-flex flex-wrap gap-2 align-items-center mb-3" id="formSaringAbsen">
-                <div class="d-flex flex-wrap gap-1">
+        {{-- ============ Tabel peserta ============ --}}
+        <x-card :padding="false">
+            <form method="GET" class="absen-filter" id="formSaringAbsen">
+                <div class="pub-chips mb-0" role="group" aria-label="Saring menurut status">
                     @foreach ($filterLabel as $kunci => $label)
-                        <a href="{{ request()->fullUrlWithQuery(['status' => $kunci === 'semua' ? null : $kunci]) }}"
-                            class="btn btn-sm {{ $filter === $kunci ? 'btn-primary' : 'btn-outline-secondary' }}">{{ $label }} <span class="opacity-75">{{ $hitungFilter[$kunci] }}</span></a>
+                        <x-chip :href="request()->fullUrlWithQuery(['status' => $kunci === 'semua' ? null : $kunci])" :active="$filter === $kunci" :count="$hitungFilter[$kunci]">{{ $label }}</x-chip>
                     @endforeach
                 </div>
                 <input type="hidden" name="status" value="{{ $filter === 'semua' ? '' : $filter }}">
-                <div class="input-group input-group-sm ms-lg-auto" style="max-width:260px">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="search" name="q" class="form-control" value="{{ request('q') }}" placeholder="Cari peserta, contoh: Siti atau SMK" aria-label="Cari peserta menurut nama, bagian, atau NIP">
+                <div class="d-flex flex-wrap gap-2 ms-lg-auto">
+                    <div class="input-group hr-input-group absen-cari">
+                        <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                        <input type="search" name="q" class="form-control form-control-sm" value="{{ request('q') }}" placeholder="Cari peserta, contoh: Siti atau SMK" aria-label="Cari peserta menurut nama, bagian, atau NIP">
+                    </div>
+                    <select name="urut" class="form-select form-select-sm w-auto" onchange="this.form.submit()" aria-label="Urutkan">
+                        @foreach (['status' => 'Perlu perhatian dulu', 'nama' => 'Nama A–Z', 'waktu' => 'Waktu absen'] as $k => $l)
+                            <option value="{{ $k }}" @selected($urut === $k)>{{ $l }}</option>
+                        @endforeach
+                    </select>
                 </div>
-                <select name="urut" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()" aria-label="Urutkan">
-                    @foreach (['status' => 'Perlu perhatian dulu', 'nama' => 'Nama A–Z', 'waktu' => 'Waktu absen'] as $k => $l)
-                        <option value="{{ $k }}" @selected($urut === $k)>{{ $l }}</option>
-                    @endforeach
-                </select>
             </form>
 
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr class="small text-muted">
-                            <th style="width:40px">#</th>
-                            <th>Pegawai</th>
-                            <th>Status</th>
-                            <th>Waktu</th>
-                            <th class="text-end">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($baris as $p)
-                            @php $st = $p->tampilan(); @endphp
-                            <tr>
-                                <td class="text-muted small">{{ $loop->iteration }}</td>
-                                <td>
+            <x-table caption="Peserta absen acara">
+                <x-slot:head>
+                    <tr><th class="kolom-no">#</th><th>Pegawai</th><th>Status</th><th>Waktu</th><th class="text-end">Aksi</th></tr>
+                </x-slot:head>
+                @forelse ($baris as $p)
+                    @php $st = $p->tampilan(); @endphp
+                    <tr>
+                        <td class="kolom-no text-muted small">{{ $loop->iteration }}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-3 table-media">
+                                <x-avatar :name="$nama($p)" size="sm" />
+                                <div class="min-w-0">
                                     <div class="fw-semibold">{{ $nama($p) }}</div>
-                                    <div class="small text-muted">{{ $unit($p) }}@if ($p->dataPegawai?->nip) · {{ $p->dataPegawai->nip }}@endif</div>
-                                </td>
-                                <td>
-                                    <span class="badge {{ $st['kelas'] }}"><i class="bi {{ $st['ikon'] }} me-1"></i>{{ $st['label'] }}</span>
-                                    @if ($p->status === 'manual')
-                                        <div class="small text-muted mt-1">{{ $p->catatan }} — {{ $p->penanda?->name }}</div>
-                                    @elseif ($p->berhalangan())
-                                        <div class="small text-muted mt-1">{{ $p->catatan }}<span class="d-block fst-italic">{{ $p->sumberLabel() }}</span></div>
-                                    @endif
-                                </td>
-                                <td class="small">{{ $p->waktu_absen?->format('H:i') ?? '–' }}@if ($p->waktu_absen && ! $p->waktu_absen->isSameDay($pengumuman->absen_buka))<span class="text-muted d-block">{{ $p->waktu_absen->translatedFormat('d M') }}</span>@endif</td>
-                                <td class="text-end text-nowrap">
-                                    @include('admin.editor-data._tombol', ['entitas' => 'peserta_acara', 'id' => $p->id, 'teks' => '', 'hapus' => false])
-                                    @php $cutiOtomatis = $p->status === 'cuti' && $p->otomatis(); @endphp
-                                    @unless ($p->sudahAbsen())
-                                        <button type="button" class="btn btn-outline-primary btn-sm" data-tetapkan="hadir"
-                                            data-url="{{ route('pengumuman.absen.tandai', [$pengumuman, $p]) }}" data-nama="{{ $nama($p) }}">
-                                            <i class="bi bi-person-check me-1"></i>Tandai hadir
-                                        </button>
-                                        <div class="dropdown d-inline-block">
-                                            <button type="button" class="btn btn-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Tetapkan izin / sakit / dinas">Tetapkan</button>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                @foreach ($bisaDitetapkan as $kode => $label)
-                                                    <li><button type="button" class="dropdown-item" data-tetapkan="{{ $kode }}" data-label="{{ $label }}"
-                                                        data-url="{{ route('pengumuman.absen.tandai', [$pengumuman, $p]) }}" data-nama="{{ $nama($p) }}">{{ $label }}</button></li>
-                                                @endforeach
-                                            </ul>
-                                        </div>
-                                    @endunless
-                                    @if ($p->status !== 'belum' && ! $cutiOtomatis)
-                                        <form action="{{ route('pengumuman.absen.tandai', [$pengumuman, $p]) }}" method="POST" class="d-inline"
-                                            data-confirm="{{ $p->sudahAbsen() ? 'Batalkan kehadiran' : 'Batalkan status ' . $st['label'] }} {{ $nama($p) }}? Status kembali menjadi belum absen.">
-                                            @csrf <input type="hidden" name="aksi" value="batal">
-                                            <button type="submit" class="btn btn-light btn-sm text-danger" title="Batalkan {{ $st['label'] }}"><i class="bi bi-x-circle"></i></button>
-                                        </form>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="5" class="text-center text-muted py-5"><i class="bi bi-search d-block fs-3 mb-1"></i>Tidak ada peserta yang cocok.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </section>
+                                    <div class="small text-muted">{{ $unit($p) }}@if ($p->dataPegawai?->nip) · <span class="angka-utuh">{{ $p->dataPegawai->nip }}</span>@endif</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <x-status-badge :badge="$st['kelas']" :icon="$st['ikon']">{{ $st['label'] }}</x-status-badge>
+                            @if ($p->status === 'manual')
+                                <div class="small text-muted mt-1">{{ $p->catatan }} — {{ $p->penanda?->name }}</div>
+                            @elseif ($p->berhalangan())
+                                <div class="small text-muted mt-1">{{ $p->catatan }}<span class="d-block fst-italic">{{ $p->sumberLabel() }}</span></div>
+                            @endif
+                        </td>
+                        <td class="small text-nowrap">{{ $p->waktu_absen?->format('H:i') ?? '–' }}@if ($p->waktu_absen && ! $p->waktu_absen->isSameDay($pengumuman->absen_buka))<span class="text-muted d-block">{{ $p->waktu_absen->translatedFormat('d M') }}</span>@endif</td>
+                        <td class="text-end text-nowrap">
+                            @include('admin.editor-data._tombol', ['entitas' => 'peserta_acara', 'id' => $p->id, 'teks' => '', 'hapus' => false])
+                            @php $cutiOtomatis = $p->status === 'cuti' && $p->otomatis(); @endphp
+                            @unless ($p->sudahAbsen())
+                                <x-button variant="outline" size="sm" icon="bi-person-check" data-tetapkan="hadir"
+                                    :data-url="route('pengumuman.absen.tandai', [$pengumuman, $p])" :data-nama="$nama($p)">Tandai hadir</x-button>
+                                <div class="dropdown d-inline-block">
+                                    <button type="button" class="btn btn-ghost btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Tetapkan izin / sakit / dinas">Tetapkan</button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        @foreach ($bisaDitetapkan as $kode => $label)
+                                            <li><button type="button" class="dropdown-item" data-tetapkan="{{ $kode }}" data-label="{{ $label }}"
+                                                data-url="{{ route('pengumuman.absen.tandai', [$pengumuman, $p]) }}" data-nama="{{ $nama($p) }}">{{ $label }}</button></li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endunless
+                            @if ($p->status !== 'belum' && ! $cutiOtomatis)
+                                <form action="{{ route('pengumuman.absen.tandai', [$pengumuman, $p]) }}" method="POST" class="d-inline"
+                                    data-confirm="{{ $p->sudahAbsen() ? 'Batalkan kehadiran' : 'Batalkan status ' . $st['label'] }} {{ $nama($p) }}? Status kembali menjadi belum absen.">
+                                    @csrf <input type="hidden" name="aksi" value="batal">
+                                    <x-button type="submit" variant="ghost" size="sm" class="btn-ikon text-danger" icon="bi-x-circle" title="Batalkan {{ $st['label'] }}" aria-label="Batalkan {{ $st['label'] }} {{ $nama($p) }}" />
+                                </form>
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5"><x-empty-state icon="bi-search" title="Tidak ada peserta yang cocok" compact>Ubah status atau kata pencarian.</x-empty-state></td></tr>
+                @endforelse
+            </x-table>
+        </x-card>
     </div>
-</div>
+</main>
 
 <form method="POST" id="formTandaiHadir" hidden>
     @csrf
@@ -158,10 +138,10 @@
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('formTandaiHadir');
         const teks = {
-            hadir: ['Tandai hadir manual?', 'mis. hadir tetapi HP mati / tidak bisa scan.', 'mis. HP mati, terlihat hadir oleh panitia', 'Tandai hadir'],
-            izin: ['Tetapkan izin?', 'Peserta tidak hadir dengan izin.', 'mis. izin keperluan keluarga', 'Tetapkan izin'],
-            sakit: ['Tetapkan sakit?', 'Peserta tidak hadir karena sakit.', 'mis. sakit, surat dokter menyusul', 'Tetapkan sakit'],
-            dinas: ['Tetapkan dinas luar?', 'Peserta sedang tugas di luar.', 'mis. rapat di dinas pendidikan', 'Tetapkan dinas luar'],
+            hadir: ['Tandai hadir manual?', 'mis. hadir tetapi HP mati / tidak bisa scan.', 'Contoh: HP mati, terlihat hadir oleh panitia', 'Tandai hadir'],
+            izin: ['Tetapkan izin?', 'Peserta tidak hadir dengan izin.', 'Contoh: izin keperluan keluarga', 'Tetapkan izin'],
+            sakit: ['Tetapkan sakit?', 'Peserta tidak hadir karena sakit.', 'Contoh: sakit, surat dokter menyusul', 'Tetapkan sakit'],
+            dinas: ['Tetapkan dinas luar?', 'Peserta sedang tugas di luar.', 'Contoh: rapat di dinas pendidikan', 'Tetapkan dinas luar'],
         };
         document.querySelectorAll('[data-tetapkan]').forEach((b) => b.addEventListener('click', function () {
             const [judul, ket, contoh, tombol] = teks[b.dataset.tetapkan];

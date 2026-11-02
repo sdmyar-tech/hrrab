@@ -1,145 +1,127 @@
 @extends(Auth::user()->panelLayout())
 
-@section('content')
-<div class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-clock-history"></i></span>
-                <div>
-                    <div class="eyebrow">Pegawai</div>
-                    <h1 class="mb-0">Pengajuan Lembur</h1>
-                </div>
-            </div>
-            <div class="heading-actions">
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.pengajuan-lembur.export'])
-            </div>
-        </div>
+@section('title', 'Pengajuan Lembur')
 
-        <div class="row g-3">
-            <div class="col-12 col-xl-5">
-                <div class="panel p-4">
-                    <h2 class="h6 fw-bold mb-3">Form Pengajuan Lembur</h2>
+@section('content')
+@php
+    $disetujui = $pengajuanLemburs->where('status', \App\Models\PengajuanLembur::STATUS_APPROVED);
+    $jamBulanIni = $disetujui->filter(fn ($l) => $l->tanggal?->isSameMonth(now()))->sum('jumlah_jam');
+    $jamTahunIni = $disetujui->filter(fn ($l) => $l->tanggal?->year === now()->year)->sum('jumlah_jam');
+    $menunggu = $pengajuanLemburs->filter(fn ($l) => $l->isPending())->count();
+    $jam = fn ($n) => rtrim(rtrim(number_format((float) $n, 2, ',', '.'), '0'), ',');
+@endphp
+<main class="dashboard-content">
+    <div class="container-fluid">
+        <x-page-header title="Pengajuan Lembur" eyebrow="Pengajuan Saya" subtitle="Catat lembur sesuai surat tugas, lalu pantau persetujuannya.">
+            <x-slot:actions>
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.pengajuan-lembur.export'])
+            </x-slot:actions>
+        </x-page-header>
+
+        {{-- ============ Ringkasan ============ --}}
+        <section class="row g-3 mb-4" aria-label="Ringkasan lembur">
+            <div class="col-6 col-xl-4">
+                <x-stat-card label="Lembur Bulan Ini" :value="$jam($jamBulanIni)" unit="jam" icon="bi-clock-history" tone="info" meta="Yang sudah disetujui" />
+            </div>
+            <div class="col-6 col-xl-4">
+                <x-stat-card label="Menunggu Persetujuan" :value="$menunggu" icon="bi-hourglass-split" :tone="$menunggu ? 'warning' : 'neutral'" meta="Belum diputuskan" />
+            </div>
+            <div class="col-12 col-xl-4">
+                <x-stat-card label="Total Tahun Ini" :value="$jam($jamTahunIni)" unit="jam" icon="bi-bar-chart" tone="primary" meta="Disetujui sepanjang {{ now()->year }}" />
+            </div>
+        </section>
+
+        <div class="row g-4 align-items-start">
+            {{-- ============ Form ============ --}}
+            <div class="col-lg-7">
+                <x-card title="Formulir Lembur" subtitle="Isian bertanda * wajib diisi." icon="bi-stopwatch">
                     <form action="{{ route('pegawai.pengajuan-lembur.store') }}" method="POST" id="formLembur" data-confirm="Ajukan lembur ini?">
                         @csrf
 
                         @if (count($unitOptions) > 1)
-                            <div class="mb-3">
-                                <label for="unit_kerja" class="form-label">Bagian Tempat Lembur</label>
-                                <select name="unit_kerja" id="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror" required>
-                                    <option value="">-- Pilih bagian --</option>
-                                    @foreach ($unitOptions as $unit)
-                                        <option value="{{ $unit }}" @selected(old('unit_kerja') === $unit)>{{ $unit }}{{ $loop->first ? ' (bagian utama)' : '' }}</option>
-                                    @endforeach
-                                </select>
-                                <div class="form-text">Anda bertugas di beberapa bagian. Pengajuan akan diproses kepala bagian yang dipilih.</div>
-                                @error('unit_kerja')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            <x-select name="unit_kerja" id="unit_kerja" label="Bagian Tempat Lembur" required placeholder="Pilih bagian"
+                                :options="collect($unitOptions)->mapWithKeys(fn ($u, $i) => [$u => $u . ($i === 0 ? ' (bagian utama)' : '')])->all()"
+                                help="Anda bertugas di beberapa bagian. Pengajuan diproses kepala bagian yang dipilih." />
                         @endif
 
-                        <div class="mb-3">
-                            <label for="tanggal" class="form-label">Tanggal</label>
-                            <input type="date" name="tanggal" id="tanggal"
-                                class="form-control @error('tanggal') is-invalid @enderror"
-                                value="{{ old('tanggal', now()->format('Y-m-d')) }}" required>
-                            @error('tanggal')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="hari" class="form-label">Hari</label>
-                            <input type="text" id="hari" class="form-control" readonly placeholder="Terisi otomatis">
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="uraian_tugas" class="form-label">Uraian Tugas</label>
-                            <textarea name="uraian_tugas" id="uraian_tugas" rows="3"
-                                class="form-control @error('uraian_tugas') is-invalid @enderror"
-                                placeholder="Contoh: rekap dokumen akreditasi untuk audit besok pagi" required>{{ old('uraian_tugas') }}</textarea>
-                            @error('uraian_tugas')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <label for="jam_mulai" class="form-label">Jam Mulai</label>
-                                <input type="time" name="jam_mulai" id="jam_mulai"
-                                    class="form-control @error('jam_mulai') is-invalid @enderror"
-                                    value="{{ old('jam_mulai') }}" required>
-                                @error('jam_mulai')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                        <div class="row gx-3">
+                            <div class="col-sm-7">
+                                <x-input name="tanggal" id="tanggal" type="date" label="Tanggal" :value="now()->format('Y-m-d')" required />
                             </div>
-                            <div class="col-6">
-                                <label for="jam_selesai" class="form-label">Jam Selesai</label>
-                                <input type="time" name="jam_selesai" id="jam_selesai"
-                                    class="form-control @error('jam_selesai') is-invalid @enderror"
-                                    value="{{ old('jam_selesai') }}" required>
-                                @error('jam_selesai')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                            <div class="col-sm-5">
+                                <div class="hr-field">
+                                    <label for="hari" class="form-label">Hari</label>
+                                    <input type="text" id="hari" class="form-control" readonly placeholder="Terisi otomatis">
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mb-3 mt-3">
-                            <label for="jumlah_jam" class="form-label">Jumlah Jam</label>
-                            <input type="text" id="jumlah_jam" class="form-control" readonly placeholder="Terisi otomatis">
+                        <x-textarea name="uraian_tugas" id="uraian_tugas" label="Uraian Tugas" rows="3" required
+                            placeholder="Contoh: rekap dokumen akreditasi untuk audit besok pagi" />
+
+                        <div class="row gx-3">
+                            <div class="col-6"><x-input name="jam_mulai" id="jam_mulai" type="time" label="Jam Mulai" required /></div>
+                            <div class="col-6"><x-input name="jam_selesai" id="jam_selesai" type="time" label="Jam Selesai" required /></div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-send me-1"></i> Ajukan Lembur
-                        </button>
+                        <div class="hr-hitungan mb-3" aria-live="polite">
+                            <i class="bi bi-calculator" aria-hidden="true"></i>
+                            <label for="jumlah_jam" class="mb-0">Jumlah jam</label>
+                            <input type="text" id="jumlah_jam" readonly placeholder="Terisi otomatis">
+                        </div>
+
+                        <x-button type="submit" size="lg" block icon="bi-send">Ajukan Lembur</x-button>
                     </form>
-                </div>
+                </x-card>
             </div>
 
-            <div class="col-12 col-xl-7">
-                <div class="panel p-4">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                        <h2 class="h6 fw-bold mb-0">Riwayat Pengajuan</h2>
-                        <div class="d-flex flex-wrap gap-2 align-items-center">
-                            @if ($urutOpsi) @include('partials.urut') @endif
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Waktu</th>
-                                    <th>Status</th>
-                                    <th>Catatan Admin</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($pengajuanLemburs as $item)
-                                    <tr>
-                                        <td>
-                                            {{ optional($item->tanggal)->translatedFormat('d M Y') }}
-                                            <small class="text-muted d-block">{{ $item->hari }}@if (count($unitOptions) > 1 && $item->unit_kerja) &middot; {{ $item->unit_kerja }}@endif</small>
-                                        </td>
-                                        <td>
-                                            <span class="text-nowrap">{{ substr((string) $item->jam_mulai, 0, 5) }}&ndash;{{ substr((string) $item->jam_selesai, 0, 5) }}</span>
-                                            <small class="text-muted d-block">{{ $item->jumlah_jam }} jam</small>
-                                        </td>
-                                        <td><span class="badge {{ $item->badgeClass() }}">{{ $item->statusLabel() }}</span></td>
-                                        <td>{{ $item->catatan_admin ?? '-' }}</td>
-                                    </tr>
-                                @empty
-                                    @include('partials.kosong-tabel', ['kosongKolom' => 4, 'kosongTeks' => 'Belum ada pengajuan lembur. Ajukan lewat formulir di samping.', 'kosongIkon' => 'bi-clock-history'])
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="col-lg-5">
+                <x-card title="Ketentuan" icon="bi-info-circle">
+                    <ul class="hr-daftar-info">
+                        <li><i class="bi bi-file-earmark-text" aria-hidden="true"></i>Lembur dihitung dari <strong>surat tugas</strong> atasan, bukan dari jam pulang mesin absen.</li>
+                        <li><i class="bi bi-clock" aria-hidden="true"></i>Isi jam mulai & selesai yang sebenarnya; jumlah jam dihitung otomatis.</li>
+                        <li><i class="bi bi-person-check" aria-hidden="true"></i>Pengajuan diproses berjenjang sesuai alur persetujuan bagian Anda; statusnya tampil di riwayat.</li>
+                    </ul>
+                </x-card>
             </div>
         </div>
+
+        {{-- ============ Riwayat ============ --}}
+        <section class="hr-section">
+            <x-card title="Riwayat Pengajuan Lembur" icon="bi-clock-history" :padding="false">
+                @if ($urutOpsi)
+                    <x-slot:actions>@include('partials.urut')</x-slot:actions>
+                @endif
+                <x-table caption="Riwayat pengajuan lembur">
+                    <x-slot:head>
+                        <tr><th>Tanggal</th><th>Uraian</th><th class="text-end">Waktu</th><th>Status</th><th>Catatan</th></tr>
+                    </x-slot:head>
+                    @forelse ($pengajuanLemburs as $item)
+                        <tr>
+                            <td>
+                                <span class="fw-semibold text-nowrap">{{ optional($item->tanggal)->translatedFormat('d M Y') }}</span>
+                                <span class="small text-muted d-block">{{ $item->hari }}@if (count($unitOptions) > 1 && $item->unit_kerja) · {{ $item->unit_kerja }}@endif</span>
+                            </td>
+                            <td class="text-muted">{{ \Illuminate\Support\Str::limit($item->uraian_tugas, 60) }}</td>
+                            <td class="hr-angka">
+                                {{ substr((string) $item->jam_mulai, 0, 5) }}–{{ substr((string) $item->jam_selesai, 0, 5) }}
+                                <span class="small text-muted d-block">{{ $jam($item->jumlah_jam) }} jam</span>
+                            </td>
+                            <td><x-status-badge :badge="$item->badgeClass()">{{ $item->statusLabel() }}</x-status-badge></td>
+                            <td class="text-muted">{{ $item->catatan_admin ?? '–' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5">
+                                <x-empty-state icon="bi-clock-history" title="Belum ada pengajuan lembur" compact>Ajukan lewat formulir di atas; statusnya akan tampil di sini.</x-empty-state>
+                            </td>
+                        </tr>
+                    @endforelse
+                </x-table>
+            </x-card>
+        </section>
     </div>
-</div>
+</main>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {

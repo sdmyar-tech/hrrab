@@ -2,44 +2,88 @@
 @extends('layouts.guest.app')
 
 @section('title', 'QR Absen')
+@section('body-class', 'layar-qr-body')
 
 @section('content')
-<div class="layar-qr min-vh-100 d-flex flex-column align-items-center justify-content-center p-3 text-center">
-    <div class="d-flex gap-2 position-absolute top-0 end-0 p-3">
-        <button type="button" class="btn btn-light btn-sm" data-layar-penuh><i class="bi bi-arrows-fullscreen me-1"></i>Layar penuh</button>
-        <a href="{{ route('pengumuman.absen', $pengumuman) }}" class="btn btn-light btn-sm"><i class="bi bi-x-lg me-1"></i>Tutup</a>
+<main class="layar-qr">
+    <div class="layar-qr-alat">
+        <x-button variant="ghost" size="sm" icon="bi-arrows-fullscreen" data-layar-penuh>Layar penuh</x-button>
+        <x-button variant="ghost" size="sm" icon="bi-x-lg" :href="route('pengumuman.absen', $pengumuman)">Tutup</x-button>
     </div>
 
-    <p class="text-uppercase small fw-semibold mb-1 opacity-75"><i class="bi bi-qr-code-scan me-1"></i>Absen Acara</p>
-    <h1 class="h2 fw-bold mb-1">{{ $pengumuman->judul }}</h1>
-    <p class="opacity-75 mb-4">{{ $pengumuman->absenJendelaLabel() }}</p>
+    <header class="layar-qr-kepala">
+        <p class="layar-qr-eyebrow"><i class="bi bi-qr-code-scan" aria-hidden="true"></i> Absen Acara</p>
+        <h1 class="layar-qr-judul">{{ $pengumuman->judul }}</h1>
+        <p class="layar-qr-waktu">{{ $pengumuman->absenJendelaLabel() }}@if ($pengumuman->lokasi) · {{ \App\Support\Lokasi::label($pengumuman->lokasi) }}@endif</p>
+    </header>
 
-    <div class="kotak-qr bg-white rounded-4 p-3 shadow" data-kotak-qr>
-        <div id="qrAbsen" aria-label="Kode QR absen"></div>
-        <div class="progress mt-3" style="height:6px" role="progressbar" aria-label="Sisa waktu QR">
-            <div class="progress-bar" data-bilah style="width:100%;background:#880f12"></div>
+    <div class="layar-qr-kotak" data-kotak-qr>
+        <div class="layar-qr-gambar" id="qrAbsen" role="img" aria-label="Kode QR absen — berganti otomatis"></div>
+        <div class="layar-qr-bilah" role="progressbar" aria-label="Sisa waktu QR" aria-valuemin="0" aria-valuemax="{{ $langkah }}">
+            <span data-bilah style="width: 100%"></span>
         </div>
-        <p class="small text-muted mb-0 mt-2">QR berganti dalam <strong data-sisa>{{ $langkah }}</strong> detik</p>
+        <p class="layar-qr-sisa">QR berganti dalam <strong data-sisa>{{ $langkah }}</strong> detik</p>
     </div>
-    <div class="pesan-fase alert alert-light mt-3 mb-0" data-pesan-fase hidden></div>
+    <p class="layar-qr-fase" data-pesan-fase role="status" hidden></p>
 
-    <div class="d-flex gap-4 mt-4 fs-5">
-        <div><strong class="fs-2 d-block" data-angka="sudah">0</strong><span class="small opacity-75">sudah absen</span></div>
-        <div><strong class="fs-2 d-block" data-angka="belum">0</strong><span class="small opacity-75">belum</span></div>
-        <div><strong class="fs-2 d-block" data-angka="berhalangan">0</strong><span class="small opacity-75">izin/cuti</span></div>
-        <div><strong class="fs-2 d-block" data-angka="total">0</strong><span class="small opacity-75">diundang</span></div>
-    </div>
-    <p class="small opacity-75 mt-4 mb-0">Buka HRRAB → Pengumuman → <strong>Absen Sekarang</strong>, atau scan dengan kamera HP.</p>
-</div>
+    <ol class="layar-qr-langkah" aria-label="Cara absen">
+        <li><span>1</span>Buka kamera HP atau HRRAB → Pengumuman</li>
+        <li><span>2</span>Scan QR di layar ini</li>
+        <li><span>3</span>Kehadiran langsung tercatat</li>
+    </ol>
+
+    <dl class="layar-qr-angka" aria-live="polite">
+        <div><dt>Sudah absen</dt><dd data-angka="sudah">0</dd></div>
+        <div><dt>Belum</dt><dd data-angka="belum">0</dd></div>
+        <div><dt>Izin/cuti</dt><dd data-angka="berhalangan">0</dd></div>
+        <div><dt>Diundang</dt><dd data-angka="total">0</dd></div>
+    </dl>
+</main>
 @endsection
 
 @section('styles')
 <style>
-    body { background: #2b0405; }
-    .layar-qr { color: #fff; background: radial-gradient(circle at top, #880f12, #2b0405 70%); }
-    .kotak-qr { width: min(88vw, 420px); }
-    #qrAbsen img, #qrAbsen canvas { width: 100% !important; height: auto !important; }
-    .kotak-qr.redup #qrAbsen { opacity: .08; }
+    /* Layar gelap bertema merek: kontras tinggi agar QR mudah dipindai dari jauh. */
+    .layar-qr-body { margin: 0; background: var(--hr-gray-900); color: #fff; }
+    .layar-qr {
+        position: relative; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: var(--hr-space-5); padding: var(--hr-space-7) var(--hr-space-4) var(--hr-space-6); text-align: center;
+        background:
+            radial-gradient(60rem 36rem at 50% -10%, rgba(136, 15, 18, .85), transparent 70%),
+            radial-gradient(circle at 1px 1px, rgba(255, 255, 255, .06) 1px, transparent 0) var(--hr-gray-900);
+        background-size: auto, 24px 24px;
+    }
+    .layar-qr-alat { position: absolute; top: var(--hr-space-4); right: var(--hr-space-4); display: flex; gap: var(--hr-space-2); }
+    .layar-qr-alat .btn { --bs-btn-color: rgba(255, 255, 255, .85); --bs-btn-hover-color: #fff; --bs-btn-hover-bg: rgba(255, 255, 255, .12); --bs-btn-active-bg: rgba(255, 255, 255, .18); --bs-btn-active-color: #fff; }
+    .layar-qr-eyebrow { margin: 0 0 var(--hr-space-2); font-size: var(--hr-text-sm); font-weight: var(--hr-weight-semibold); letter-spacing: .1em; text-transform: uppercase; color: var(--hr-primary-200); }
+    .layar-qr-judul { margin: 0; font-size: clamp(var(--hr-text-3xl), 1.5rem + 2vw, 3rem); font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+    .layar-qr-waktu { margin: var(--hr-space-2) 0 0; font-size: var(--hr-text-lg); color: rgba(255, 255, 255, .75); }
+
+    /* Kartu QR dengan denyut halus (tanda layar hidup). */
+    .layar-qr-kotak { position: relative; width: min(84vw, 440px); padding: var(--hr-space-5); border-radius: var(--hr-radius-lg); background: #fff; color: var(--hr-gray-800); box-shadow: var(--hr-shadow-xl); }
+    .layar-qr-kotak::before { content: ""; position: absolute; inset: -8px; border-radius: calc(var(--hr-radius-lg) + 8px); border: 2px solid rgba(255, 255, 255, .35); animation: qr-denyut 2.4s var(--hr-easing) infinite; pointer-events: none; }
+    @keyframes qr-denyut { 0% { opacity: .9; transform: scale(1); } 70%, 100% { opacity: 0; transform: scale(1.06); } }
+    .layar-qr-gambar img, .layar-qr-gambar canvas { width: 100% !important; height: auto !important; display: block; }
+    .layar-qr-kotak.redup .layar-qr-gambar { opacity: .08; }
+    .layar-qr-bilah { height: 6px; margin-top: var(--hr-space-4); border-radius: var(--hr-radius-pill); background: var(--hr-gray-200); overflow: hidden; }
+    .layar-qr-bilah span { display: block; height: 100%; border-radius: inherit; background: var(--hr-primary); transition: width 1s linear; }
+    .layar-qr-sisa { margin: var(--hr-space-2) 0 0; font-size: var(--hr-text-sm); color: var(--hr-gray-500); }
+    .layar-qr-sisa strong { color: var(--hr-gray-900); font-variant-numeric: tabular-nums; }
+    .layar-qr-fase { margin: 0; padding: var(--hr-space-3) var(--hr-space-4); border-radius: var(--hr-radius-md); background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .2); }
+
+    .layar-qr-langkah { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--hr-space-2) var(--hr-space-5); margin: 0; padding: 0; list-style: none; font-size: var(--hr-text-base); color: rgba(255, 255, 255, .8); }
+    .layar-qr-langkah li { display: inline-flex; align-items: center; gap: var(--hr-space-2); }
+    .layar-qr-langkah span { width: 24px; height: 24px; display: inline-grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .15); font-size: var(--hr-text-xs); font-weight: var(--hr-weight-bold); }
+
+    .layar-qr-angka { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--hr-space-3); width: min(100%, 560px); margin: 0; }
+    .layar-qr-angka > div { padding: var(--hr-space-3); border-radius: var(--hr-radius-md); background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .12); }
+    .layar-qr-angka dt { font-size: var(--hr-text-xs); font-weight: var(--hr-weight-medium); color: rgba(255, 255, 255, .7); }
+    .layar-qr-angka dd { margin: 0; font-size: var(--hr-text-3xl); font-weight: 800; font-variant-numeric: tabular-nums; }
+    @media (max-width: 575.98px) {
+        .layar-qr { padding-top: calc(var(--hr-space-7) + var(--hr-space-4)); }
+        .layar-qr-angka { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (prefers-reduced-motion: reduce) { .layar-qr-kotak::before { animation: none; } }
 </style>
 @endsection
 

@@ -108,6 +108,23 @@ Aturan susunan:
 | `x-card` | `<x-card title subtitle icon :padding="false" hover href title-tag="h3">` + slot `actions`, `footer` |
 | `x-chip` | `<x-chip :href="…" :active="…" icon :count="12">SDM</x-chip>`; tanpa `href` jadi tombol untuk saring di sisi klien |
 | `x-timeline` + `x-timeline.item` | `<x-timeline.item state="done\|active\|stopped\|pending" title meta icon>rincian</x-timeline.item>` |
+| `x-status-badge` | `<x-status-badge :badge="$item->badgeClass()">{{ $item->statusLabel() }}</x-status-badge>` — kelas `text-bg-*` dari model → tone semantik |
+| `x-section-nav` | Navigasi bagian halaman panjang (kolom kiri lengket, penanda bagian terlihat): `:items="[['id', 'label', 'icon', 'status' => true\|false\|null]]"` |
+| `x-stepper` | Penunjuk langkah form bertahap: `id :steps :current`; perbarui dengan `hrStepper(id, indeks)` |
+
+Pola kelas (CSS di `ui.css`, tanpa komponen):
+
+| Kelas | Kegunaan |
+|---|---|
+| `.hr-samping` + `.hr-bagian` | Kolom samping lengket di desktop + jarak gulir bagian tujuan di bawah topbar |
+| `.hr-opsi-grup` > `label.hr-opsi` | Pilihan radio berbentuk kartu (tersorot saat terpilih) |
+| `.hr-segmen` | Pilihan tunggal mendatar (radio `.btn-check` + `label`) |
+| `.btn-check` + `label.hr-chip` | Chip sebagai radio |
+| `.hr-hitungan` | Nilai hasil hitungan otomatis (lama cuti, jumlah jam) |
+| `.hr-daftar-info` | Daftar ketentuan/keterangan berikon |
+| `.hr-bilah-aksi` | Bilah tombol simpan lengket di bawah form panjang (tombol terakhir rata kanan) |
+| `.lamaran-filter` + `.pub-chips` | Baris chip filter + urutan (chip bisa digeser di HP) |
+| `partials.saring-status` | Saring kartu `[data-status]` lewat chip `[data-saring-status]` tanpa muat ulang |
 | `x-stat-card` | `<x-stat-card label value icon tone unit meta :trend="12.5" trend-label href>` |
 | `x-page-header` | `title subtitle eyebrow back back-label` + slot `actions`, `media` |
 | `x-table` | `<x-table caption compact sticky>` + slot `head`, `foot`; di HP otomatis jadi kartu |

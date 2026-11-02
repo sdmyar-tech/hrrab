@@ -1,5 +1,7 @@
 @extends($layout)
 
+@section('title', 'Kirim Notifikasi')
+
 @section('content')
 @php
     $target = old('target', 'belum_lengkap');
@@ -7,82 +9,78 @@
         'judul' => 'Lengkapi data pegawai Anda',
         'pesan' => 'Data kepegawaian Anda belum lengkap. Mohon segera lengkapi lewat menu Pengkinian Data (atau hubungi Admin SDM) agar administrasi cuti, kontrak, dan BPJS tidak terhambat.',
     ];
+    $opsi = [
+        'belum_lengkap' => ['Pegawai yang datanya belum lengkap', 'bi-person-vcard', $belumLengkap->count() . ' akun'],
+        'unit' => ['Per bagian', 'bi-diagram-3', null],
+        'pegawai' => ['Pilih pegawai tertentu', 'bi-person-check', null],
+        'semua' => ['Semua pegawai dalam wewenang saya', 'bi-people', $pilihanPegawai->count() . ' akun'],
+    ];
+    if ($bisaPilihRole) {
+        $opsi['role'] = ['Per role', 'bi-person-badge', null];
+    }
 @endphp
-<div class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-send"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Notifikasi</p>
-                    <h1 class="h3 mb-1">Kirim Notifikasi</h1>
-                    <p class="text-muted mb-0">Kirim pengingat atau tugas ke pegawai lain. Muncul di lonceng notifikasi penerima (dan notifikasi desktop bila diaktifkan).</p>
-                </div>
-            </div>
-        </div>
+<main class="dashboard-content">
+    <div class="container-fluid">
+        <x-page-header title="Kirim Notifikasi" eyebrow="Notifikasi" :back="route('notifikasi.index')" back-label="Notifikasi"
+            subtitle="Kirim pengingat atau tugas ke pegawai lain. Muncul di lonceng notifikasi penerima (dan notifikasi desktop bila diaktifkan)." />
 
-        <form action="{{ route('notifikasi.kirim.store') }}" method="POST" data-confirm="Kirim notifikasi ini?">
+        <form action="{{ route('notifikasi.kirim.store') }}" method="POST" data-confirm="Kirim notifikasi ini?" id="formKirimNotif">
             @csrf
             {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
             @section('galat-di-halaman', '1')
             @if ($errors->any())
-                <div class="alert alert-danger small"><ul class="mb-0 ps-3">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
+                <x-alert tone="danger" title="Notifikasi belum terkirim" class="mb-3">
+                    <ul class="mb-0 ps-3">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+                </x-alert>
             @endif
 
-            <div class="row g-3">
-                <div class="col-12 col-lg-7">
-                    <section class="panel p-4 h-100">
-                        <h2 class="h6 fw-bold mb-3">1. Penerima</h2>
-                        @php
-                            $opsi = [
-                                'belum_lengkap' => ['Pegawai yang datanya belum lengkap', 'bi-person-vcard', $belumLengkap->count() . ' akun'],
-                                'unit' => ['Per bagian', 'bi-diagram-3', null],
-                                'pegawai' => ['Pilih pegawai tertentu', 'bi-person-check', null],
-                                'semua' => ['Semua pegawai dalam wewenang saya', 'bi-people', $pilihanPegawai->count() . ' akun'],
-                            ];
-                            if ($bisaPilihRole) { $opsi['role'] = ['Per role', 'bi-person-badge', null]; }
-                        @endphp
-                        <div class="list-group mb-3">
-                            @foreach ($opsi as $val => [$label, $ikon, $info])
-                                <label class="list-group-item d-flex align-items-center gap-2">
-                                    <input class="form-check-input mt-0" type="radio" name="target" value="{{ $val }}" @checked($target === $val)>
-                                    <i class="bi {{ $ikon }} text-muted"></i> <span class="flex-grow-1">{{ $label }}</span>
-                                    @if ($info)<span class="badge text-bg-light border">{{ $info }}</span>@endif
-                                </label>
-                            @endforeach
-                        </div>
+            <div class="row g-4 align-items-start">
+                <div class="col-lg-7 d-grid gap-3">
+                    {{-- 1. Penerima --}}
+                    <x-card title="1. Penerima" subtitle="Pilih kepada siapa notifikasi dikirim." icon="bi-people">
+                        <fieldset>
+                            <legend class="visually-hidden">Jenis penerima</legend>
+                            <div class="hr-opsi-grup hr-opsi-grup-1 mb-4">
+                                @foreach ($opsi as $val => [$label, $ikon, $info])
+                                    <label class="hr-opsi">
+                                        <input class="form-check-input" type="radio" name="target" value="{{ $val }}" @checked($target === $val)>
+                                        <i class="bi {{ $ikon }} hr-opsi-ikon" aria-hidden="true"></i>
+                                        <span class="flex-grow-1"><strong>{{ $label }}</strong></span>
+                                        @if ($info)<x-badge tone="neutral">{{ $info }}</x-badge>@endif
+                                    </label>
+                                @endforeach
+                            </div>
+                        </fieldset>
 
                         <div data-target="belum_lengkap">
                             @if ($belumLengkap->isEmpty())
-                                <div class="alert alert-success small mb-0">Semua akun dalam wewenang Anda sudah lengkap datanya.</div>
+                                <x-alert tone="success" class="mb-0">Semua akun dalam wewenang Anda sudah lengkap datanya.</x-alert>
                             @else
                                 <p class="small text-muted mb-2">Akan dikirim ke {{ $belumLengkap->count() }} akun berikut. Staff diarahkan langsung ke menu Pengkinian Data.</p>
-                                <div class="border rounded" style="max-height:260px; overflow-y:auto;">
-                                    <table class="table table-sm small mb-0 align-middle">
-                                        <tbody>
-                                            @foreach ($belumLengkap as $r)
-                                                <tr>
-                                                    {{-- Satu kolom agar tidak terpotong di kotak sempit (HP). --}}
-                                                    <td>
-                                                        <span class="fw-semibold">{{ $r['user']->name }}</span>
-                                                        <span class="d-block text-muted">{{ $r['user']->roleLabel() }} &middot; {{ $r['user']->dataPegawai?->kepegawaian?->unit_kerja }}</span>
-                                                        <span class="d-block text-danger-emphasis"><i class="bi bi-exclamation-circle me-1"></i>Kurang: {{ implode(', ', array_slice($r['kurang'], 0, 4)) }}{{ count($r['kurang']) > 4 ? ' +' . (count($r['kurang']) - 4) : '' }}</span>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <ul class="hr-list notif-penerima">
+                                    @foreach ($belumLengkap as $r)
+                                        <li class="hr-list-item">
+                                            <x-avatar :name="$r['user']->name" size="sm" />
+                                            <span class="hr-list-utama">
+                                                <span class="hr-list-judul">{{ $r['user']->name }}</span>
+                                                <span class="hr-list-sub">{{ $r['user']->roleLabel() }} · {{ $r['user']->dataPegawai?->kepegawaian?->unit_kerja }}</span>
+                                                <span class="small text-danger d-block text-wrap"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>Kurang: {{ implode(', ', array_slice($r['kurang'], 0, 4)) }}{{ count($r['kurang']) > 4 ? ' +' . (count($r['kurang']) - 4) : '' }}</span>
+                                            </span>
+                                        </li>
+                                    @endforeach
+                                </ul>
                             @endif
                         </div>
 
                         <div data-target="unit">
-                            <label class="form-label small">Bagian</label>
-                            <div class="form-check mb-1">
-                                <input class="form-check-input" type="checkbox" id="semua-unit" data-pilih-semua="unit[]">
-                                <label class="form-check-label small fw-semibold" for="semua-unit">Pilih semua bagian <span class="text-muted fw-normal" data-jumlah-terpilih></span></label>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="form-label mb-0">Bagian</span>
+                                <div class="form-check m-0">
+                                    <input class="form-check-input" type="checkbox" id="semua-unit" data-pilih-semua="unit[]">
+                                    <label class="form-check-label small fw-semibold" for="semua-unit">Pilih semua <span class="text-muted fw-normal" data-jumlah-terpilih></span></label>
+                                </div>
                             </div>
-                            <div class="border rounded p-2 row row-cols-2 g-1 mx-0" style="max-height:220px; overflow-y:auto;">
+                            <div class="notif-pilihan row row-cols-1 row-cols-sm-2 g-1 mx-0">
                                 @foreach ($pilihanUnit as $u)
                                     <div class="col"><div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="unit[]" value="{{ $u }}" id="u-{{ $loop->index }}" @checked(in_array($u, old('unit', []), true))>
@@ -93,17 +91,19 @@
                         </div>
 
                         <div data-target="pegawai">
-                            <label class="form-label small" for="cari-pegawai">Pegawai (punya akun)</label>
-                            <input type="search" class="form-control form-control-sm mb-2" id="cari-pegawai" placeholder="Saring nama, contoh: Siti">
-                            <div class="form-check mb-1">
+                            <div class="input-group hr-input-group mb-2">
+                                <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                                <input type="search" class="form-control" id="cari-pegawai" placeholder="Saring nama, contoh: Siti" aria-label="Saring pegawai menurut nama">
+                            </div>
+                            <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" id="semua-pegawai" data-pilih-semua="pegawai[]">
                                 <label class="form-check-label small fw-semibold" for="semua-pegawai">Pilih semua (yang tampil) <span class="text-muted fw-normal" data-jumlah-terpilih></span></label>
                             </div>
-                            <div class="border rounded p-2" style="max-height:240px; overflow-y:auto;" id="daftar-pegawai">
+                            <div class="notif-pilihan" id="daftar-pegawai">
                                 @foreach ($pilihanPegawai as $p)
                                     <div class="form-check" data-nama="{{ strtolower($p->name) }}">
                                         <input class="form-check-input" type="checkbox" name="pegawai[]" value="{{ $p->id }}" id="p-{{ $p->id }}" @checked(in_array($p->id, old('pegawai', [])))>
-                                        <label class="form-check-label small" for="p-{{ $p->id }}">{{ $p->name }} <span class="text-muted">&middot; {{ $p->roleLabel() }}{{ $p->dataPegawai?->kepegawaian?->unit_kerja ? ', ' . $p->dataPegawai->kepegawaian->unit_kerja : '' }}</span></label>
+                                        <label class="form-check-label small" for="p-{{ $p->id }}">{{ $p->name }} <span class="text-muted">· {{ $p->roleLabel() }}{{ $p->dataPegawai?->kepegawaian?->unit_kerja ? ', ' . $p->dataPegawai->kepegawaian->unit_kerja : '' }}</span></label>
                                     </div>
                                 @endforeach
                             </div>
@@ -111,61 +111,75 @@
 
                         @if ($bisaPilihRole)
                             <div data-target="role">
-                                <label class="form-label small">Role</label>
-                            <div class="form-check mb-1">
-                                <input class="form-check-input" type="checkbox" id="semua-role" data-pilih-semua="role[]">
-                                <label class="form-check-label small fw-semibold" for="semua-role">Pilih semua role <span class="text-muted fw-normal" data-jumlah-terpilih></span></label>
-                            </div>
-                                @foreach (\App\Models\Role::bawaanAktif() as $r)
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="role[]" value="{{ $r }}" id="r-{{ $r }}" @checked(in_array($r, old('role', []), true))>
-                                        <label class="form-check-label small" for="r-{{ $r }}">{{ \App\Models\User::roleLabelFor($r) }}</label>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="form-label mb-0">Role</span>
+                                    <div class="form-check m-0">
+                                        <input class="form-check-input" type="checkbox" id="semua-role" data-pilih-semua="role[]">
+                                        <label class="form-check-label small fw-semibold" for="semua-role">Pilih semua <span class="text-muted fw-normal" data-jumlah-terpilih></span></label>
                                     </div>
-                                @endforeach
+                                </div>
+                                <div class="notif-pilihan row row-cols-1 row-cols-sm-2 g-1 mx-0">
+                                    @foreach (\App\Models\Role::bawaanAktif() as $r)
+                                        <div class="col"><div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="role[]" value="{{ $r }}" id="r-{{ $r }}" @checked(in_array($r, old('role', []), true))>
+                                            <label class="form-check-label small" for="r-{{ $r }}">{{ \App\Models\User::roleLabelFor($r) }}</label>
+                                        </div></div>
+                                    @endforeach
+                                </div>
                             </div>
                         @endif
 
                         <div data-target="semua">
-                            <p class="small text-muted mb-0">Dikirim ke {{ $pilihanPegawai->count() }} akun dalam wewenang Anda (tidak termasuk Anda sendiri). Untuk informasi umum, pertimbangkan membuat <a href="{{ route('pengumuman.create') }}" class="text-primary">pengumuman</a>.</p>
+                            <x-alert tone="info" class="mb-0">Dikirim ke {{ $pilihanPegawai->count() }} akun dalam wewenang Anda (tidak termasuk Anda sendiri). Untuk informasi umum, pertimbangkan membuat <a href="{{ route('pengumuman.create') }}" class="alert-link">pengumuman</a>.</x-alert>
                         </div>
-                    </section>
+                    </x-card>
+
+                    {{-- 2. Pesan --}}
+                    <x-card title="2. Pesan" icon="bi-chat-left-text">
+                        <x-select name="jenis" id="f-jenis" label="Jenis" :options="['pengingat' => 'Pengingat', 'tugas' => 'Tugas', 'info' => 'Info']" selected="pengingat" />
+                        <x-input name="judul" id="judul" label="Judul" maxlength="120" required :value="$templateLengkapi['judul']" placeholder="Contoh: Kumpulkan laporan bulanan" />
+                        <x-textarea name="pesan" id="pesan" label="Pesan" rows="6" maxlength="1000" required :value="$templateLengkapi['pesan']" field-class="mb-0"
+                            placeholder="Contoh: Mohon kumpulkan laporan bulanan paling lambat Jumat." />
+                    </x-card>
                 </div>
 
-                <div class="col-12 col-lg-5">
-                    <section class="panel p-4">
-                        <h2 class="h6 fw-bold mb-3">2. Pesan</h2>
-                        <div class="mb-3">
-                            <label for="f-jenis" class="form-label small">Jenis</label>
-                            <select id="f-jenis" name="jenis" class="form-select">
-                                <option value="pengingat" @selected(old('jenis', 'pengingat') === 'pengingat')>Pengingat</option>
-                                <option value="tugas" @selected(old('jenis') === 'tugas')>Tugas</option>
-                                <option value="info" @selected(old('jenis') === 'info')>Info</option>
-                            </select>
+                {{-- ============ Pratinjau ============ --}}
+                <aside class="col-lg-5 hr-samping" aria-label="Pratinjau notifikasi">
+                    <x-card title="Pratinjau" subtitle="Begini notifikasi tampil di lonceng penerima." icon="bi-eye">
+                        <div class="notif-pratinjau">
+                            <div class="notif-item is-baru" aria-live="polite">
+                                <span class="hr-stat-ikon hr-tone-info" data-pratinjau-ikon><i class="bi bi-bell" aria-hidden="true"></i></span>
+                                <span class="notif-isi">
+                                    <span class="notif-kepala">
+                                        <span class="notif-judul" data-pratinjau-judul></span>
+                                        <span class="hr-badge hr-badge-info" data-pratinjau-jenis>Pengingat</span>
+                                    </span>
+                                    <span class="notif-pesan" data-pratinjau-pesan></span>
+                                    <span class="notif-waktu">baru saja · dari {{ Auth::user()->name }}</span>
+                                </span>
+                                <span class="notif-titik" aria-hidden="true"></span>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label small" for="judul">Judul</label>
-                            <input type="text" name="judul" id="judul" class="form-control" maxlength="120" required value="{{ old('judul', $templateLengkapi['judul']) }}">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small" for="pesan">Pesan</label>
-                            <textarea name="pesan" id="pesan" rows="6" class="form-control" maxlength="1000" required>{{ old('pesan', $templateLengkapi['pesan']) }}</textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send me-1"></i>Kirim Notifikasi</button>
-                    </section>
-                </div>
+                        <p class="small text-muted mt-3 mb-0" data-pratinjau-penerima></p>
+                        <x-slot:footer>
+                            <x-button type="submit" size="lg" block icon="bi-send">Kirim Notifikasi</x-button>
+                        </x-slot:footer>
+                    </x-card>
+                </aside>
             </div>
         </form>
     </div>
-</div>
+</main>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('formKirimNotif');
         function sinkron() {
-            const target = document.querySelector('input[name="target"]:checked').value;
-            document.querySelectorAll('[data-target]').forEach(function (el) { el.hidden = el.dataset.target !== target; });
+            const target = form.querySelector('input[name="target"]:checked').value;
+            form.querySelectorAll('[data-target]').forEach(function (el) { el.hidden = el.dataset.target !== target; });
+            perbaruiPenerima();
         }
-        document.querySelectorAll('input[name="target"]').forEach(function (r) { r.addEventListener('change', sinkron); });
-        sinkron();
+        form.querySelectorAll('input[name="target"]').forEach(function (r) { r.addEventListener('change', sinkron); });
 
         const cari = document.getElementById('cari-pegawai');
         if (cari) {
@@ -174,6 +188,37 @@
                 document.querySelectorAll('#daftar-pegawai [data-nama]').forEach(function (el) { el.hidden = kata !== '' && ! el.dataset.nama.includes(kata); });
             });
         }
+
+        // Pratinjau langsung: judul, pesan, jenis (warna & ikon), dan ringkasan penerima.
+        const JENIS = { pengingat: ['Pengingat', 'info', 'bi-bell'], tugas: ['Tugas', 'warning', 'bi-list-check'], info: ['Info', 'neutral', 'bi-info-circle'] };
+        const el = (s) => document.querySelector(s);
+        function perbaruiPratinjau() {
+            const [label, tone, ikon] = JENIS[el('#f-jenis').value] || JENIS.info;
+            el('[data-pratinjau-judul]').textContent = el('#judul').value.trim() || 'Judul notifikasi';
+            el('[data-pratinjau-pesan]').textContent = el('#pesan').value.trim() || 'Isi pesan akan tampil di sini.';
+            el('[data-pratinjau-jenis]').textContent = label;
+            el('[data-pratinjau-jenis]').className = 'hr-badge hr-badge-' + tone;
+            el('[data-pratinjau-ikon]').className = 'hr-stat-ikon hr-tone-' + tone;
+            el('[data-pratinjau-ikon]').innerHTML = '<i class="bi ' + ikon + '" aria-hidden="true"></i>';
+        }
+        function perbaruiPenerima() {
+            const target = form.querySelector('input[name="target"]:checked').value;
+            const n = (nama) => form.querySelectorAll('input[name="' + nama + '[]"]:checked').length;
+            const teks = {
+                belum_lengkap: @json($belumLengkap->count() . ' akun yang datanya belum lengkap'),
+                semua: @json($pilihanPegawai->count() . ' akun dalam wewenang Anda'),
+                unit: n('unit') + ' bagian dipilih',
+                pegawai: n('pegawai') + ' pegawai dipilih',
+                role: n('role') + ' role dipilih',
+            }[target];
+            el('[data-pratinjau-penerima]').innerHTML = '<i class="bi bi-people me-1" aria-hidden="true"></i>Penerima: <strong></strong>';
+            el('[data-pratinjau-penerima] strong').textContent = teks;
+        }
+        ['#f-jenis', '#judul', '#pesan'].forEach((s) => el(s).addEventListener('input', perbaruiPratinjau));
+        el('#f-jenis').addEventListener('change', perbaruiPratinjau);
+        form.addEventListener('change', (e) => { if (e.target.matches('input[type=checkbox]')) perbaruiPenerima(); });
+        perbaruiPratinjau();
+        sinkron();
     });
 </script>
 @include('partials.pilih-semua')

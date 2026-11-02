@@ -68,19 +68,7 @@
                         @endif
                     </p>
                 </x-card>
-                <nav class="hr-tabs hr-tabs-vertikal pelamar-nav" aria-label="Bagian data pelamar">
-                    @foreach ($navBagian as [$kunci, $label, $ikon])
-                        @php $status = $bagianLengkap($kunci); @endphp
-                        <a href="#bagian-{{ $kunci }}" class="hr-tab {{ $loop->first ? 'active' : '' }}" data-nav-bagian>
-                            <i class="bi {{ $ikon }}" aria-hidden="true"></i><span>{{ $label }}</span>
-                            @if ($status === true)
-                                <i class="bi bi-check-circle-fill text-success ms-auto" aria-label="lengkap"></i>
-                            @elseif ($status === false)
-                                <i class="bi bi-exclamation-circle text-warning ms-auto" aria-label="belum lengkap"></i>
-                            @endif
-                        </a>
-                    @endforeach
-                </nav>
+                <x-section-nav label="Bagian data pelamar" :items="collect($navBagian)->map(fn ($b) => ['id' => 'bagian-' . $b[0], 'label' => $b[1], 'icon' => $b[2], 'status' => $bagianLengkap($b[0])])->all()" />
             </aside>
 
             {{-- ============ Kanan: form per bagian ============ --}}
@@ -143,7 +131,7 @@
 
                     @include('partials.pelamar-riwayat', ['pelamar' => $pelamar])
 
-                    <div class="pelamar-simpan">
+                    <div class="hr-bilah-aksi">
                         <p class="small text-muted mb-0 d-none d-sm-block"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Kolom bertanda <span class="text-danger">*</span> wajib diisi.</p>
                         <x-button type="submit" icon="bi-check-lg">Simpan Data Pelamar</x-button>
                     </div>
@@ -152,23 +140,4 @@
         </div>
     </div>
 </main>
-
-<script>
-    // Navigasi bagian: tandai bagian yang sedang terlihat saat menggulir.
-    document.addEventListener('DOMContentLoaded', function () {
-        const tautan = Array.from(document.querySelectorAll('[data-nav-bagian]'));
-        if (!('IntersectionObserver' in window) || !tautan.length) return;
-        const pengamat = new IntersectionObserver(function (entri) {
-            entri.forEach(function (e) {
-                if (!e.isIntersecting) return;
-                tautan.forEach((a) => {
-                    const aktif = a.getAttribute('href') === '#' + e.target.id;
-                    a.classList.toggle('active', aktif);
-                    aktif ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current');
-                });
-            });
-        }, { rootMargin: '-30% 0px -60% 0px' });
-        tautan.forEach((a) => { const t = document.querySelector(a.getAttribute('href')); if (t) pengamat.observe(t); });
-    });
-</script>
 @endsection

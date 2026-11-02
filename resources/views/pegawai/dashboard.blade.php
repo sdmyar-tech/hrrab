@@ -69,6 +69,18 @@
 
         {{-- ============ 1. Kartu angka ============ --}}
         <section class="row g-3" aria-label="Ringkasan saya">
+            @if ($kehadiran)
+                @php $persenHadir = $kehadiran['hari_kerja'] ? (int) round($kehadiran['hadir_total'] / $kehadiran['hari_kerja'] * 100) : null; @endphp
+                <div class="col-6 col-xl-3">
+                    <x-stat-card label="Kehadiran Bulan Ini" :value="$kehadiran['hadir_total']" :unit="$kehadiran['hari_kerja'] ? '/ ' . $kehadiran['hari_kerja'] . ' hari' : 'hari'"
+                        icon="bi-fingerprint" :tone="$kehadiran['telat'] ? 'warning' : 'success'" :href="route('absensi.saya')"
+                        :meta="match (true) {
+                            $kehadiran['telat'] > 0 => $kehadiran['telat'] . ' kali terlambat',
+                            $kehadiran['hadir_total'] > 0 => ($persenHadir ?? 100) . '% hadir · tidak pernah telat',
+                            default => 'Belum ada catatan hadir bulan ini',
+                        }" />
+                </div>
+            @endif
             @if ($bisaCuti)
                 <div class="col-6 col-xl-3">
                     <x-stat-card label="Sisa Cuti Tahunan" :value="$sisaCuti" :unit="'/ ' . $kuotaCuti . ' hari'" icon="bi-calendar2-check" tone="success"
@@ -86,6 +98,8 @@
                 <x-stat-card label="Pengajuan Menunggu" :value="$pending" icon="bi-hourglass-split" :tone="$pending ? 'warning' : 'neutral'"
                     meta="Cuti & lembur belum diputuskan" />
             </div>
+            {{-- Kartu kelengkapan hanya bila belum ada kartu kehadiran (info kelengkapan tetap ada di banner & Aksi Cepat). --}}
+            @unless ($kehadiran)
             <div class="col-6 col-xl-3">
                 <x-stat-card label="Kelengkapan Data" :value="$kelengkapan" unit="%" icon="bi-person-vcard" :tone="$kelengkapan >= 100 ? 'success' : 'danger'"
                     :href="route($isIncomplete ? 'pegawai.pengkinian-data' : 'pegawai.data-pegawai')">
@@ -94,6 +108,7 @@
                     </div>
                 </x-stat-card>
             </div>
+            @endunless
         </section>
 
         {{-- ============ Aksi cepat ============ --}}

@@ -1,210 +1,190 @@
 @extends(Auth::user()->panelLayout())
 
+@section('title', 'Pengajuan Cuti')
+
 @section('content')
-<div class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-calendar2-check"></i></span>
-                <div>
-                    <div class="eyebrow">Pegawai</div>
-                    <h1 class="mb-0">Permohonan Cuti</h1>
-                </div>
-            </div>
-            <div class="heading-actions">
+@php
+    $menunggu = $riwayat->filter(fn ($r) => $r->isPending())->count();
+    $hariDisetujui = $riwayat->filter(fn ($r) => $r->status === \App\Models\PengajuanCuti::STATUS_APPROVED && $r->tanggal_mulai->year === now()->year)->sum('lama_cuti');
+
+@endphp
+<main class="dashboard-content">
+    <div class="container-fluid">
+        <x-page-header title="Pengajuan Cuti" eyebrow="Pengajuan Saya" subtitle="Ajukan cuti tahunan atau cuti alasan penting, lalu pantau persetujuannya.">
+            <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.pengajuan-cuti.export'])
-            </div>
-        </div>
+            </x-slot:actions>
+        </x-page-header>
 
-        <div class="panel p-4 mb-3">
-            <h2 class="h6 fw-bold mb-3">Data Pegawai</h2>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label text-muted small">Nama Lengkap / NIK</label>
-                    <input class="form-control form-control-sm" value="{{ $pegawai?->nama_lengkap ?? '-' }} / {{ $pegawai?->nik ?? '-' }}" readonly>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label text-muted small">Jabatan</label>
-                    <input class="form-control form-control-sm" value="{{ $kepegawaian?->jabatan ?? '-' }}" readonly>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label text-muted small">Divisi / Bagian</label>
-                    <input class="form-control form-control-sm" value="{{ $kepegawaian?->unit_kerja ?? '-' }}" readonly>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label text-muted small">Mulai Bekerja di Yayasan Abdurrab</label>
-                    <input class="form-control form-control-sm" value="{{ optional($kepegawaian?->tanggal_masuk)->format('d-m-Y') ?? '-' }}" readonly>
-                </div>
+        {{-- ============ Ringkasan saldo ============ --}}
+        <section class="row g-3 mb-4" aria-label="Ringkasan cuti">
+            <div class="col-6 col-xl-3">
+                @if ($eligible)
+                    <x-stat-card label="Sisa Cuti Tahunan" :value="$sisaCuti" :unit="'/ ' . $annualQuota . ' hari'" icon="bi-calendar2-check" :tone="$sisaCuti > 0 ? 'success' : 'danger'" meta="Berlaku tahun {{ now()->year }}" />
+                @else
+                    <x-stat-card label="Cuti Tahunan" value="—" icon="bi-calendar2-check" tone="neutral" meta="Tersedia setelah masa kerja 1 tahun" />
+                @endif
             </div>
-        </div>
-
-        @if (! $eligible)
-            <div class="alert alert-info d-flex gap-2 align-items-start">
-                <i class="bi bi-info-circle-fill mt-1"></i>
-                <div><strong>Cuti tahunan belum tersedia</strong> karena masa kerja Anda belum 1 tahun.
-                    Anda tetap bisa mengajukan <strong>cuti alasan penting</strong> (menikah, duka, istri melahirkan, bencana, dll.).</div>
+            <div class="col-6 col-xl-3">
+                <x-stat-card label="Pengajuan Tahun Ini" :value="$jumlahPengajuanTahunIni" :unit="'/ ' . $maxPengajuanTahunan . ' kali'" icon="bi-send" tone="primary"
+                    :meta="$jumlahPengajuanTahunIni >= $maxPengajuanTahunan ? 'Batas pengajuan tercapai' : ($maxPengajuanTahunan - $jumlahPengajuanTahunIni) . ' kali lagi'" />
             </div>
-        @endif
+            <div class="col-6 col-xl-3">
+                <x-stat-card label="Menunggu Persetujuan" :value="$menunggu" icon="bi-hourglass-split" :tone="$menunggu ? 'warning' : 'neutral'" meta="Belum diputuskan" />
+            </div>
+            <div class="col-6 col-xl-3">
+                <x-stat-card label="Hari Cuti Disetujui" :value="$hariDisetujui" unit="hari" icon="bi-check2-circle" tone="info" meta="Tahun {{ now()->year }}" />
+            </div>
+        </section>
 
-        <div class="row g-3">
-                <div class="col-12 col-xl-6">
-                    <div class="panel p-4">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                            <h2 class="h6 fw-bold mb-0">Keterangan Cuti</h2>
-                            <div class="text-end">
-                                @if ($eligible)<span class="badge text-bg-info d-block mb-1">Sisa Cuti Tahunan: {{ $sisaCuti }} / {{ $annualQuota }} hari</span>@endif
-                                <span class="badge text-bg-secondary">Pengajuan Tahun Ini: {{ $jumlahPengajuanTahunIni }} / {{ $maxPengajuanTahunan }} kali</span>
+        @unless ($eligible)
+            <x-alert tone="info" title="Cuti tahunan belum tersedia" class="mb-4">
+                Masa kerja Anda belum 1 tahun. Anda tetap bisa mengajukan <strong>cuti alasan penting</strong> (menikah, duka, istri melahirkan, bencana, dll.).
+            </x-alert>
+        @endunless
+
+        <div class="row g-4 align-items-start">
+            {{-- ============ Form ============ --}}
+            <div class="col-lg-7">
+                <x-card title="Formulir Cuti" subtitle="Isian bertanda * wajib diisi." icon="bi-calendar-plus">
+                    <form action="{{ route('pegawai.pengajuan-cuti.store') }}" method="POST" id="formCuti" data-confirm="Ajukan cuti ini?">
+                        @csrf
+
+                        <fieldset class="hr-field">
+                            <legend class="form-label required">Jenis Cuti</legend>
+                            <div class="hr-opsi-grup">
+                                <label class="hr-opsi {{ $eligible ? '' : 'is-nonaktif' }}" for="jenisTahunan">
+                                    <input class="form-check-input" type="radio" name="jenis_cuti" id="jenisTahunan" value="tahunan" @checked($eligible && old('jenis_cuti', 'tahunan') === 'tahunan') @disabled(! $eligible)>
+                                    <span><strong>Cuti Tahunan</strong><small>{{ $eligible ? 'Memotong sisa cuti tahunan.' : 'Tersedia setelah 1 tahun bekerja.' }}</small></span>
+                                </label>
+                                <label class="hr-opsi" for="jenisBesar">
+                                    <input class="form-check-input" type="radio" name="jenis_cuti" id="jenisBesar" value="besar" @checked(old('jenis_cuti') === 'besar' || ! $eligible)>
+                                    <span><strong>Cuti Besar / Alasan Penting</strong><small>Menikah, duka, melahirkan, bencana, dll.</small></span>
+                                </label>
                             </div>
+                        </fieldset>
+
+                        <div id="sectionBesar" class="hr-field d-none">
+                            <label for="kategori_cuti_besar" class="form-label required">Jenis Cuti Besar</label>
+                            <select name="kategori_cuti_besar" id="kategori_cuti_besar" class="form-select @error('kategori_cuti_besar') is-invalid @enderror" aria-describedby="durasiHint">
+                                <option value="">Pilih jenis cuti besar</option>
+                                @foreach ($kategoriBesarOptions as $value => $label)
+                                    <option value="{{ $value }}" data-durasi="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_DURASI[$value] ?? '' }}" data-dadakan="{{ in_array($value, \App\Models\PengajuanCuti::KATEGORI_DADAKAN, true) ? 1 : 0 }}" {{ old('kategori_cuti_besar') == $value ? 'selected' : '' }} @disabled(! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true))>{{ $label }}{{ ! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true) ? ' (setelah 1 tahun)' : '' }}</option>
+                                @endforeach
+                            </select>
+                            @error('kategori_cuti_besar')
+                                <div class="invalid-feedback d-block"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
+                            @enderror
+                            <div id="durasiHint" class="form-text"></div>
                         </div>
 
-                        <form action="{{ route('pegawai.pengajuan-cuti.store') }}" method="POST" id="formCuti" data-confirm="Ajukan cuti ini?">
-                            @csrf
-
-                            <div class="mb-3">
-                                <label class="form-label">Jenis Cuti</label>
-                                <div class="d-flex gap-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="jenis_cuti" id="jenisTahunan" value="tahunan" @checked($eligible && old('jenis_cuti', 'tahunan') === 'tahunan') @disabled(! $eligible)>
-                                        <label class="form-check-label" for="jenisTahunan">Cuti Tahunan @unless ($eligible)<small class="text-muted">(setelah 1 tahun)</small>@endunless</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="jenis_cuti" id="jenisBesar" value="besar" @checked(old('jenis_cuti') === 'besar' || ! $eligible)>
-                                        <label class="form-check-label" for="jenisBesar">Cuti Besar</label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="sectionBesar" class="mb-3 d-none">
-                                <label for="kategori_cuti_besar" class="form-label">Jenis Cuti Besar</label>
-                                <select name="kategori_cuti_besar" id="kategori_cuti_besar" class="form-select @error('kategori_cuti_besar') is-invalid @enderror">
-                                    <option value="">-- Pilih --</option>
-                                    @foreach ($kategoriBesarOptions as $value => $label)
-                                        <option value="{{ $value }}" data-durasi="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_DURASI[$value] ?? '' }}" data-dadakan="{{ in_array($value, \App\Models\PengajuanCuti::KATEGORI_DADAKAN, true) ? 1 : 0 }}" {{ old('kategori_cuti_besar') == $value ? 'selected' : '' }} @disabled(! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true))>{{ $label }}{{ ! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true) ? ' (setelah 1 tahun)' : '' }}</option>
-                                    @endforeach
-                                </select>
-                                <small id="durasiHint" class="text-muted d-block mt-1"></small>
-                                @error('kategori_cuti_besar')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <label for="tanggal_mulai" class="form-label">Tgl Mulai</label>
+                        <div class="row gx-3">
+                            <div class="col-sm-6">
+                                <div class="hr-field">
+                                    <label for="tanggal_mulai" class="form-label required">Tanggal Mulai</label>
                                     <input type="date" name="tanggal_mulai" id="tanggal_mulai"
                                         class="form-control @error('tanggal_mulai') is-invalid @enderror"
                                         value="{{ old('tanggal_mulai', now()->addDays(7)->format('Y-m-d')) }}"
-                                        min="{{ now()->addDays(7)->format('Y-m-d') }}" required
+                                        min="{{ now()->addDays(7)->format('Y-m-d') }}" required aria-describedby="hintTanggalMulai"
                                         data-min-normal="{{ now()->addDays(7)->format('Y-m-d') }}"
                                         data-min-dadakan="{{ now()->format('Y-m-d') }}">
-                                    <small class="text-muted" id="hintTanggalMulai">Tanggal mulai minimal 7 hari setelah tanggal pengajuan.</small>
                                     @error('tanggal_mulai')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="invalid-feedback d-block"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
                                     @enderror
+                                    <div class="form-text" id="hintTanggalMulai">Tanggal mulai minimal 7 hari setelah tanggal pengajuan.</div>
                                 </div>
-                                <div class="col-6">
-                                    <label for="tanggal_selesai" class="form-label">Tgl Selesai</label>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="hr-field">
+                                    <label for="tanggal_selesai" class="form-label required">Tanggal Selesai</label>
                                     <input type="date" name="tanggal_selesai" id="tanggal_selesai"
                                         class="form-control @error('tanggal_selesai') is-invalid @enderror"
                                         value="{{ old('tanggal_selesai') }}" required>
                                     @error('tanggal_selesai')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="invalid-feedback d-block"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
                                     @enderror
                                 </div>
                             </div>
-
-                            <div class="mb-3 mt-3">
-                                <label for="lama_cuti_display" class="form-label">Lama Cuti</label>
-                                <input type="text" id="lama_cuti_display" class="form-control" readonly placeholder="Terisi otomatis">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="keterangan" class="form-label">Keterangan Lain dari Pemohon</label>
-                                <textarea name="keterangan" id="keterangan" rows="2"
-                                    class="form-control @error('keterangan') is-invalid @enderror">{{ old('keterangan') }}</textarea>
-                                @error('keterangan')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Tanggal Pengajuan Cuti</label>
-                                <input type="text" class="form-control" value="{{ now()->format('d-m-Y') }}" readonly>
-                            </div>
-
-                            <p class="text-muted small mb-3">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Pengganti tugas selama cuti akan ditentukan oleh Kepala Bagian Anda saat menyetujui pengajuan ini.
-                            </p>
-
-                            <p class="text-muted small mb-3">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Cuti maksimal {{ $maxPengajuanTahunan }} kali per tahun dan tidak boleh berturut-turut/bentrok dengan cuti lain yang masih menunggu atau sudah disetujui (minimal jeda 1 hari).
-                            </p>
-
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-send me-1"></i> Ajukan Cuti
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-            <div class="col-12 col-xl-6">
-                <div class="panel p-4">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                        <h2 class="h6 fw-bold mb-0">Riwayat Pengajuan Cuti</h2>
-                        <div class="d-flex flex-wrap gap-2 align-items-center">
-                            @if ($urutOpsi) @include('partials.urut') @endif
                         </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Jenis</th>
-                                    <th>Tanggal</th>
-                                    <th>Pengganti</th>
-                                    <th>Status</th>
-                                    <th>Catatan Admin</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($riwayat as $item)
-                                    <tr>
-                                        <td>
-                                            {{ $item->jenisLabel() }}
-                                            @if ($item->kategoriBesarLabel())
-                                                <small class="text-muted d-block">{{ $item->kategoriBesarLabel() }}</small>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            {{-- Satu hari cukup satu tanggal; lama cuti di bawahnya. --}}
-                                            <span class="text-nowrap">{{ $item->tanggal_mulai->translatedFormat('d M Y') }}</span>
-                                            @unless ($item->tanggal_mulai->isSameDay($item->tanggal_selesai))
-                                                &ndash; <span class="text-nowrap">{{ $item->tanggal_selesai->translatedFormat('d M Y') }}</span>
-                                            @endunless
-                                            <small class="text-muted d-block">{{ $item->lama_cuti }} hari</small>
-                                        </td>
-                                        <td>{{ $item->pengganti_nama ?? '-' }}</td>
-                                        <td>
-                                            <span class="badge {{ $item->badgeClass() }}">{{ $item->statusLabel() }}</span>
-                                            @if ($item->isPending())
-                                                <small class="text-muted d-block">Menunggu: {{ $item->currentLevelLabel() }}</small>
-                                            @endif
-                                        </td>
-                                        <td>{{ $item->catatan_admin ?? '-' }}</td>
-                                    </tr>
-                                @empty
-                                    @include('partials.kosong-tabel', ['kosongKolom' => 5, 'kosongTeks' => 'Belum ada pengajuan cuti. Ajukan lewat formulir di samping.', 'kosongIkon' => 'bi-calendar2-check'])
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+
+                        <div class="hr-hitungan mb-3" aria-live="polite">
+                            <i class="bi bi-calculator" aria-hidden="true"></i>
+                            <label for="lama_cuti_display" class="mb-0">Lama cuti</label>
+                            <input type="text" id="lama_cuti_display" readonly placeholder="Terisi otomatis">
+                        </div>
+
+                        <x-textarea name="keterangan" id="keterangan" label="Keterangan" optional rows="2"
+                            placeholder="Contoh: menghadiri pernikahan saudara di Padang" maxlength="1000" />
+
+                        <x-button type="submit" size="lg" block icon="bi-send">Ajukan Cuti</x-button>
+                        <p class="small text-muted text-center mt-2 mb-0">Diajukan hari ini, {{ now()->translatedFormat('d F Y') }}.</p>
+                    </form>
+                </x-card>
+            </div>
+
+            {{-- ============ Samping: data pegawai + ketentuan ============ --}}
+            <div class="col-lg-5 d-grid gap-3">
+                <x-card title="Data Pegawai" icon="bi-person-vcard">
+                    <dl class="dash-dl mb-0">
+                        <div><dt>Nama</dt><dd>{{ $pegawai?->nama_lengkap ?? '-' }}</dd></div>
+                        <div><dt>NIK</dt><dd class="angka-utuh">{{ $pegawai?->nik ?? '-' }}</dd></div>
+                        <div><dt>Jabatan</dt><dd>{{ $kepegawaian?->jabatan ?? '-' }}</dd></div>
+                        <div><dt>Bagian</dt><dd>{{ $kepegawaian?->unit_kerja ?? '-' }}</dd></div>
+                        <div><dt>Mulai bekerja</dt><dd>{{ optional($kepegawaian?->tanggal_masuk)->translatedFormat('d M Y') ?? '-' }}</dd></div>
+                    </dl>
+                </x-card>
+                <x-card title="Ketentuan" icon="bi-info-circle">
+                    <ul class="hr-daftar-info">
+                        <li><i class="bi bi-calendar-week" aria-hidden="true"></i>Cuti biasa diajukan paling lambat <strong>7 hari</strong> sebelum tanggal mulai. Cuti mendadak (duka, melahirkan, bencana) boleh mulai hari ini.</li>
+                        <li><i class="bi bi-arrow-repeat" aria-hidden="true"></i>Maksimal <strong>{{ $maxPengajuanTahunan }} kali</strong> per tahun dan tidak boleh bentrok dengan cuti lain (minimal jeda 1 hari).</li>
+                        <li><i class="bi bi-person-check" aria-hidden="true"></i>Pengganti tugas ditentukan Kepala Bagian saat menyetujui pengajuan.</li>
+                    </ul>
+                </x-card>
             </div>
         </div>
+
+        {{-- ============ Riwayat ============ --}}
+        <section class="hr-section">
+            <x-card title="Riwayat Pengajuan Cuti" icon="bi-clock-history" :padding="false">
+                @if ($urutOpsi)
+                    <x-slot:actions>@include('partials.urut')</x-slot:actions>
+                @endif
+                <x-table caption="Riwayat pengajuan cuti">
+                    <x-slot:head>
+                        <tr><th>Jenis</th><th>Tanggal</th><th>Pengganti</th><th>Status</th><th>Catatan</th></tr>
+                    </x-slot:head>
+                    @forelse ($riwayat as $item)
+                        <tr>
+                            <td>
+                                <span class="fw-semibold">{{ $item->jenisLabel() }}</span>
+                                @if ($item->kategoriBesarLabel())<span class="small text-muted d-block">{{ $item->kategoriBesarLabel() }}</span>@endif
+                            </td>
+                            <td>
+                                <span class="text-nowrap">{{ $item->tanggal_mulai->translatedFormat('d M Y') }}</span>
+                                @unless ($item->tanggal_mulai->isSameDay($item->tanggal_selesai))
+                                    – <span class="text-nowrap">{{ $item->tanggal_selesai->translatedFormat('d M Y') }}</span>
+                                @endunless
+                                <span class="small text-muted d-block">{{ $item->lama_cuti }} hari</span>
+                            </td>
+                            <td>{{ $item->pengganti_nama ?? '–' }}</td>
+                            <td>
+                                <x-status-badge :badge="$item->badgeClass()">{{ $item->statusLabel() }}</x-status-badge>
+                                @if ($item->isPending())<span class="small text-muted d-block mt-1">Menunggu: {{ $item->currentLevelLabel() }}</span>@endif
+                            </td>
+                            <td class="text-muted">{{ $item->catatan_admin ?? '–' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5">
+                                <x-empty-state icon="bi-calendar2-check" title="Belum ada pengajuan cuti" compact>Ajukan lewat formulir di atas; statusnya akan tampil di sini.</x-empty-state>
+                            </td>
+                        </tr>
+                    @endforelse
+                </x-table>
+            </x-card>
+        </section>
     </div>
-</div>
+</main>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -273,6 +253,7 @@
                 ? 'Cuti mendadak: boleh mulai di hari yang sama dengan pengajuan. Keterangan wajib diisi.'
                 : 'Tanggal mulai minimal 7 hari setelah tanggal pengajuan.';
             keterangan.required = dadakan;
+            keterangan.closest('.hr-field')?.querySelector('.form-label')?.classList.toggle('required', dadakan);
         }
 
         function updateKategori() {

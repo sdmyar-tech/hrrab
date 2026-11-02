@@ -9,6 +9,7 @@ use App\Models\PengajuanCuti;
 use App\Models\PengajuanLembur;
 use App\Models\Pengumuman;
 use App\Models\User;
+use App\Support\Absensi\PenilaianAbsensi;
 use App\Support\DashboardData;
 use App\Support\ExcelExporter;
 use App\Support\InterviewFlow;
@@ -103,11 +104,28 @@ class DashboardController extends Controller
             'unitSaya' => $this->unitSaya($pegawai),
             'pengumuman' => Pengumuman::untuk($user)->berlaku()->orderByDesc('penting')->latest()->take(3)->get(),
             'terbaru' => $this->pengajuanTerbaru($pegawai),
+            'kehadiran' => $this->kehadiranBulanIni($pegawai),
             'seleksiSaya' => $user->data_pegawai_id
                 ? Lamaran::with(['lowongan', 'interviewJadwals' => fn ($q) => $q->where('status', 'terjadwal')->orderBy('tanggal')])
                     ->where('data_pegawai_id', $user->data_pegawai_id)->where('status', Lamaran::STATUS_PROSES)->get()
                 : collect(),
         ];
+    }
+
+    /**
+     * Rekap kehadiran bulan berjalan (hanya pegawai yang diabsen). Hitungan sama dengan halaman Absensi Saya:
+     * satu bulan penuh lewat PenilaianAbsensi (tanggal mendatang berstatus "belum ada data").
+     */
+    private function kehadiranBulanIni(?DataPegawai $pegawai): ?array
+    {
+        if (! $pegawai?->ikut_absensi) {
+            return null;
+        }
+
+        $bulan = now()->startOfMonth();
+        $hari = PenilaianAbsensi::rentang(collect([$pegawai]), $bulan, $bulan->copy()->endOfMonth())[$pegawai->id] ?? [];
+
+        return PenilaianAbsensi::rekap($hari);
     }
 
     private function kontrak($kep): ?array
