@@ -25,7 +25,7 @@
             <div class="row g-4">
                 <div class="col-xl-7 d-grid gap-4 align-content-start">
                     <x-card title="Tahap Persetujuan" icon="bi-list-ol"
-                        subtitle="Susun dari atas ke bawah. Setiap tahap wajib dilalui; tahap terakhir = persetujuan akhir.">
+                        subtitle="Pengajuan naik dari Tahap 1 sampai tahap terakhir, tanpa ada yang dilewati. Tahap terakhir = persetujuan akhir.">
                         <div data-daftar-tahap></div>
                         <div class="mt-3">
                             <x-button variant="outline" icon="bi-plus-lg" data-tambah-tahap>Tambah Tahap</x-button>
@@ -63,8 +63,8 @@
                             <ol class="hr-tangga hr-tangga-vertikal" data-pratinjau aria-live="polite" aria-label="Pratinjau tangga alur"></ol>
                             <x-slot:footer>
                                 <p class="small text-muted mb-0">
-                                    Nama penyetuju dihitung dari data saat ini (koordinator, GM bidang, pemegang jabatan yang punya hak menyetujui).
-                                    Pengaju sendiri tidak pernah menyetujui pengajuannya.
+                                    Nama diambil dari data saat ini. Bila koordinator, GM, atau pemegang jabatan berganti, penyetuju ikut berganti otomatis.
+                                    Pengaju tidak pernah menyetujui pengajuannya sendiri.
                                 </p>
                             </x-slot:footer>
                         </x-card>
@@ -87,6 +87,15 @@
         const NAMA_UNIT = @json($unit->nama);
         const AWAL = @json($awal);
         const TIPE = @json(TanggaAlur::TIPE_LABEL);
+        const IKON_TIPE = { koordinator: 'bi-person-badge', gm: 'bi-diagram-3', kepala_sdm: 'bi-shield-check', jabatan: 'bi-briefcase', akun: 'bi-person' };
+        // Penjelasan singkat tiap jenis penyetuju, tampil di bawah pilihan jenis.
+        const BANTU_TIPE = {
+            koordinator: 'Siapa pun yang sedang menjadi koordinator bagian itu. Bila koordinatornya berganti, penyetuju ikut berganti.',
+            gm: 'GM yang membawahi bagian itu.',
+            kepala_sdm: 'Semua akun Kepala SDM.',
+            jabatan: 'Semua orang yang memegang jabatan ini dan punya hak menyetujui pengajuan.',
+            akun: 'Hanya orang yang dipilih. Bila orang ini pindah atau keluar, ubah tahap ini.',
+        };
         const MAKS = {{ TanggaAlur::MAKS_TAHAP }};
         let tahap = @json($tahapAwal).map(function (t) {
             return { nama: t.nama || '', semua: !!t.semua, penyetuju: (t.penyetuju || []).map(function (s) { return Object.assign({ unit: 'pengaju' }, s); }) };
@@ -125,11 +134,11 @@
                 case 'kepala_sdm': return 'Kepala SDM';
                 case 'jabatan': {
                     const j = P.jabatan.find(function (x) { return String(x.id) === String(s.jabatan_id); });
-                    return (j ? j.nama : 'Pilih jabatan') + (s.unit === 'semua' ? '' : ' ' + namaUnit(s.unit));
+                    return j ? j.nama + (s.unit === 'semua' ? '' : ' ' + namaUnit(s.unit)) : 'Jabatan belum dipilih';
                 }
                 case 'akun': {
                     const a = P.akun.find(function (x) { return String(x.id) === String(s.user_id); });
-                    return a ? a.nama : 'Pilih akun';
+                    return a ? a.nama : 'Orang belum dipilih';
                 }
             }
             return '-';
@@ -148,86 +157,132 @@
             }
             return [];
         }
+        function namaOtomatis(t) {
+            return t.penyetuju.map(labelSumber).join(' / ') || 'Tahap tanpa penyetuju';
+        }
         function namaTahap(t) {
-            return t.nama.trim() || t.penyetuju.map(labelSumber).join(' / ') || 'Tahap tanpa penyetuju';
+            return t.nama.trim() || namaOtomatis(t);
         }
         function semuaNama(t) {
             return Array.from(new Set(t.penyetuju.flatMap(namaPenyetuju)));
         }
-
-        // ---------- Penyusun tahap ----------
-        function detailSumber(s) {
-            const kotak = el('div', { class: 'd-flex flex-wrap gap-2 min-w-0' });
-            const pilihUnit = function (bolehSemua, labelSemua) {
-                const sel = el('select', { class: 'form-select form-select-sm', 'data-kolom': 'unit', 'aria-label': 'Bagian' }, [
-                    opsi('pengaju', 'Bagian pengaju (' + NAMA_UNIT + ')', s.unit),
-                    bolehSemua ? opsi('semua', labelSemua, s.unit) : null,
-                ].concat(P.unit.map(function (u) { return opsi(u.id, u.nama, s.unit); })));
-                sel.style.flex = '1 1 160px';
-                return sel;
-            };
-            if (s.tipe === 'koordinator') kotak.append(pilihUnit(false));
-            if (s.tipe === 'gm') kotak.append(pilihUnit(true, 'GM mana pun'));
-            if (s.tipe === 'jabatan') {
-                const j = el('select', { class: 'form-select form-select-sm', 'data-kolom': 'jabatan_id', 'aria-label': 'Jabatan', required: true },
-                    [opsi('', 'Pilih jabatan', s.jabatan_id || '')].concat(P.jabatan.map(function (x) { return opsi(x.id, x.nama, s.jabatan_id); })));
-                j.style.flex = '1 1 180px';
-                kotak.append(j, pilihUnit(true, 'Bagian mana pun'));
-            }
-            if (s.tipe === 'akun') {
-                const a = el('select', { class: 'form-select form-select-sm', 'data-kolom': 'user_id', 'aria-label': 'Akun penyetuju', required: true },
-                    [opsi('', 'Pilih akun', s.user_id || '')].concat(P.akun.map(function (x) { return opsi(x.id, x.nama + (x.ket ? ' · ' + x.ket : ''), s.user_id); })));
-                a.style.flex = '1 1 220px';
-                kotak.append(a);
-            }
-            if (s.tipe === 'kepala_sdm') kotak.append(el('span', { class: 'small text-muted align-self-center', text: 'Semua akun Kepala SDM' }));
-            return kotak;
+        // Pilihan "cukup salah satu / semua" hanya berarti bila penyetuju tahap ini lebih dari satu orang.
+        function perluCara(t) {
+            return t.penyetuju.length > 1 || semuaNama(t).length > 1;
+        }
+        function alasanKosong(s) {
+            return {
+                koordinator: 'Bagian ' + namaUnit(s.unit) + ' belum punya koordinator yang bisa menyetujui.',
+                gm: 'Belum ada GM untuk bidang ini.',
+                kepala_sdm: 'Belum ada akun Kepala SDM.',
+                jabatan: 'Belum ada pemegang jabatan ini yang punya hak menyetujui.',
+            }[s.tipe] || '';
         }
 
-        function barisSumber(s, i, j) {
+        // ---------- Penyusun tahap ----------
+        function bidang(id, label, kontrol) {
+            return el('div', { class: 'hr-field mb-0' }, [el('label', { class: 'form-label', for: id, text: label }), kontrol]);
+        }
+        function pilihBagian(s, id, label, opsiSemua) {
+            return bidang(id, label, el('select', { class: 'form-select', id: id, 'data-kolom': 'unit' }, [
+                opsi('pengaju', 'Bagian pengaju (' + NAMA_UNIT + ')', s.unit),
+                opsiSemua ? opsi('semua', opsiSemua, s.unit) : null,
+                el('optgroup', { label: 'Bagian tertentu' }, P.unit.map(function (u) { return opsi(u.id, u.nama, s.unit); })),
+            ]));
+        }
+        // Isian lanjutan sesuai jenis penyetuju; labelnya berupa pertanyaan agar jelas apa yang dipilih.
+        function detailSumber(s, id) {
+            const isian = [];
+            if (s.tipe === 'koordinator') isian.push(pilihBagian(s, id + '-unit', 'Koordinator bagian mana?'));
+            if (s.tipe === 'gm') isian.push(pilihBagian(s, id + '-unit', 'GM bidang mana?', 'GM mana pun (semua GM)'));
+            if (s.tipe === 'jabatan') {
+                isian.push(bidang(id + '-jabatan', 'Jabatan apa?', el('select', { class: 'form-select', id: id + '-jabatan', 'data-kolom': 'jabatan_id', required: true },
+                    [opsi('', 'Pilih jabatan', s.jabatan_id || '')].concat(P.jabatan.map(function (x) { return opsi(x.id, x.nama, s.jabatan_id); })))));
+                isian.push(pilihBagian(s, id + '-unit', 'Di bagian mana?', 'Bagian mana saja'));
+            }
+            if (s.tipe === 'akun') {
+                isian.push(bidang(id + '-akun', 'Siapa orangnya?', el('select', { class: 'form-select', id: id + '-akun', 'data-kolom': 'user_id', required: true },
+                    [opsi('', 'Pilih nama', s.user_id || '')].concat(P.akun.map(function (x) { return opsi(x.id, x.nama + (x.ket ? ' — ' + x.ket : ''), s.user_id); })))));
+            }
+            return isian.length ? el('div', { class: 'tangga-sumber-detail' }, isian) : null;
+        }
+        // Hasil pilihan: siapa yang benar-benar menyetujui, atau alasan bila belum ada orangnya.
+        function isiHasil(kotak, s) {
             const nama = namaPenyetuju(s);
+            const belumDipilih = (s.tipe === 'jabatan' && !s.jabatan_id) || (s.tipe === 'akun' && !s.user_id);
+            kotak.classList.toggle('is-kosong', !nama.length);
+            kotak.replaceChildren(
+                ikon(nama.length ? 'bi-person-check' : 'bi-exclamation-triangle'),
+                el('span', {}, nama.length ? ['Yang menyetujui: ', el('strong', { text: nama.join(', ') })]
+                    : belumDipilih ? [s.tipe === 'jabatan' ? 'Pilih jabatannya dulu.' : 'Pilih nama orangnya dulu.']
+                    : [el('strong', { text: 'Belum ada orangnya. ' }), alasanKosong(s)]),
+            );
+        }
+
+        function barisSumber(s, j, t, idTahap) {
+            const id = idTahap + '-p' + j;
+            const banyak = t.penyetuju.length > 1;
+            const hasil = el('div', { class: 'tangga-sumber-hasil', 'data-hasil': true });
+            isiHasil(hasil, s);
             return el('div', { class: 'tangga-sumber', 'data-sumber': j }, [
-                el('select', { class: 'form-select form-select-sm', 'data-kolom': 'tipe', 'aria-label': 'Jenis penyetuju' },
-                    Object.entries(TIPE).map(function ([k, v]) { return opsi(k, v, s.tipe); })),
-                detailSumber(s),
-                el('button', { type: 'button', class: 'btn btn-ghost btn-sm', 'data-hapus-sumber': j, 'aria-label': 'Hapus penyetuju ' + labelSumber(s), title: 'Hapus penyetuju' }, [ikon('bi-x-lg')]),
-                el('div', { class: 'tangga-sumber-nama' + (nama.length ? '' : ' is-kosong'), 'data-nama-sumber': true,
-                    text: nama.length ? 'Penyetuju: ' + nama.join(', ') : 'Belum ada akun yang bisa menyetujui dari sumber ini' }),
+                // Judul + Hapus hanya bila penyetuju lebih dari satu; penyetuju tunggal cukup diganti jenisnya.
+                banyak ? el('div', { class: 'tangga-sumber-kepala' }, [
+                    el('span', { class: 'tangga-sumber-judul', text: 'Penyetuju ' + (j + 1) }),
+                    el('button', { type: 'button', class: 'btn btn-ghost btn-sm text-danger', 'data-hapus-sumber': j, 'aria-label': 'Hapus penyetuju ' + (j + 1) }, [ikon('bi-trash'), ' Hapus']),
+                ]) : null,
+                el('div', { class: 'tangga-jenis', role: 'radiogroup', 'aria-label': 'Jenis penyetuju' + (banyak ? ' ' + (j + 1) : '') }, Object.entries(TIPE).flatMap(function ([k, v]) {
+                    return [
+                        el('input', { type: 'radio', class: 'btn-check', name: id + '-tipe', id: id + '-' + k, value: k, 'data-kolom': 'tipe', checked: s.tipe === k }),
+                        el('label', { class: 'hr-chip', for: id + '-' + k }, [ikon(IKON_TIPE[k]), v]),
+                    ];
+                })),
+                el('p', { class: 'tangga-sumber-bantu', text: BANTU_TIPE[s.tipe] }),
+                detailSumber(s, id),
+                hasil,
             ]);
         }
 
         function kartuTahap(t, i) {
             uid++;
+            const idTahap = 'tahap' + uid;
             const nomor = el('span', { class: 'tangga-tahap-no', 'aria-hidden': 'true', text: String(i + 1) });
             const tombol = function (attr, nama, label, mati) {
                 return el('button', Object.assign({ type: 'button', class: 'btn btn-ghost btn-sm', 'aria-label': label, title: label, disabled: mati }, attr), [ikon(nama)]);
             };
-            return el('section', { class: 'tangga-tahap', 'data-tahap': i, 'aria-labelledby': 'judul-tahap-' + uid }, [
+            return el('section', { class: 'tangga-tahap', 'data-tahap': i, 'aria-labelledby': idTahap + '-judul' }, [
                 el('header', { class: 'tangga-tahap-kepala' }, [
                     nomor,
-                    el('h3', { class: 'tangga-tahap-judul', id: 'judul-tahap-' + uid, text: 'Tahap ' + (i + 1) + (i === tahap.length - 1 ? ' · persetujuan akhir' : '') }),
+                    el('h3', { class: 'tangga-tahap-judul', id: idTahap + '-judul' }, [
+                        'Tahap ' + (i + 1),
+                        i === tahap.length - 1 ? el('span', { class: 'hr-badge hr-badge-success', text: 'Akhir' }) : null,
+                    ]),
                     tombol({ 'data-naik': i }, 'bi-arrow-up', 'Naikkan tahap ' + (i + 1), i === 0),
                     tombol({ 'data-turun': i }, 'bi-arrow-down', 'Turunkan tahap ' + (i + 1), i === tahap.length - 1),
                     tombol({ 'data-hapus-tahap': i, class: 'btn btn-ghost btn-sm text-danger' }, 'bi-trash', 'Hapus tahap ' + (i + 1), tahap.length === 1),
                 ]),
                 el('div', { class: 'tangga-tahap-isi' }, [
-                    el('div', { class: 'hr-field mb-0' }, [
-                        el('label', { class: 'form-label', for: 'nama-tahap-' + uid }, ['Nama tahap ', el('span', { class: 'hr-field-opsional', text: '(opsional)' })]),
-                        el('input', { type: 'text', class: 'form-control', id: 'nama-tahap-' + uid, 'data-kolom-tahap': 'nama', maxlength: 60, value: t.nama,
-                            placeholder: 'Kosongkan untuk nama otomatis, contoh: Verifikasi Keuangan' }),
-                    ]),
                     el('fieldset', { class: 'mb-0' }, [
-                        el('legend', { class: 'form-label required', text: 'Penyetuju' }),
-                        el('div', { class: 'd-grid gap-2' }, t.penyetuju.map(function (s, j) { return barisSumber(s, i, j); })),
-                        el('button', { type: 'button', class: 'btn btn-link btn-sm px-0 mt-1', 'data-tambah-sumber': i }, [ikon('bi-plus-lg'), ' Tambah penyetuju']),
+                        el('legend', { class: 'form-label required', text: 'Siapa yang menyetujui?' }),
+                        el('div', { class: 'd-grid gap-2' }, t.penyetuju.map(function (s, j) { return barisSumber(s, j, t, idTahap); })),
+                        el('button', { type: 'button', class: 'btn btn-ghost btn-sm tangga-tambah-sumber mt-2', 'data-tambah-sumber': i }, [ikon('bi-plus-lg'), ' Tambah penyetuju lain di tahap ini']),
                     ]),
-                    el('fieldset', { class: 'mb-0' }, [
-                        el('legend', { class: 'form-label', text: 'Cara menyetujui' }),
-                        el('div', { class: 'hr-segmen', role: 'group', 'aria-label': 'Cara menyetujui tahap ' + (i + 1) }, [
-                            el('input', { type: 'radio', class: 'btn-check', name: 'semua-' + uid, id: 'satu-' + uid, value: '0', 'data-kolom-tahap': 'semua', checked: !t.semua }),
-                            el('label', { for: 'satu-' + uid, text: 'Salah satu cukup' }),
-                            el('input', { type: 'radio', class: 'btn-check', name: 'semua-' + uid, id: 'semua-' + uid, value: '1', 'data-kolom-tahap': 'semua', checked: t.semua }),
-                            el('label', { for: 'semua-' + uid, text: 'Semua harus setuju' }),
+                    el('fieldset', { class: 'mb-0', 'data-cara': true, hidden: !perluCara(t) }, [
+                        el('legend', { class: 'form-label', text: 'Penyetujunya lebih dari satu orang. Kapan tahap ini selesai?' }),
+                        el('div', { class: 'hr-segmen', role: 'group', 'aria-label': 'Kapan tahap ' + (i + 1) + ' selesai' }, [
+                            el('input', { type: 'radio', class: 'btn-check', name: idTahap + '-semua', id: idTahap + '-satu', value: '0', 'data-kolom-tahap': 'semua', checked: !t.semua }),
+                            el('label', { for: idTahap + '-satu', text: 'Cukup salah satu menyetujui' }),
+                            el('input', { type: 'radio', class: 'btn-check', name: idTahap + '-semua', id: idTahap + '-semua', value: '1', 'data-kolom-tahap': 'semua', checked: t.semua }),
+                            el('label', { for: idTahap + '-semua', text: 'Semua harus menyetujui' }),
+                        ]),
+                    ]),
+                    // Nama tahap jarang diubah: dilipat agar tidak mengganggu, terbuka bila sudah diisi.
+                    el('details', { class: 'tangga-tahap-nama', open: !!t.nama.trim() }, [
+                        el('summary', {}, ['Ganti nama tahap ', el('span', { class: 'hr-field-opsional', text: '(opsional)' })]),
+                        el('div', { class: 'hr-field mb-0 mt-2' }, [
+                            el('label', { class: 'form-label', for: idTahap + '-nama', text: 'Nama tahap' }),
+                            el('input', { type: 'text', class: 'form-control', id: idTahap + '-nama', 'data-kolom-tahap': 'nama', maxlength: 60, value: t.nama,
+                                placeholder: 'Tulis nama tahap, contoh: Verifikasi Keuangan' }),
+                            el('div', { class: 'form-text', 'data-nama-otomatis': true, text: 'Jika dikosongkan, nama tahap: ' + namaOtomatis(t) }),
                         ]),
                     ]),
                 ]),
@@ -259,7 +314,7 @@
                 const nama = semuaNama(t);
                 const lencana = [];
                 if (i === tahap.length - 1) lencana.push(el('span', { class: 'hr-badge hr-badge-success', text: 'Akhir' }));
-                if (t.semua) lencana.push(el('span', { class: 'hr-badge hr-badge-info' }, [ikon('bi-people'), ' Semua setuju']));
+                if (t.semua && perluCara(t)) lencana.push(el('span', { class: 'hr-badge hr-badge-info' }, [ikon('bi-people'), ' Semua setuju']));
                 daftar.push(itemPratinjau(nama.length ? '' : 'is-kosong', nama.length ? String(i + 1) : ikon('bi-exclamation'), namaTahap(t),
                     nama.length
                         ? el('span', { class: 'hr-tangga-oleh', text: nama.slice(0, 4).join(', ') + (nama.length > 4 ? ' +' + (nama.length - 4) : '') })
@@ -270,30 +325,32 @@
             pratinjau.replaceChildren.apply(pratinjau, daftar);
         }
 
-        // Isian berubah: perbarui data, nama penyetuju baris itu, & pratinjau (tanpa menggambar ulang agar fokus tidak hilang).
+        // Isian berubah: perbarui data, hasil penyetuju baris itu, & pratinjau (tanpa menggambar ulang agar fokus tidak hilang).
         function perbarui(e) {
             const kartu = e.target.closest('[data-tahap]');
             if (!kartu) return;
-            const t = tahap[+kartu.dataset.tahap];
+            const i = +kartu.dataset.tahap;
+            const t = tahap[i];
             const kolomTahap = e.target.dataset.kolomTahap;
             if (kolomTahap === 'nama') t.nama = e.target.value;
             if (kolomTahap === 'semua') t.semua = e.target.value === '1';
             const baris = e.target.closest('[data-sumber]');
             const kolom = e.target.dataset.kolom;
             if (baris && kolom) {
-                const s = t.penyetuju[+baris.dataset.sumber];
+                const j = +baris.dataset.sumber;
                 if (kolom === 'tipe') {
-                    t.penyetuju[+baris.dataset.sumber] = { tipe: e.target.value, unit: 'pengaju' };
+                    // Radio memicu 'input' lalu 'change': gambar ulang sekali saja.
+                    if (t.penyetuju[j].tipe === e.target.value) return;
+                    t.penyetuju[j] = { tipe: e.target.value, unit: 'pengaju' };
                     gambarPenyusun();
-                    wadah.querySelector('[data-tahap="' + kartu.dataset.tahap + '"] [data-sumber="' + baris.dataset.sumber + '"] [data-kolom="tipe"]').focus();
+                    wadah.querySelector('[data-tahap="' + i + '"] [data-sumber="' + j + '"] [data-kolom="tipe"]:checked').focus();
                     return;
                 }
-                s[kolom] = e.target.value;
-                const nama = namaPenyetuju(s);
-                const teks = baris.querySelector('[data-nama-sumber]');
-                teks.textContent = nama.length ? 'Penyetuju: ' + nama.join(', ') : 'Belum ada akun yang bisa menyetujui dari sumber ini';
-                teks.classList.toggle('is-kosong', !nama.length);
+                t.penyetuju[j][kolom] = e.target.value;
+                isiHasil(baris.querySelector('[data-hasil]'), t.penyetuju[j]);
             }
+            kartu.querySelector('[data-cara]').hidden = !perluCara(t);
+            kartu.querySelector('[data-nama-otomatis]').textContent = 'Jika dikosongkan, nama tahap: ' + namaOtomatis(t);
             gambarPratinjau();
         }
         wadah.addEventListener('input', perbarui);
@@ -308,11 +365,11 @@
             if ('tambahTahap' in d) {
                 if (tahap.length >= MAKS) return;
                 tahap.push({ nama: '', semua: false, penyetuju: [{ tipe: 'kepala_sdm', unit: 'pengaju' }] });
-                fokus = '[data-tahap="' + (tahap.length - 1) + '"] [data-kolom="tipe"]';
+                fokus = '[data-tahap="' + (tahap.length - 1) + '"] [data-kolom="tipe"]:checked';
             } else if ('tambahSumber' in d) {
                 const t = tahap[+d.tambahSumber];
                 t.penyetuju.push({ tipe: 'koordinator', unit: 'pengaju' });
-                fokus = '[data-tahap="' + d.tambahSumber + '"] [data-sumber="' + (t.penyetuju.length - 1) + '"] [data-kolom="tipe"]';
+                fokus = '[data-tahap="' + d.tambahSumber + '"] [data-sumber="' + (t.penyetuju.length - 1) + '"] [data-kolom="tipe"]:checked';
             } else if ('hapusSumber' in d) {
                 const i = +b.closest('[data-tahap]').dataset.tahap;
                 tahap[i].penyetuju.splice(+d.hapusSumber, 1);
@@ -347,7 +404,7 @@
                 if (!t.penyetuju.length) masalah = ['Tahap ' + (i + 1) + ' belum punya penyetuju.', '[data-tambah-sumber="' + i + '"]'];
                 t.penyetuju.some(function (s, j) {
                     if ((s.tipe === 'jabatan' && !s.jabatan_id) || (s.tipe === 'akun' && !s.user_id)) {
-                        masalah = ['Tahap ' + (i + 1) + ': lengkapi ' + (s.tipe === 'jabatan' ? 'jabatan' : 'akun') + ' penyetuju.',
+                        masalah = ['Tahap ' + (i + 1) + ': ' + (s.tipe === 'jabatan' ? 'pilih jabatannya.' : 'pilih nama orangnya.'),
                             '[data-tahap="' + i + '"] [data-sumber="' + j + '"] [data-kolom="' + (s.tipe === 'jabatan' ? 'jabatan_id' : 'user_id') + '"]'];
                     }
                     return masalah;

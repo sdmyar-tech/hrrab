@@ -1991,13 +1991,29 @@ html[data-theme="dark"] .notif-item.is-baru { background: rgba(240, 138, 140, .0
 .tangga-tahap + .tangga-tahap { margin-top: var(--hr-space-3); }
 .tangga-tahap-kepala { display: flex; align-items: center; gap: var(--hr-space-2); padding: var(--hr-space-3) var(--hr-space-4); border-bottom: 1px solid var(--admin-border); background: var(--admin-surface-soft); border-radius: var(--hr-radius-md) var(--hr-radius-md) 0 0; }
 .tangga-tahap-no { flex: none; width: 28px; height: 28px; display: inline-grid; place-items: center; border-radius: 50%; background: var(--hr-primary); color: #fff; font-size: var(--hr-text-xs); font-weight: var(--hr-weight-bold); }
-.tangga-tahap-judul { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--hr-text-sm); font-weight: var(--hr-weight-semibold); color: var(--admin-heading); }
+.tangga-tahap-judul { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--hr-space-2); margin: 0; font-size: var(--hr-text-sm); font-weight: var(--hr-weight-semibold); color: var(--admin-heading); }
 .tangga-tahap-kepala .btn:disabled { border-color: transparent; opacity: .35; }
 .tangga-tahap-isi { display: grid; gap: var(--hr-space-3); padding: var(--hr-space-4); }
-.tangga-sumber { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--hr-space-2); align-items: center; padding: var(--hr-space-3); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-sm); background: var(--admin-surface-soft); }
-.tangga-sumber-nama { font-size: var(--hr-text-xs); color: var(--admin-muted); overflow-wrap: anywhere; }
-.tangga-sumber > [data-hapus-sumber] { justify-self: end; }
-.tangga-sumber-nama.is-kosong { color: var(--hr-warning); font-weight: var(--hr-weight-semibold); }
-@media (min-width: 768px) { .tangga-sumber { grid-template-columns: 180px minmax(0, 1fr) auto; } .tangga-sumber-nama { grid-column: 1 / -1; } }
+/* Kartu satu penyetuju: judul + Hapus, pilihan jenis (chip radio), keterangan, isian lanjutan, hasil nama orang. */
+.tangga-sumber { display: grid; gap: var(--hr-space-3); min-width: 0; padding: var(--hr-space-3) var(--hr-space-4) var(--hr-space-4); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-sm); background: var(--admin-surface-soft); }
+.tangga-sumber-kepala { display: flex; align-items: center; justify-content: space-between; gap: var(--hr-space-2); margin-bottom: calc(var(--hr-space-1) * -1); }
+.tangga-sumber-judul { font-size: var(--hr-text-xs); font-weight: var(--hr-weight-semibold); color: var(--admin-muted); text-transform: uppercase; letter-spacing: .04em; }
+.tangga-jenis { display: flex; flex-wrap: wrap; gap: var(--hr-space-2); }
+.tangga-jenis .btn-check:checked + .hr-chip { border-color: var(--hr-primary); background: var(--hr-primary-soft); color: var(--hr-primary-soft-text); font-weight: var(--hr-weight-semibold); }
+.tangga-jenis .btn-check:focus-visible + .hr-chip { outline: 2px solid var(--hr-focus); outline-offset: 1px; }
+.tangga-sumber-bantu { margin: 0; font-size: var(--hr-text-xs); color: var(--admin-muted); }
+.tangga-sumber-detail { display: grid; gap: var(--hr-space-3); }
+@media (min-width: 576px) { .tangga-sumber-detail { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } }
+.tangga-sumber-hasil { display: flex; align-items: flex-start; gap: var(--hr-space-2); padding: var(--hr-space-2) var(--hr-space-3); border-radius: var(--hr-radius-sm); background: var(--hr-success-soft); color: var(--admin-heading); font-size: var(--hr-text-sm); overflow-wrap: anywhere; }
+.tangga-sumber-hasil .bi { flex: none; margin-top: 2px; color: var(--hr-success); }
+.tangga-sumber-hasil.is-kosong { background: var(--hr-warning-soft); }
+.tangga-sumber-hasil.is-kosong .bi { color: var(--hr-warning); }
+.tangga-tambah-sumber { width: 100%; justify-content: center; border: 1px dashed var(--admin-border-strong); }
+.tangga-tahap-nama > summary { width: fit-content; font-size: var(--hr-text-sm); font-weight: var(--hr-weight-medium); color: var(--admin-muted); cursor: pointer; }
+/* HP: kurangi padding bertingkat (kartu > tahap > penyetuju) agar pilihan jenis muat dua per baris. */
+@media (max-width: 575.98px) {
+    .tangga-tahap-isi { padding: var(--hr-space-3); }
+    .tangga-sumber { padding: var(--hr-space-3); }
+}
 .tangga-panah { display: flex; justify-content: center; color: var(--admin-muted); margin: var(--hr-space-2) 0; }
 .tangga-pratinjau { position: sticky; top: calc(var(--hr-topbar-h, 64px) + var(--hr-space-4)); }

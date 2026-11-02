@@ -87,9 +87,9 @@ class TanggaAlurController extends Controller
             'tahap.max' => 'Paling banyak ' . TanggaAlur::MAKS_TAHAP . ' tahap.',
             'tahap.*.penyetuju.required' => 'Setiap tahap harus punya minimal satu penyetuju.',
             'tahap.*.penyetuju.min' => 'Setiap tahap harus punya minimal satu penyetuju.',
-            "{$sumber}.jabatan_id.required_if" => 'Pilih jabatan untuk penyetuju "Pemegang jabatan".',
-            "{$sumber}.user_id.required_if" => 'Pilih akun untuk penyetuju "Akun tertentu".',
-            "{$sumber}.user_id.in" => 'Akun yang dipilih tidak punya hak menyetujui pengajuan.',
+            "{$sumber}.jabatan_id.required_if" => 'Pilih jabatan penyetujunya.',
+            "{$sumber}.user_id.required_if" => 'Pilih nama orang penyetujunya.',
+            "{$sumber}.user_id.in" => 'Orang yang dipilih tidak punya hak menyetujui pengajuan.',
         ]);
 
         $tahap = collect($v['tahap'])->map(fn (array $t) => [

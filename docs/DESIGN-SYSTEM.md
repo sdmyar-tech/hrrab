@@ -126,7 +126,8 @@ Pola kelas (CSS di `ui.css`, tanpa komponen):
 | `.hr-bilah-aksi` | Bilah tombol simpan lengket di bawah form panjang (tombol terakhir rata kanan) |
 | `.lamaran-filter` + `.pub-chips` | Baris chip filter + urutan (chip bisa digeser di HP) |
 | `partials.saring-status` | Saring kartu `[data-status]` lewat chip `[data-saring-status]` tanpa muat ulang |
-| `.tangga-sel` / `.tangga-tahap` / `.tangga-sumber` | Halaman Tangga Alur Pengajuan: kartu tangga per bagian (otomatis = garis putus) & penyusun tahap (kartu tahap, baris sumber penyetuju) |
+| `.tangga-sel` / `.tangga-tahap` / `.tangga-sumber` | Halaman Tangga Alur Pengajuan: kartu tangga per bagian (otomatis = garis putus) & penyusun tahap (kartu tahap, kartu penyetuju) |
+| `.tangga-jenis` / `.tangga-sumber-bantu` / `.tangga-sumber-detail` / `.tangga-sumber-hasil` | Kartu penyetuju: jenis sebagai chip radio (`.btn-check` + `.hr-chip`), keterangan jenis, isian lanjutan berlabel pertanyaan, hasil "Yang menyetujui: …" (hijau) / alasan kosong (`.is-kosong`, kuning) |
 | `x-stat-card` | `<x-stat-card label value icon tone unit meta :trend="12.5" trend-label href>` |
 | `x-page-header` | `title subtitle eyebrow back back-label` + slot `actions`, `media` |
 | `x-table` | `<x-table caption compact sticky>` + slot `head`, `foot`; di HP otomatis jadi kartu |

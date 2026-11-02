@@ -36,11 +36,11 @@ class TanggaAlur extends Model
     public const TIPE_AKUN = 'akun';
 
     public const TIPE_LABEL = [
-        self::TIPE_KOORDINATOR => 'Koordinator bagian',
-        self::TIPE_GM => 'GM bidang',
+        self::TIPE_KOORDINATOR => 'Koordinator',
+        self::TIPE_GM => 'GM',
         self::TIPE_KEPALA_SDM => 'Kepala SDM',
-        self::TIPE_JABATAN => 'Pemegang jabatan',
-        self::TIPE_AKUN => 'Akun tertentu',
+        self::TIPE_JABATAN => 'Jabatan',
+        self::TIPE_AKUN => 'Orang tertentu',
     ];
 
     /** Nilai "unit" sumber penyetuju selain id bagian: bagian pengaju sendiri, atau semua bagian. */
