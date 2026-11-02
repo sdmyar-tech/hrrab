@@ -248,6 +248,9 @@ class RingkasanPengajuan
     /** Alur cuti/lembur/izin keluar: diajukan → tahap rute (Kepala Bagian / GM / Kepala SDM) lengkap dengan status tiap tahap. */
     private static function alurBerjenjang(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $p, bool $lembur): array
     {
+        if ($p->tangga) {
+            return self::alurTangga($p);
+        }
         $langkah = [['label' => 'Diajukan', 'oleh' => $p->dataPegawai?->nama_lengkap, 'waktu' => self::waktu($p->created_at), 'catatan' => null, 'status' => 'selesai']];
 
         // Tahap yang seharusnya dilalui + tahap yang benar-benar tercatat, diurutkan baku.
@@ -280,6 +283,44 @@ class RingkasanPengajuan
                 $p->isPending() && $p->current_level === $lv => ['label' => PengajuanWorkflow::levelLabel($lv), 'oleh' => $calonTeks, 'waktu' => null, 'catatan' => 'sedang menunggu', 'status' => 'berjalan'],
                 $p->isPending() => ['label' => PengajuanWorkflow::levelLabel($lv), 'oleh' => $calonTeks, 'waktu' => null, 'catatan' => null, 'status' => 'menunggu'],
                 default => ['label' => PengajuanWorkflow::levelLabel($lv), 'oleh' => null, 'waktu' => null, 'catatan' => 'dilewati', 'status' => 'lewati'],
+            };
+        }
+
+        return $langkah;
+    }
+
+    /** Alur tangga: diajukan → tiap tahap salinan tangga, dengan siapa yang sudah/masih harus menyetujui. */
+    private static function alurTangga(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $p): array
+    {
+        $langkah = [['label' => 'Diajukan', 'oleh' => $p->dataPegawai?->nama_lengkap, 'waktu' => self::waktu($p->created_at), 'catatan' => null, 'status' => 'selesai']];
+        $unit = PengajuanWorkflow::unitPengajuan($p);
+        $riwayat = TanggaAlurWorkflow::riwayat($p);
+        $ke = (int) $p->tahap_ke;
+        $disetujui = $p->status === $p::STATUS_APPROVED;
+        $nama = fn ($daftar) => $daftar->take(2)->pluck('name')->implode(', ') . ($daftar->count() > 2 ? ' +' . ($daftar->count() - 2) : '');
+
+        foreach ($p->tangga as $i => $tahap) {
+            $label = TanggaAlurWorkflow::namaTahap($tahap, $unit);
+            $setuju = $riwayat->get($i, collect());
+            $semua = (bool) ($tahap['semua'] ?? false);
+
+            $langkah[] = match (true) {
+                $p->status === $p::STATUS_REJECTED && $i === $ke => ['label' => $label, 'oleh' => $p->approvedBy?->name, 'waktu' => self::waktu($p->approved_at), 'catatan' => $p->catatan_admin, 'status' => 'ditolak'],
+                $setuju->isNotEmpty() && ($i < $ke || $disetujui) => ['label' => $label, 'oleh' => $nama($setuju->pluck('user')->filter()), 'waktu' => self::waktu($setuju->last()->created_at), 'catatan' => null, 'status' => 'selesai'],
+                $p->isPending() && $i === $ke => (function () use ($p, $label, $setuju, $semua, $nama) {
+                    $menunggu = TanggaAlurWorkflow::penyetujuMenunggu($p);
+                    $total = $setuju->count() + $menunggu->count();
+
+                    return ['label' => $label, 'oleh' => $nama($menunggu) ?: null, 'waktu' => null,
+                        'catatan' => $semua ? "semua harus setuju · {$setuju->count()} dari {$total} sudah" : 'sedang menunggu', 'status' => 'berjalan'];
+                })(),
+                $p->isPending() && $i > $ke => ['label' => $label, 'oleh' => $nama(TanggaAlurWorkflow::penyetuju($tahap, $unit, $p->data_pegawai_id)) ?: null, 'waktu' => null,
+                    'catatan' => $semua ? 'semua harus setuju' : null, 'status' => 'menunggu'],
+                default => ['label' => $label, 'oleh' => null, 'waktu' => null, 'status' => 'lewati', 'catatan' => match (true) {
+                    $disetujui => 'diputuskan langsung oleh Admin',
+                    $p->isPending() => 'dilewati (diatur Admin)',
+                    default => 'dilewati',
+                }],
             };
         }
 

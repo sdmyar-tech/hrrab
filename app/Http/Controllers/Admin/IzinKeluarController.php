@@ -94,13 +94,12 @@ class IzinKeluarController extends Controller
         $approver = Auth::user();
         abort_unless(PengajuanWorkflow::canAct($approver, $izinKeluar), 403, 'Anda tidak berwenang menyetujui pengajuan ini pada tahap ini.');
 
-        $updates = PengajuanWorkflow::approvalUpdates($approver, $izinKeluar);
-        $izinKeluar->update($updates);
+        $updates = PengajuanWorkflow::setujui($approver, $izinKeluar);
         Notifikasi::pengajuanDiproses($izinKeluar);
 
         return redirect()->route('admin.izin-keluar.index')->with('success', $updates['current_level'] === null
             ? 'Izin keluar disetujui. Tiket keluar sudah terbit untuk pegawai.'
-            : 'Izin keluar disetujui dan diteruskan ke ' . PengajuanWorkflow::levelLabel($updates['current_level']) . '.');
+            : 'Izin keluar disetujui dan ' . PengajuanWorkflow::keteranganLanjut($izinKeluar) . '.');
     }
 
     public function reject(Request $request, PengajuanIzinKeluar $izinKeluar): RedirectResponse
@@ -129,7 +128,7 @@ class IzinKeluarController extends Controller
         $tidakKembali = $request->boolean('tidak_kembali');
         $v = $request->validate([
             'status' => ['required', Rule::in([PengajuanIzinKeluar::STATUS_PENDING, PengajuanIzinKeluar::STATUS_APPROVED, PengajuanIzinKeluar::STATUS_REJECTED])],
-            'current_level' => ['nullable', 'required_if:status,pending', Rule::in(array_keys(PengajuanWorkflow::LEVEL_LABELS))],
+            'current_level' => ['nullable', 'required_if:status,pending', Rule::in(array_keys(PengajuanWorkflow::pilihanTahapAdmin($izinKeluar)))],
             'tanggal' => ['required', 'date'],
             'jam_keluar' => ['required', 'date_format:H:i'],
             'jam_kembali' => [$tidakKembali ? 'nullable' : 'required', 'date_format:H:i', 'after:jam_keluar'],
@@ -145,7 +144,7 @@ class IzinKeluarController extends Controller
             ...PengajuanWorkflow::statusAdmin($izinKeluar, $v['status'], $v['current_level'] ?? null, Auth::user()),
         ]);
 
-        if ($statusLama !== $izinKeluar->status || $izinKeluar->wasChanged('current_level')) {
+        if ($statusLama !== $izinKeluar->status || $izinKeluar->wasChanged(['current_level', 'tahap_ke'])) {
             Notifikasi::pengajuanDiproses($izinKeluar);
         }
 

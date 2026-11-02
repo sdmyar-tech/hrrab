@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
  */
 class PengajuanIzinKeluar extends Model
 {
-    use Concerns\DicatatLog, SnapshotUnitKerja;
+    use Concerns\DicatatLog, Concerns\IkutTanggaAlur, SnapshotUnitKerja;
 
     protected $table = 'pengajuan_izin_keluars';
 
@@ -126,7 +126,7 @@ class PengajuanIzinKeluar extends Model
 
     public function currentLevelLabel(): string
     {
-        return PengajuanWorkflow::levelLabel($this->current_level);
+        return PengajuanWorkflow::labelTahap($this);
     }
 
     public function keperluanLabel(): string

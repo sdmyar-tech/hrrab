@@ -10,8 +10,9 @@
 <div class="col-md-6" data-tahap-admin>
     <label class="form-label small mb-1">Tahap (bila Menunggu)</label>
     <select name="current_level" class="form-select form-select-sm">
-        @foreach (\App\Support\PengajuanWorkflow::LEVEL_LABELS as $nilai => $label)
-            <option value="{{ $nilai }}" @selected(old('current_level', $pengajuan->current_level) === $nilai)>{{ $label }}</option>
+        {{-- Tangga alur: pilihan = tahap tangga pengajuan ini ("tangga:indeks"); selain itu level alur bawaan. --}}
+        @foreach (\App\Support\PengajuanWorkflow::pilihanTahapAdmin($pengajuan) as $nilai => $label)
+            <option value="{{ $nilai }}" @selected(old('current_level', \App\Support\PengajuanWorkflow::nilaiTahapAdmin($pengajuan)) === $nilai)>{{ $label }}</option>
         @endforeach
     </select>
 </div>

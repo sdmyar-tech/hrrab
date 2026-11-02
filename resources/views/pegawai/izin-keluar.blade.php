@@ -64,13 +64,8 @@
             {{-- ============ Samping: alur & cara pakai ============ --}}
             <div class="col-lg-5 d-grid gap-3">
                 @if ($rute)
-                    <x-card title="Alur Persetujuan" icon="bi-signpost-split">
-                        <x-timeline label="Alur persetujuan izin keluar">
-                            @foreach ($rute as $r)
-                                <x-timeline.item state="pending" icon="bi-person" :title="str_replace(' (Approve Akhir)', '', $r['label'])" />
-                            @endforeach
-                            <x-timeline.item state="pending" icon="bi-ticket-perforated" title="Tiket keluar terbit" />
-                        </x-timeline>
+                    <x-card title="Alur Persetujuan" icon="bi-signpost-split" subtitle="Pengajuan Anda melewati tahap berikut secara berurutan.">
+                        <x-tangga-alur :tahap="\App\Support\PengajuanWorkflow::tahapTampil($rute)" awal="Anda mengajukan" akhir="Tiket keluar terbit" arah="vertikal" label="Alur persetujuan izin keluar" />
                     </x-card>
                 @endif
                 <x-card title="Cara Memakai Tiket" icon="bi-info-circle">

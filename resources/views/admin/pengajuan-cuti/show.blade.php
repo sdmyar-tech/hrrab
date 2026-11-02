@@ -35,7 +35,7 @@
                             <h2 class="h6 fw-bold mb-3">Aksi</h2>
                             @include('admin.partials.gm-pengganti-badge', ['pengajuan' => $pengajuanCuti])
 
-                            @if ($pengajuanCuti->current_level === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_DIVISI)
+                            @if ($pengajuanCuti->perluPengganti())
                                 <form action="{{ route('admin.pengajuan-cuti.approve', $pengajuanCuti->id) }}" method="POST" class="form-approve-kepala mb-2">
                                     @csrf
                                     <label for="f-pengganti-nama" class="form-label small mb-1">Pengganti Tugas</label>
@@ -46,7 +46,7 @@
                                                 <option value="{{ $nama }}">{{ $nama }}</option>
                                             @endforeach
                                         </select>
-                                        <button type="submit" class="btn btn-success" title="Setujui &amp; teruskan ke Kepala SDM">
+                                        <button type="submit" class="btn btn-success" title="Setujui &amp; teruskan ke tahap berikutnya">
                                             <i class="bi bi-check-lg"></i> Setujui
                                         </button>
                                     </div>

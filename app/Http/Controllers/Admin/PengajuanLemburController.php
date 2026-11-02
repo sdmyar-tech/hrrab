@@ -113,15 +113,14 @@ class PengajuanLemburController extends Controller
             abort(403, 'Anda tidak berwenang menyetujui pengajuan ini pada tahap ini.');
         }
 
-        $updates = PengajuanWorkflow::approvalUpdates($approver, $pengajuanLembur);
-        $pengajuanLembur->update($updates);
+        $updates = PengajuanWorkflow::setujui($approver, $pengajuanLembur);
         Notifikasi::pengajuanDiproses($pengajuanLembur);
 
         return redirect()
             ->route('admin.pengajuan-lembur.index')
             ->with('success', $updates['current_level'] === null
                 ? 'Pengajuan lembur berhasil disetujui.'
-                : 'Pengajuan lembur disetujui dan diteruskan ke ' . PengajuanWorkflow::levelLabel($updates['current_level']) . '.');
+                : 'Pengajuan lembur disetujui dan ' . PengajuanWorkflow::keteranganLanjut($pengajuanLembur) . '.');
     }
 
     public function reject(Request $request, PengajuanLembur $pengajuanLembur): RedirectResponse
@@ -158,7 +157,7 @@ class PengajuanLemburController extends Controller
     {
         $v = $request->validate([
             'status' => ['required', Rule::in([PengajuanLembur::STATUS_PENDING, PengajuanLembur::STATUS_APPROVED, PengajuanLembur::STATUS_REJECTED])],
-            'current_level' => ['nullable', 'required_if:status,pending', Rule::in(array_keys(PengajuanWorkflow::LEVEL_LABELS))],
+            'current_level' => ['nullable', 'required_if:status,pending', Rule::in(array_keys(PengajuanWorkflow::pilihanTahapAdmin($pengajuanLembur)))],
             'tanggal' => ['required', 'date'],
             'uraian_tugas' => ['required', 'string', 'max:2000'],
             'jam_mulai' => ['required', 'date_format:H:i'],
@@ -174,7 +173,7 @@ class PengajuanLemburController extends Controller
             ...PengajuanWorkflow::statusAdmin($pengajuanLembur, $v['status'], $v['current_level'] ?? null, Auth::user()),
         ]);
 
-        if ($statusLama !== $pengajuanLembur->status || $pengajuanLembur->wasChanged('current_level')) {
+        if ($statusLama !== $pengajuanLembur->status || $pengajuanLembur->wasChanged(['current_level', 'tahap_ke'])) {
             Notifikasi::pengajuanDiproses($pengajuanLembur);
         }
 

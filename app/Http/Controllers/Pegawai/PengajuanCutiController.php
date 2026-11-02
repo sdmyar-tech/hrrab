@@ -54,6 +54,7 @@ class PengajuanCutiController extends Controller
             'maxPengajuanTahunan' => PengajuanCuti::MAX_PENGAJUAN_PER_TAHUN,
             'kategoriBesarOptions' => PengajuanCuti::KATEGORI_BESAR_OPTIONS,
             'riwayat' => $riwayat,
+            'alur' => PengajuanWorkflow::tahapTampil(PengajuanWorkflow::rute($user, $user->unitKerja())),
         ]);
     }
 
@@ -169,13 +170,13 @@ class PengajuanCutiController extends Controller
             'lama_cuti' => $lamaCuti,
             'keterangan' => $validated['keterangan'] ?? null,
             'status' => PengajuanCuti::STATUS_PENDING,
-            'current_level' => PengajuanWorkflow::initialLevel($user, $unit),
+            ...PengajuanWorkflow::kolomAwal($user, $unit),
         ]);
         Notifikasi::pengajuanMenunggu($pengajuan);
 
         return redirect()
             ->route('pegawai.pengajuan-cuti')
-            ->with('success', 'Pengajuan cuti berhasil dikirim. Menunggu persetujuan ' . PengajuanWorkflow::levelLabel($pengajuan->current_level) . '.');
+            ->with('success', 'Pengajuan cuti berhasil dikirim. Menunggu persetujuan ' . $pengajuan->currentLevelLabel() . '.');
     }
 
     private function hitungHariKerja(Carbon $mulai, Carbon $selesai): int

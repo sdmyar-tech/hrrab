@@ -1925,3 +1925,79 @@ html[data-theme="dark"] .notif-item.is-baru { background: rgba(240, 138, 140, .0
     .absen-filter > .d-flex { width: 100%; }
     .absen-cari { width: 100%; }
 }
+
+/* =====================================================================
+   TANGGA ALUR PENGAJUAN (x-tangga-alur + halaman pengaturan)
+   ===================================================================== */
+.hr-tangga { display: flex; margin: 0; padding: 0; list-style: none; }
+.hr-tangga-item { position: relative; display: flex; gap: var(--hr-space-3); min-width: 0; }
+.hr-tangga-penanda { position: relative; z-index: 1; flex: none; width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: 50%; border: 2px solid var(--admin-border-strong); background: var(--admin-surface); color: var(--admin-muted); font-size: var(--hr-text-xs); font-weight: var(--hr-weight-bold); }
+.hr-tangga-isi { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 5px; }
+.hr-tangga-kepala { display: flex; flex-wrap: wrap; align-items: center; gap: var(--hr-space-1) var(--hr-space-2); }
+.hr-tangga-label { font-size: var(--hr-text-sm); font-weight: var(--hr-weight-semibold); color: var(--admin-heading); overflow-wrap: anywhere; }
+.hr-tangga-oleh, .hr-tangga-catatan { font-size: var(--hr-text-xs); color: var(--admin-muted); overflow-wrap: anywhere; }
+.hr-tangga-catatan { font-style: italic; }
+.hr-tangga-peringatan { color: var(--hr-warning); font-weight: var(--hr-weight-semibold); }
+/* Garis penghubung antartahap */
+.hr-tangga-item:not(:last-child)::before { content: ""; position: absolute; background: var(--admin-border); }
+.hr-tangga-item.is-selesai:not(:last-child)::before, .hr-tangga-item.is-awal:not(:last-child)::before { background: var(--hr-success); opacity: .45; }
+/* Keadaan tahap */
+.hr-tangga-item.is-awal .hr-tangga-penanda { border-color: var(--hr-primary-soft); background: var(--hr-primary-soft); color: var(--hr-primary-soft-text); font-size: var(--hr-text-sm); }
+.hr-tangga-item.is-akhir .hr-tangga-penanda { border-style: dashed; color: var(--hr-success); font-size: var(--hr-text-sm); }
+.hr-tangga-item.is-selesai .hr-tangga-penanda { border-color: var(--hr-success); background: var(--hr-success); color: #fff; font-size: var(--hr-text-sm); }
+.hr-tangga-item.is-berjalan .hr-tangga-penanda { border-color: var(--hr-primary); background: var(--hr-primary); color: #fff; box-shadow: 0 0 0 4px var(--hr-primary-ring); }
+.hr-tangga-item.is-ditolak .hr-tangga-penanda { border-color: var(--hr-danger); background: var(--hr-danger); color: #fff; font-size: var(--hr-text-sm); }
+.hr-tangga-item.is-lewati { opacity: .6; }
+.hr-tangga-item.is-lewati .hr-tangga-penanda { border-style: dashed; }
+.hr-tangga-item.is-menunggu .hr-tangga-label { color: var(--admin-muted); }
+.hr-tangga-item.is-kosong .hr-tangga-penanda { border-color: var(--hr-warning); background: var(--hr-warning-soft); color: var(--hr-warning); font-size: var(--hr-text-sm); }
+/* Vertikal (kartu samping, HP) */
+.hr-tangga-vertikal { flex-direction: column; }
+.hr-tangga-vertikal .hr-tangga-item { padding-bottom: var(--hr-space-4); }
+.hr-tangga-vertikal .hr-tangga-item:last-child { padding-bottom: 0; }
+.hr-tangga-vertikal .hr-tangga-item:not(:last-child)::before { left: 15px; top: 34px; bottom: 2px; width: 2px; border-radius: 2px; }
+/* Horizontal (lebar): penanda di atas, garis ke kanan */
+@media (min-width: 768px) {
+    .hr-tangga-horizontal { overflow-x: auto; padding-bottom: var(--hr-space-1); }
+    .hr-tangga-horizontal .hr-tangga-item { flex: 1 1 0; min-width: 132px; flex-direction: column; gap: var(--hr-space-2); padding-right: var(--hr-space-3); }
+    .hr-tangga-horizontal .hr-tangga-item:not(:last-child)::before { top: 15px; left: 36px; right: 4px; height: 2px; border-radius: 2px; }
+    .hr-tangga-horizontal .hr-tangga-isi { padding-top: 0; }
+}
+@media (max-width: 767.98px) {
+    .hr-tangga-horizontal { flex-direction: column; }
+    .hr-tangga-horizontal .hr-tangga-item { padding-bottom: var(--hr-space-4); }
+    .hr-tangga-horizontal .hr-tangga-item:last-child { padding-bottom: 0; }
+    .hr-tangga-horizontal .hr-tangga-item:not(:last-child)::before { left: 15px; top: 34px; bottom: 2px; width: 2px; border-radius: 2px; }
+}
+
+/* ---------- Halaman Tangga Alur: daftar per bagian ---------- */
+.tangga-baris { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--hr-space-3); }
+.tangga-sel { display: flex; flex-direction: column; gap: var(--hr-space-3); min-width: 0; padding: var(--hr-space-4); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); background: var(--admin-surface); }
+.tangga-sel.is-otomatis { background: var(--admin-surface-soft); border-style: dashed; }
+.tangga-sel.is-peringatan { border-color: var(--hr-warning); }
+.tangga-sel-kepala { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--hr-space-2); }
+.tangga-sel-judul { margin: 0; font-size: var(--hr-text-sm); font-weight: var(--hr-weight-semibold); color: var(--admin-heading); }
+.tangga-sel-aksi { display: flex; flex-wrap: wrap; gap: var(--hr-space-2); }
+.tangga-sel-otomatis { margin: 0; font-size: var(--hr-text-sm); color: var(--admin-muted); }
+.tangga-sel-info { margin: 0; font-size: var(--hr-text-xs); color: var(--admin-muted); }
+/* Dua kartu otomatis berdampingan; kartu yang sudah diatur selebar baris agar tangganya muat mendatar. */
+@media (min-width: 992px) {
+    .tangga-baris { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tangga-sel:not(.is-otomatis) { grid-column: 1 / -1; }
+}
+
+/* ---------- Form Tangga Alur: penyusun tahap ---------- */
+.tangga-tahap { border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); background: var(--admin-surface); }
+.tangga-tahap + .tangga-tahap { margin-top: var(--hr-space-3); }
+.tangga-tahap-kepala { display: flex; align-items: center; gap: var(--hr-space-2); padding: var(--hr-space-3) var(--hr-space-4); border-bottom: 1px solid var(--admin-border); background: var(--admin-surface-soft); border-radius: var(--hr-radius-md) var(--hr-radius-md) 0 0; }
+.tangga-tahap-no { flex: none; width: 28px; height: 28px; display: inline-grid; place-items: center; border-radius: 50%; background: var(--hr-primary); color: #fff; font-size: var(--hr-text-xs); font-weight: var(--hr-weight-bold); }
+.tangga-tahap-judul { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--hr-text-sm); font-weight: var(--hr-weight-semibold); color: var(--admin-heading); }
+.tangga-tahap-kepala .btn:disabled { border-color: transparent; opacity: .35; }
+.tangga-tahap-isi { display: grid; gap: var(--hr-space-3); padding: var(--hr-space-4); }
+.tangga-sumber { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--hr-space-2); align-items: center; padding: var(--hr-space-3); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-sm); background: var(--admin-surface-soft); }
+.tangga-sumber-nama { font-size: var(--hr-text-xs); color: var(--admin-muted); overflow-wrap: anywhere; }
+.tangga-sumber > [data-hapus-sumber] { justify-self: end; }
+.tangga-sumber-nama.is-kosong { color: var(--hr-warning); font-weight: var(--hr-weight-semibold); }
+@media (min-width: 768px) { .tangga-sumber { grid-template-columns: 180px minmax(0, 1fr) auto; } .tangga-sumber-nama { grid-column: 1 / -1; } }
+.tangga-panah { display: flex; justify-content: center; color: var(--admin-muted); margin: var(--hr-space-2) 0; }
+.tangga-pratinjau { position: sticky; top: calc(var(--hr-topbar-h, 64px) + var(--hr-space-4)); }

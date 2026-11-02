@@ -75,7 +75,14 @@
                 </x-card>
             </div>
 
-            <div class="col-lg-5">
+            <div class="col-lg-5 d-grid gap-3 align-content-start">
+                {{-- Alur bergantung bagian tempat lembur: satu tangga per bagian, yang tampil mengikuti pilihan bagian. --}}
+                @foreach ($alurPerUnit as $unitAlur => $alur)
+                    <x-card title="Alur Persetujuan" icon="bi-signpost-split" :subtitle="count($alurPerUnit) > 1 ? 'Lembur di bagian ' . $unitAlur : 'Pengajuan Anda melewati tahap berikut secara berurutan.'"
+                        data-alur-unit="{{ $unitAlur }}" :hidden="count($alurPerUnit) > 1 && ! $loop->first">
+                        <x-tangga-alur :tahap="$alur" awal="Anda mengajukan" akhir="Lembur disetujui" arah="vertikal" :label="'Alur persetujuan lembur bagian ' . $unitAlur" />
+                    </x-card>
+                @endforeach
                 <x-card title="Ketentuan" icon="bi-info-circle">
                     <ul class="hr-daftar-info">
                         <li><i class="bi bi-file-earmark-text" aria-hidden="true"></i>Lembur dihitung dari <strong>surat tugas</strong> atasan, bukan dari jam pulang mesin absen.</li>
@@ -152,12 +159,22 @@
             jumlahJamInput.value = minutes > 0 ? (minutes / 60).toFixed(2) + ' jam' : '';
         }
 
+        // Bertugas di beberapa bagian: kartu alur mengikuti bagian tempat lembur yang dipilih.
+        const unitInput = document.getElementById('unit_kerja');
+        function updateAlur() {
+            const kartu = document.querySelectorAll('[data-alur-unit]');
+            const dipilih = unitInput && unitInput.value ? unitInput.value : (kartu[0] && kartu[0].dataset.alurUnit);
+            kartu.forEach(function (k) { k.hidden = k.dataset.alurUnit !== dipilih; });
+        }
+
         tanggalInput.addEventListener('change', updateHari);
         jamMulaiInput.addEventListener('change', updateJumlahJam);
         jamSelesaiInput.addEventListener('change', updateJumlahJam);
+        if (unitInput) unitInput.addEventListener('change', updateAlur);
 
         updateHari();
         updateJumlahJam();
+        updateAlur();
     });
 </script>
 @endsection

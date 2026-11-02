@@ -443,6 +443,9 @@
                                                     <i class="bi {{ $alur['jenis'] === 'Cuti' ? 'bi-calendar2-week' : 'bi-clock-history' }}"></i> {{ $alur['jenis'] }}
                                                 </span>
                                                 <span class="fw-semibold small">{{ $alur['unit'] ?? 'Bagian belum diisi' }}</span>
+                                                @if ($alur['tahap'][0]['tangga'] ?? false)
+                                                    <a href="{{ route('admin.tangga-alur.index') }}" class="pd-chip pd-chip-primary text-decoration-none" title="Diatur di Tangga Alur Pengajuan"><i class="bi bi-signpost-split"></i> Tangga alur</a>
+                                                @endif
                                             </div>
                                             <ol class="pd-steps">
                                                 @foreach ($alur['tahap'] as $tahap)

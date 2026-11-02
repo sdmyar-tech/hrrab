@@ -10,6 +10,7 @@ use App\Models\Penugasan;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /** Menentukan tingkatan pengaju & alur persetujuan berjenjang untuk pengajuan cuti/lembur/izin keluar. */
 class PengajuanWorkflow
@@ -19,6 +20,9 @@ class PengajuanWorkflow
     public const LEVEL_KEPALA_SDM = 'kepala_sdm';
 
     public const LEVEL_GM = 'gm';
+
+    /** Pengajuan mengikuti Tangga Alur bagian (tahap berjalan = kolom tahap_ke, detail tahap = kolom tangga). */
+    public const LEVEL_TANGGA = 'tangga';
 
     public const LEVEL_LABELS = [
         self::LEVEL_KEPALA_DIVISI => 'Kepala Bagian',
@@ -44,6 +48,10 @@ class PengajuanWorkflow
     /** Tingkat approval pertama saat pengajuan baru dibuat di $unit (cuti: unit utama; lembur: unit yang dipilih). */
     public static function initialLevel(User $user, ?string $unit, bool $lembur = false): string
     {
+        if (TanggaAlurWorkflow::untuk($user, $unit)) {
+            return self::LEVEL_TANGGA;
+        }
+
         // Alur khusus (diatur Kepala SDM/Admin) selalu menang atas aturan otomatis.
         if ($alur = AlurPegawai::milik($user->data_pegawai_id)) {
             return $alur->daftarTahap()[0] ?? self::LEVEL_KEPALA_SDM;
@@ -64,6 +72,16 @@ class PengajuanWorkflow
         }
 
         return self::LEVEL_KEPALA_DIVISI;
+    }
+
+    /** Kolom tahap awal pengajuan baru: tangga alur bagian (salinan tahap + tahap pertama) atau level alur bawaan. */
+    public static function kolomAwal(User $user, ?string $unit, bool $lembur = false): array
+    {
+        if ($tangga = TanggaAlurWorkflow::untuk($user, $unit)) {
+            return ['current_level' => self::LEVEL_TANGGA, 'tangga' => TanggaAlurWorkflow::salinan($tangga, $unit), 'tahap_ke' => 0];
+        }
+
+        return ['current_level' => self::initialLevel($user, $unit, $lembur)];
     }
 
     /** Tahap berikutnya setelah $currentLevel disetujui, bergantung pada siapa $submitter-nya. */
@@ -158,6 +176,10 @@ class PengajuanWorkflow
      */
     public static function rute(User $user, ?string $unit, bool $lembur = false): array
     {
+        if ($tangga = TanggaAlurWorkflow::untuk($user, $unit)) {
+            return TanggaAlurWorkflow::rute($tangga, $user, $unit);
+        }
+
         $pegawaiId = $user->data_pegawai_id;
         $alur = AlurPegawai::with(['atasan', 'gm'])->where('data_pegawai_id', $pegawaiId ?? 0)->first();
         $tahap = [];
@@ -188,6 +210,22 @@ class PengajuanWorkflow
         }
 
         return $tahap;
+    }
+
+    /**
+     * Rute → data komponen x-tangga-alur (nama tahap, penyetuju, tahap akhir, semua harus setuju, tanpa penyetuju).
+     *
+     * @return list<array{label: string, oleh: string, final: bool, semua: bool, kosong: bool}>
+     */
+    public static function tahapTampil(array $rute): array
+    {
+        return array_map(fn (array $t) => [
+            'label' => str_replace(' (Approve Akhir)', '', $t['label']),
+            'oleh' => $t['approvers']->take(3)->pluck('name')->implode(', ') . ($t['approvers']->count() > 3 ? ' +' . ($t['approvers']->count() - 3) . ' lainnya' : ''),
+            'final' => $t['final'],
+            'semua' => $t['semua'] ?? false,
+            'kosong' => $t['approvers']->isEmpty(),
+        ], $rute);
     }
 
     /** Cari akun User pemilik/pengaju pengajuan (lewat relasi data_pegawai_id). */
@@ -222,6 +260,10 @@ class PengajuanWorkflow
             return false;
         }
 
+        if ($pengajuan->current_level === self::LEVEL_TANGGA) {
+            return TanggaAlurWorkflow::bisaSetujui($approver, $pengajuan);
+        }
+
         $submitterUnit = self::unitPengajuan($pengajuan);
         $alur = AlurPegawai::milik($pengajuan->data_pegawai_id);
 
@@ -239,6 +281,10 @@ class PengajuanWorkflow
     /** Kolom yang di-update saat $approver menyetujui tahap saat ini (sudah lolos canAct()). */
     public static function approvalUpdates(User $approver, PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): array
     {
+        if ($pengajuan->current_level === self::LEVEL_TANGGA) {
+            return TanggaAlurWorkflow::updateSetuju($approver, $pengajuan);
+        }
+
         $current = $pengajuan->current_level;
         $updates = [];
 
@@ -270,13 +316,61 @@ class PengajuanWorkflow
     }
 
     /**
+     * Setujui tahap berjalan (sudah lolos canAct) + kolom $tambahan (mis. pengganti tugas), lalu simpan.
+     * Tangga alur: persetujuan dicatat per tahap sebelum pengajuan berpindah tahap.
+     */
+    public static function setujui(User $approver, PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan, array $tambahan = []): array
+    {
+        return DB::transaction(function () use ($approver, $pengajuan, $tambahan) {
+            $updates = [...self::approvalUpdates($approver, $pengajuan), ...$tambahan];
+            if ($pengajuan->current_level === self::LEVEL_TANGGA) {
+                TanggaAlurWorkflow::catat($approver, $pengajuan, (int) $pengajuan->tahap_ke);
+            }
+            $pengajuan->update($updates);
+
+            return $updates;
+        });
+    }
+
+    /** Lanjutan kalimat setelah "… disetujui dan": tahap berikutnya, atau tahap yang masih menunggu penyetuju lain. */
+    public static function keteranganLanjut(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): string
+    {
+        return $pengajuan->current_level === self::LEVEL_TANGGA && ! $pengajuan->wasChanged('tahap_ke')
+            ? 'tercatat. Tahap ' . $pengajuan->currentLevelLabel() . ' masih menunggu persetujuan lain'
+            : 'diteruskan ke ' . $pengajuan->currentLevelLabel();
+    }
+
+    /** @return array<string, string> pilihan tahap untuk form Ubah Langsung (Admin) */
+    public static function pilihanTahapAdmin(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): array
+    {
+        return $pengajuan->tangga ? TanggaAlurWorkflow::pilihanAdmin($pengajuan) : self::LEVEL_LABELS;
+    }
+
+    /** Nilai tahap saat ini di form Ubah Langsung (Admin): "tangga:indeks" untuk tangga alur. */
+    public static function nilaiTahapAdmin(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): ?string
+    {
+        return $pengajuan->tangga ? self::LEVEL_TANGGA . ':' . (int) $pengajuan->tahap_ke : $pengajuan->current_level;
+    }
+
+    /**
      * Kolom status yang di-set Admin secara langsung (tanpa tahapan).
-     * Disetujui/ditolak = final atas nama Admin; menunggu = dikembalikan ke tahap $level.
+     * Disetujui/ditolak = final atas nama Admin; menunggu = dikembalikan ke tahap $level
+     * ("tangga:indeks" untuk tangga alur: persetujuan tahap itu & sesudahnya diulang).
      */
     public static function statusAdmin(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan, string $status, ?string $level, User $admin): array
     {
+        $tangga = [];
+        if ($level !== null && str_starts_with($level, self::LEVEL_TANGGA . ':')) {
+            $ke = (int) substr($level, strlen(self::LEVEL_TANGGA) + 1);
+            $level = self::LEVEL_TANGGA;
+            if ($status === $pengajuan::STATUS_PENDING) {
+                TanggaAlurWorkflow::ulangDari($pengajuan, $ke);
+                $tangga = ['tahap_ke' => $ke];
+            }
+        }
+
         return match ($status) {
-            $pengajuan::STATUS_PENDING => ['current_level' => $level, 'approved_by' => null, 'approved_at' => null],
+            $pengajuan::STATUS_PENDING => ['current_level' => $level, 'approved_by' => null, 'approved_at' => null] + $tangga,
             default => [
                 'current_level' => null,
                 'approved_by' => $pengajuan->status === $status ? ($pengajuan->approved_by ?? $admin->id) : $admin->id,
@@ -355,14 +449,40 @@ class PengajuanWorkflow
 
     public static function levelLabel(?string $level): string
     {
-        return self::LEVEL_LABELS[$level] ?? '-';
+        return $level === self::LEVEL_TANGGA ? 'Tangga Alur' : (self::LEVEL_LABELS[$level] ?? '-');
     }
 
-    /** Batasi daftar pengajuan yang terlihat sesuai tingkatan/divisi $viewer. */
+    /** Nama tahap berjalan sebuah pengajuan (tangga alur: nama tahapnya, mis. "Koordinator SDM"). */
+    public static function labelTahap(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): string
+    {
+        return $pengajuan->current_level === self::LEVEL_TANGGA
+            ? ($pengajuan->tangga[(int) $pengajuan->tahap_ke]['nama'] ?? self::levelLabel(self::LEVEL_TANGGA))
+            : self::levelLabel($pengajuan->current_level);
+    }
+
+    /**
+     * Batasi daftar pengajuan yang terlihat sesuai tingkatan/divisi $viewer,
+     * ditambah pengajuan tangga alur yang menunggu / pernah disetujui $viewer.
+     */
     public static function scopeVisibleTo(Builder $query, User $viewer): Builder
     {
+        if (in_array($viewer->role, [User::ROLE_PEMBINA, User::ROLE_ADMIN], true)) {
+            return $query;
+        }
+        $tangga = TanggaAlurWorkflow::idTerlihat($query->getModel(), $viewer);
+
+        return $query->where(function ($q) use ($viewer, $tangga) {
+            self::lingkupPeran($q, $viewer);
+            if ($tangga) {
+                $q->orWhereIn($q->qualifyColumn('id'), $tangga);
+            }
+        });
+    }
+
+    /** Lingkup bawaan per peran (alur Kepala Bagian → GM → Kepala SDM). */
+    private static function lingkupPeran(Builder $query, User $viewer): Builder
+    {
         return match ($viewer->role) {
-            User::ROLE_PEMBINA, User::ROLE_ADMIN => $query,
             User::ROLE_GM => $query->where(function ($q) use ($viewer) {
                 $q->whereIn('data_pegawai_id', User::whereIn('role', [User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM])
                     ->whereNotNull('data_pegawai_id')->select('data_pegawai_id'))
@@ -380,6 +500,8 @@ class PengajuanWorkflow
                 $q->whereNotNull('kepala_approved_by')
                     ->orWhereNotNull('gm_approved_by')
                     ->orWhere('current_level', self::LEVEL_KEPALA_SDM)
+                    // Tangga alur yang sudah selesai (disetujui/ditolak) tetap masuk laporan SDM walau SDM tidak di tangganya.
+                    ->orWhere(fn ($w) => $w->whereNotNull($q->qualifyColumn('tangga'))->where($q->qualifyColumn('status'), '!=', $q->getModel()::STATUS_PENDING))
                     ->orWhere('data_pegawai_id', $viewer->data_pegawai_id ?? 0)
                     ->orWhereIn('unit_kerja', $viewer->unitsDipimpinUntukQuery())
                     ->orWhereIn('data_pegawai_id', self::pegawaiDenganAtasan($viewer));

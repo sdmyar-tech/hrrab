@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\PengajuanLemburController as AdminPengajuanLembur
 use App\Http\Controllers\Admin\PenugasanController as AdminPenugasanController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\SuratPeringatanController as AdminSuratPeringatanController;
+use App\Http\Controllers\Admin\TanggaAlurController as AdminTanggaAlurController;
 use App\Http\Controllers\Admin\UnitController as AdminUnitController;
 use App\Http\Controllers\Admin\UnitOrganisasiController as AdminUnitOrganisasiController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -465,5 +466,13 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         Route::put('/pegawai/{pegawai}/alur', [AlurPegawaiController::class, 'update'])->name('pegawai.alur.update');
         Route::delete('/pegawai/{pegawai}/alur', [AlurPegawaiController::class, 'destroy'])->name('pegawai.alur.destroy');
         Route::post('/akun/{user}/wajib-password', [WajibPasswordController::class, 'atur'])->name('akun.wajib-password');
+
+        // Tangga Alur Pengajuan: alur persetujuan cuti/lembur/izin keluar per bagian (pegawai biasa & koordinator).
+        Route::prefix('tangga-alur')->name('tangga-alur.')->group(function () {
+            Route::get('/', [AdminTanggaAlurController::class, 'index'])->name('index');
+            Route::get('/{unit}/{sasaran}', [AdminTanggaAlurController::class, 'edit'])->name('edit')->whereIn('sasaran', ['staf', 'koordinator']);
+            Route::put('/{unit}/{sasaran}', [AdminTanggaAlurController::class, 'update'])->name('update')->whereIn('sasaran', ['staf', 'koordinator']);
+            Route::delete('/{unit}/{sasaran}', [AdminTanggaAlurController::class, 'destroy'])->name('destroy')->whereIn('sasaran', ['staf', 'koordinator']);
+        });
     });
 });

@@ -111,6 +111,7 @@ Aturan susunan:
 | `x-status-badge` | `<x-status-badge :badge="$item->badgeClass()">{{ $item->statusLabel() }}</x-status-badge>` — kelas `text-bg-*` dari model → tone semantik |
 | `x-section-nav` | Navigasi bagian halaman panjang (kolom kiri lengket, penanda bagian terlihat): `:items="[['id', 'label', 'icon', 'status' => true\|false\|null]]"` |
 | `x-stepper` | Penunjuk langkah form bertahap: `id :steps :current`; perbarui dengan `hrStepper(id, indeks)` |
+| `x-tangga-alur` | Tangga alur persetujuan: `:tahap="[['label','oleh','status','final','semua','kosong','catatan']]" awal="Anda mengajukan" akhir="Disetujui" arah="horizontal\|vertikal"`; status `selesai\|berjalan\|menunggu\|ditolak\|lewati` (kosong = pratinjau rute). Data rute → `PengajuanWorkflow::tahapTampil($rute)` |
 
 Pola kelas (CSS di `ui.css`, tanpa komponen):
 
@@ -125,6 +126,7 @@ Pola kelas (CSS di `ui.css`, tanpa komponen):
 | `.hr-bilah-aksi` | Bilah tombol simpan lengket di bawah form panjang (tombol terakhir rata kanan) |
 | `.lamaran-filter` + `.pub-chips` | Baris chip filter + urutan (chip bisa digeser di HP) |
 | `partials.saring-status` | Saring kartu `[data-status]` lewat chip `[data-saring-status]` tanpa muat ulang |
+| `.tangga-sel` / `.tangga-tahap` / `.tangga-sumber` | Halaman Tangga Alur Pengajuan: kartu tangga per bagian (otomatis = garis putus) & penyusun tahap (kartu tahap, baris sumber penyetuju) |
 | `x-stat-card` | `<x-stat-card label value icon tone unit meta :trend="12.5" trend-label href>` |
 | `x-page-header` | `title subtitle eyebrow back back-label` + slot `actions`, `media` |
 | `x-table` | `<x-table caption compact sticky>` + slot `head`, `foot`; di HP otomatis jadi kartu |

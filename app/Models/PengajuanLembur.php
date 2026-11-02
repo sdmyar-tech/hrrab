@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\IkutTanggaAlur;
 use App\Models\Concerns\SnapshotUnitKerja;
 use App\Support\PengajuanWorkflow;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PengajuanLembur extends Model
 {
-    use \App\Models\Concerns\DicatatLog, HasFactory, SnapshotUnitKerja;
+    use \App\Models\Concerns\DicatatLog, HasFactory, IkutTanggaAlur, SnapshotUnitKerja;
 
     protected $table = 'pengajuan_lemburs';
 
@@ -95,6 +96,6 @@ class PengajuanLembur extends Model
 
     public function currentLevelLabel(): string
     {
-        return PengajuanWorkflow::levelLabel($this->current_level);
+        return PengajuanWorkflow::labelTahap($this);
     }
 }

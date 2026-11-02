@@ -57,6 +57,10 @@ class Notifikasi
 
     public static function pengajuanDiproses(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): void
     {
+        // Tangga alur "semua harus setuju": persetujuan sebagian tidak memindah tahap → penyetuju lain sudah diberi tahu.
+        if ($pengajuan->current_level === PengajuanWorkflow::LEVEL_TANGGA && ! $pengajuan->wasChanged(['current_level', 'tahap_ke', 'status'])) {
+            return;
+        }
         $pengajuan->refresh()->loadMissing('dataPegawai.kepegawaian');
 
         if ($pengajuan->isPending()) {
@@ -91,6 +95,10 @@ class Notifikasi
 
     public static function approver(PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): Collection
     {
+        if ($pengajuan->current_level === PengajuanWorkflow::LEVEL_TANGGA) {
+            return TanggaAlurWorkflow::penyetujuMenunggu($pengajuan);
+        }
+
         return User::with('dataPegawai.penugasanAktif')
             ->whereIn('role', [User::ROLE_KEPALA_BAGIAN, User::ROLE_KEPALA_SDM, User::ROLE_GM])
             ->get()

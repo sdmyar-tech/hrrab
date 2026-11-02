@@ -133,11 +133,16 @@
                         <div><dt>Mulai bekerja</dt><dd>{{ optional($kepegawaian?->tanggal_masuk)->translatedFormat('d M Y') ?? '-' }}</dd></div>
                     </dl>
                 </x-card>
+                @if ($alur)
+                    <x-card title="Alur Persetujuan" icon="bi-signpost-split" subtitle="Pengajuan Anda melewati tahap berikut secara berurutan.">
+                        <x-tangga-alur :tahap="$alur" awal="Anda mengajukan" akhir="Cuti disetujui" arah="vertikal" label="Alur persetujuan cuti" />
+                    </x-card>
+                @endif
                 <x-card title="Ketentuan" icon="bi-info-circle">
                     <ul class="hr-daftar-info">
                         <li><i class="bi bi-calendar-week" aria-hidden="true"></i>Cuti biasa diajukan paling lambat <strong>7 hari</strong> sebelum tanggal mulai. Cuti mendadak (duka, melahirkan, bencana) boleh mulai hari ini.</li>
                         <li><i class="bi bi-arrow-repeat" aria-hidden="true"></i>Maksimal <strong>{{ $maxPengajuanTahunan }} kali</strong> per tahun dan tidak boleh bentrok dengan cuti lain (minimal jeda 1 hari).</li>
-                        <li><i class="bi bi-person-check" aria-hidden="true"></i>Pengganti tugas ditentukan Kepala Bagian saat menyetujui pengajuan.</li>
+                        <li><i class="bi bi-person-check" aria-hidden="true"></i>Pengganti tugas ditentukan penyetuju tahap pertama saat menyetujui pengajuan.</li>
                     </ul>
                 </x-card>
             </div>

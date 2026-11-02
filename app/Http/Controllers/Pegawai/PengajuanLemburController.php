@@ -35,8 +35,10 @@ class PengajuanLemburController extends Controller
         }
 
         $unitOptions = $user->unitsLembur();
+        $alurPerUnit = collect($unitOptions)->mapWithKeys(fn ($unit) => [$unit => PengajuanWorkflow::tahapTampil(PengajuanWorkflow::rute($user, $unit, lembur: true))])
+            ->filter()->all();
 
-        return view('pegawai.pengajuan-lembur', compact('pengajuanLemburs', 'unitOptions') + $urut);
+        return view('pegawai.pengajuan-lembur', compact('pengajuanLemburs', 'unitOptions', 'alurPerUnit') + $urut);
     }
 
     public function store(Request $request): RedirectResponse
@@ -88,12 +90,12 @@ class PengajuanLemburController extends Controller
             'jam_selesai' => $validated['jam_selesai'],
             'jumlah_jam' => $jumlahJam,
             'status' => PengajuanLembur::STATUS_PENDING,
-            'current_level' => PengajuanWorkflow::initialLevel($user, $unit, lembur: true),
+            ...PengajuanWorkflow::kolomAwal($user, $unit, lembur: true),
         ]);
         Notifikasi::pengajuanMenunggu($pengajuan);
 
         return redirect()
             ->route('pegawai.pengajuan-lembur')
-            ->with('success', 'Pengajuan lembur berhasil dikirim. Menunggu persetujuan ' . PengajuanWorkflow::levelLabel($pengajuan->current_level) . '.');
+            ->with('success', 'Pengajuan lembur berhasil dikirim. Menunggu persetujuan ' . $pengajuan->currentLevelLabel() . '.');
     }
 }

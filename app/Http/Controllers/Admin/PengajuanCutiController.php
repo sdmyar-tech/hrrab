@@ -124,9 +124,8 @@ class PengajuanCutiController extends Controller
             abort(403, 'Anda tidak berwenang menyetujui pengajuan ini pada tahap ini.');
         }
 
-        $updates = PengajuanWorkflow::approvalUpdates($approver, $pengajuanCuti);
-
-        if ($pengajuanCuti->current_level === PengajuanWorkflow::LEVEL_KEPALA_DIVISI) {
+        $tambahan = [];
+        if ($pengajuanCuti->perluPengganti()) {
             $validated = $request->validate([
                 'pengganti_nama' => ['required', 'string', 'max:150'],
             ], [
@@ -137,17 +136,17 @@ class PengajuanCutiController extends Controller
                 return redirect()->back()->with('error', 'Nama pengganti harus berasal dari divisi yang sama dengan pemohon.');
             }
 
-            $updates['pengganti_nama'] = $validated['pengganti_nama'];
+            $tambahan['pengganti_nama'] = $validated['pengganti_nama'];
         }
 
-        $pengajuanCuti->update($updates);
+        $updates = PengajuanWorkflow::setujui($approver, $pengajuanCuti, $tambahan);
         Notifikasi::pengajuanDiproses($pengajuanCuti);
 
         return redirect()
             ->route('admin.pengajuan-cuti.index')
             ->with('success', $updates['current_level'] === null
                 ? 'Pengajuan cuti berhasil disetujui.'
-                : 'Pengajuan cuti disetujui dan diteruskan ke ' . PengajuanWorkflow::levelLabel($updates['current_level']) . '.');
+                : 'Pengajuan cuti disetujui dan ' . PengajuanWorkflow::keteranganLanjut($pengajuanCuti) . '.');
     }
 
     public function reject(Request $request, PengajuanCuti $pengajuanCuti): RedirectResponse
@@ -184,7 +183,7 @@ class PengajuanCutiController extends Controller
     {
         $v = $request->validate([
             'status' => ['required', Rule::in([PengajuanCuti::STATUS_PENDING, PengajuanCuti::STATUS_APPROVED, PengajuanCuti::STATUS_REJECTED])],
-            'current_level' => ['nullable', 'required_if:status,pending', Rule::in(array_keys(PengajuanWorkflow::LEVEL_LABELS))],
+            'current_level' => ['nullable', 'required_if:status,pending', Rule::in(array_keys(PengajuanWorkflow::pilihanTahapAdmin($pengajuanCuti)))],
             'jenis_cuti' => ['required', Rule::in([PengajuanCuti::JENIS_TAHUNAN, PengajuanCuti::JENIS_BESAR])],
             'kategori_cuti_besar' => ['nullable', 'required_if:jenis_cuti,besar', Rule::in(array_keys(PengajuanCuti::KATEGORI_BESAR_OPTIONS))],
             'tanggal_mulai' => ['required', 'date'],
@@ -204,7 +203,7 @@ class PengajuanCutiController extends Controller
             ...PengajuanWorkflow::statusAdmin($pengajuanCuti, $v['status'], $v['current_level'] ?? null, Auth::user()),
         ]);
 
-        if ($statusLama !== $pengajuanCuti->status || $pengajuanCuti->wasChanged('current_level')) {
+        if ($statusLama !== $pengajuanCuti->status || $pengajuanCuti->wasChanged(['current_level', 'tahap_ke'])) {
             Notifikasi::pengajuanDiproses($pengajuanCuti);
         }
 

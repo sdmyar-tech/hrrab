@@ -106,12 +106,12 @@ class IzinKeluarController extends Controller
             'keperluan' => $validated['keperluan'],
             'alasan' => $validated['alasan'],
             'status' => PengajuanIzinKeluar::STATUS_PENDING,
-            'current_level' => PengajuanWorkflow::initialLevel($user, $unit),
+            ...PengajuanWorkflow::kolomAwal($user, $unit),
         ]);
         Notifikasi::pengajuanMenunggu($izin);
 
         return redirect()->route('pegawai.izin-keluar')
-            ->with('success', 'Izin keluar dikirim. Menunggu persetujuan ' . PengajuanWorkflow::levelLabel($izin->current_level) . '. Tiket muncul setelah disetujui.');
+            ->with('success', 'Izin keluar dikirim. Menunggu persetujuan ' . $izin->currentLevelLabel() . '. Tiket muncul setelah disetujui.');
     }
 
     /** Tiket keluar (hanya izin yang sudah disetujui akhir): dibuka pemilik, atau penyetuju/Admin yang berhak melihatnya. */

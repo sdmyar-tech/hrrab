@@ -112,7 +112,7 @@
                                         'kelasTolak' => 'btn-reject-cuti',
                                         'judulSetujui' => 'Setujui Pengajuan Cuti?',
                                         'teksSetujui' => 'Pengajuan cuti ' . $item->dataPegawai?->nama_lengkap . ' akan disetujui pada tahap ini.',
-                                        ...($item->current_level === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_DIVISI ? ['pengganti' => $item->substituteOptions()] : []),
+                                        ...($item->perluPengganti() ? ['pengganti' => $item->substituteOptions()] : []),
                                     ])
                                 </td>
                             </tr>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\IkutTanggaAlur;
 use App\Models\Concerns\SnapshotUnitKerja;
 use App\Support\PengajuanWorkflow;
 use Carbon\Carbon;
@@ -12,7 +13,7 @@ use Illuminate\Support\Collection;
 
 class PengajuanCuti extends Model
 {
-    use \App\Models\Concerns\DicatatLog, HasFactory, SnapshotUnitKerja;
+    use \App\Models\Concerns\DicatatLog, HasFactory, IkutTanggaAlur, SnapshotUnitKerja;
 
     protected $table = 'pengajuan_cutis';
 
@@ -213,7 +214,14 @@ class PengajuanCuti extends Model
 
     public function currentLevelLabel(): string
     {
-        return PengajuanWorkflow::levelLabel($this->current_level);
+        return PengajuanWorkflow::labelTahap($this);
+    }
+
+    /** Penyetuju pertama memilih pengganti tugas: tahap Kepala Bagian (alur bawaan) atau tahap pertama tangga alur. */
+    public function perluPengganti(): bool
+    {
+        return $this->current_level === PengajuanWorkflow::LEVEL_KEPALA_DIVISI
+            || ($this->current_level === PengajuanWorkflow::LEVEL_TANGGA && (int) $this->tahap_ke === 0 && blank($this->pengganti_nama));
     }
 
     public function substituteOptions(): Collection
