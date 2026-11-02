@@ -87,16 +87,16 @@
 </div>
 
 <style>
-    .tahap-alur { border: 1px solid var(--admin-border); border-radius: 10px; padding: .75rem .9rem; background: var(--admin-surface); transition: border-color .15s, background .15s; }
-    .tahap-alur.aktif { border-color: #e3b9ba; background: var(--hr-primary-soft); }
+    .tahap-alur { border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); padding: var(--hr-space-3) var(--hr-space-4); background: var(--admin-surface); transition: border-color var(--hr-durasi) var(--hr-easing), background var(--hr-durasi) var(--hr-easing); }
+    .tahap-alur.aktif { border-color: var(--hr-primary-200); background: var(--hr-primary-soft); }
     .tahap-alur label { cursor: pointer; }
-    .tahap-ikon { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px; background: var(--admin-surface-soft); color: var(--hr-primary); }
+    .tahap-ikon { width: var(--hr-control-sm); height: var(--hr-control-sm); flex: none; display: grid; place-items: center; border-radius: var(--hr-radius-md); background: var(--admin-surface-soft); color: var(--hr-primary); }
     .tahap-alur.aktif .tahap-ikon { background: var(--hr-primary); color: #fff; }
-    .tahap-pilih { margin: .6rem 0 0 calc(1em + 30px + 1rem); }
+    .tahap-pilih { margin: var(--hr-space-2) 0 0 calc(1em + var(--hr-control-sm) + var(--hr-space-4)); }
     .tahap-alur:not(.aktif) .tahap-pilih { display: none; }
-    .alur-pratinjau { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; padding: .6rem .8rem; border-radius: 10px; background: var(--admin-surface-soft); font-size: .8125rem; }
-    .alur-pratinjau .langkah { padding: .2rem .55rem; border-radius: 999px; background: var(--admin-surface); border: 1px solid var(--admin-border); font-weight: 600; }
-    .alur-pratinjau .langkah.akhir { background: #e6f4ea; border-color: #c4e6cd; color: #146c2e; }
+    .alur-pratinjau { display: flex; flex-wrap: wrap; align-items: center; gap: var(--hr-space-1) var(--hr-space-2); padding: var(--hr-space-2) var(--hr-space-3); border-radius: var(--hr-radius-md); background: var(--admin-surface-soft); font-size: var(--hr-text-sm); }
+    .alur-pratinjau .langkah { padding: 2px var(--hr-space-2); border-radius: var(--hr-radius-pill); background: var(--admin-surface); border: 1px solid var(--admin-border); font-weight: var(--hr-weight-semibold); }
+    .alur-pratinjau .langkah.akhir { background: var(--hr-success-soft); border-color: transparent; color: var(--hr-success); }
     @media (max-width: 575.98px) { .tahap-pilih { margin-left: 0; } }
 </style>
 <script>

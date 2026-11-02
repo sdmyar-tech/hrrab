@@ -29,7 +29,7 @@
                 <div class="mb-3">
                     <label for="jenis_keluar" class="form-label">Jenis keluar</label>
                     <select name="jenis_keluar" id="jenis_keluar" class="form-select @error('jenis_keluar', 'keluar') is-invalid @enderror" required>
-                        <option value="">-- Pilih --</option>
+                        <option value="">Pilih jenis keluar, contoh: Resign</option>
                         @foreach (\App\Support\PegawaiKeluar::JENIS as $k => $label)
                             <option value="{{ $k }}" @selected(old('jenis_keluar') === $k)>{{ $label }}</option>
                         @endforeach
@@ -83,8 +83,8 @@
     </div>
 </div>
 <style>
-    .keluar-dampak { padding: .75rem .9rem; border: 1px solid var(--admin-border); border-radius: 10px; background: var(--admin-surface-soft); }
-    .keluar-dampak ul { padding-left: 1.1rem; display: grid; gap: .25rem; }
+    .keluar-dampak { padding: var(--hr-space-3) var(--hr-space-4); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); background: var(--admin-surface-soft); }
+    .keluar-dampak ul { padding-left: var(--hr-space-4); display: grid; gap: var(--hr-space-1); }
 </style>
 @if ($errors->keluar->any())
     {{-- Validasi gagal: buka lagi modalnya agar pesan terlihat. --}}

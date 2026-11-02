@@ -4,638 +4,635 @@
     @php
         $kepeg = $pegawai->kepegawaian;
         $foto = optional($pegawai->dokumen)->pas_foto;
-        $fotoUrl = $foto ? \App\Support\Berkas::url($foto) : asset('assets-admin/images/avatar/avatar-fallback.jpg');
         $status = $kepeg->status_rekrutmen ?? 'Non-Aktif';
         $aktif = strtolower($status) === 'aktif';
+        // Keluar lewat "Proses Keluar" (merah); tidak aktif tanpa proses keluar tetap abu.
+        $keluar = ! $aktif && filled($kepeg?->jenis_keluar);
         $utama = $pegawai->penugasanAktif->firstWhere('is_utama', true);
         $rangkapAktif = $pegawai->penugasanAktif->where('is_utama', false);
+
+        // Masa kerja dihitung dari tanggal masuk sampai hari ini (aktif) atau tanggal keluar (tidak aktif).
+        $masuk = $kepeg?->tanggal_masuk;
+        $sampai = $aktif ? now() : $kepeg?->tanggal_keluar;
+        $masaKerja = match (true) {
+            ! $masuk || ! $sampai => null,
+            $masuk->isFuture() => 'Belum mulai bekerja',
+            default => (fn ($s) => ($s->y ? "{$s->y} tahun " : '') . "{$s->m} bulan")($masuk->diff($sampai)),
+        };
+        $habisKontrak = $aktif ? $kepeg?->tanggal_habis_kontrak : null;
+        $sisaKontrak = $habisKontrak ? (int) now()->startOfDay()->diffInDays($habisKontrak, false) : null;
+
+        // Kelengkapan data: daftar isian wajib sama dengan dashboard pegawai (Pegawai\DashboardController).
+        $wajib = [
+            'Nama lengkap' => $pegawai->nama_lengkap, 'NIK' => $pegawai->nik, 'No. KK' => $pegawai->no_kk, 'No. HP' => $pegawai->no_hp,
+            'Tempat lahir' => $pegawai->tempat_lahir, 'Tanggal lahir' => $pegawai->tanggal_lahir, 'Jenis kelamin' => $pegawai->jenis_kelamin,
+            'Agama' => $pegawai->agama, 'Alamat KTP' => $pegawai->alamat_ktp, 'Status pernikahan' => $pegawai->status_pernikahan,
+            'Nama ibu kandung' => $pegawai->nama_ibu_kandung, 'Pendidikan terakhir' => $pegawai->pendidikan_terakhir,
+            'Jabatan' => $kepeg?->jabatan, 'Bagian' => $kepeg?->unit_kerja, 'Lokasi kerja' => $kepeg?->lokasi_kerja, 'Tanggal masuk' => $masuk,
+            'No. HP kerabat' => $pegawai->kontakDarurat?->no_hp_kerabat, 'Nama kerabat' => $pegawai->kontakDarurat?->nama_kerabat,
+            'Hubungan kerabat' => $pegawai->kontakDarurat?->hubungan_kerabat,
+            'File KTP' => $pegawai->dokumen?->upload_ktp, 'File KK' => $pegawai->dokumen?->upload_kk, 'Pas foto' => $foto,
+        ];
+        $kurang = array_keys(array_filter($wajib, fn ($v) => blank($v)));
+        $kelengkapan = (int) round((count($wajib) - count($kurang)) / count($wajib) * 100);
+
+        $dokumen = [
+            'pas_foto' => 'Pas Foto',
+            'upload_ktp' => 'KTP',
+            'upload_kk' => 'Kartu Keluarga',
+            'upload_cv' => 'CV',
+            'upload_ijazah_terakhir' => 'Ijazah Terakhir',
+            'upload_buku_tabungan' => 'Buku Tabungan',
+        ];
+
+        // Nomor WhatsApp dari No. HP (08… → 628…).
+        $angkaHp = preg_replace('/\D+/', '', (string) $pegawai->no_hp);
+        $nomorWa = $angkaHp ? (str_starts_with($angkaHp, '0') ? '62' . substr($angkaHp, 1) : $angkaHp) : null;
+
+        $tabs = [
+            ['key' => 'pribadi', 'label' => 'Data Pribadi', 'icon' => 'bi-person'],
+            ['key' => 'kepegawaian', 'label' => 'Kepegawaian', 'icon' => 'bi-briefcase'],
+            ['key' => 'penugasan', 'label' => 'Penugasan & Alur', 'icon' => 'bi-diagram-3'],
+            ['key' => 'kontak', 'label' => 'Kontak & BPJS', 'icon' => 'bi-telephone'],
+            ['key' => 'dokumen', 'label' => 'Dokumen', 'icon' => 'bi-folder2-open'],
+        ];
+        // ?tab=penugasan dkk. (tautan dari Mutasi & kembali dari simpan alur/akun) membuka tab itu sejak awal;
+        // galat isian tampil di tab Penugasan. #hash tab tetap diutamakan oleh x-tabs.
+        $tabDiminta = is_string(request('tab')) ? request('tab') : null;
+        $tabAwal = match (true) {
+            in_array($tabDiminta, array_column($tabs, 'key'), true) => $tabDiminta,
+            $errors->any() => 'penugasan',
+            default => 'pribadi',
+        };
+
+        // Riwayat singkat di kolom samping: keluar → penugasan terbaru → mulai bekerja.
+        $riwayat = collect();
+        if ($keluar) {
+            $riwayat->push(['state' => 'stopped', 'icon' => 'bi-box-arrow-right', 'title' => 'Keluar · ' . $kepeg->jenisKeluarLabel(),
+                'meta' => $kepeg->tanggal_keluar?->translatedFormat('d M Y'), 'teks' => $kepeg->alasan_keluar]);
+        }
+        foreach ($pegawai->penugasans->take(5) as $p) {
+            $riwayat->push([
+                'state' => $p->isAkanDatang() ? 'pending' : ($p->isAktif() ? 'active' : 'done'),
+                'icon' => null,
+                'title' => $p->jenisLabel() . ' · ' . $p->unit_kerja,
+                'meta' => $p->tanggal_mulai->translatedFormat('d M Y'),
+                'teks' => ($p->jabatan ?? 'Jabatan belum diisi') . ($p->isKepala() ? ' · Kepala' : '') . ' · ' . match (true) {
+                    $p->isAkanDatang() => 'terjadwal',
+                    (bool) $p->tanggal_selesai => 'sampai ' . $p->tanggal_selesai->translatedFormat('d M Y'),
+                    default => 'masih berlaku',
+                },
+            ]);
+        }
+        if ($masuk && ! $pegawai->penugasans->contains('jenis', \App\Models\Penugasan::JENIS_AWAL)) {
+            $riwayat->push(['state' => $masuk->isFuture() ? 'pending' : 'done', 'icon' => $masuk->isFuture() ? null : 'bi-door-open',
+                'title' => 'Mulai bekerja', 'meta' => $masuk->translatedFormat('d M Y'), 'teks' => $kepeg?->unit_kerja]);
+        }
+        $riwayatLain = max(0, $pegawai->penugasans->count() - 5);
     @endphp
 
-    <style>
-        .pd-hero {
-            position: relative;
-            overflow: hidden;
-            border: 1px solid var(--admin-border);
-            border-radius: 12px;
-            background: var(--admin-surface);
-            box-shadow: var(--admin-shadow-sm);
-        }
-        .pd-hero-band {
-            position: relative;
-            height: 96px;
-            background:
-                radial-gradient(circle at 85% -20%, rgba(255, 255, 255, .18) 0, transparent 55%),
-                linear-gradient(120deg, var(--admin-primary-dark) 0%, var(--admin-primary) 55%, #c9474a 100%);
-        }
-        .pd-hero-band .pd-crumb {
-            position: absolute;
-            left: 1.5rem;
-            top: .9rem;
-            color: rgba(255, 255, 255, .85);
-            font-size: .8rem;
-            font-weight: 600;
-        }
-        .pd-hero-band .pd-crumb a { color: #fff; text-decoration: none; }
-        .pd-hero-band .pd-crumb a:hover { text-decoration: underline; }
-        .pd-hero-body {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: flex-start;
-            gap: 1rem 1.5rem;
-            padding: 0 1.5rem 1.35rem;
-        }
-        .pd-hero-body > .pd-avatar { position: relative; z-index: 1; margin-top: -56px; flex: none; }
-        .pd-hero-body > .pd-identity { padding-top: .9rem; }
-        .pd-hero-body > .pd-actions { padding-top: 1rem; align-self: flex-start; }
-        .pd-avatar {
-            width: 112px;
-            height: 112px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid var(--admin-surface);
-            background: var(--admin-surface-soft);
-            box-shadow: var(--admin-shadow-sm);
-        }
-        .pd-identity { flex: 1 1 260px; min-width: 0; }
-        .pd-name { margin: 0 0 .2rem; font-weight: 800; color: var(--admin-text); font-size: 1.4rem; }
-        .pd-role { color: var(--admin-muted); font-weight: 600; margin-bottom: .6rem; }
-        .pd-meta { display: flex; flex-wrap: wrap; gap: .4rem .9rem; color: var(--admin-muted); font-size: .88rem; }
-        .pd-meta i { color: var(--admin-primary); }
-        .pd-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
-
-        .pd-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: .3rem;
-            padding: .22rem .6rem;
-            border-radius: 999px;
-            border: 1px solid var(--admin-border);
-            background: var(--admin-surface-soft);
-            color: var(--admin-text);
-            font-size: .78rem;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-        .pd-chip-primary { border-color: transparent; background: #f9e5e6; color: var(--admin-primary-dark); }
-        .pd-chip-success { border-color: transparent; background: #e3f6ee; color: #11734f; }
-        .pd-chip-muted   { border-color: transparent; background: #eef1f5; color: #5b6575; }
-        .pd-chip-warning { border-color: transparent; background: #fff4df; color: #9a5a05; }
-        .pd-chip-dark    { border-color: transparent; background: #1f2937; color: #fff; }
-        html[data-theme="dark"] .pd-chip-primary { background: #3b2020; color: #f5d4d5; }
-        html[data-theme="dark"] .pd-chip-success { background: rgba(15, 118, 110, .25); color: #99f6e4; }
-        html[data-theme="dark"] .pd-chip-muted   { background: #243149; color: #c7d2e1; }
-        html[data-theme="dark"] .pd-chip-warning { background: rgba(217, 119, 6, .22); color: #fde68a; }
-        html[data-theme="dark"] .pd-chip-dark    { background: #e5edf7; color: #111827; }
-
-        .pd-tabs {
-            display: flex;
-            gap: .35rem;
-            overflow-x: auto;
-            padding: .35rem;
-            margin: 1.5rem 0 1.25rem;
-            border: 1px solid var(--admin-border);
-            border-radius: 10px;
-            background: var(--admin-surface-soft);
-            scrollbar-width: thin;
-        }
-        .pd-tabs .nav-link {
-            display: inline-flex;
-            align-items: center;
-            gap: .4rem;
-            border: 0;
-            border-radius: 8px;
-            padding: .5rem .9rem;
-            color: var(--admin-muted);
-            font-weight: 700;
-            font-size: .9rem;
-            white-space: nowrap;
-            background: transparent;
-        }
-        .pd-tabs .nav-link:hover { color: var(--admin-primary); background: var(--admin-surface); }
-        .pd-tabs .nav-link.active {
-            color: #fff;
-            background: var(--admin-primary);
-            box-shadow: 0 6px 14px rgba(136, 15, 18, .22);
-        }
-
-        .pd-flow-card {
-            height: 100%;
-            padding: 1rem;
-            border: 1px solid var(--admin-border);
-            border-radius: 10px;
-            background: var(--admin-surface);
-        }
-        .pd-flow-card.has-warning { border-color: var(--admin-warning); }
-        .pd-flow-head { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-bottom: .85rem; }
-        .pd-steps { list-style: none; margin: 0; padding: 0; }
-        .pd-step { position: relative; display: flex; gap: .75rem; padding-bottom: .9rem; }
-        .pd-step:last-child { padding-bottom: 0; }
-        .pd-step:not(:last-child)::before {
-            content: "";
-            position: absolute;
-            left: 13px;
-            top: 28px;
-            bottom: 2px;
-            width: 2px;
-            background: var(--admin-border);
-        }
-        .pd-step-dot {
-            flex: 0 0 28px;
-            width: 28px;
-            height: 28px;
-            display: inline-grid;
-            place-items: center;
-            border-radius: 50%;
-            background: #f9e5e6;
-            color: var(--admin-primary-dark);
-            font-size: .8rem;
-            font-weight: 800;
-        }
-        .pd-step.is-final .pd-step-dot { background: var(--admin-primary); color: #fff; }
-        .pd-step.is-empty .pd-step-dot { background: #fff4df; color: #9a5a05; }
-        html[data-theme="dark"] .pd-step-dot { background: #3b2020; color: #f5d4d5; }
-        .pd-step-label { font-weight: 700; color: var(--admin-text); font-size: .9rem; }
-        .pd-step-who { color: var(--admin-muted); font-size: .84rem; }
-
-        .pd-table thead th {
-            color: var(--admin-muted);
-            font-size: .75rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: .03em;
-            background: var(--admin-surface-soft);
-            border-bottom-width: 1px;
-            white-space: nowrap;
-        }
-        .pd-table td { vertical-align: middle; }
-        .pd-row-active { box-shadow: inset 3px 0 0 var(--admin-primary); }
-
-        .pd-empty {
-            padding: 2rem 1rem;
-            text-align: center;
-            color: var(--admin-muted);
-            border: 1px dashed var(--admin-border);
-            border-radius: 10px;
-        }
-        .pd-empty i { display: block; font-size: 1.6rem; margin-bottom: .4rem; }
-
-        @media (max-width: 575.98px) {
-            .pd-hero-body { padding: 0 1rem 1rem; justify-content: center; text-align: center; }
-            .pd-hero-body > .pd-identity { padding-top: 0; }
-            .pd-meta, .pd-actions, .pd-identity .d-flex { justify-content: center; }
-            .pd-actions { width: 100%; }
-            .pd-actions .btn { flex: 1 1 auto; }
-        }
-    </style>
-
     <main class="dashboard-content">
-        <div class="container-fluid px-3 px-lg-4 py-4">
+        <div class="container-fluid">
 
-            <section class="pd-hero mb-0">
-                <div class="pd-hero-band">
-                    <nav class="pd-crumb" aria-label="breadcrumb">
-                        <a href="{{ route('admin.pegawai.index') }}"><i class="bi bi-people me-1"></i>Data Pegawai</a>
-                        <i class="bi bi-chevron-right mx-1" aria-hidden="true"></i> Detail Pegawai
-                    </nav>
-                </div>
-                <div class="pd-hero-body">
-                    <img src="{{ $fotoUrl }}" alt="Foto {{ $pegawai->nama_lengkap }}" class="pd-avatar">
+            <x-page-header :title="$pegawai->nama_lengkap" eyebrow="Kepegawaian" :back="route('admin.pegawai.index')" back-label="Data Pegawai"
+                :subtitle="collect([$kepeg?->jabatan ?? 'Jabatan belum diisi', $kepeg?->unit_kerja, $pegawai->nip ? 'NIP ' . $pegawai->nip : 'NIP belum diisi'])->filter()->implode(' · ')">
+                <x-slot:media><x-avatar :src="$foto ? \App\Support\Berkas::url($foto) : null" :name="$pegawai->nama_lengkap" size="xl" /></x-slot:media>
 
-                    <div class="pd-identity">
-                        <h1 class="pd-name">{{ $pegawai->nama_lengkap }}</h1>
-                        <div class="pd-role">{{ $kepeg->jabatan ?? 'Jabatan belum diisi' }}</div>
+                <x-badge size="lg" :tone="$aktif ? 'success' : ($keluar ? 'danger' : 'neutral')" dot
+                    :title="$keluar ? $status . ' · ' . $kepeg->jenisKeluarLabel() : null">{{ $keluar ? 'Keluar' : $status }}</x-badge>
+                @if ($kepeg?->status_kerja)
+                    <x-badge tone="neutral" icon="bi-briefcase">{{ $kepeg->status_kerja }}</x-badge>
+                @endif
+                @if ($utama?->isKepala())
+                    <x-badge tone="primary" icon="bi-star-fill" title="Kepala bagian utama">Kepala {{ $utama->unit_kerja }}</x-badge>
+                @endif
+                @foreach ($rangkapAktif as $rangkap)
+                    <x-badge tone="info" icon="bi-diagram-3" title="Rangkap tugas sejak {{ $rangkap->tanggal_mulai->translatedFormat('d M Y') }}">
+                        Rangkap {{ $rangkap->unit_kerja }}{{ $rangkap->isKepala() ? ' · Kepala' : '' }}
+                    </x-badge>
+                @endforeach
 
-                        <div class="d-flex flex-wrap gap-1 mb-2">
-                            <span class="pd-chip {{ $aktif ? 'pd-chip-success' : 'pd-chip-muted' }}">
-                                <i class="bi {{ $aktif ? 'bi-check-circle-fill' : 'bi-pause-circle' }}"></i> {{ $status }}
-                            </span>
-                            @if ($kepeg?->unit_kerja)
-                                <span class="pd-chip pd-chip-primary" title="Bagian utama">
-                                    <i class="bi bi-building"></i> {{ $kepeg->unit_kerja }}{{ $utama?->isKepala() ? ' · Kepala' : '' }}
-                                </span>
-                            @endif
-                            @foreach ($rangkapAktif as $rangkap)
-                                <span class="pd-chip" title="Rangkap tugas sejak {{ $rangkap->tanggal_mulai->format('d-m-Y') }}">
-                                    <i class="bi bi-diagram-3"></i> {{ $rangkap->unit_kerja }}{{ $rangkap->isKepala() ? ' · Kepala' : '' }}
-                                </span>
+                <x-slot:actions>
+                    @if (auth()->user()->isAdmin())
+                        {{-- Admin: buka data mentah pegawai ini di Editor Data (semua kolom, tanpa aturan). --}}
+                        <x-dropdown label="Data mentah (Admin)" icon="bi-shield-lock" icon-only>
+                            <a class="dropdown-item" href="{{ route('admin.data.edit', ['pegawai', $pegawai->id, 'kembali' => request()->fullUrl()]) }}"><i class="bi bi-person me-2" aria-hidden="true"></i>Data pribadi</a>
+                            @foreach (['kepegawaian' => ['Kepegawaian', 'bi-person-badge'], 'penugasan' => ['Penugasan / mutasi', 'bi-arrow-left-right'], 'bpjs' => ['BPJS', 'bi-shield-plus'],
+                                'kontak_darurat' => ['Kontak darurat', 'bi-telephone'], 'dokumen' => ['Dokumen', 'bi-folder2'], 'absensi' => ['Absensi', 'bi-fingerprint'],
+                                'jadwal_kerja' => ['Jam kerja', 'bi-alarm'], 'cuti' => ['Cuti', 'bi-calendar2-check'], 'lembur' => ['Lembur', 'bi-clock-history']] as $ent => [$lbl, $ik])
+                                <a class="dropdown-item" href="{{ route('admin.data.daftar', [$ent, 'q' => $pegawai->nama_lengkap]) }}"><i class="bi {{ $ik }} me-2" aria-hidden="true"></i>{{ $lbl }}</a>
                             @endforeach
-                        </div>
-
-                        <div class="pd-meta">
-                            <span><i class="bi bi-person-badge me-1"></i>NIP {{ $pegawai->nip ?? '-' }}</span>
-                            @if ($pegawai->email)
-                                <span><i class="bi bi-envelope me-1"></i>{{ $pegawai->email }}</span>
-                            @endif
-                            @if ($pegawai->no_hp)
-                                <span><i class="bi bi-telephone me-1"></i>{{ $pegawai->no_hp }}</span>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div class="pd-actions">
-                        <a href="{{ route('admin.pegawai.index') }}" class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-arrow-left"></i> Kembali
-                        </a>
-                        @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pegawai.export-detail', 'eksporParam' => ['pegawai' => $pegawai->id], 'eksporUkuran' => 'btn-sm'])
-                        @can('kelola-pegawai')
-                            <a href="{{ route('admin.pegawai.edit', $pegawai) }}" class="btn btn-primary btn-sm">
-                                <i class="bi bi-pencil"></i> Ubah Data
-                            </a>
-                            @if ($dampakKeluar)
-                                <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalKeluar">
-                                    <i class="bi bi-box-arrow-right"></i> Resign / Keluar
-                                </button>
-                            @endif
-                        @endcan
-                        @if (auth()->user()->isAdmin())
-                            {{-- Admin: buka data mentah pegawai ini di Editor Data (semua kolom, tanpa aturan). --}}
-                            <div class="dropdown">
-                                <button class="btn btn-outline-warning btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-shield-lock"></i> Data Mentah (Admin)
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="{{ route('admin.data.edit', ['pegawai', $pegawai->id, 'kembali' => request()->fullUrl()]) }}"><i class="bi bi-person me-2"></i>Data pribadi</a></li>
-                                    @foreach (['kepegawaian' => ['Kepegawaian', 'bi-person-badge'], 'penugasan' => ['Penugasan / mutasi', 'bi-arrow-left-right'], 'bpjs' => ['BPJS', 'bi-shield-plus'],
-                                        'kontak_darurat' => ['Kontak darurat', 'bi-telephone'], 'dokumen' => ['Dokumen', 'bi-folder2'], 'absensi' => ['Absensi', 'bi-fingerprint'],
-                                        'jadwal_kerja' => ['Jam kerja', 'bi-alarm'], 'cuti' => ['Cuti', 'bi-calendar2-check'], 'lembur' => ['Lembur', 'bi-clock-history']] as $ent => [$lbl, $ik])
-                                        <li><a class="dropdown-item" href="{{ route('admin.data.daftar', [$ent, 'q' => $pegawai->nama_lengkap]) }}"><i class="bi {{ $ik }} me-2"></i>{{ $lbl }}</a></li>
-                                    @endforeach
-                                </ul>
-                            </div>
+                        </x-dropdown>
+                    @endif
+                    @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pegawai.export-detail', 'eksporParam' => ['pegawai' => $pegawai->id]])
+                    @can('kelola-pegawai')
+                        @if ($dampakKeluar)
+                            <x-button variant="danger-outline" icon="bi-box-arrow-right" data-bs-toggle="modal" data-bs-target="#modalKeluar">Resign / Keluar</x-button>
                         @endif
-                    </div>
-                </div>
-            </section>
+                        <form action="{{ route('admin.pegawai.destroy', $pegawai->id) }}" method="POST" class="d-inline-flex">
+                            @csrf
+                            @method('DELETE')
+                            <x-button type="submit" variant="danger-outline" icon="bi-trash"
+                                data-confirm="true" data-icon="warning" data-title="Hapus Data Pegawai?"
+                                data-text="Data {{ $pegawai->nama_lengkap }} akan dihapus permanen beserta dokumen terkait."
+                                data-confirm-text="Ya, Hapus" data-cancel-text="Batal">Hapus</x-button>
+                        </form>
+                        <x-button :href="route('admin.pegawai.edit', $pegawai)" icon="bi-pencil">Ubah Data</x-button>
+                    @endcan
+                </x-slot:actions>
+            </x-page-header>
 
             @if (session('peringatan_keluar'))
-                <div class="alert alert-info small d-flex gap-2">
-                    <i class="bi bi-info-circle-fill"></i>
+                <x-alert tone="info" class="mb-4">
                     <ul class="mb-0 ps-3">@foreach (session('peringatan_keluar') as $p)<li>{{ $p }}</li>@endforeach</ul>
-                </div>
+                </x-alert>
             @endif
-            @if (! $aktif && $kepeg?->jenis_keluar)
+            @if ($keluar)
                 {{-- Pegawai sudah keluar lewat "Proses Keluar": ringkasan + pembatalan. --}}
-                <div class="alert alert-secondary d-flex flex-column flex-md-row gap-2 justify-content-between align-items-md-center">
-                    <div class="small">
-                        <strong><i class="bi bi-box-arrow-right me-1"></i>Keluar per {{ $kepeg->tanggal_keluar?->translatedFormat('d F Y') ?? '-' }}</strong>
-                        · {{ $kepeg->jenisKeluarLabel() }}
-                        @if ($kepeg->alasan_keluar) · {{ $kepeg->alasan_keluar }} @endif
-                        <span class="d-block text-muted">Diproses oleh {{ $kepeg->pemrosesKeluar?->name ?? '-' }}. Akunnya kini akun pelamar; untuk kembali bekerja harus melamar lagi.</span>
-                    </div>
+                <x-alert tone="info" icon="bi-box-arrow-right" class="mb-4"
+                    :title="'Keluar per ' . ($kepeg->tanggal_keluar?->translatedFormat('d F Y') ?? '-') . ' · ' . $kepeg->jenisKeluarLabel()">
+                    @if ($kepeg->alasan_keluar)<span class="d-block">{{ $kepeg->alasan_keluar }}</span>@endif
+                    <span class="d-block text-muted small">Diproses oleh {{ $kepeg->pemrosesKeluar?->name ?? '-' }}. Akunnya kini akun pelamar; untuk kembali bekerja harus melamar lagi.</span>
                     @can('kelola-pegawai')
                         @if ($kepeg->keluar_snapshot)
-                            <form action="{{ route('admin.pegawai.keluar.batal', $pegawai) }}" method="POST" class="flex-shrink-0"
-                                data-confirm="Batalkan proses keluar {{ $pegawai->nama_lengkap }}? Status, akun, penugasan, dan pengajuan dikembalikan seperti sebelum keluar.">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Batalkan Keluar</button>
-                            </form>
+                            <x-slot:action>
+                                <form action="{{ route('admin.pegawai.keluar.batal', $pegawai) }}" method="POST"
+                                    data-confirm="Batalkan proses keluar {{ $pegawai->nama_lengkap }}? Status, akun, penugasan, dan pengajuan dikembalikan seperti sebelum keluar.">
+                                    @csrf @method('DELETE')
+                                    <x-button type="submit" size="sm" variant="secondary" icon="bi-arrow-counterclockwise">Batalkan Keluar</x-button>
+                                </form>
+                            </x-slot:action>
                         @endif
                     @endcan
-                </div>
+                </x-alert>
             @endif
 
-            <ul class="nav pd-tabs" id="detailTab" role="tablist">
-                @foreach ([
-                    'pribadi' => ['bi-person', 'Data Pribadi'],
-                    'kepegawaian' => ['bi-briefcase', 'Kepegawaian'],
-                    'penugasan' => ['bi-diagram-3', 'Penugasan & Approval'],
-                    'kontak' => ['bi-telephone', 'Kontak & BPJS'],
-                    'dokumen' => ['bi-folder2-open', 'Dokumen'],
-                ] as $key => [$icon, $label])
-                    <li class="nav-item" role="presentation">
-                        <button type="button" class="nav-link {{ $loop->first ? 'active' : '' }}" id="tab-{{ $key }}-btn" data-bs-toggle="tab"
-                            data-bs-target="#tab-{{ $key }}" type="button" role="tab" aria-controls="tab-{{ $key }}"
-                            aria-selected="{{ $loop->first ? 'true' : 'false' }}">
-                            <i class="bi {{ $icon }}"></i> {{ $label }}
-                        </button>
-                    </li>
-                @endforeach
-            </ul>
+            <div class="row g-4">
+                {{-- ============ Kiri: data lengkap per tab ============ --}}
+                <div class="col-xl-8">
+                    {{-- Kartu tanpa padding: garis tab selebar kartu; isi tab memakai padding kartu biasa (.hr-card-body). --}}
+                    <x-card id="detail-pegawai" class="hr-bagian" :padding="false" aria-label="Data pegawai">
+                        <x-tabs id="pegawai" :items="$tabs" :active="$tabAwal" label="Bagian data pegawai" class="px-2" />
 
-            <section class="panel">
-                <div class="tab-content">
+                        <div class="tab-content hr-card-body pt-4">
+                            {{-- ---------- Data Pribadi ---------- --}}
+                            <x-tabs.pane tabs="pegawai" key="pribadi" :active="$tabAwal === 'pribadi'">
+                                <section class="hr-detail-bagian" aria-labelledby="judul-identitas">
+                                    <h2 class="hr-detail-judul" id="judul-identitas"><i class="bi bi-person-lines-fill" aria-hidden="true"></i> Identitas</h2>
+                                    <x-info-list :items="[
+                                        'Nama Lengkap' => $pegawai->nama_lengkap,
+                                        'Email' => $pegawai->email,
+                                        'No. HP' => $pegawai->no_hp,
+                                        'NIK (No. KTP)' => $pegawai->nik,
+                                        'No. KK' => $pegawai->no_kk,
+                                        'No. NPWP' => $pegawai->npwp,
+                                        'Tempat, Tanggal Lahir' => collect([$pegawai->tempat_lahir, optional($pegawai->tanggal_lahir)->translatedFormat('d F Y')])->filter()->implode(', '),
+                                        'Jenis Kelamin' => $pegawai->jenis_kelamin,
+                                        'Agama' => $pegawai->agama,
+                                        'Golongan Darah' => $pegawai->golongan_darah,
+                                        'Status Pernikahan' => $pegawai->status_pernikahan,
+                                        'Jumlah Tanggungan' => $pegawai->jumlah_tanggungan,
+                                        'Nama Ibu Kandung' => $pegawai->nama_ibu_kandung,
+                                        'Pendidikan Terakhir' => $pegawai->pendidikan_terakhir,
+                                    ]" />
+                                </section>
+                                <section class="hr-detail-bagian" aria-labelledby="judul-alamat">
+                                    <h2 class="hr-detail-judul" id="judul-alamat"><i class="bi bi-geo-alt" aria-hidden="true"></i> Alamat</h2>
+                                    <x-info-list :items="[
+                                        'Alamat KTP' => $pegawai->alamat_ktp,
+                                        'Alamat Domisili' => $pegawai->alamat_domisili ?: 'Sama dengan KTP',
+                                    ]" />
+                                </section>
+                            </x-tabs.pane>
 
-                    <div class="tab-pane fade show active" id="tab-pribadi" role="tabpanel" aria-labelledby="tab-pribadi-btn">
-                        <h2 class="pd-section-title"><i class="bi bi-person-lines-fill"></i> Identitas</h2>
-                        @include('admin.pegawai._info-grid', ['items' => [
-                            'Nama Lengkap' => $pegawai->nama_lengkap,
-                            'Email' => $pegawai->email,
-                            'NIK (No. KTP)' => $pegawai->nik,
-                            'No. KK' => $pegawai->no_kk,
-                            'No. NPWP' => $pegawai->npwp,
-                            'Tempat, Tanggal Lahir' => collect([$pegawai->tempat_lahir, optional($pegawai->tanggal_lahir)->translatedFormat('d F Y')])->filter()->implode(', '),
-                            'Jenis Kelamin' => $pegawai->jenis_kelamin,
-                            'Agama' => $pegawai->agama,
-                            'Golongan Darah' => $pegawai->golongan_darah,
-                            'Status Pernikahan' => $pegawai->status_pernikahan,
-                            'Jumlah Tanggungan' => $pegawai->jumlah_tanggungan,
-                            'Nama Ibu Kandung' => $pegawai->nama_ibu_kandung,
-                            'Pendidikan Terakhir' => $pegawai->pendidikan_terakhir,
-                        ]])
+                            {{-- ---------- Kepegawaian ---------- --}}
+                            <x-tabs.pane tabs="pegawai" key="kepegawaian" :active="$tabAwal === 'kepegawaian'">
+                                <section class="hr-detail-bagian" aria-labelledby="judul-jabatan">
+                                    <h2 class="hr-detail-judul" id="judul-jabatan"><i class="bi bi-briefcase" aria-hidden="true"></i> Jabatan & Penempatan</h2>
+                                    <x-info-list :items="[
+                                        'NIP' => $pegawai->nip,
+                                        'Jabatan Utama' => $kepeg?->jabatan,
+                                        'Jabatan Tambahan' => $kepeg?->jabatan_tambahan,
+                                        'Bagian Utama' => $kepeg?->unit_kerja ? $kepeg->unit_kerja . ($utama?->isKepala() ? ' (Kepala)' : '') : null,
+                                        'Unit' => $kepeg?->unit_organisasi,
+                                        'Lokasi Kerja' => $kepeg?->lokasi_kerja,
+                                        ...($rangkapAktif->isNotEmpty() ? [
+                                            'Rangkap Tugas' => $rangkapAktif->map(fn ($r) => $r->unit_kerja . ($r->isKepala() ? ' (Kepala)' : ''))->implode(', '),
+                                        ] : []),
+                                    ]" />
+                                </section>
+                                <section class="hr-detail-bagian" aria-labelledby="judul-status-kerja">
+                                    <h2 class="hr-detail-judul" id="judul-status-kerja"><i class="bi bi-calendar2-check" aria-hidden="true"></i> Status & Masa Kerja</h2>
+                                    <x-info-list :items="[
+                                        'Tanggal Masuk' => optional($masuk)->translatedFormat('d F Y'),
+                                        'Masa Kerja' => $masaKerja,
+                                        'Status Pegawai' => $kepeg?->status_rekrutmen,
+                                        'Status Kerja' => $kepeg?->status_kerja,
+                                        ...($kepeg?->tanggal_habis_kontrak || strtolower((string) $kepeg?->status_kerja) === 'kontrak' ? [
+                                            'Tanggal Habis Kontrak' => optional($kepeg?->tanggal_habis_kontrak)->translatedFormat('d F Y'),
+                                        ] : []),
+                                    ]" />
+                                </section>
+                                @if ($kepeg?->status_rekrutmen === 'Tidak Aktif')
+                                    <section class="hr-detail-bagian" aria-labelledby="judul-data-keluar">
+                                        <h2 class="hr-detail-judul" id="judul-data-keluar"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Data Keluar</h2>
+                                        <x-info-list :items="[
+                                            'Tanggal Keluar' => optional($kepeg->tanggal_keluar)->translatedFormat('d F Y') ?? 'Tidak diketahui',
+                                            'Jenis Keluar' => $kepeg->jenisKeluarLabel(),
+                                            'Alasan Keluar' => $kepeg->alasan_keluar,
+                                            ...($kepeg->jenis_keluar ? ['Diproses Oleh' => $kepeg->pemrosesKeluar?->name] : []),
+                                        ]" />
+                                    </section>
+                                @endif
+                            </x-tabs.pane>
 
-                        <h2 class="pd-section-title mt-4"><i class="bi bi-geo-alt"></i> Alamat</h2>
-                        @include('admin.pegawai._info-grid', ['items' => [
-                            'Alamat KTP' => $pegawai->alamat_ktp,
-                            'Alamat Domisili' => $pegawai->alamat_domisili ?: 'Sama dengan KTP',
-                        ]])
-                    </div>
+                            {{-- ---------- Penugasan & Persetujuan ---------- --}}
+                            <x-tabs.pane tabs="pegawai" key="penugasan" :active="$tabAwal === 'penugasan'">
+                                @if (session('peringatan_penugasan'))
+                                    <x-alert tone="warning" class="mb-4">
+                                        <ul class="mb-0 ps-3">
+                                            @foreach (session('peringatan_penugasan') as $p)
+                                                <li>{{ $p }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </x-alert>
+                                @endif
+                                {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
+                                @section('galat-di-halaman', '1')
+                                @if ($errors->any())
+                                    <x-alert tone="danger" class="mb-4">{{ $errors->first() }}</x-alert>
+                                @endif
 
-                    <div class="tab-pane fade" id="tab-kepegawaian" role="tabpanel" aria-labelledby="tab-kepegawaian-btn">
-                        <h2 class="pd-section-title"><i class="bi bi-briefcase"></i> Data Kepegawaian</h2>
-                        @include('admin.pegawai._info-grid', ['items' => [
-                            'NIP' => $pegawai->nip,
-                            'Jabatan Utama' => $kepeg?->jabatan,
-                            'Jabatan Tambahan' => $kepeg?->jabatan_tambahan,
-                            'Bagian Utama' => $kepeg?->unit_kerja,
-                            'Unit' => $kepeg?->unit_organisasi,
-                            'Lokasi Kerja' => $kepeg?->lokasi_kerja,
-                            'Tanggal Masuk' => optional($kepeg?->tanggal_masuk)->translatedFormat('d F Y'),
-                            'Masa Kerja' => $kepeg?->masa_kerja,
-                            'Status Rekrutmen' => $kepeg?->status_rekrutmen,
-                            ...($kepeg?->status_rekrutmen === 'Tidak Aktif' ? [
-                                'Tanggal Keluar' => optional($kepeg->tanggal_keluar)->translatedFormat('d F Y') ?? 'Tidak diketahui',
-                                'Jenis Keluar' => $kepeg->jenisKeluarLabel(),
-                                'Alasan Keluar' => $kepeg->alasan_keluar,
-                            ] : []),
-                            'Status Kerja' => $kepeg?->status_kerja,
-                            'Tanggal Habis Kontrak' => optional($kepeg?->tanggal_habis_kontrak)->translatedFormat('d F Y'),
-                        ]])
-                    </div>
-
-                    <div class="tab-pane fade" id="tab-penugasan" role="tabpanel" aria-labelledby="tab-penugasan-btn">
-                        @if (session('peringatan_penugasan'))
-                            <div class="alert alert-warning small d-flex gap-2">
-                                <i class="bi bi-exclamation-triangle-fill"></i>
-                                <ul class="mb-0 ps-3">
-                                    @foreach (session('peringatan_penugasan') as $p)
-                                        <li>{{ $p }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @endif
-                        {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
-                        @section('galat-di-halaman', '1')
-                        @if ($errors->any())
-                            <div class="alert alert-danger small mb-3"><i class="bi bi-x-circle-fill me-1"></i>{{ $errors->first() }}</div>
-                        @endif
-
-                        @include('admin.pegawai._akun-login')
-                        @if ($bolehAturAkun && $akun)
-                            @push('modal-pegawai')
-                                @include('admin.pegawai._modal-alur')
-                            @endpush
-                        @endif
-
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2" id="alur-approval">
-                            <h2 class="pd-section-title mb-0">
-                                <i class="bi bi-signpost-split"></i> Alur Approval
-                                @if ($alurKhusus)<span class="pd-chip pd-chip-primary ms-1"><i class="bi bi-sliders"></i> Diatur khusus</span>@endif
-                            </h2>
-                            @if ($bolehAturAkun && $akun)
-                                <div class="d-flex flex-wrap gap-2">
-                                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAlurPegawai">
-                                        <i class="bi bi-diagram-3"></i> Ubah Alur & Atasan
-                                    </button>
-                                    @if ($alurKhusus)
-                                        <form action="{{ route('admin.pegawai.alur.destroy', $pegawai) }}" method="POST"
-                                            data-confirm="Kembalikan alur persetujuan {{ $pegawai->nama_lengkap }} ke otomatis (mengikuti bagian & jabatan)?">
-                                            @csrf @method('DELETE')
-                                            <button type="submit" class="btn btn-light btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Kembali Otomatis</button>
-                                        </form>
-                                    @endif
-                                </div>
-                            @endif
-                        </div>
-                        @if ($alurKhusus)
-                            <div class="alert alert-info small py-2 mb-2">
-                                <i class="bi bi-info-circle me-1"></i>Alur pegawai ini diatur khusus oleh {{ $alurKhusus->pengubah?->name ?? 'SDM' }}
-                                ({{ $alurKhusus->updated_at?->translatedFormat('d M Y H:i') }}) dan berlaku untuk cuti & lembur.
-                                @if ($alurKhusus->catatan)<span class="d-block text-muted">Catatan: {{ $alurKhusus->catatan }}</span>@endif
-                            </div>
-                        @endif
-                        @if ($unitsDisetujui)
-                            <div class="d-flex flex-wrap align-items-center gap-1 small text-muted mb-2">
-                                <span>Menyetujui pengajuan staf di:</span>
-                                @foreach ($unitsDisetujui as $unit)
-                                    <span class="pd-chip pd-chip-dark"><i class="bi bi-shield-check"></i> {{ $unit }}</span>
-                                @endforeach
-                            </div>
-                        @endif
-                        @unless ($alurKhusus)
-                            <p class="text-muted small mb-3">
-                                Cuti mengikuti bagian utama. Lembur dipilih per bagian dan di-approve kepala bagian tersebut;
-                                bila pegawai ini kepala di bagian itu, atau bagiannya tidak punya kepala, approval naik ke GM.
-                            </p>
-                        @endunless
-
-                        @if (! $akun)
-                            <div class="pd-empty mb-4"><i class="bi bi-person-x"></i>Pegawai ini belum punya akun, jadi belum bisa mengajukan cuti/lembur.</div>
-                        @elseif (! $alurApproval)
-                            <div class="pd-empty mb-4"><i class="bi bi-slash-circle"></i>Akun pegawai ini tidak mengajukan cuti/lembur lewat sistem (bagian/jabatan dikecualikan).</div>
-                        @else
-                            <div class="row g-3 mb-4">
-                                @foreach ($alurApproval as $alur)
-                                    @php $kosong = collect($alur['tahap'])->contains(fn ($t) => $t['approvers']->isEmpty()); @endphp
-                                    <div class="col-md-6 col-xl-4">
-                                        <div class="pd-flow-card {{ $kosong ? 'has-warning' : '' }}">
-                                            <div class="pd-flow-head">
-                                                <span class="pd-chip {{ $alur['jenis'] === 'Cuti' ? 'pd-chip-primary' : 'pd-chip-dark' }}">
-                                                    <i class="bi {{ $alur['jenis'] === 'Cuti' ? 'bi-calendar2-week' : 'bi-clock-history' }}"></i> {{ $alur['jenis'] }}
-                                                </span>
-                                                <span class="fw-semibold small">{{ $alur['unit'] ?? 'Bagian belum diisi' }}</span>
-                                                @if ($alur['tahap'][0]['tangga'] ?? false)
-                                                    <a href="{{ route('admin.tangga-alur.index') }}" class="pd-chip pd-chip-primary text-decoration-none" title="Diatur di Tangga Alur Pengajuan"><i class="bi bi-signpost-split"></i> Tangga alur</a>
-                                                @endif
+                                {{-- Riwayat penugasan & mutasi --}}
+                                <section class="hr-detail-bagian hr-bagian" id="riwayat-penugasan" aria-labelledby="judul-riwayat-penugasan">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                        <h2 class="hr-detail-judul mb-0" id="judul-riwayat-penugasan"><i class="bi bi-clock-history" aria-hidden="true"></i> Riwayat Penugasan & Mutasi</h2>
+                                        @can('kelola-penugasan')
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <x-button size="sm" variant="secondary" icon="bi-plus-lg" :href="route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'rangkap'])">Tambah Rangkap</x-button>
+                                                <x-button size="sm" icon="bi-arrow-left-right" :href="route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'mutasi'])">Mutasi</x-button>
                                             </div>
-                                            <ol class="pd-steps">
-                                                @foreach ($alur['tahap'] as $tahap)
-                                                    <li class="pd-step {{ $tahap['final'] ? 'is-final' : '' }} {{ $tahap['approvers']->isEmpty() ? 'is-empty' : '' }}">
-                                                        <span class="pd-step-dot">
-                                                            @if ($tahap['approvers']->isEmpty())<i class="bi bi-exclamation"></i>@elseif ($tahap['final'])<i class="bi bi-check2"></i>@else{{ $loop->iteration }}@endif
-                                                        </span>
-                                                        <div style="min-width: 0">
-                                                            <div class="pd-step-label">
-                                                                {{ match (true) {
-                                                                    $tahap['level'] === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_SDM => 'Kepala SDM',
-                                                                    $tahap['level'] === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_DIVISI && ($tahap['khusus'] ?? false) && $alurKhusus?->atasan_user_id => 'Atasan Langsung',
-                                                                    default => $tahap['label'],
-                                                                } }}
-                                                                @if ($tahap['final'])<span class="pd-chip pd-chip-success ms-1">Final</span>@endif
-                                                            </div>
-                                                            <div class="pd-step-who">
-                                                                @if ($tahap['approvers']->isEmpty())
-                                                                    <span class="text-warning fw-semibold">Belum ada approver — pengajuan akan ditolak sistem.</span>
-                                                                @else
-                                                                    {{ $tahap['approvers']->pluck('name')->take(3)->implode(', ') }}
-                                                                    @if ($tahap['approvers']->count() > 3)
-                                                                        +{{ $tahap['approvers']->count() - 3 }} lainnya
-                                                                    @endif
-                                                                    @if ($tahap['level'] === \App\Support\PengajuanWorkflow::LEVEL_GM && $tahap['approvers']->count() > 1)
-                                                                        <span class="d-block">GM lain bisa approve sebagai pengganti.</span>
-                                                                    @endif
-                                                                @endif
-                                                            </div>
-                                                        </div>
-                                                    </li>
-                                                @endforeach
-                                            </ol>
-                                        </div>
+                                        @endcan
                                     </div>
-                                @endforeach
-                            </div>
-                        @endif
 
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                            <h2 class="pd-section-title mb-0"><i class="bi bi-clock-history"></i> Riwayat Penugasan & Mutasi</h2>
-                            @can('kelola-penugasan')
-                                <div class="d-flex flex-wrap gap-2">
-                                    <a href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'mutasi']) }}" class="btn btn-primary btn-sm">
-                                        <i class="bi bi-arrow-left-right"></i> Mutasi
-                                    </a>
-                                    <a href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'rangkap']) }}" class="btn btn-outline-secondary btn-sm">
-                                        <i class="bi bi-plus-lg"></i> Tambah Rangkap
-                                    </a>
-                                </div>
-                            @endcan
-                        </div>
-
-                        @if ($pegawai->penugasans->isEmpty())
-                            <div class="pd-empty"><i class="bi bi-inbox"></i>Belum ada riwayat penugasan.</div>
-                        @else
-                            <div class="table-responsive border rounded-3">
-                                <table class="table pd-table mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>Bagian</th>
-                                            <th>Jabatan / Peran</th>
-                                            <th>Periode</th>
-                                            <th>Status</th>
-                                            <th>SK / Keterangan</th>
-                                            @can('kelola-penugasan')<th class="text-end">Aksi</th>@endcan
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($pegawai->penugasans as $p)
-                                            <tr class="{{ $p->isAktif() ? 'pd-row-active' : '' }}">
-                                                <td>
-                                                    <div class="fw-semibold">{{ $p->unit_kerja }}</div>
-                                                    <div class="d-flex flex-wrap gap-1 mt-1">
-                                                        <span class="pd-chip {{ $p->is_utama ? 'pd-chip-primary' : '' }}">{{ $p->is_utama ? 'Utama' : 'Rangkap' }}</span>
-                                                        <span class="pd-chip pd-chip-muted">{{ $p->jenisLabel() }}</span>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    {{ $p->jabatan ?? '-' }}
-                                                    @if ($p->isKepala())
-                                                        <span class="pd-chip pd-chip-dark ms-1"><i class="bi bi-star-fill"></i> Kepala</span>
-                                                    @endif
-                                                </td>
-                                                <td class="small text-nowrap">
-                                                    {{ $p->tanggal_mulai->format('d-m-Y') }} &ndash; {{ $p->tanggal_selesai?->format('d-m-Y') ?? 'sekarang' }}
-                                                </td>
-                                                <td>
-                                                    @php
-                                                        $chip = match (true) {
-                                                            $p->isAkanDatang() => 'pd-chip-warning',
-                                                            $p->isAktif() => 'pd-chip-success',
-                                                            default => 'pd-chip-muted',
-                                                        };
-                                                    @endphp
-                                                    <span class="pd-chip {{ $chip }}">{{ $p->statusLabel() }}</span>
-                                                </td>
-                                                <td class="small">
-                                                    <div>{{ $p->no_sk ?? '-' }}</div>
-                                                    @if ($p->keterangan)<div class="text-muted">{{ $p->keterangan }}</div>@endif
-                                                    <div class="text-muted">Dicatat: {{ $p->dibuatOleh?->name ?? 'sistem' }}</div>
-                                                </td>
-                                                @can('kelola-penugasan')
-                                                    <td class="text-end">
-                                                        @if (auth()->user()->isAdmin())
-                                                            <a href="{{ route('admin.penugasan.edit', $p) }}" class="btn btn-link btn-sm p-0 me-2" title="Ubah langsung (Admin)"><i class="bi bi-pencil"></i> Ubah</a>
-                                                        @endif
-                                                        @if ($p->isAkanDatang())
-                                                            <form action="{{ route('admin.penugasan.destroy', $p) }}" method="POST"
-                                                                data-confirm="Batalkan {{ strtolower($p->jenisLabel()) }} terjadwal ke {{ $p->unit_kerja }}?">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                                                    <i class="bi bi-x-circle"></i> Batalkan
-                                                                </button>
-                                                            </form>
-                                                        @elseif (! $p->is_utama && $p->isAktif())
-                                                            <form action="{{ route('admin.penugasan.akhiri', $p) }}" method="POST"
-                                                                class="input-group input-group-sm justify-content-end flex-nowrap ms-auto" style="max-width: 250px"
-                                                                data-confirm="Akhiri rangkap tugas di {{ $p->unit_kerja }}?">
-                                                                @csrf
-                                                                <input type="date" name="tanggal_selesai" class="form-control" aria-label="Hari terakhir bertugas"
-                                                                    value="{{ now()->format('Y-m-d') }}" min="{{ $p->tanggal_mulai->format('Y-m-d') }}" required
-                                                                    title="Hari terakhir bertugas">
-                                                                <button type="submit" class="btn btn-outline-danger">
-                                                                    <i class="bi bi-box-arrow-right"></i> Akhiri
-                                                                </button>
-                                                            </form>
-                                                        @endif
-                                                        @if (! $p->isAkanDatang() && ($p->jenis !== \App\Models\Penugasan::JENIS_AWAL || auth()->user()->isAdmin()))
-                                                            <form action="{{ route('admin.penugasan.destroy', $p) }}" method="POST" class="mt-1"
-                                                                data-confirm="Hapus {{ strtolower($p->jenisLabel()) }} ke {{ $p->unit_kerja }} (koreksi salah input)?{{ $p->is_utama ? ' Pegawai dikembalikan ke bagian sebelumnya.' : '' }}">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit" class="btn btn-link btn-sm text-danger p-0">
-                                                                    <i class="bi bi-trash"></i> Hapus
-                                                                </button>
-                                                            </form>
-                                                        @elseif ($p->jenis === \App\Models\Penugasan::JENIS_AWAL && ! auth()->user()->isAdmin())
-                                                            <span class="text-muted small">&mdash;</span>
+                                    @if ($pegawai->penugasans->isEmpty())
+                                        <x-empty-state icon="bi-inbox" title="Belum ada riwayat penugasan" compact>
+                                            Penempatan awal, mutasi, dan rangkap tugas pegawai ini akan tercatat di sini.
+                                        </x-empty-state>
+                                    @else
+                                        <x-table caption="Riwayat penugasan dan mutasi" class="border rounded-3" compact>
+                                            <x-slot:head>
+                                                <tr>
+                                                    <th>Bagian</th>
+                                                    <th>Jabatan / Peran</th>
+                                                    <th>Periode &amp; Status</th>
+                                                    <th>SK / Keterangan</th>
+                                                    @can('kelola-penugasan')<th class="hr-kolom-aksi">Aksi</th>@endcan
+                                                </tr>
+                                            </x-slot:head>
+                                            @foreach ($pegawai->penugasans as $p)
+                                                <tr>
+                                                    <td>
+                                                        <span class="hr-sel-judul">{{ $p->unit_kerja }}</span>
+                                                        <span class="hr-sel-badge">
+                                                            @if ($p->is_utama)
+                                                                <x-badge tone="primary">Utama</x-badge>
+                                                                <x-badge tone="neutral">{{ $p->jenisLabel() }}</x-badge>
+                                                            @else
+                                                                <x-badge tone="info">Rangkap</x-badge>
+                                                            @endif
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="d-block">{{ $p->jabatan ?? '-' }}</span>
+                                                        @if ($p->isKepala())
+                                                            <span class="hr-sel-badge"><x-badge tone="neutral" icon="bi-star-fill">Kepala</x-badge></span>
                                                         @endif
                                                     </td>
-                                                @endcan
-                                            </tr>
+                                                    <td>
+                                                        <span class="d-block"><span class="text-nowrap">{{ $p->tanggal_mulai->translatedFormat('d M Y') }} &ndash;</span> <span class="text-nowrap">{{ $p->tanggal_selesai?->translatedFormat('d M Y') ?? 'sekarang' }}</span></span>
+                                                        <span class="hr-sel-badge">
+                                                            <x-badge :tone="$p->isAkanDatang() ? 'warning' : ($p->isAktif() ? 'success' : 'neutral')" dot>{{ $p->statusLabel() }}</x-badge>
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="d-block">{{ $p->no_sk ?? '-' }}</span>
+                                                        @if ($p->keterangan)<span class="hr-sel-sub">{{ $p->keterangan }}</span>@endif
+                                                        <span class="hr-sel-sub">Dicatat: {{ $p->dibuatOleh?->name ?? 'sistem' }}</span>
+                                                    </td>
+                                                    @can('kelola-penugasan')
+                                                        <td class="text-end hr-kolom-aksi">
+                                                            <div class="hr-aksi-baris">
+                                                                @if (auth()->user()->isAdmin())
+                                                                    <x-icon-button icon="bi-pencil" label="Ubah langsung (Admin)" :href="route('admin.penugasan.edit', $p)" />
+                                                                @endif
+                                                                @if ($p->isAkanDatang())
+                                                                    <form action="{{ route('admin.penugasan.destroy', $p) }}" method="POST"
+                                                                        data-confirm="Batalkan {{ strtolower($p->jenisLabel()) }} terjadwal ke {{ $p->unit_kerja }}?">
+                                                                        @csrf
+                                                                        @method('DELETE')
+                                                                        <x-icon-button type="submit" icon="bi-x-circle" :label="'Batalkan ' . strtolower($p->jenisLabel()) . ' terjadwal'" tone="danger" />
+                                                                    </form>
+                                                                @elseif (! $p->is_utama && $p->isAktif())
+                                                                    {{-- Akhiri rangkap: isian tanggal di menu kecil agar kolom aksi tetap ramping. --}}
+                                                                    <x-dropdown label="Akhiri rangkap tugas">
+                                                                        <x-slot:trigger>
+                                                                            <x-icon-button icon="bi-box-arrow-right" label="Akhiri rangkap tugas" tone="warning"
+                                                                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" />
+                                                                        </x-slot:trigger>
+                                                                        <form action="{{ route('admin.penugasan.akhiri', $p) }}" method="POST" class="d-grid gap-2 px-3 py-2 text-start"
+                                                                            data-confirm="Akhiri rangkap tugas di {{ $p->unit_kerja }}?">
+                                                                            @csrf
+                                                                            <label class="form-label small mb-0" for="akhiri-{{ $p->id }}">Hari terakhir bertugas di {{ $p->unit_kerja }}</label>
+                                                                            <input type="date" name="tanggal_selesai" id="akhiri-{{ $p->id }}" class="form-control form-control-sm"
+                                                                                value="{{ now()->format('Y-m-d') }}" min="{{ $p->tanggal_mulai->format('Y-m-d') }}" required>
+                                                                            <x-button type="submit" size="sm" variant="danger-outline" icon="bi-box-arrow-right">Akhiri Rangkap</x-button>
+                                                                        </form>
+                                                                    </x-dropdown>
+                                                                @else
+                                                                    {{-- Pengganti selebar tombol agar ikon antarbaris tetap sejajar. --}}
+                                                                    <span class="hr-ikon-btn invisible" aria-hidden="true"></span>
+                                                                @endif
+                                                                @if (! $p->isAkanDatang() && ($p->jenis !== \App\Models\Penugasan::JENIS_AWAL || auth()->user()->isAdmin()))
+                                                                    <form action="{{ route('admin.penugasan.destroy', $p) }}" method="POST"
+                                                                        data-confirm="Hapus {{ strtolower($p->jenisLabel()) }} ke {{ $p->unit_kerja }} (koreksi salah input)?{{ $p->is_utama ? ' Pegawai dikembalikan ke bagian sebelumnya.' : '' }}">
+                                                                        @csrf
+                                                                        @method('DELETE')
+                                                                        <x-icon-button type="submit" icon="bi-trash" label="Hapus (koreksi salah input)" tone="danger" />
+                                                                    </form>
+                                                                @elseif ($p->jenis === \App\Models\Penugasan::JENIS_AWAL && ! auth()->user()->isAdmin())
+                                                                    <span class="text-muted" aria-label="Tidak ada aksi">&mdash;</span>
+                                                                @endif
+                                                            </div>
+                                                        </td>
+                                                    @endcan
+                                                </tr>
+                                            @endforeach
+                                        </x-table>
+                                    @endif
+                                </section>
+
+                                {{-- Alur persetujuan cuti & lembur --}}
+                                @if ($bolehAturAkun && $akun)
+                                    @push('modal-pegawai')
+                                        @include('admin.pegawai._modal-alur')
+                                    @endpush
+                                @endif
+                                <section class="hr-detail-bagian hr-bagian" id="alur-approval" aria-labelledby="judul-alur">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                        <h2 class="hr-detail-judul mb-0" id="judul-alur">
+                                            <i class="bi bi-signpost-split" aria-hidden="true"></i> Alur Persetujuan
+                                            @if ($alurKhusus)<x-badge tone="primary" icon="bi-sliders">Diatur khusus</x-badge>@endif
+                                        </h2>
+                                        @if ($bolehAturAkun && $akun)
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @if ($alurKhusus)
+                                                    <form action="{{ route('admin.pegawai.alur.destroy', $pegawai) }}" method="POST"
+                                                        data-confirm="Kembalikan alur persetujuan {{ $pegawai->nama_lengkap }} ke otomatis (mengikuti bagian & jabatan)?">
+                                                        @csrf @method('DELETE')
+                                                        <x-button type="submit" size="sm" variant="ghost" icon="bi-arrow-counterclockwise">Kembali Otomatis</x-button>
+                                                    </form>
+                                                @endif
+                                                <x-button size="sm" variant="outline" icon="bi-diagram-3" data-bs-toggle="modal" data-bs-target="#modalAlurPegawai">Ubah Alur & Atasan</x-button>
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    @if ($alurKhusus)
+                                        <x-alert tone="info" class="mb-3">
+                                            Alur pegawai ini diatur khusus oleh {{ $alurKhusus->pengubah?->name ?? 'SDM' }}
+                                            ({{ $alurKhusus->updated_at?->translatedFormat('d M Y H:i') }}) dan berlaku untuk cuti & lembur.
+                                            @if ($alurKhusus->catatan)<span class="d-block text-muted">Catatan: {{ $alurKhusus->catatan }}</span>@endif
+                                        </x-alert>
+                                    @endif
+                                    @if ($unitsDisetujui)
+                                        <div class="d-flex flex-wrap align-items-center gap-2 small text-muted mb-3">
+                                            <span>Menyetujui pengajuan staf di:</span>
+                                            @foreach ($unitsDisetujui as $unit)
+                                                <x-badge tone="neutral" icon="bi-shield-check">{{ $unit }}</x-badge>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                    @if (! $alurKhusus && $alurApproval)
+                                        <p class="text-muted small mb-3">
+                                            Cuti mengikuti bagian utama. Lembur dipilih per bagian dan disetujui kepala bagian tersebut;
+                                            bila pegawai ini kepala di bagian itu, atau bagiannya tidak punya kepala, persetujuan naik ke GM.
+                                        </p>
+                                    @endif
+
+                                    @if (! $akun)
+                                        <x-empty-state icon="bi-signpost-split" title="Alur belum berlaku" compact>
+                                            Pegawai ini belum punya akun, jadi belum bisa mengajukan cuti/lembur.
+                                        </x-empty-state>
+                                    @elseif (! $alurApproval)
+                                        <x-empty-state icon="bi-slash-circle" title="Tidak mengajukan lewat sistem" compact>
+                                            Akun pegawai ini tidak mengajukan cuti/lembur lewat sistem (bagian/jabatan dikecualikan).
+                                        </x-empty-state>
+                                    @else
+                                        <div class="row g-3">
+                                            @foreach ($alurApproval as $alur)
+                                                @php
+                                                    $adaKosong = collect($alur['tahap'])->contains(fn ($t) => $t['approvers']->isEmpty());
+                                                    // Data tahap → x-tangga-alur; nama tahap Kepala SDM & atasan langsung (alur khusus) disesuaikan.
+                                                    $tahapTampil = collect(\App\Support\PengajuanWorkflow::tahapTampil($alur['tahap']))
+                                                        ->map(function ($t, $i) use ($alur, $alurKhusus) {
+                                                            $asli = $alur['tahap'][$i];
+                                                            $t['label'] = match (true) {
+                                                                $asli['level'] === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_SDM => 'Kepala SDM',
+                                                                $asli['level'] === \App\Support\PengajuanWorkflow::LEVEL_KEPALA_DIVISI && ($asli['khusus'] ?? false) && $alurKhusus?->atasan_user_id => 'Atasan Langsung',
+                                                                default => $t['label'],
+                                                            };
+                                                            $t['catatan'] = match (true) {
+                                                                $t['kosong'] => 'Pengajuan akan ditolak sistem.',
+                                                                $asli['level'] === \App\Support\PengajuanWorkflow::LEVEL_GM && $asli['approvers']->count() > 1 => 'GM lain bisa menyetujui sebagai pengganti.',
+                                                                default => null,
+                                                            };
+
+                                                            return $t;
+                                                        })->values()->all();
+                                                @endphp
+                                                <div class="col-md-6">
+                                                    <x-card as="article" title-tag="h3" class="h-100"
+                                                        :title="$alur['jenis'] . ' · ' . ($alur['unit'] ?? 'Bagian belum diisi')"
+                                                        :icon="$alur['jenis'] === 'Cuti' ? 'bi-calendar2-week' : 'bi-clock-history'">
+                                                        @if ($alur['tahap'][0]['tangga'] ?? false)
+                                                            <x-slot:actions>
+                                                                <a href="{{ route('admin.tangga-alur.index') }}" title="Diatur di Tangga Alur Pengajuan">Tangga alur</a>
+                                                            </x-slot:actions>
+                                                        @endif
+                                                        @if ($adaKosong)
+                                                            <x-badge tone="warning" icon="bi-exclamation-triangle" class="mb-3">Ada tahap tanpa penyetuju</x-badge>
+                                                        @endif
+                                                        <x-tangga-alur :tahap="$tahapTampil" arah="vertikal" :label="'Alur persetujuan ' . strtolower($alur['jenis']) . ' ' . ($alur['unit'] ?? '')" />
+                                                    </x-card>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </section>
+
+                                {{-- Akun login pegawai --}}
+                                @include('admin.pegawai._akun-login')
+                            </x-tabs.pane>
+
+                            {{-- ---------- Kontak & BPJS ---------- --}}
+                            <x-tabs.pane tabs="pegawai" key="kontak" :active="$tabAwal === 'kontak'">
+                                <section class="hr-detail-bagian" aria-labelledby="judul-kontak-darurat">
+                                    <h2 class="hr-detail-judul" id="judul-kontak-darurat"><i class="bi bi-telephone" aria-hidden="true"></i> Kontak Darurat</h2>
+                                    <x-info-list :items="[
+                                        'Nama Kerabat' => optional($pegawai->kontakDarurat)->nama_kerabat,
+                                        'No. HP Kerabat' => optional($pegawai->kontakDarurat)->no_hp_kerabat,
+                                        'Hubungan' => optional($pegawai->kontakDarurat)->hubungan_kerabat,
+                                    ]" />
+                                </section>
+                                <section class="hr-detail-bagian" aria-labelledby="judul-bpjs">
+                                    <h2 class="hr-detail-judul" id="judul-bpjs"><i class="bi bi-card-checklist" aria-hidden="true"></i> Data BPJS</h2>
+                                    <x-info-list :items="[
+                                        'No. BPJS Kesehatan' => optional($pegawai->bpjs)->no_bpjs_kesehatan,
+                                        'No. BPJS Ketenagakerjaan' => optional($pegawai->bpjs)->no_bpjs_ketenagakerjaan,
+                                        'Faskes Tingkat 1' => optional($pegawai->bpjs)->faskes_tingkat_1,
+                                    ]" />
+                                </section>
+                            </x-tabs.pane>
+
+                            {{-- ---------- Dokumen ---------- --}}
+                            <x-tabs.pane tabs="pegawai" key="dokumen" :active="$tabAwal === 'dokumen'">
+                                <section class="hr-detail-bagian" aria-labelledby="judul-dokumen">
+                                    <h2 class="hr-detail-judul" id="judul-dokumen"><i class="bi bi-folder2-open" aria-hidden="true"></i> Dokumen Pegawai</h2>
+                                    <div class="row g-3">
+                                        @foreach ($dokumen as $field => $label)
+                                            <div class="col-md-6">
+                                                @include('partials.preview-file', [
+                                                    'path' => optional($pegawai->dokumen)->{$field},
+                                                    'label' => $label,
+                                                ])
+                                            </div>
                                         @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        @endif
-                    </div>
-
-                    <div class="tab-pane fade" id="tab-kontak" role="tabpanel" aria-labelledby="tab-kontak-btn">
-                        <h2 class="pd-section-title"><i class="bi bi-telephone"></i> Kontak Darurat</h2>
-                        @include('admin.pegawai._info-grid', ['items' => [
-                            'Nama Kerabat' => optional($pegawai->kontakDarurat)->nama_kerabat,
-                            'No. HP Kerabat' => optional($pegawai->kontakDarurat)->no_hp_kerabat,
-                            'Hubungan' => optional($pegawai->kontakDarurat)->hubungan_kerabat,
-                        ]])
-
-                        <h2 class="pd-section-title mt-4"><i class="bi bi-card-checklist"></i> Data BPJS</h2>
-                        @include('admin.pegawai._info-grid', ['items' => [
-                            'No. BPJS Kesehatan' => optional($pegawai->bpjs)->no_bpjs_kesehatan,
-                            'No. BPJS Ketenagakerjaan' => optional($pegawai->bpjs)->no_bpjs_ketenagakerjaan,
-                            'Faskes Tingkat 1' => optional($pegawai->bpjs)->faskes_tingkat_1,
-                        ]])
-                    </div>
-
-                    <div class="tab-pane fade" id="tab-dokumen" role="tabpanel" aria-labelledby="tab-dokumen-btn">
-                        <h2 class="pd-section-title"><i class="bi bi-folder2-open"></i> Dokumen Pegawai</h2>
-                        <div class="row g-3">
-                            @foreach ([
-                                'pas_foto' => 'Pas Foto',
-                                'upload_ktp' => 'KTP',
-                                'upload_kk' => 'Kartu Keluarga',
-                                'upload_cv' => 'CV',
-                                'upload_ijazah_terakhir' => 'Ijazah Terakhir',
-                                'upload_buku_tabungan' => 'Buku Tabungan',
-                            ] as $field => $label)
-                                <div class="col-md-6">
-                                    @include('partials.preview-file', [
-                                        'path' => optional($pegawai->dokumen)->{$field},
-                                        'label' => $label,
-                                    ])
-                                </div>
-                            @endforeach
+                                    </div>
+                                </section>
+                            </x-tabs.pane>
                         </div>
-                    </div>
-
+                    </x-card>
                 </div>
-            </section>
+
+                {{-- ============ Kanan: ringkasan + riwayat (lengket di desktop) ============ --}}
+                <div class="col-xl-4">
+                    <div class="hr-detail-samping d-grid gap-4">
+                        <x-card title="Ringkasan" icon="bi-person-vcard">
+                            <section class="hr-detail-bagian" aria-label="Ringkasan kepegawaian">
+                                <dl class="dash-dl">
+                                    <div><dt>Masa kerja</dt><dd>{{ $masaKerja ?? '-' }}</dd></div>
+                                    <div><dt>Tanggal masuk</dt><dd>{{ $masuk?->translatedFormat('d M Y') ?? '-' }}</dd></div>
+                                    @if ($keluar)
+                                        <div><dt>Tanggal keluar</dt><dd>{{ $kepeg->tanggal_keluar?->translatedFormat('d M Y') ?? '-' }}</dd></div>
+                                    @endif
+                                    <div><dt>Status kerja</dt><dd>{{ $kepeg?->status_kerja ?? '-' }}</dd></div>
+                                    <div><dt>Lokasi kerja</dt><dd>{{ $kepeg?->lokasi_kerja ?? '-' }}</dd></div>
+                                    <div><dt>Akun login</dt><dd>{{ $akun ? $akun->roleLabel() : 'Belum ada' }}</dd></div>
+                                </dl>
+                                @if ($habisKontrak)
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 small mt-3">
+                                        <span>Kontrak s/d <strong>{{ $habisKontrak->translatedFormat('d M Y') }}</strong></span>
+                                        @if ($sisaKontrak < 0)
+                                            <x-badge tone="danger">Berakhir</x-badge>
+                                        @else
+                                            <x-badge :tone="$sisaKontrak <= 60 ? 'warning' : 'neutral'">{{ $sisaKontrak }} hari lagi</x-badge>
+                                        @endif
+                                    </div>
+                                @endif
+                            </section>
+
+                            <section class="hr-detail-bagian" aria-labelledby="judul-kelengkapan">
+                                <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                    <h3 class="hr-detail-judul mb-0" id="judul-kelengkapan"><i class="bi bi-ui-checks" aria-hidden="true"></i> Kelengkapan Data</h3>
+                                    <x-badge :tone="$kelengkapan >= 100 ? 'success' : 'warning'">{{ $kelengkapan }}%</x-badge>
+                                </div>
+                                <div class="progress" role="progressbar" aria-label="Kelengkapan data" aria-valuenow="{{ $kelengkapan }}" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="progress-bar {{ $kelengkapan >= 100 ? 'bg-success' : 'bg-warning' }}" style="width: {{ $kelengkapan }}%"></div>
+                                </div>
+                                <p class="small text-muted mt-2 mb-0">
+                                    @if ($kurang)
+                                        Belum diisi: {{ implode(', ', array_slice($kurang, 0, 4)) }}{{ count($kurang) > 4 ? ', +' . (count($kurang) - 4) . ' lainnya' : '' }}.
+                                    @else
+                                        Semua data wajib sudah terisi.
+                                    @endif
+                                </p>
+                                @if ($kurang)
+                                    @can('kelola-pegawai')
+                                        <a href="{{ route('admin.pegawai.edit', $pegawai) }}" class="small fw-semibold d-inline-flex align-items-center gap-1 mt-2">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>Lengkapi data
+                                        </a>
+                                    @endcan
+                                @endif
+                            </section>
+
+                            <section class="hr-detail-bagian" aria-labelledby="judul-kontak-cepat">
+                                <h3 class="hr-detail-judul" id="judul-kontak-cepat"><i class="bi bi-chat-dots" aria-hidden="true"></i> Kontak Cepat</h3>
+                                @if ($pegawai->no_hp || $pegawai->email || $pegawai->kontakDarurat?->no_hp_kerabat)
+                                    <ul class="hr-list">
+                                        @if ($pegawai->no_hp)
+                                            <li class="hr-list-item">
+                                                <div class="hr-list-utama">
+                                                    <span class="hr-list-judul angka-utuh">{{ $pegawai->no_hp }}</span>
+                                                    <span class="hr-list-sub">No. HP</span>
+                                                </div>
+                                                <div class="hr-aksi-baris">
+                                                    <x-icon-button icon="bi-telephone" label="Telepon" :href="'tel:' . $angkaHp" />
+                                                    <x-icon-button icon="bi-whatsapp" label="Chat WhatsApp" :href="'https://wa.me/' . $nomorWa" target="_blank" rel="noopener" />
+                                                </div>
+                                            </li>
+                                        @endif
+                                        @if ($pegawai->email)
+                                            <li class="hr-list-item">
+                                                <div class="hr-list-utama">
+                                                    <span class="hr-list-judul">{{ $pegawai->email }}</span>
+                                                    <span class="hr-list-sub">Email</span>
+                                                </div>
+                                                <div class="hr-aksi-baris">
+                                                    <x-icon-button icon="bi-envelope" label="Kirim email" :href="'mailto:' . $pegawai->email" />
+                                                </div>
+                                            </li>
+                                        @endif
+                                        @if ($pegawai->kontakDarurat?->no_hp_kerabat)
+                                            <li class="hr-list-item">
+                                                <div class="hr-list-utama">
+                                                    <span class="hr-list-judul">{{ $pegawai->kontakDarurat->nama_kerabat ?? 'Kerabat' }}</span>
+                                                    <span class="hr-list-sub">Kontak darurat{{ $pegawai->kontakDarurat->hubungan_kerabat ? ' · ' . $pegawai->kontakDarurat->hubungan_kerabat : '' }} · {{ $pegawai->kontakDarurat->no_hp_kerabat }}</span>
+                                                </div>
+                                                <div class="hr-aksi-baris">
+                                                    <x-icon-button icon="bi-telephone" label="Telepon kontak darurat" :href="'tel:' . preg_replace('/[^\d+]+/', '', $pegawai->kontakDarurat->no_hp_kerabat)" />
+                                                </div>
+                                            </li>
+                                        @endif
+                                    </ul>
+                                @else
+                                    <p class="small text-muted mb-0">Belum ada nomor HP atau email.</p>
+                                @endif
+                            </section>
+                        </x-card>
+
+                        <x-card title="Riwayat Kepegawaian" icon="bi-clock-history">
+                            @if ($pegawai->penugasans->isNotEmpty())
+                                <x-slot:actions>
+                                    <a href="{{ route('admin.pegawai.show', [$pegawai, 'tab' => 'penugasan']) }}#riwayat-penugasan" data-buka-tab="penugasan">Lihat semua</a>
+                                </x-slot:actions>
+                            @endif
+                            @if ($riwayat->isEmpty())
+                                <x-empty-state icon="bi-clock-history" compact>Belum ada riwayat penugasan atau tanggal masuk.</x-empty-state>
+                            @else
+                                <x-timeline label="Riwayat kepegawaian">
+                                    @foreach ($riwayat as $r)
+                                        <x-timeline.item :state="$r['state']" :icon="$r['icon']" :title="$r['title']" :meta="$r['meta']">{{ $r['teks'] }}</x-timeline.item>
+                                    @endforeach
+                                </x-timeline>
+                                @if ($riwayatLain)
+                                    <p class="small text-muted mt-3 mb-0">+{{ $riwayatLain }} riwayat penugasan lain di tab Penugasan.</p>
+                                @endif
+                            @endif
+                        </x-card>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -647,14 +644,29 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const tab = new URLSearchParams(window.location.search).get('tab');
-            const btn = tab && document.getElementById('tab-' + tab + '-btn');
-            if (btn && window.bootstrap) {
-                bootstrap.Tab.getOrCreateInstance(btn).show();
-                // Kembali dari simpan pengaturan: gulir ke bagiannya (#alur-approval / #akun-login).
-                const target = location.hash && document.querySelector(location.hash);
-                if (target) setTimeout(() => target.scrollIntoView({ block: 'start' }), 150);
+            // HP/tablet: bilah tab bergulir mendatar → geser agar tab yang terbuka (mis. dari ?tab=penugasan) terlihat.
+            const navTab = document.querySelector('[data-hr-tabs="pegawai"]');
+            function tampakkanTabAktif() {
+                const aktif = navTab && navTab.querySelector('.hr-tab.active');
+                if (aktif) navTab.scrollLeft += aktif.getBoundingClientRect().left - navTab.getBoundingClientRect().left - 8;
             }
+            if (navTab) {
+                tampakkanTabAktif();
+                navTab.addEventListener('shown.bs.tab', tampakkanTabAktif);
+            }
+
+            // "Lihat semua" di kolom samping: buka tab Penugasan tanpa memuat ulang, lalu gulir ke tabelnya.
+            document.querySelectorAll('[data-buka-tab]').forEach(function (tautan) {
+                tautan.addEventListener('click', function (e) {
+                    const tombol = document.getElementById('pegawai-tab-' + tautan.dataset.bukaTab);
+                    if (!tombol || !window.bootstrap) return;
+                    e.preventDefault();
+                    bootstrap.Tab.getOrCreateInstance(tombol).show();
+                    const tujuan = document.getElementById('riwayat-penugasan') || document.getElementById('detail-pegawai');
+                    tujuan.scrollIntoView({ block: 'start' });
+                    tombol.focus({ preventScroll: true });
+                });
+            });
         });
     </script>
 @endsection

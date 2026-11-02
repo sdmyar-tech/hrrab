@@ -239,7 +239,7 @@
       var forms = document.querySelectorAll("form.panel-filter, form[data-filter-daftar]");
 
       function tandai(form) {
-        var panel = form.closest(".panel");
+        var panel = form.closest(".panel, .hr-card");
         if (panel) {
           panel.classList.add("memuat");
           panel.setAttribute("aria-busy", "true");
@@ -272,7 +272,7 @@
         if (!event.persisted) {
           return;
         }
-        Array.prototype.forEach.call(document.querySelectorAll(".panel.memuat"), function (panel) {
+        Array.prototype.forEach.call(document.querySelectorAll(".panel.memuat, .hr-card.memuat"), function (panel) {
           panel.classList.remove("memuat");
           panel.removeAttribute("aria-busy");
         });
@@ -280,6 +280,24 @@
           ikon.className = "bi bi-search";
           ikon.removeAttribute("role");
           ikon.removeAttribute("aria-label");
+        });
+      });
+    }
+
+    // Tooltip tombol ikon ([data-hr-tooltip], komponen x-icon-button). Memakai atribut sendiri agar tombol
+    // tetap bisa membuka modal/dropdown lewat data-bs-toggle.
+    function initTooltipIkon() {
+      if (!window.bootstrap || !bootstrap.Tooltip) {
+        return;
+      }
+      Array.prototype.forEach.call(document.querySelectorAll("[data-hr-tooltip]"), function (el) {
+        bootstrap.Tooltip.getOrCreateInstance(el, { title: el.getAttribute("data-hr-tooltip"), trigger: "hover focus", container: "body" });
+        // Tombol yang membuka modal/konfirmasi: tutup tooltip agar tidak tertinggal di atas dialog.
+        el.addEventListener("click", function () {
+          var tip = bootstrap.Tooltip.getInstance(el);
+          if (tip) {
+            tip.hide();
+          }
         });
       });
     }
@@ -395,6 +413,7 @@
     initSaringLangsung();
     initCariOtomatis();
     initFilterMemuat();
+    initTooltipIkon();
     initTableDropdowns();
     initTableSearch();
     initResponsiveTables();

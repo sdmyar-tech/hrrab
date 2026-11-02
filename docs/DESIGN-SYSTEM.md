@@ -111,6 +111,11 @@ Aturan susunan:
 | `x-status-badge` | `<x-status-badge :badge="$item->badgeClass()">{{ $item->statusLabel() }}</x-status-badge>` — kelas `text-bg-*` dari model → tone semantik |
 | `x-section-nav` | Navigasi bagian halaman panjang (kolom kiri lengket, penanda bagian terlihat): `:items="[['id', 'label', 'icon', 'status' => true\|false\|null]]"` |
 | `x-stepper` | Penunjuk langkah form bertahap: `id :steps :current`; perbarui dengan `hrStepper(id, indeks)` |
+| `x-filter-bar` | Bilah filter daftar (Batch 4): `:action` (form GET, cari otomatis) **atau** `target="#idTabel"` (saring di sisi klien) + `search search-label search-id :count unit :filtered :reset`; slot bawaan = pilihan/tanggal/urutan, slot `chips`, `hidden`, `summary` |
+| `x-icon-button` | Tombol ikon + tooltip untuk kolom aksi: `<x-icon-button icon="bi-pencil" label="Ubah" :href tone="primary\|danger\|warning" type>`; `label` wajib (aria-label + tooltip `data-hr-tooltip`) |
+| `x-table-empty` | Baris kosong tabel: `<x-table-empty :colspan icon title>` teks + slot `action`; saring klien: `data-saring-kosong="#id" hidden` |
+| `x-form-section` | Bagian form: `<x-form-section title subtitle icon id>` berisi kolom grid (`col-md-6`/`col-12`); antarbagian dalam satu kartu otomatis bergaris |
+| `x-info-list` | Label–nilai halaman detail: `<x-info-list :items="['NIK' => $p->nik]" />`, kosong → "Belum diisi", nilai panjang selebar penuh |
 | `x-tangga-alur` | Tangga alur persetujuan: `:tahap="[['label','oleh','status','final','semua','kosong','catatan']]" awal="Anda mengajukan" akhir="Disetujui" arah="horizontal\|vertikal"`; status `selesai\|berjalan\|menunggu\|ditolak\|lewati` (kosong = pratinjau rute). Data rute → `PengajuanWorkflow::tahapTampil($rute)` |
 
 Pola kelas (CSS di `ui.css`, tanpa komponen):
@@ -130,7 +135,7 @@ Pola kelas (CSS di `ui.css`, tanpa komponen):
 | `.tangga-jenis` / `.tangga-sumber-bantu` / `.tangga-sumber-detail` / `.tangga-sumber-hasil` | Kartu penyetuju: jenis sebagai chip radio (`.btn-check` + `.hr-chip`), keterangan jenis, isian lanjutan berlabel pertanyaan, hasil "Yang menyetujui: …" (hijau) / alasan kosong (`.is-kosong`, kuning) |
 | `x-stat-card` | `<x-stat-card label value icon tone unit meta :trend="12.5" trend-label href>` |
 | `x-page-header` | `title subtitle eyebrow back back-label` + slot `actions`, `media` |
-| `x-table` | `<x-table caption compact sticky>` + slot `head`, `foot`; di HP otomatis jadi kartu |
+| `x-table` | `<x-table caption compact sticky striped scroll>` + slot `head`, `foot`; di HP otomatis jadi kartu. `striped` = zebra halus, `scroll` = tinggi maks setinggi layar (header lengket di dalam kartu) — varian Batch 4. Kolom aksi: `<th class="hr-kolom-aksi">` + `<td class="text-end hr-kolom-aksi"><div class="hr-aksi-baris">…` |
 | `x-pagination` | `<x-pagination :paginator="$data" />`, menampilkan "Menampilkan 1–20 dari 135" |
 | `x-modal` | `<x-modal id title subtitle icon tone size="sm\|md\|lg\|xl" static>` + slot `footer` |
 | `x-dropdown` | `<x-dropdown label icon variant icon-only>` berisi `.dropdown-item` |
@@ -143,6 +148,28 @@ Pola kelas (CSS di `ui.css`, tanpa komponen):
 | `x-tabs` + `x-tabs.pane` | Tab mendatar/`vertical`; tab terbuka diingat lewat `#hash` |
 | `x-auth-card` | Kartu halaman tamu (logo, eyebrow, judul, pesan sesi, kaki) |
 | `x-password-meter` | Kekuatan kata sandi + syarat (`len:N`, `letter`, `digit`, `mix`, `same:id`, `differs:id`) |
+
+### Pola seragam CRUD admin (Batch 4) — wajib untuk halaman daftar/detail/form admin berikutnya
+
+**Daftar** (contoh: `admin/pegawai/index`, `admin/unit/index`):
+```blade
+<x-page-header title eyebrow subtitle>  <x-slot:actions> Ekspor · tombol sekunder · <x-button icon="bi-plus-lg">Tambah X</x-button> </x-slot:actions> </x-page-header>
+<x-card :padding="false">
+    <x-filter-bar …>pilihan · @include('partials.filter-tanggal') · @include('partials.urut')</x-filter-bar>
+    <x-table caption sticky striped scroll> … <x-table-empty …> </x-table>
+    <x-slot:footer><x-pagination :paginator /></x-slot:footer>   {{-- hanya bila hasPages() --}}
+</x-card>
+```
+- Sel utama: `.hr-sel-judul` (tautan ke detail) + `.hr-sel-sub`; foto `x-avatar size="sm"` dalam `.hr-sel-utama`; badge tambahan di `.hr-sel-badge`.
+- Aksi baris: `x-icon-button` (lihat · ubah · lainnya · hapus paling kanan). Baris yang tak punya satu aksi diberi pengganti `<span class="hr-ikon-btn invisible" aria-hidden="true"></span>` agar ikon sejajar.
+- Tambah/ubah data master sederhana (bagian, unit, lokasi, jabatan) memakai `x-modal` dari tombol utama; form di badan modal, tombol simpan di kaki memakai `form="idForm"`.
+  Galat validasi membuka lagi modal yang sama: input tersembunyi `_form=tambah|ubah` (+ `_url` untuk ubah), lalu `old()`.
+- Saring cepat berbentuk tab/status → chip di slot `chips` (`x-chip` + jumlah), bukan tab Bootstrap.
+- Aksi massal (centang + bilah aksi) belum dipakai: belum ada endpoint massal di backend.
+
+**Detail**: `x-page-header` (back, `media` avatar, status `x-badge size="lg"`, aksi) → `row` kiri `col-xl-8` kartu berisi `.hr-detail-bagian` + `.hr-detail-judul` + `x-info-list` (tab `x-tabs` bila data banyak), kanan `col-xl-4` `.hr-detail-samping` (lengket) berisi ringkasan + `x-timeline`.
+
+**Form**: `x-page-header` (back) → `x-card` berisi beberapa `x-form-section` (2 kolom desktop) → `.hr-bilah-aksi` lengket (Batal | Simpan). Form panjang boleh `x-section-nav` di kolom kiri.
 
 Partial lama yang tetap dipakai: `partials.tombol-ekspor`, `partials.daftar-cari`, `partials.filter-tanggal`, `partials.urut`,
 `partials.daftar-ringkas`, `partials.kosong(-tabel)`, `partials.tombol-aksi-lain`, `partials.pilih-pegawai`,

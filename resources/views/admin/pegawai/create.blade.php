@@ -1,573 +1,348 @@
-    @extends(Auth::user()->panelLayout())
+@extends(Auth::user()->panelLayout())
 
-    @section('content')
-        <main class="dashboard-content">
-            <div class="container-fluid px-3 px-lg-4 py-4">
+@section('content')
+@php
+    $p = $pegawai ?? null;
+    // Admin boleh menyimpan data belum lengkap: hanya kolom ini yang tetap wajib (sama dengan aturan server).
+    $longgar = auth()->user()->isAdmin();
+    $wajib = fn (string $kolom) => ! $longgar || in_array($kolom, ['nama_lengkap', 'jabatan', 'unit_kerja', 'status_rekrutmen', 'status_kerja'], true);
+    $opsi = fn (array $daftar) => array_combine($daftar, $daftar);
 
-                @include('layouts.admin.header')
+    $bagian = [
+        ['id' => 'bagian-pribadi', 'label' => 'Data Pribadi', 'icon' => 'bi-person', 'kolom' => ['nama_lengkap', 'email', 'no_hp', 'nik', 'no_kk', 'npwp', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'golongan_darah', 'status_pernikahan', 'jumlah_tanggungan', 'nama_ibu_kandung', 'pendidikan_terakhir']],
+        ['id' => 'bagian-alamat', 'label' => 'Alamat', 'icon' => 'bi-house', 'kolom' => ['alamat_ktp', 'alamat_domisili']],
+        ['id' => 'bagian-kepegawaian', 'label' => 'Kepegawaian', 'icon' => 'bi-briefcase', 'kolom' => ['nip', 'unit_kerja', 'jabatan', 'jabatan_tambahan', 'unit_organisasi', 'lokasi_kerja', 'tanggal_masuk', 'status_kerja', 'tanggal_habis_kontrak', 'status_rekrutmen', 'tanggal_keluar']],
+        ['id' => 'bagian-kontak', 'label' => 'Kontak Darurat', 'icon' => 'bi-telephone', 'kolom' => ['nama_kerabat', 'no_hp_kerabat', 'hubungan_kerabat']],
+        ['id' => 'bagian-bpjs', 'label' => 'BPJS', 'icon' => 'bi-heart-pulse', 'kolom' => ['no_bpjs_kesehatan', 'no_bpjs_ketenagakerjaan', 'faskes_tingkat_1']],
+        ['id' => 'bagian-dokumen', 'label' => 'Dokumen', 'icon' => 'bi-folder2-open', 'kolom' => ['pas_foto', 'upload_ktp', 'upload_kk', 'upload_cv', 'upload_ijazah_terakhir', 'upload_buku_tabungan']],
+    ];
+    // Navigasi bagian: bagian yang memuat galat server diberi tanda.
+    $nav = array_map(fn ($b) => ['id' => $b['id'], 'label' => $b['label'], 'icon' => $b['icon'], 'status' => $errors->hasAny($b['kolom']) ? false : null], $bagian);
 
-                <section class="panel">
-                    <div class="panel-header d-flex justify-content-between align-items-center">
-                        <div>
-                            <h2 class="h5 mb-1 section-title">
-                                <i class="bi bi-person-plus" aria-hidden="true"></i>
-                                <span>Formulir Data Pegawai</span>
-                            </h2>
-                            <p class="text-muted mb-0">Isi formulir secara bertahap, atau klik langsung tab yang ingin diisi.</p>
-                        </div>
-                    </div>
+    // [name, id, label, accept, bantuan] — format & ukuran mengikuti aturan server.
+    $berkas = [
+        ['pas_foto', 'f-pas-foto', 'Pas Foto', '.jpg,.jpeg,.png', 'JPG/PNG, maks. 2 MB.'],
+        ['upload_ktp', 'f-upload-ktp', 'KTP', '.pdf,.jpg,.jpeg,.png', 'PDF/JPG/PNG, maks. 2 MB.'],
+        ['upload_kk', 'f-upload-kk', 'Kartu Keluarga', '.pdf,.jpg,.jpeg,.png', 'PDF/JPG/PNG, maks. 2 MB.'],
+        ['upload_cv', 'f-upload-cv', 'CV', '.pdf', 'PDF, maks. 2 MB.'],
+        ['upload_ijazah_terakhir', 'f-upload-ijazah-terakhir', 'Ijazah Terakhir', '.pdf,.jpg,.jpeg,.png', 'PDF/JPG/PNG, maks. 2 MB.'],
+        ['upload_buku_tabungan', 'f-upload-buku-tabungan', 'Buku Tabungan', '.pdf,.jpg,.jpeg,.png', 'PDF/JPG/PNG, maks. 2 MB.'],
+    ];
+@endphp
+<main class="dashboard-content">
+    <div class="container-fluid">
+        <x-page-header title="Tambah Pegawai" eyebrow="Kepegawaian" :back="route('admin.pegawai.index')" back-label="Data Pegawai"
+            :subtitle="'Masukkan data pegawai baru. ' . ($longgar ? 'Cukup isi kolom bertanda *; data lain bisa dilengkapi nanti.' : 'Kolom bertanda * wajib diisi.')" />
 
-                    <div class="panel-body p-0 pt-3 p-md-4">{{-- HP: .panel sudah berpadding --}}
-                        <form @unless (isset($pegawai)) data-fokus-awal @endunless action="{{ isset($pegawai) ? route('admin.pegawai.update', $pegawai->id) : route('admin.pegawai.store') }}"
-                            method="POST"
-                            enctype="multipart/form-data"
-                            id="wizardPegawaiForm"
-                            novalidate>
-                            @csrf
-                            @if(isset($pegawai))
-                                @method('PUT')
+        {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
+        @section('galat-di-halaman', '1')
+        @if ($errors->any())
+            <x-alert tone="danger" title="Periksa kembali isian yang ditandai merah" class="mb-3">
+                Data belum tersimpan. Perbaiki isian berikut, lalu simpan lagi:
+                <ul class="mb-0 ps-3">@foreach ($errors->all() as $pesan)<li>{{ $pesan }}</li>@endforeach</ul>
+            </x-alert>
+        @endif
+
+        <form @unless (isset($pegawai)) data-fokus-awal @endunless action="{{ isset($pegawai) ? route('admin.pegawai.update', $pegawai->id) : route('admin.pegawai.store') }}"
+            method="POST"
+            enctype="multipart/form-data"
+            id="wizardPegawaiForm"
+            data-confirm="Simpan data pegawai baru ini?"
+            novalidate>
+            @csrf
+            @if(isset($pegawai))
+                @method('PUT')
+            @endif
+
+            <div class="row g-4 align-items-start">
+                <aside class="col-lg-3 hr-samping">
+                    <x-section-nav label="Bagian formulir pegawai" :items="$nav" />
+                </aside>
+
+                <div class="col-lg-9">
+                    <x-card>
+                        <x-form-section id="bagian-pribadi" class="hr-bagian" title="Data Pribadi" subtitle="Identitas pegawai sesuai KTP dan Kartu Keluarga." icon="bi-person">
+                            <div class="col-md-6">
+                                <x-input name="nama_lengkap" id="f-nama-lengkap" label="Nama Lengkap & Gelar" :value="$p->nama_lengkap ?? ''" maxlength="255"
+                                    placeholder="Nama beserta gelar, contoh: Siti Aminah, S.Pd" :required="$wajib('nama_lengkap')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="email" id="f-email" type="email" label="Email" :value="$p->email ?? ''" maxlength="255"
+                                    placeholder="Email aktif, contoh: siti.aminah@gmail.com" data-pesan="Format email belum benar. Contoh: siti.aminah@gmail.com"
+                                    :required="$wajib('email')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="no_hp" id="f-no-hp" type="tel" label="No. HP (Aktif/WA)" :value="$p->no_hp ?? ''" inputmode="tel" maxlength="20"
+                                    placeholder="Nomor aktif/WhatsApp, contoh: 081234567890" :required="$wajib('no_hp')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="nik" id="f-nik" label="NIK (No. KTP)" :value="$p->nik ?? ''" inputmode="numeric" maxlength="16" minlength="16" pattern="\d{16}"
+                                    placeholder="16 digit angka, contoh: 1471010101010001" data-pesan="NIK harus 16 digit angka, contoh: 1471010101010001."
+                                    :required="$wajib('nik')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="no_kk" id="f-no-kk" label="No. KK" :value="$p->no_kk ?? ''" inputmode="numeric" maxlength="20"
+                                    placeholder="Nomor Kartu Keluarga, contoh: 1471010101010002" :required="$wajib('no_kk')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="npwp" id="f-npwp" label="No. NPWP" optional :value="$p->npwp ?? ''" maxlength="25"
+                                    placeholder="Contoh: 12.345.678.9-012.000" help="Hanya bagi yang sudah memiliki NPWP." field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="tempat_lahir" id="f-tempat-lahir" label="Tempat Lahir" :value="$p->tempat_lahir ?? ''" maxlength="255"
+                                    placeholder="Kota kelahiran, contoh: Pekanbaru" :required="$wajib('tempat_lahir')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                {{-- Batas usia minimal 15 tahun hanya untuk peran selain Admin (server juga melonggarkan Admin). --}}
+                                <x-input name="tanggal_lahir" id="f-tanggal-lahir" type="date" label="Tanggal Lahir" :max="$longgar ? null : now()->subYears(15)->format('Y-m-d')"
+                                    :value="isset($p->tanggal_lahir) ? $p->tanggal_lahir->format('Y-m-d') : ''"
+                                    data-pesan="Tanggal lahir belum benar: usia pegawai minimal 15 tahun." :required="$wajib('tanggal_lahir')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-select name="jenis_kelamin" id="f-jenis-kelamin" label="Jenis Kelamin" :options="$opsi(['Laki-laki', 'Perempuan'])"
+                                    :selected="$p->jenis_kelamin ?? ''" placeholder="Pilih jenis kelamin" :required="$wajib('jenis_kelamin')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="agama" id="f-agama" label="Agama" :value="$p->agama ?? 'Islam'" maxlength="50"
+                                    placeholder="Contoh: Islam" :required="$wajib('agama')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-select name="golongan_darah" id="f-golongan-darah" label="Golongan Darah" optional :options="$opsi(\App\Models\DataPegawai::GOLONGAN_DARAH)"
+                                    :selected="$p->golongan_darah ?? ''" help="Pilih “Belum Diketahui” bila belum pernah cek." field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-select name="status_pernikahan" id="f-status-pernikahan" label="Status Pernikahan" :options="$opsi(['Belum Menikah', 'Menikah', 'Cerai Hidup', 'Cerai Mati'])"
+                                    :selected="$p->status_pernikahan ?? ''" :required="$wajib('status_pernikahan')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="jumlah_tanggungan" id="f-jumlah-tanggungan" type="number" label="Jumlah Tanggungan" optional min="0" max="20"
+                                    :value="$p->jumlah_tanggungan ?? 0" help="Jumlah orang yang dinafkahi pegawai (0–20)."
+                                    data-pesan="Isi angka 0 sampai 20." field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="nama_ibu_kandung" id="f-nama-ibu-kandung" label="Nama Ibu Kandung" :value="$p->nama_ibu_kandung ?? ''" maxlength="255"
+                                    placeholder="Sesuai Kartu Keluarga, contoh: Aminah" :required="$wajib('nama_ibu_kandung')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="pendidikan_terakhir" id="f-pendidikan-terakhir" label="Pendidikan Terakhir" :value="$p->pendidikan_terakhir ?? ''" maxlength="100"
+                                    placeholder="Jenjang dan jurusan, contoh: S1 Pendidikan" :required="$wajib('pendidikan_terakhir')" field-class="mb-0" />
+                            </div>
+                        </x-form-section>
+
+                        <x-form-section id="bagian-alamat" class="hr-bagian" title="Alamat" subtitle="Alamat domisili diisi hanya bila berbeda dari alamat KTP." icon="bi-house">
+                            <div class="col-12">
+                                <x-textarea name="alamat_ktp" id="f-alamat-ktp" label="Alamat KTP" rows="2" :value="$p->alamat_ktp ?? ''"
+                                    placeholder="Jalan, RT/RW, kelurahan, kecamatan, kota. Contoh: Jl. Riau No. 10, RT 02/RW 03, Padang Terubuk, Senapelan, Pekanbaru"
+                                    :required="$wajib('alamat_ktp')" field-class="mb-0" />
+                            </div>
+                            <div class="col-12">
+                                <x-textarea name="alamat_domisili" id="f-alamat-domisili" label="Alamat Domisili" optional rows="2" :value="$p->alamat_domisili ?? ''"
+                                    placeholder="Kosongkan bila sama dengan KTP. Contoh: Jl. Melati No. 5, Pekanbaru" field-class="mb-0" />
+                            </div>
+                        </x-form-section>
+
+                        <x-form-section id="bagian-kepegawaian" class="hr-bagian" title="Kepegawaian" subtitle="Penempatan, jabatan, dan status kerja." icon="bi-briefcase">
+                            <div class="col-md-6">
+                                <x-input name="nip" id="f-nip" label="NIP (No. Induk Pegawai)" :value="$p->nip ?? ''" maxlength="50"
+                                    placeholder="Nomor induk pegawai, contoh: 0101199001012020001" :required="$wajib('nip')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-select name="unit_kerja" id="f-unit-kerja" label="Bagian" :options="$opsi(config('kepegawaian.unit_kerja'))"
+                                    :selected="$p->kepegawaian->unit_kerja ?? ''" placeholder="Pilih bagian" :required="$wajib('unit_kerja')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-select name="jabatan" id="f-jabatan" label="Jabatan Utama" :options="$opsi(\App\Models\Jabatan::daftar())" data-jabatan-unit="[name=unit_kerja]"
+                                    :selected="$p->kepegawaian->jabatan ?? ''" placeholder="Pilih jabatan utama" help="Jabatan di bagian terpilih tampil paling atas."
+                                    :required="$wajib('jabatan')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-select name="jabatan_tambahan" id="f-jabatan-tambahan" label="Jabatan Tambahan" optional :options="$opsi(\App\Models\Jabatan::daftar())" data-jabatan-unit="[name=unit_kerja]"
+                                    :selected="$p->kepegawaian->jabatan_tambahan ?? ''" placeholder="Tidak ada" help="Isi bila pegawai memegang lebih dari satu jabatan." field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-select name="unit_organisasi" id="f-unit-organisasi" label="Unit" optional :options="$opsi(\App\Models\UnitOrganisasi::daftar())"
+                                    :selected="$p->kepegawaian->unit_organisasi ?? ''" placeholder="Tanpa unit" aria-describedby="f-unit-organisasi-info" field-class="mb-0" />
+                                <div class="form-text" id="f-unit-organisasi-info">
+                                    Pengelompokan pegawai; persetujuan tetap mengikuti Bagian. Kelola daftarnya di <a href="{{ route('admin.master-unit.index') }}">Master Unit</a>.
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <x-select name="lokasi_kerja" id="f-lokasi-kerja" label="Lokasi Kerja" :options="$opsi(config('kepegawaian.lokasi_kerja'))"
+                                    :selected="$p->kepegawaian->lokasi_kerja ?? ''" placeholder="Pilih lokasi kerja" :required="$wajib('lokasi_kerja')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="tanggal_masuk" id="f-tanggal-masuk" type="date" label="Tanggal Masuk" :max="now()->format('Y-m-d')"
+                                    :value="isset($p->kepegawaian->tanggal_masuk) ? $p->kepegawaian->tanggal_masuk->format('Y-m-d') : now()->format('Y-m-d')"
+                                    data-pesan="Tanggal masuk tidak boleh melewati hari ini." :required="$wajib('tanggal_masuk')" field-class="mb-0" />
+                            </div>
+                            @if (isset($p->kepegawaian))
+                                <div class="col-md-6">
+                                    <div class="hr-field mb-0">
+                                        <label for="f-masa-kerja" class="form-label">Masa Kerja</label>
+                                        <input id="f-masa-kerja" type="text" class="form-control" value="{{ $p->kepegawaian->masa_kerja }}" readonly tabindex="-1" aria-describedby="f-masa-kerja-bantuan">
+                                        <div class="form-text" id="f-masa-kerja-bantuan">Dihitung otomatis dari tanggal masuk.</div>
+                                    </div>
+                                </div>
                             @endif
-
-                            <ul class="nav nav-pills nav-justified mb-4" id="pegawaiFormTab" role="tablist">
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link active" id="pribadi-tab" data-bs-toggle="tab" data-bs-target="#pribadi" type="button" role="tab">
-                                        <span class="badge bg-secondary me-1">1</span> Data Pribadi
-                                    </button>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="kepegawaian-tab" data-bs-toggle="tab" data-bs-target="#kepegawaian" type="button" role="tab">
-                                        <span class="badge bg-secondary me-1">2</span> Kepegawaian
-                                    </button>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="kontak-tab" data-bs-toggle="tab" data-bs-target="#kontak" type="button" role="tab">
-                                        <span class="badge bg-secondary me-1">3</span> Kontak & BPJS
-                                    </button>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="dokumen-tab" data-bs-toggle="tab" data-bs-target="#dokumen" type="button" role="tab">
-                                        <span class="badge bg-secondary me-1">4</span> Dokumen
-                                    </button>
-                                </li>
-                            </ul>
-
-                            <div class="tab-content" id="pegawaiFormTabContent">
-
-                                <div class="tab-pane fade show active" id="pribadi" role="tabpanel">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label for="f-nama-lengkap" class="form-label required">Nama Lengkap & Gelar</label>
-                                            <input id="f-nama-lengkap" type="text" name="nama_lengkap" class="form-control @error('nama_lengkap') is-invalid @enderror"
-                                                value="{{ old('nama_lengkap', $pegawai->nama_lengkap ?? '') }}" required>
-                                            <div class="invalid-feedback">@error('nama_lengkap'){{ $message }}@else Nama lengkap wajib diisi. @enderror</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-email" class="form-label required">Email</label>
-                                            <input id="f-email" type="email" name="email" class="form-control @error('email') is-invalid @enderror"
-                                                value="{{ old('email', $pegawai->email ?? '') }}" required>
-                                            <div class="invalid-feedback">@error('email'){{ $message }}@else Masukkan alamat email yang valid. @enderror</div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="f-nik" class="form-label required">NIK (No. KTP)</label>
-                                            <input id="f-nik" type="text" name="nik" maxlength="16" minlength="16" pattern="\d{16}" inputmode="numeric"
-                                                class="form-control @error('nik') is-invalid @enderror"
-                                                value="{{ old('nik', $pegawai->nik ?? '') }}" required>
-                                            <div class="invalid-feedback">@error('nik'){{ $message }}@else NIK harus 16 digit angka. @enderror</div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="f-no-kk" class="form-label">No. KK</label>
-                                            <input id="f-no-kk" type="text" name="no_kk" maxlength="20" class="form-control @error('no_kk') is-invalid @enderror"
-                                                value="{{ old('no_kk', $pegawai->no_kk ?? '') }}" required>
-                                            @error('no_kk')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="f-npwp" class="form-label">No. NPWP</label>
-                                            <input id="f-npwp" type="text" name="npwp" maxlength="25" class="form-control @error('npwp') is-invalid @enderror"
-                                                value="{{ old('npwp', $pegawai->npwp ?? '') }}">
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="f-tempat-lahir" class="form-label required">Tempat Lahir</label>
-                                            <input id="f-tempat-lahir" type="text" name="tempat_lahir" class="form-control @error('tempat_lahir') is-invalid @enderror"
-                                                value="{{ old('tempat_lahir', $pegawai->tempat_lahir ?? '') }}" required>
-                                            <div class="invalid-feedback">Tempat lahir wajib diisi.</div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="f-tanggal-lahir" class="form-label required">Tanggal Lahir</label>
-                                            <input id="f-tanggal-lahir" type="date" name="tanggal_lahir" max="{{ now()->subYears(15)->format('Y-m-d') }}"
-                                                class="form-control @error('tanggal_lahir') is-invalid @enderror"
-                                                value="{{ old('tanggal_lahir', isset($pegawai->tanggal_lahir) ? $pegawai->tanggal_lahir->format('Y-m-d') : '') }}" required>
-                                            <div class="invalid-feedback">Tanggal lahir wajib diisi dan tidak boleh di masa depan.</div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="f-jenis-kelamin" class="form-label required">Jenis Kelamin</label>
-                                            <select id="f-jenis-kelamin" name="jenis_kelamin" class="form-select @error('jenis_kelamin') is-invalid @enderror" required>
-                                                <option value="">-- Pilih --</option>
-                                                <option value="Laki-laki" {{ old('jenis_kelamin', $pegawai->jenis_kelamin ?? '') == 'Laki-laki' ? 'selected' : '' }}>Laki-laki</option>
-                                                <option value="Perempuan" {{ old('jenis_kelamin', $pegawai->jenis_kelamin ?? '') == 'Perempuan' ? 'selected' : '' }}>Perempuan</option>
-                                            </select>
-                                            <div class="invalid-feedback">Silakan pilih jenis kelamin.</div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label for="f-agama" class="form-label required">Agama</label>
-                                            <input id="f-agama" type="text" name="agama" class="form-control @error('agama') is-invalid @enderror"
-                                                value="{{ old('agama', $pegawai->agama ?? 'Islam') }}" required>
-                                            <div class="invalid-feedback">Agama wajib diisi.</div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label for="f-golongan-darah" class="form-label">Golongan Darah</label>
-                                            <select id="f-golongan-darah" name="golongan_darah" class="form-select">
-                                                @foreach(\App\Models\DataPegawai::GOLONGAN_DARAH as $gol)
-                                                    <option value="{{ $gol }}" {{ old('golongan_darah', $pegawai->golongan_darah ?? '') == $gol ? 'selected' : '' }}>{{ $gol }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label for="f-status-pernikahan" class="form-label">Status Pernikahan</label>
-                                            <select id="f-status-pernikahan" name="status_pernikahan" class="form-select">
-                                                @foreach(['Belum Menikah', 'Menikah', 'Cerai Hidup', 'Cerai Mati'] as $status)
-                                                    <option value="{{ $status }}" {{ old('status_pernikahan', $pegawai->status_pernikahan ?? '') == $status ? 'selected' : '' }}>{{ $status }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label for="f-jumlah-tanggungan" class="form-label">Jumlah Tanggungan</label>
-                                            <input id="f-jumlah-tanggungan" type="number" name="jumlah_tanggungan" min="0" max="20" class="form-control"
-                                                value="{{ old('jumlah_tanggungan', $pegawai->jumlah_tanggungan ?? 0) }}">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-nama-ibu-kandung" class="form-label required">Nama Ibu Kandung</label>
-                                            <input id="f-nama-ibu-kandung" type="text" name="nama_ibu_kandung" class="form-control @error('nama_ibu_kandung') is-invalid @enderror"
-                                                value="{{ old('nama_ibu_kandung', $pegawai->nama_ibu_kandung ?? '') }}" required>
-                                            <div class="invalid-feedback">Nama ibu kandung wajib diisi.</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-pendidikan-terakhir" class="form-label required">Pendidikan Terakhir</label>
-                                            <input id="f-pendidikan-terakhir" type="text" name="pendidikan_terakhir" class="form-control @error('pendidikan_terakhir') is-invalid @enderror"
-                                                value="{{ old('pendidikan_terakhir', $pegawai->pendidikan_terakhir ?? '') }}" placeholder="contoh: S1 Pendidikan" required>
-                                            <div class="invalid-feedback">Pendidikan terakhir wajib diisi.</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-alamat-ktp" class="form-label required">Alamat KTP</label>
-                                            <textarea id="f-alamat-ktp" name="alamat_ktp" class="form-control @error('alamat_ktp') is-invalid @enderror" rows="3" required>{{ old('alamat_ktp', $pegawai->alamat_ktp ?? '') }}</textarea>
-                                            <div class="invalid-feedback">Alamat KTP wajib diisi.</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-alamat-domisili" class="form-label">Alamat Domisili</label>
-                                            <textarea id="f-alamat-domisili" name="alamat_domisili" class="form-control" rows="3" placeholder="Kosongkan bila sama dengan KTP. Contoh: Jl. Melati No. 5">{{ old('alamat_domisili', $pegawai->alamat_domisili ?? '') }}</textarea>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="tab-pane fade" id="kepegawaian" role="tabpanel">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label for="f-nip" class="form-label required">NIP (No. Induk Pegawai)</label>
-                                            <input id="f-nip" type="text" name="nip" class="form-control @error('nip') is-invalid @enderror"
-                                                value="{{ old('nip', $pegawai->nip ?? '') }}" required>
-                                            <div class="invalid-feedback">@error('nip'){{ $message }}@else NIP wajib diisi. @enderror</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-unit-kerja" class="form-label required">Bagian</label>
-                                            <select id="f-unit-kerja" name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror" required>
-                                                <option value="">-- Pilih Bagian --</option>
-                                                @foreach (config('kepegawaian.unit_kerja') as $unit)
-                                                    <option value="{{ $unit }}" {{ old('unit_kerja', $pegawai->kepegawaian->unit_kerja ?? '') == $unit ? 'selected' : '' }}>{{ $unit }}</option>
-                                                @endforeach
-                                            </select>
-                                            <div class="invalid-feedback">Silakan pilih bagian.</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-jabatan" class="form-label required">Jabatan Utama</label>
-                                            <select id="f-jabatan" name="jabatan" class="form-select @error('jabatan') is-invalid @enderror" required data-jabatan-unit="[name=unit_kerja]">
-                                                <option value="">-- Pilih Jabatan --</option>
-                                                @foreach (\App\Models\Jabatan::daftar() as $j)
-                                                    <option value="{{ $j }}" {{ old('jabatan', $pegawai->kepegawaian->jabatan ?? '') == $j ? 'selected' : '' }}>{{ $j }}</option>
-                                                @endforeach
-                                            </select>
-                                            <div class="invalid-feedback">Jabatan wajib diisi.</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-jabatan-tambahan" class="form-label">Jabatan Tambahan <span class="text-muted">(silahkan diisi bagi yang memiliki jabatan lebih dari 1)</span></label>
-                                            <select id="f-jabatan-tambahan" name="jabatan_tambahan" class="form-select" data-jabatan-unit="[name=unit_kerja]">
-                                                <option value="">-- Tidak Ada --</option>
-                                                @foreach (\App\Models\Jabatan::daftar() as $j)
-                                                    <option value="{{ $j }}" {{ old('jabatan_tambahan', $pegawai->kepegawaian->jabatan_tambahan ?? '') == $j ? 'selected' : '' }}>{{ $j }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-unit-organisasi" class="form-label">Unit <span class="text-muted fw-normal">(opsional)</span></label>
-                                            <select id="f-unit-organisasi" name="unit_organisasi" class="form-select @error('unit_organisasi') is-invalid @enderror">
-                                                <option value="">-- Tanpa Unit --</option>
-                                                @foreach (\App\Models\UnitOrganisasi::daftar() as $unitOrg)
-                                                    <option value="{{ $unitOrg }}" @selected(old('unit_organisasi', $pegawai->kepegawaian->unit_organisasi ?? '') === $unitOrg)>{{ $unitOrg }}</option>
-                                                @endforeach
-                                            </select>
-                                            <div class="form-text">Pengelompokan pegawai; persetujuan tetap mengikuti Bagian. Kelola daftarnya di <a href="{{ route('admin.master-unit.index') }}">Master Unit</a>.</div>
-                                            @error('unit_organisasi')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-lokasi-kerja" class="form-label required">Lokasi Kerja</label>
-                                            <select id="f-lokasi-kerja" name="lokasi_kerja" class="form-select @error('lokasi_kerja') is-invalid @enderror" required>
-                                                <option value="">-- Pilih Lokasi Kerja --</option>
-                                                @foreach (config('kepegawaian.lokasi_kerja') as $lokasi)
-                                                    <option value="{{ $lokasi }}" {{ old('lokasi_kerja', $pegawai->kepegawaian->lokasi_kerja ?? '') == $lokasi ? 'selected' : '' }}>{{ $lokasi }}</option>
-                                                @endforeach
-                                            </select>
-                                            <div class="invalid-feedback">Lokasi kerja wajib diisi.</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-tanggal-masuk" class="form-label required">Tanggal Masuk</label>
-                                            <input id="f-tanggal-masuk" type="date" name="tanggal_masuk" max="{{ now()->format('Y-m-d') }}"
-                                                class="form-control @error('tanggal_masuk') is-invalid @enderror"
-                                                value="{{ old('tanggal_masuk', isset($pegawai->kepegawaian->tanggal_masuk) ? $pegawai->kepegawaian->tanggal_masuk->format('Y-m-d') : now()->format('Y-m-d')) }}" required>
-                                            <div class="invalid-feedback">Tanggal masuk wajib diisi.</div>
-                                        </div>
-
-                                        @if(isset($pegawai) && $pegawai->kepegawaian)
-                                            <div class="col-md-6">
-                                                <label class="form-label">Masa Kerja (otomatis)</label>
-                                                <input type="text" class="form-control bg-light" value="{{ $pegawai->kepegawaian->masa_kerja }}" readonly tabindex="-1">
-                                                <small class="text-muted">Dihitung otomatis dari tanggal masuk, tidak perlu diisi manual.</small>
-                                            </div>
-                                        @endif
-
-                                        <div class="col-md-4">
-                                            <label for="f-status-rekrutmen" class="form-label required">Status Rekrutmen</label>
-                                            <select id="f-status-rekrutmen" name="status_rekrutmen" class="form-select @error('status_rekrutmen') is-invalid @enderror" required>
-                                                <option value="Aktif" {{ old('status_rekrutmen', $pegawai->kepegawaian->status_rekrutmen ?? '') == 'Aktif' ? 'selected' : '' }}>Aktif</option>
-                                                <option value="Tidak Aktif" {{ old('status_rekrutmen', $pegawai->kepegawaian->status_rekrutmen ?? '') == 'Tidak Aktif' ? 'selected' : '' }}>Tidak Aktif</option>
-                                            </select>
-                                            <div class="invalid-feedback">Silakan pilih status rekrutmen.</div>
-                                        </div>
-                                        <div class="col-md-4" data-tanggal-keluar>
-                                            <label for="f-tanggal-keluar" class="form-label">Tanggal Keluar</label>
-                                            <input id="f-tanggal-keluar" type="date" name="tanggal_keluar" max="{{ now()->format('Y-m-d') }}"
-                                                class="form-control @error('tanggal_keluar') is-invalid @enderror"
-                                                value="{{ old('tanggal_keluar', optional($pegawai->kepegawaian->tanggal_keluar ?? null)->format('Y-m-d')) }}">
-                                            @error('tanggal_keluar')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                            <small class="text-muted">Kosongkan = hari ini saat status diubah ke Tidak Aktif.</small>
-                                        </div>
-                                        <script>
-                                            // Tanggal keluar hanya relevan bila status Tidak Aktif.
-                                            document.addEventListener('DOMContentLoaded', function () {
-                                                const s = document.querySelector('select[name=status_rekrutmen]'), k = document.querySelector('[data-tanggal-keluar]');
-                                                const atur = () => { k.hidden = s.value !== 'Tidak Aktif'; };
-                                                s.addEventListener('change', atur); atur();
-                                            });
-                                        </script>
-                                        <div class="col-md-4">
-                                            <label for="f-status-kerja" class="form-label required">Status Kerja</label>
-                                            <select id="f-status-kerja" name="status_kerja" class="form-select @error('status_kerja') is-invalid @enderror" required>
-                                                @foreach(['Tetap', 'Kontrak', 'Magang', 'Harian Lepas', 'Probation'] as $sk)
-                                                    <option value="{{ $sk }}" {{ old('status_kerja', $pegawai->kepegawaian->status_kerja ?? '') == $sk ? 'selected' : '' }}>{{ $sk }}</option>
-                                                @endforeach
-                                            </select>
-                                            <div class="invalid-feedback">Silakan pilih status kerja.</div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="f-tanggal-habis-kontrak" class="form-label">Tanggal Habis Kontrak</label>
-                                            <input id="f-tanggal-habis-kontrak" type="date" name="tanggal_habis_kontrak" class="form-control"
-                                                value="{{ old('tanggal_habis_kontrak', isset($pegawai->kepegawaian->tanggal_habis_kontrak) ? $pegawai->kepegawaian->tanggal_habis_kontrak->format('Y-m-d') : '') }}">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="tab-pane fade" id="kontak" role="tabpanel">
-                                    <div class="row g-3">
-                                        <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-telephone me-2"></i>Kontak Darurat (Kerabat)</h6>
-                                        <div class="col-md-4">
-                                            <label for="f-no-hp" class="form-label required">No. HP Pegawai (Aktif/WA)</label>
-                                            <input id="f-no-hp" type="text" name="no_hp" class="form-control @error('no_hp') is-invalid @enderror"
-                                                value="{{ old('no_hp', $pegawai->no_hp ?? '') }}" required>
-                                            <div class="invalid-feedback">No. HP wajib diisi.</div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="f-nama-kerabat" class="form-label required">Nama Kerabat</label>
-                                            <input id="f-nama-kerabat" type="text" name="nama_kerabat" class="form-control @error('nama_kerabat') is-invalid @enderror"
-                                                value="{{ old('nama_kerabat', $pegawai->kontakDarurat->nama_kerabat ?? '') }}" required>
-                                            <div class="invalid-feedback">Nama kerabat wajib diisi.</div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="f-no-hp-kerabat" class="form-label required">No. HP Kerabat</label>
-                                            <input id="f-no-hp-kerabat" type="text" name="no_hp_kerabat" class="form-control @error('no_hp_kerabat') is-invalid @enderror"
-                                                value="{{ old('no_hp_kerabat', $pegawai->kontakDarurat->no_hp_kerabat ?? '') }}" required>
-                                            <div class="invalid-feedback">No. HP kerabat wajib diisi.</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-hubungan-kerabat" class="form-label required">Hubungan Dengan Kerabat</label>
-                                            <input id="f-hubungan-kerabat" type="text" name="hubungan_kerabat" class="form-control @error('hubungan_kerabat') is-invalid @enderror"
-                                                value="{{ old('hubungan_kerabat', $pegawai->kontakDarurat->hubungan_kerabat ?? '') }}" placeholder="contoh: Istri / Suami / Ibu Kandung" required>
-                                            <div class="invalid-feedback">Hubungan dengan kerabat wajib diisi.</div>
-                                        </div>
-
-                                        <hr class="my-3">
-                                        <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-card-checklist me-2"></i>Data BPJS</h6>
-                                        <div class="col-md-4">
-                                            <label for="f-no-bpjs-kesehatan" class="form-label">No. BPJS Kesehatan</label>
-                                            <input id="f-no-bpjs-kesehatan" type="text" name="no_bpjs_kesehatan" class="form-control"
-                                                value="{{ old('no_bpjs_kesehatan', $pegawai->bpjs->no_bpjs_kesehatan ?? '') }}">
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="f-no-bpjs-ketenagakerjaan" class="form-label">No. BPJS Ketenagakerjaan</label>
-                                            <input id="f-no-bpjs-ketenagakerjaan" type="text" name="no_bpjs_ketenagakerjaan" class="form-control"
-                                                value="{{ old('no_bpjs_ketenagakerjaan', $pegawai->bpjs->no_bpjs_ketenagakerjaan ?? '') }}">
-                                        </div>
-
-                                        <div class="col-md-4">
-                                            <label for="f-faskes-tingkat-1" class="form-label">Faskes Tingkat 1</label>
-                                            <input id="f-faskes-tingkat-1" type="text" name="faskes_tingkat_1" class="form-control @error('faskes_tingkat_1') is-invalid @enderror"
-                                                placeholder="Nama RS/klinik, contoh: Klinik Abdurrab" value="{{ old('faskes_tingkat_1', $pegawai->bpjs->faskes_tingkat_1 ?? '') }}">
-                                            @error('faskes_tingkat_1')
-                                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="tab-pane fade" id="dokumen" role="tabpanel">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label for="f-pas-foto" class="form-label">Pas Foto (JPG/PNG)</label>
-                                            <input id="f-pas-foto" type="file" name="pas_foto" class="form-control @error('pas_foto') is-invalid @enderror" accept="image/*">
-                                            @error('pas_foto') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                                            @if(isset($pegawai) && optional($pegawai->dokumen)->pas_foto)
-                                                <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->pas_foto) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
-                                            @endif
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-upload-ktp" class="form-label">Unggah KTP (PDF/JPG)</label>
-                                            <input id="f-upload-ktp" type="file" name="upload_ktp" class="form-control @error('upload_ktp') is-invalid @enderror">
-                                            @error('upload_ktp') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                                            @if(isset($pegawai) && optional($pegawai->dokumen)->upload_ktp)
-                                                <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_ktp) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
-                                            @endif
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-upload-kk" class="form-label">Unggah KK (PDF/JPG)</label>
-                                            <input id="f-upload-kk" type="file" name="upload_kk" class="form-control @error('upload_kk') is-invalid @enderror">
-                                            @error('upload_kk') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                                            @if(isset($pegawai) && optional($pegawai->dokumen)->upload_kk)
-                                                <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_kk) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
-                                            @endif
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-upload-cv" class="form-label">Unggah CV (PDF)</label>
-                                            <input id="f-upload-cv" type="file" name="upload_cv" class="form-control @error('upload_cv') is-invalid @enderror">
-                                            @error('upload_cv') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                                            @if(isset($pegawai) && optional($pegawai->dokumen)->upload_cv)
-                                                <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_cv) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
-                                            @endif
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-upload-ijazah-terakhir" class="form-label">Unggah Ijazah Terakhir (PDF)</label>
-                                            <input id="f-upload-ijazah-terakhir" type="file" name="upload_ijazah_terakhir" class="form-control @error('upload_ijazah_terakhir') is-invalid @enderror">
-                                            @error('upload_ijazah_terakhir') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                                            @if(isset($pegawai) && optional($pegawai->dokumen)->upload_ijazah_terakhir)
-                                                <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_ijazah_terakhir) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
-                                            @endif
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="f-upload-buku-tabungan" class="form-label">Unggah Buku Tabungan (PDF/JPG)</label>
-                                            <input id="f-upload-buku-tabungan" type="file" name="upload_buku_tabungan" class="form-control @error('upload_buku_tabungan') is-invalid @enderror">
-                                            @error('upload_buku_tabungan') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                                            @if(isset($pegawai) && optional($pegawai->dokumen)->upload_buku_tabungan)
-                                                <small class="text-muted d-block mt-1"><a href="{{ \App\Support\Berkas::url($pegawai->dokumen->upload_buku_tabungan) }}" target="_blank" rel="noopener">Lihat file saat ini</a></small>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-
+                            <div class="col-md-6">
+                                <x-select name="status_kerja" id="f-status-kerja" label="Status Kerja" :options="$opsi(['Tetap', 'Kontrak', 'Magang', 'Harian Lepas', 'Probation'])"
+                                    :selected="$p->kepegawaian->status_kerja ?? ''" :required="$wajib('status_kerja')" field-class="mb-0" />
                             </div>
-
-                            <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center">
-                                <button type="button" class="btn btn-outline-secondary" id="btnPrev" disabled>
-                                    <i class="bi bi-chevron-left me-1"></i> Sebelumnya
-                                </button>
-
-                                <div>
-                                    <button type="button" class="btn btn-primary" id="btnNext">
-                                        Selanjutnya <i class="bi bi-chevron-right ms-1"></i>
-                                    </button>
-
-                                    <button type="submit" class="btn btn-success d-none" id="btnSubmit">
-                                        <i class="bi bi-check-circle me-1"></i> {{ isset($pegawai) ? 'Simpan Perubahan' : 'Submit Data Pegawai' }}
-                                    </button>
-                                </div>
+                            <div class="col-md-6">
+                                <x-input name="tanggal_habis_kontrak" id="f-tanggal-habis-kontrak" type="date" label="Tanggal Habis Kontrak" optional
+                                    :value="isset($p->kepegawaian->tanggal_habis_kontrak) ? $p->kepegawaian->tanggal_habis_kontrak->format('Y-m-d') : ''"
+                                    help="Untuk pegawai kontrak, magang, atau masa percobaan." field-class="mb-0" />
                             </div>
+                            <div class="col-md-6">
+                                <x-select name="status_rekrutmen" id="f-status-rekrutmen" label="Status Rekrutmen" :options="$opsi(['Aktif', 'Tidak Aktif'])"
+                                    :selected="$p->kepegawaian->status_rekrutmen ?? ''" :required="$wajib('status_rekrutmen')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6" data-tanggal-keluar>
+                                <x-input name="tanggal_keluar" id="f-tanggal-keluar" type="date" label="Tanggal Keluar" optional :max="now()->format('Y-m-d')"
+                                    :value="optional($p->kepegawaian->tanggal_keluar ?? null)->format('Y-m-d')"
+                                    data-pesan="Tanggal keluar tidak boleh melewati hari ini." help="Kosongkan = hari ini saat status diubah ke Tidak Aktif." field-class="mb-0" />
+                            </div>
+                        </x-form-section>
 
-                        </form>
+                        <x-form-section id="bagian-kontak" class="hr-bagian" title="Kontak Darurat" subtitle="Kerabat yang dihubungi bila terjadi keadaan darurat." icon="bi-telephone">
+                            <div class="col-md-6">
+                                <x-input name="nama_kerabat" id="f-nama-kerabat" label="Nama Kerabat" :value="$p->kontakDarurat->nama_kerabat ?? ''" maxlength="255"
+                                    placeholder="Kerabat terdekat, contoh: Ahmad Fauzi" :required="$wajib('nama_kerabat')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="no_hp_kerabat" id="f-no-hp-kerabat" type="tel" label="No. HP Kerabat" :value="$p->kontakDarurat->no_hp_kerabat ?? ''" inputmode="tel" maxlength="20"
+                                    placeholder="Nomor aktif, contoh: 081234567890" :required="$wajib('no_hp_kerabat')" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="hubungan_kerabat" id="f-hubungan-kerabat" label="Hubungan dengan Kerabat" :value="$p->kontakDarurat->hubungan_kerabat ?? ''" maxlength="100"
+                                    placeholder="Contoh: Istri / Suami / Ibu Kandung" :required="$wajib('hubungan_kerabat')" field-class="mb-0" />
+                            </div>
+                        </x-form-section>
+
+                        <x-form-section id="bagian-bpjs" class="hr-bagian" title="BPJS" subtitle="Isi bila pegawai sudah terdaftar." icon="bi-heart-pulse">
+                            <div class="col-md-6">
+                                <x-input name="no_bpjs_kesehatan" id="f-no-bpjs-kesehatan" label="No. BPJS Kesehatan" optional :value="$p->bpjs->no_bpjs_kesehatan ?? ''" maxlength="30"
+                                    placeholder="Nomor kartu, contoh: 0001234567890" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="no_bpjs_ketenagakerjaan" id="f-no-bpjs-ketenagakerjaan" label="No. BPJS Ketenagakerjaan" optional :value="$p->bpjs->no_bpjs_ketenagakerjaan ?? ''" maxlength="30"
+                                    placeholder="Nomor kartu, contoh: 12345678901" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="faskes_tingkat_1" id="f-faskes-tingkat-1" label="Faskes Tingkat 1" optional :value="$p->bpjs->faskes_tingkat_1 ?? ''" maxlength="255"
+                                    placeholder="Nama RS/klinik, contoh: Klinik Abdurrab" field-class="mb-0" />
+                            </div>
+                        </x-form-section>
+
+                        <x-form-section id="bagian-dokumen" class="hr-bagian" title="Dokumen" subtitle="Semua berkas opsional; bisa diunggah sekarang atau nanti." icon="bi-folder2-open">
+                            @foreach ($berkas as [$nama, $id, $label, $terima, $bantuan])
+                                @php $ada = $p?->dokumen?->{$nama}; @endphp
+                                <div class="col-md-6">
+                                    <div class="hr-field mb-0">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                            <label for="{{ $id }}" class="form-label mb-0">{{ $label }} <span class="hr-field-opsional">(opsional)</span></label>
+                                            @if ($ada)
+                                                <a href="{{ \App\Support\Berkas::url($ada) }}" target="_blank" rel="noopener" class="hr-badge hr-badge-success text-decoration-none">
+                                                    <i class="bi bi-check2" aria-hidden="true"></i>Sudah diunggah · Lihat
+                                                </a>
+                                            @endif
+                                        </div>
+                                        <input id="{{ $id }}" type="file" name="{{ $nama }}" accept="{{ $terima }}"
+                                            class="form-control @error($nama) is-invalid @enderror" aria-describedby="{{ $id }}-bantuan">
+                                        @error($nama)
+                                            <div class="invalid-feedback d-block" id="{{ $id }}-bantuan"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
+                                        @else
+                                            <div class="form-text" id="{{ $id }}-bantuan">{{ $bantuan }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            @endforeach
+                        </x-form-section>
+                    </x-card>
+
+                    <div class="hr-bilah-aksi mt-3">
+                        <x-button variant="secondary" :href="route('admin.pegawai.index')">Batal</x-button>
+                        <x-button type="submit" icon="bi-check-lg">Simpan Pegawai</x-button>
                     </div>
-                </section>
+                </div>
             </div>
-        </main>
+        </form>
+    </div>
+</main>
 
-        <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                const form = document.getElementById('wizardPegawaiForm');
-                const tabs = Array.from(document.querySelectorAll('#pegawaiFormTab button[data-bs-toggle="tab"]'));
-                // Hanya pane form ini (navbar juga punya .tab-pane) agar indeks pane = indeks tab.
-                const panes = Array.from(document.querySelectorAll('#pegawaiFormTabContent > .tab-pane'));
-                const btnPrev = document.getElementById('btnPrev');
-                const btnNext = document.getElementById('btnNext');
-                const btnSubmit = document.getElementById('btnSubmit');
-                let currentStep = 0;
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('wizardPegawaiForm');
 
-                function activateStep(stepIndex) {
-                    const targetTab = bootstrap.Tab.getOrCreateInstance(tabs[stepIndex]);
-                    targetTab.show();
+        // Tanggal keluar hanya relevan bila status Tidak Aktif.
+        const status = form.querySelector('select[name=status_rekrutmen]');
+        const keluar = form.querySelector('[data-tanggal-keluar]');
+        const aturKeluar = () => { keluar.hidden = status.value !== 'Tidak Aktif'; };
+        status.addEventListener('change', aturKeluar);
+        aturKeluar();
 
-                    btnPrev.disabled = stepIndex === 0;
+        // Pesan galat isian (Bahasa Indonesia): kosong → dari label; format → data-pesan.
+        function pesan(el) {
+            const label = (form.querySelector('label[for="' + el.id + '"]')?.firstChild?.textContent || 'Isian ini').trim();
+            if (el.validity.valueMissing) return el.tagName === 'SELECT' ? 'Pilih ' + label.toLowerCase() + '.' : label + ' wajib diisi.';
+            return el.dataset.pesan || el.validationMessage;
+        }
 
-                    if (stepIndex === tabs.length - 1) {
-                        btnNext.classList.add('d-none');
-                        btnSubmit.classList.remove('d-none');
-                    } else {
-                        btnNext.classList.remove('d-none');
-                        btnSubmit.classList.add('d-none');
-                    }
-
-                    currentStep = stepIndex;
+        // Tandai satu isian: merah + pesan di bawahnya bila tidak valid. Galat server yang sudah tampil tidak digandakan.
+        function periksa(el) {
+            const wadah = el.closest('.hr-field') || el.parentElement;
+            let umpan = wadah.querySelector('[data-galat-klien]');
+            if (el.checkValidity()) {
+                if (umpan) {
+                    umpan.remove();
+                    el.classList.remove('is-invalid');
+                    el.removeAttribute('aria-invalid');
                 }
-
-                function validateTab(stepIndex) {
-                    const pane = panes[stepIndex];
-                    const inputs = pane.querySelectorAll('input[required], select[required], textarea[required]');
-                    let isValid = true;
-
-                    inputs.forEach(input => {
-                        if (!input.checkValidity()) {
-                            input.classList.add('is-invalid');
-                            isValid = false;
-                        } else {
-                            input.classList.remove('is-invalid');
-                        }
-                    });
-
-                    return isValid;
+                return true;
+            }
+            el.classList.add('is-invalid');
+            el.setAttribute('aria-invalid', 'true');
+            if (!wadah.querySelector('.invalid-feedback:not([data-galat-klien])')) {
+                if (!umpan) {
+                    umpan = document.createElement('div');
+                    umpan.className = 'invalid-feedback d-block';
+                    umpan.id = el.id + '-galat-klien';
+                    umpan.dataset.galatKlien = '';
+                    wadah.append(umpan);
+                    el.setAttribute('aria-describedby', ((el.getAttribute('aria-describedby') || '') + ' ' + umpan.id).trim());
                 }
+                umpan.innerHTML = '<i class="bi bi-exclamation-circle" aria-hidden="true"></i> ';
+                umpan.append(pesan(el));
+            }
+            return false;
+        }
 
-                function validateTabAndFocus(stepIndex) {
-                    const isValid = validateTab(stepIndex);
-                    if (!isValid) {
-                        const firstInvalid = panes[stepIndex].querySelector('.is-invalid');
-                        if (firstInvalid) firstInvalid.focus();
-                    }
-                    return isValid;
-                }
-
-                tabs.forEach((tab, index) => {
-                    tab.addEventListener('click', function () {
-                        activateStep(index);
-                    });
-                });
-
-                btnNext.addEventListener('click', function () {
-                    if (validateTabAndFocus(currentStep) && currentStep < tabs.length - 1) {
-                        activateStep(currentStep + 1);
-                    }
-                });
-
-                btnPrev.addEventListener('click', function () {
-                    if (currentStep > 0) {
-                        activateStep(currentStep - 1);
-                    }
-                });
-
-                form.addEventListener('submit', function (e) {
-                    if (form.dataset.confirmed === '1') return;
-
-                    let firstInvalidStep = null;
-
-                    panes.forEach((pane, index) => {
-                        const stepValid = validateTab(index);
-                        if (!stepValid && firstInvalidStep === null) {
-                            firstInvalidStep = index;
-                        }
-                    });
-
-                    if (firstInvalidStep !== null) {
-                        e.preventDefault();
-                        activateStep(firstInvalidStep);
-                        const firstInvalid = panes[firstInvalidStep].querySelector('.is-invalid');
-                        if (firstInvalid) firstInvalid.focus();
-                        return;
-                    }
-
-                    e.preventDefault();
-                    Swal.fire({
-                        icon: 'question',
-                        title: 'Simpan Data Pegawai?',
-                        text: 'Pastikan semua data yang diisi sudah benar.',
-                        showCancelButton: true,
-                        confirmButtonColor: '#880f12',
-                        cancelButtonColor: '#6c757d',
-                        confirmButtonText: 'Ya, Simpan',
-                        cancelButtonText: 'Batal',
-                        reverseButtons: true,
-                    }).then(function (result) {
-                        if (result.isConfirmed) {
-                            form.dataset.confirmed = '1';
-                            form.submit();
-                        }
-                    });
-                });
-
-                {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
-                @section('galat-di-halaman', '1')
-                @if ($errors->any())
-                    // Tandai juga field yang ditolak server tapi belum diberi kelas is-invalid di Blade, agar tab-nya ikut ditandai & dibuka.
-                    Object.entries(@json($errors->toArray())).forEach(([nama, pesan]) => {
-                        const el = form.querySelector(`[name="${nama}"], [name="${nama}[]"]`);
-                        if (!el || el.classList.contains('is-invalid')) return;
-                        el.classList.add('is-invalid');
-                        if (!el.parentElement.querySelector('.invalid-feedback')) {
-                            const umpan = document.createElement('div');
-                            umpan.className = 'invalid-feedback';
-                            umpan.textContent = pesan[0];
-                            el.after(umpan);
-                        }
-                    });
-
-                    panes.forEach((pane, index) => {
-                        if (pane.querySelector('.is-invalid')) {
-                            const numberBadge = tabs[index].querySelector('.badge');
-                            if (numberBadge) numberBadge.classList.replace('bg-secondary', 'bg-danger');
-                            if (!tabs[index].querySelector('.tab-error-count')) {
-                                const errBadge = document.createElement('span');
-                                errBadge.className = 'badge bg-danger rounded-pill ms-1 tab-error-count';
-                                errBadge.textContent = pane.querySelectorAll('.is-invalid').length + ' error';
-                                tabs[index].appendChild(errBadge);
-                            }
-                        }
-                    });
-
-                    const firstError = form.querySelector('.is-invalid');
-                    if (firstError) {
-                        const errorPane = firstError.closest('.tab-pane');
-                        if (errorPane) {
-                            const errorIndex = panes.indexOf(errorPane);
-                            activateStep(errorIndex);
-                        }
-                        firstError.focus({ preventScroll: true });
-                        firstError.scrollIntoView({ block: 'center' });
-                    }
-                @endif
-            });
-        </script>
-    @if (auth()->user()->isAdmin())
-    <script>
-        // Admin boleh menyimpan data belum lengkap: hanya nama, jabatan, dan unit kerja yang tetap wajib (sama dengan aturan server).
-        document.addEventListener('DOMContentLoaded', function () {
-            const tetap = ['nama_lengkap', 'jabatan', 'unit_kerja'];
-            document.querySelectorAll('#wizardPegawaiForm [required]').forEach(function (el) {
-                if (tetap.includes(el.name)) return;
-                el.removeAttribute('required');
-                // Tanda * di label ikut hilang agar sesuai dengan kolom yang benar-benar wajib.
-                el.closest('[class*="col-"]')?.querySelector('.form-label.required')?.classList.remove('required');
+        // Saat isian bertanda merah diubah: galat browser dicek ulang, pesan galat server dibuang (sedang diperbaiki;
+        // .d-block mengalahkan [hidden], jadi elemennya dihapus).
+        ['input', 'change'].forEach(function (jenis) {
+            form.addEventListener(jenis, function (e) {
+                const el = e.target;
+                if (!el.classList || !el.classList.contains('is-invalid')) return;
+                const wadah = el.closest('.hr-field') || el.parentElement;
+                if (wadah.querySelector('[data-galat-klien]')) { periksa(el); return; }
+                wadah.querySelectorAll('.invalid-feedback').forEach((g) => g.remove());
+                el.classList.remove('is-invalid');
+                el.removeAttribute('aria-invalid');
             });
         });
-    </script>
-@endif
+
+        // Sebelum dikirim: semua isian dicek. Ada yang salah → tandai & fokus ke yang pertama;
+        // semua benar → dialog konfirmasi data-confirm lalu tombol Simpan berstatus memuat (layouts.partials.sweetalert).
+        form.addEventListener('submit', function (e) {
+            if (form.dataset.confirmed === '1') return;
+            const salah = Array.from(form.elements).filter((el) => el.willValidate).filter((el) => !periksa(el));
+            if (!salah.length) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            salah[0].focus({ preventScroll: true });
+            salah[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }, true);
+    });
+</script>
 @include('partials.jabatan-ikut-unit')
 @endsection

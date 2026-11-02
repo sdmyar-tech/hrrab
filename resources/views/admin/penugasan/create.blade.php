@@ -1,5 +1,8 @@
 @extends('layouts.admin.app')
 
+{{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
+@section('galat-di-halaman', '1')
+
 @section('content')
 @php
     $mutasi = $jenis === 'mutasi';
@@ -9,189 +12,207 @@
         ? route('admin.penugasan.tambah', array_filter(['pegawai' => $pegawai?->id, 'jenis' => $j]))
         : route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => $j]);
     $urlKembali = $dariDaftar ? route('admin.penugasan.index') : route('admin.pegawai.show', ['pegawai' => $pegawai, 'tab' => 'penugasan']);
+    $units = config('kepegawaian.unit_kerja');
+    $judul = $mutasi ? 'Mutasi Pegawai' : 'Tambah Rangkap Tugas';
 @endphp
 <main class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        @include('partials.kembali', ['ke' => $urlKembali, 'label' => $dariDaftar ? 'Mutasi & Rangkap' : 'detail pegawai'])
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi {{ $mutasi ? 'bi-arrow-left-right' : 'bi-diagram-3' }}"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Mutasi &amp; Rangkap Tugas</p>
-                    <h1 class="h3 mb-1">{{ $mutasi ? 'Mutasi Pegawai' : 'Tambah Rangkap Tugas' }}</h1>
-                    <p class="text-muted mb-0">{{ $pegawai ? $pegawai->nama_lengkap . ' · NIP ' . ($pegawai->nip ?? '-') : 'Pilih pegawai, lalu isi data penugasannya.' }}</p>
-                </div>
-            </div>
-        </div>
+    <div class="container-fluid">
+        <x-page-header :title="$judul" eyebrow="Kepegawaian"
+            :subtitle="$pegawai ? $pegawai->nama_lengkap . ' · ' . ($pegawai->nip ? 'NIP ' . $pegawai->nip : 'NIP belum diisi') : 'Pilih pegawai, lalu isi data penugasannya.'"
+            :back="$urlKembali" :back-label="$dariDaftar ? 'Mutasi & Rangkap' : 'Detail Pegawai'" />
 
-        <div class="row g-3">
-            <div class="col-12 col-lg-7">
-                <section class="panel p-4">
-                    {{-- Dua pilihan jenis, sama lebar. --}}
-                    <div class="pn-jenis mb-3" role="group" aria-label="Jenis penugasan">
-                        <a href="{{ $urlJenis('mutasi') }}" class="btn {{ $mutasi ? 'btn-primary' : 'btn-outline-primary' }}" @if ($mutasi) aria-current="page" @endif>
-                            <span><i class="bi bi-arrow-left-right me-1"></i>Mutasi</span><small>Pindah bagian utama</small>
-                        </a>
-                        <a href="{{ $urlJenis('rangkap') }}" class="btn {{ $mutasi ? 'btn-outline-primary' : 'btn-primary' }}" @unless ($mutasi) aria-current="page" @endunless>
-                            <span><i class="bi bi-diagram-3 me-1"></i>Rangkap Tugas</span><small>Tugas tambahan di bagian lain</small>
-                        </a>
-                    </div>
+        @if ($errors->any())
+            <x-alert tone="danger" title="Periksa kembali isian yang ditandai merah" class="mb-3">
+                Data belum tersimpan. Perbaiki isian berikut, lalu simpan lagi:
+                <ul class="mb-0 ps-3">@foreach ($errors->all() as $pesan)<li>{{ $pesan }}</li>@endforeach</ul>
+            </x-alert>
+        @endif
+
+        <div class="row g-4">
+            <div class="col-lg-8 d-grid gap-4 align-content-start">
+                {{-- Langkah 1: jenis & pegawai. Di luar form simpan: memilih = memuat ulang form untuk pilihan itu. --}}
+                <x-card>
+                    <x-form-section title="Jenis Penugasan" icon="bi-signpost-split"
+                        subtitle="Mutasi memindahkan bagian utama; rangkap tugas menambah tugas di bagian lain tanpa melepas bagian utama.">
+                        <div class="col-12">
+                            {{-- Dua pilihan sama lebar (tautan: berganti jenis memuat ulang form, pegawai terpilih tetap). --}}
+                            <div class="pn-jenis hr-opsi-grup" role="group" aria-label="Jenis penugasan">
+                                <a href="{{ $urlJenis('mutasi') }}" class="hr-opsi" @if ($mutasi) aria-current="page" @endif>
+                                    <i class="bi bi-arrow-left-right hr-opsi-ikon" aria-hidden="true"></i>
+                                    <span><strong>Mutasi</strong><small>Pindah bagian utama</small></span>
+                                </a>
+                                <a href="{{ $urlJenis('rangkap') }}" class="hr-opsi" @unless ($mutasi) aria-current="page" @endunless>
+                                    <i class="bi bi-diagram-3 hr-opsi-ikon" aria-hidden="true"></i>
+                                    <span><strong>Rangkap Tugas</strong><small>Tugas tambahan di bagian lain</small></span>
+                                </a>
+                            </div>
+                        </div>
+                    </x-form-section>
 
                     @if ($dariDaftar)
-                        <div class="mb-3">
-                            <label class="form-label" for="pn-pegawai">Pegawai</label>
-                            @include('partials.pilih-pegawai', ['name' => 'pegawai', 'id' => 'pn-pegawai', 'terpilih' => $pegawai?->id, 'wajib' => true])
-                        </div>
+                        <x-form-section title="Pegawai" icon="bi-person" subtitle="Ketik nama, NIP, atau bagian untuk menyaring daftar.">
+                            <div class="col-12">
+                                <x-form-group label="Pegawai" for="pn-pegawai" required class="mb-0">
+                                    @include('partials.pilih-pegawai', ['name' => 'pegawai', 'id' => 'pn-pegawai', 'terpilih' => $pegawai?->id, 'wajib' => true])
+                                </x-form-group>
+                            </div>
+                        </x-form-section>
                     @endif
+                </x-card>
 
-                    @if (! $pegawai)
-                        <div class="alert alert-light border small mb-0"><i class="bi bi-person-check me-1"></i>Pilih pegawai di atas untuk mengisi data {{ $mutasi ? 'mutasi' : 'rangkap tugas' }}.</div>
-                    @else
-                    <form data-fokus-awal action="{{ route('admin.penugasan.store', $pegawai) }}" method="POST"
+                @if (! $pegawai)
+                    <x-card>
+                        <x-empty-state icon="bi-person-check" title="Pilih pegawai dulu" compact>
+                            Isian {{ $mutasi ? 'mutasi' : 'rangkap tugas' }} tampil setelah pegawai dipilih di atas.
+                        </x-empty-state>
+                    </x-card>
+                @else
+                    {{-- Langkah 2: data penugasan (form simpan). --}}
+                    <form data-fokus-awal action="{{ route('admin.penugasan.store', $pegawai) }}" method="POST" id="formPenugasan"
                         data-confirm="{{ $mutasi ? 'Simpan mutasi pegawai ini?' : 'Tambahkan rangkap tugas ini?' }}">
                         @csrf
                         <input type="hidden" name="jenis" value="{{ $jenis }}">
                         @if ($dariDaftar)<input type="hidden" name="asal" value="daftar">@endif
 
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="f-unit-kerja" class="form-label">{{ $mutasi ? 'Bagian Tujuan' : 'Bagian Rangkap' }}</label>
-                                <select id="f-unit-kerja" name="unit_kerja" class="form-select @error('unit_kerja') is-invalid @enderror" required>
-                                    <option value="">-- Pilih Bagian --</option>
-                                    @foreach (config('kepegawaian.unit_kerja') as $unit)
-                                        <option value="{{ $unit }}" @selected(old('unit_kerja') === $unit)>{{ $unit }}</option>
-                                    @endforeach
-                                </select>
-                                @error('unit_kerja')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="f-peran" class="form-label">Peran di Bagian</label>
-                                <select id="f-peran" name="peran" class="form-select @error('peran') is-invalid @enderror" required>
-                                    <option value="anggota" @selected(old('peran', 'anggota') === 'anggota')>Anggota / Staff</option>
-                                    <option value="kepala" @selected(old('peran') === 'kepala')>Kepala Bagian</option>
-                                </select>
-                                <div class="form-text">Kepala bagian meng-approve cuti/lembur bagian itu & jadi interviewer tahap 2.</div>
-                                @error('peran')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-
-                            <div class="col-12">
-                                <label for="f-jabatan" class="form-label">Jabatan {{ $mutasi ? 'Baru' : 'di Bagian Rangkap' }} @unless ($mutasi)<span class="text-muted">(opsional)</span>@endunless</label>
-                                <input id="f-jabatan" type="text" name="jabatan" list="daftarJabatan" data-jabatan-unit="[name=unit_kerja]" class="form-control @error('jabatan') is-invalid @enderror"
-                                    value="{{ old('jabatan', $mutasi ? $utama?->jabatan : '') }}" {{ $mutasi ? 'required' : '' }} autocomplete="off">
-                                <datalist id="daftarJabatan">
-                                    @foreach (\App\Models\Jabatan::daftar() as $j)
-                                        <option value="{{ $j }}">
-                                    @endforeach
-                                </datalist>
-                                @error('jabatan')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-
-                            @if ($mutasi)
+                        <x-card>
+                            <x-form-section title="Penempatan" icon="bi-building"
+                                :subtitle="$mutasi ? 'Bagian & jabatan baru pegawai.' : 'Bagian tempat tugas tambahan & jabatannya di sana.'">
                                 <div class="col-md-6">
-                                    <label for="f-tanggal-efektif" class="form-label">Tanggal Efektif</label>
-                                    <input id="f-tanggal-efektif" type="date" name="tanggal_efektif" class="form-control @error('tanggal_efektif') is-invalid @enderror"
-                                        value="{{ old('tanggal_efektif', $hariIni) }}" required>
-                                    <div class="form-text">Tanggal ke depan = mutasi terjadwal, berlaku otomatis pada tanggal itu.</div>
-                                    @error('tanggal_efektif')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                </div>
-                            @else
-                                <div class="col-md-6">
-                                    <label for="f-tanggal-mulai" class="form-label">Tanggal Mulai</label>
-                                    <input id="f-tanggal-mulai" type="date" name="tanggal_mulai" class="form-control @error('tanggal_mulai') is-invalid @enderror"
-                                        value="{{ old('tanggal_mulai', $hariIni) }}" required>
-                                    @error('tanggal_mulai')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    <x-select name="unit_kerja" id="f-unit-kerja" :label="$mutasi ? 'Bagian Tujuan' : 'Bagian Rangkap'"
+                                        :options="array_combine($units, $units)" placeholder="Pilih bagian" required field-class="mb-0" />
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="f-tanggal-selesai" class="form-label">Tanggal Selesai <span class="text-muted">(opsional)</span></label>
-                                    <input id="f-tanggal-selesai" type="date" name="tanggal_selesai" class="form-control @error('tanggal_selesai') is-invalid @enderror"
-                                        value="{{ old('tanggal_selesai') }}">
-                                    <div class="form-text">Kosongkan bila belum ditentukan; bisa diakhiri kapan saja.</div>
-                                    @error('tanggal_selesai')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    <x-input name="jabatan" id="f-jabatan" :label="$mutasi ? 'Jabatan Baru' : 'Jabatan di Bagian Rangkap'"
+                                        :value="$mutasi ? $utama?->jabatan : ''" :required="$mutasi" :optional="! $mutasi"
+                                        list="daftarJabatan" data-jabatan-unit="[name=unit_kerja]" autocomplete="off" maxlength="255"
+                                        placeholder="Pilih jabatan, contoh: STAFF KEUANGAN"
+                                        help="Jabatan di bagian terpilih tampil paling atas." field-class="mb-0" />
+                                    <datalist id="daftarJabatan">
+                                        @foreach (\App\Models\Jabatan::daftar() as $j)
+                                            <option value="{{ $j }}">
+                                        @endforeach
+                                    </datalist>
                                 </div>
-                            @endif
-
-                            <div class="col-md-6">
-                                <label for="f-no-sk" class="form-label">No. SK <span class="text-muted">(opsional)</span></label>
-                                <input id="f-no-sk" type="text" name="no_sk" class="form-control @error('no_sk') is-invalid @enderror" value="{{ old('no_sk') }}" maxlength="100">
-                                @error('no_sk')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-
-                            <div class="col-12">
-                                <label for="f-keterangan" class="form-label">Keterangan <span class="text-muted">(opsional)</span></label>
-                                <textarea id="f-keterangan" name="keterangan" rows="2" class="form-control @error('keterangan') is-invalid @enderror">{{ old('keterangan') }}</textarea>
-                                @error('keterangan')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-
-                            @if ($mutasi)
                                 <div class="col-12">
-                                    <label class="form-label">Pengajuan cuti/lembur yang masih menunggu
-                                        <span class="badge text-bg-{{ $jumlahPending ? 'warning' : 'secondary' }}">{{ $jumlahPending }}</span></label>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="pengajuan_pending" id="pendingLanjut" value="lanjut" @checked(old('pengajuan_pending', 'lanjut') === 'lanjut')>
-                                        <label class="form-check-label" for="pendingLanjut">Tetap diproses kepala bagian lama <span class="text-muted">(disarankan — terjadi saat masih di bagian lama)</span></label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="pengajuan_pending" id="pendingTolak" value="tolak" @checked(old('pengajuan_pending') === 'tolak')>
-                                        <label class="form-check-label" for="pendingTolak">Tolak otomatis, pegawai mengajukan ulang di bagian baru</label>
-                                    </div>
-                                    @error('pengajuan_pending')<div class="text-danger small">{{ $message }}</div>@enderror
+                                    <fieldset class="hr-field mb-0">
+                                        <legend class="form-label required">Peran di Bagian</legend>
+                                        <div class="hr-opsi-grup">
+                                            <label class="hr-opsi" for="f-peran-anggota">
+                                                <input class="form-check-input @error('peran') is-invalid @enderror" type="radio" name="peran" id="f-peran-anggota" value="anggota"
+                                                    @checked(old('peran', 'anggota') === 'anggota') required>
+                                                <span><strong>Anggota / Staff</strong><small>Bekerja di bagian ini tanpa wewenang menyetujui.</small></span>
+                                            </label>
+                                            <label class="hr-opsi" for="f-peran-kepala">
+                                                <input class="form-check-input @error('peran') is-invalid @enderror" type="radio" name="peran" id="f-peran-kepala" value="kepala"
+                                                    @checked(old('peran') === 'kepala')>
+                                                <span><strong>Kepala Bagian</strong><small>Menyetujui cuti/lembur bagian ini &amp; menjadi pewawancara tahap 2.</small></span>
+                                            </label>
+                                        </div>
+                                        @error('peran')<div class="invalid-feedback d-block"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>@enderror
+                                    </fieldset>
                                 </div>
-                            @endif
-                        </div>
+                            </x-form-section>
 
-                        <div class="d-flex gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i> {{ $mutasi ? 'Simpan Mutasi' : 'Simpan Rangkap' }}
-                            </button>
-                            <a href="{{ $urlKembali }}" class="btn btn-outline-secondary">Batal</a>
+                            <x-form-section title="Masa Berlaku & SK" icon="bi-calendar-event"
+                                :subtitle="$mutasi ? 'Tanggal ke depan = mutasi terjadwal, berlaku otomatis pada tanggal itu.' : 'Rangkap tugas bisa diakhiri kapan saja dari detail pegawai.'">
+                                @if ($mutasi)
+                                    <div class="col-md-6">
+                                        <x-input type="date" name="tanggal_efektif" id="f-tanggal-efektif" label="Tanggal Efektif" :value="$hariIni" required
+                                            help="Penugasan utama lama ditutup sehari sebelumnya." field-class="mb-0" />
+                                    </div>
+                                @else
+                                    <div class="col-md-6">
+                                        <x-input type="date" name="tanggal_mulai" id="f-tanggal-mulai" label="Tanggal Mulai" :value="$hariIni" required field-class="mb-0" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <x-input type="date" name="tanggal_selesai" id="f-tanggal-selesai" label="Tanggal Selesai" optional
+                                            help="Kosongkan bila belum ditentukan." field-class="mb-0" />
+                                    </div>
+                                @endif
+                                <div class="col-md-6">
+                                    <x-input name="no_sk" id="f-no-sk" label="No. SK" optional maxlength="100"
+                                        placeholder="Nomor SK, contoh: 012/SK/YAR/2026" field-class="mb-0" />
+                                </div>
+                                <div class="col-12">
+                                    <x-textarea name="keterangan" id="f-keterangan" label="Keterangan" optional rows="2" maxlength="1000"
+                                        placeholder="Catatan singkat, contoh: menggantikan kepala bagian yang cuti panjang" field-class="mb-0" />
+                                </div>
+                            </x-form-section>
+
+                            @if ($mutasi)
+                                <x-form-section title="Pengajuan yang Masih Menunggu" icon="bi-hourglass-split"
+                                    :subtitle="$jumlahPending ? 'Ada ' . $jumlahPending . ' pengajuan cuti/lembur pegawai ini yang belum diputuskan.' : 'Saat ini tidak ada pengajuan cuti/lembur yang menunggu; pilihan ini berlaku bila ada.'">
+                                    <div class="col-12">
+                                        <fieldset class="hr-field mb-0">
+                                            <legend class="form-label required">Penanganan pengajuan cuti/lembur yang menunggu</legend>
+                                            <div class="hr-opsi-grup">
+                                                <label class="hr-opsi" for="pendingLanjut">
+                                                    <input class="form-check-input @error('pengajuan_pending') is-invalid @enderror" type="radio" name="pengajuan_pending" id="pendingLanjut" value="lanjut"
+                                                        @checked(old('pengajuan_pending', 'lanjut') === 'lanjut')>
+                                                    <span><strong>Tetap diproses kepala bagian lama</strong><small>Disarankan — pengajuan dibuat saat masih di bagian lama.</small></span>
+                                                </label>
+                                                <label class="hr-opsi" for="pendingTolak">
+                                                    <input class="form-check-input @error('pengajuan_pending') is-invalid @enderror" type="radio" name="pengajuan_pending" id="pendingTolak" value="tolak"
+                                                        @checked(old('pengajuan_pending') === 'tolak')>
+                                                    <span><strong>Tolak otomatis</strong><small>Pegawai mengajukan ulang di bagian baru.</small></span>
+                                                </label>
+                                            </div>
+                                            @error('pengajuan_pending')<div class="invalid-feedback d-block"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>@enderror
+                                        </fieldset>
+                                    </div>
+                                </x-form-section>
+                            @endif
+                        </x-card>
+
+                        <div class="hr-bilah-aksi mt-4">
+                            <x-button variant="secondary" :href="$urlKembali">Batal</x-button>
+                            <x-button type="submit" icon="bi-check-lg">{{ $mutasi ? 'Simpan Mutasi' : 'Simpan Rangkap' }}</x-button>
                         </div>
                     </form>
-                    @endif
-                </section>
+                @endif
             </div>
 
-            <div class="col-12 col-lg-5">
-                <section class="panel p-4">
-                    <h2 class="h6 fw-bold mb-3">Penugasan Saat Ini</h2>
-                    @forelse ($pegawai?->penugasanAktif ?? [] as $p)
-                        <div class="border rounded p-2 mb-2">
-                            <div class="d-flex justify-content-between">
-                                <span class="fw-semibold">{{ $p->unit_kerja }}</span>
-                                <span>
-                                    <span class="badge {{ $p->is_utama ? 'text-bg-primary' : 'text-bg-info' }}">{{ $p->is_utama ? 'Utama' : 'Rangkap' }}</span>
-                                    @if ($p->isKepala())<span class="badge text-bg-dark">Kepala</span>@endif
-                                </span>
-                            </div>
-                            <small class="text-muted">{{ $p->jabatan ?? '-' }} &middot; sejak {{ $p->tanggal_mulai->format('d-m-Y') }}</small>
-                        </div>
-                    @empty
-                        <p class="text-muted small mb-0">{{ $pegawai ? 'Belum ada penugasan tercatat.' : 'Pilih pegawai untuk melihat penugasannya.' }}</p>
-                    @endforelse
+            <aside class="col-lg-4"><div class="hr-samping d-grid gap-4">
+                <x-card title="Penugasan Saat Ini" icon="bi-diagram-3" :padding="false"
+                    :subtitle="$pegawai ? null : 'Pilih pegawai untuk melihat penugasannya.'">
+                    @if ($pegawai)
+                        <ul class="list-group list-group-flush">
+                            @forelse ($pegawai->penugasanAktif as $p)
+                                <li class="list-group-item">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                                        <span class="hr-sel-judul">{{ $p->unit_kerja }}</span>
+                                        <span class="d-flex flex-wrap gap-1">
+                                            <x-badge :tone="$p->is_utama ? 'primary' : 'info'">{{ $p->is_utama ? 'Utama' : 'Rangkap' }}</x-badge>
+                                            @if ($p->isKepala())<x-badge tone="neutral" icon="bi-star">Kepala</x-badge>@endif
+                                        </span>
+                                    </div>
+                                    <span class="hr-sel-sub">{{ $p->jabatan ?? '-' }} &middot; sejak {{ $p->tanggal_mulai->translatedFormat('d M Y') }}</span>
+                                </li>
+                            @empty
+                                <li class="list-group-item hr-sel-sub">Belum ada penugasan tercatat.</li>
+                            @endforelse
+                        </ul>
+                    @endif
+                </x-card>
 
-                    <hr>
-                    <ul class="small text-muted mb-0 ps-3">
+                <x-card :title="$mutasi ? 'Yang Terjadi Saat Mutasi' : 'Ketentuan Rangkap Tugas'" icon="bi-info-circle">
+                    <ul class="hr-daftar-info">
                         @if ($mutasi)
-                            <li>Penugasan utama lama ditutup sehari sebelum tanggal efektif; rangkap tugas tetap berjalan.</li>
-                            <li>Pengajuan yang sudah dibuat tetap tercatat di bagian lama (laporan tidak berubah).</li>
-                            <li>Bila pegawai ini kepala di bagian lama, sistem mengingatkan bagian yang jadi tanpa kepala.</li>
+                            <li><i class="bi bi-calendar-x" aria-hidden="true"></i>Penugasan utama lama ditutup sehari sebelum tanggal efektif; rangkap tugas tetap berjalan.</li>
+                            <li><i class="bi bi-journal-text" aria-hidden="true"></i>Pengajuan yang sudah dibuat tetap tercatat di bagian lama (laporan tidak berubah).</li>
+                            <li><i class="bi bi-person-exclamation" aria-hidden="true"></i>Bila pegawai ini kepala di bagian lama, sistem mengingatkan bagian yang jadi tanpa kepala.</li>
                         @else
-                            <li>Cuti tetap di-approve kepala bagian utama; kepala bagian rangkap ikut melihat.</li>
-                            <li>Lembur: pegawai memilih bagian tempat lembur, di-approve kepala bagian itu.</li>
-                            <li>Peran Kepala: akun Staff otomatis dinaikkan menjadi Kepala Bagian.</li>
+                            <li><i class="bi bi-calendar-check" aria-hidden="true"></i>Cuti tetap disetujui kepala bagian utama; kepala bagian rangkap ikut melihat.</li>
+                            <li><i class="bi bi-clock-history" aria-hidden="true"></i>Lembur: pegawai memilih bagian tempat lembur, disetujui kepala bagian itu.</li>
+                            <li><i class="bi bi-person-up" aria-hidden="true"></i>Peran Kepala: akun Staff otomatis dinaikkan menjadi Kepala Bagian.</li>
                         @endif
                     </ul>
-                </section>
-            </div>
+                </x-card>
+            </div></aside>
         </div>
     </div>
 </main>
 
-<style>
-    .pn-jenis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
-    .pn-jenis .btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .1rem; padding: .6rem .5rem; font-weight: 600; }
-    .pn-jenis .btn small { font-weight: 400; font-size: .75rem; opacity: .85; }
-</style>
 @if ($dariDaftar)
     <script>
         // Ganti pegawai = muat ulang form untuk pegawai itu (penugasan saat ini & jabatan bawaan ikut berubah).

@@ -2,6 +2,7 @@
 
 @php
     use App\Models\EvaluasiKontrak as EK;
+    use Illuminate\Support\HtmlString;
     $p = $e->dataPegawai;
     $k = $p?->kepegawaian;
     $sisa = $e->sisaHari();
@@ -12,25 +13,48 @@
     $nilai = old('nilai', $e->nilai ?? []);
     [$periodeMulai, $periodeSelesai] = $periode;
     $labelPemutus = $pemutus->isNotEmpty() && $pemutus->every->isGm() ? 'GM' : 'Kepala SDM';
+    $selesai = $e->status === EK::STATUS_SELESAI;
+    $namaPenilai = $penilai->pluck('name')->implode(', ');
+    $namaPemutus = $pemutus->pluck('name')->implode(', ');
+    $teksSisa = $sisa < 0 ? 'lewat ' . abs($sisa) . ' hari' : ($sisa === 0 ? 'hari ini' : $sisa . ' hari lagi');
+    // Tombol utama bilah bawah: nilai saat menunggu penilaian, keputusan setelah nilai masuk.
+    $utamaNilai = $e->status === EK::STATUS_MENUNGGU_ATASAN || ! $bisaPutuskan;
+    $adaBilah = $bisaIsi || $bisaPutuskan;
+    $ttdLewat = $e->ttd_jadwal && $e->ttd_jadwal->isPast();
 @endphp
+
+{{-- Galat isian ditampilkan di halaman ini (ringkasan + di bawah isian); banner global tidak perlu. --}}
+@section('galat-di-halaman', '1')
 
 @section('content')
 <main class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        @include('partials.kembali', ['ke' => route('admin.evaluasi-kontrak.index'), 'label' => 'Evaluasi Kontrak'])
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-clipboard-check"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Evaluasi Kontrak</p>
-                    <h1 class="h3 mb-1">{{ $p?->nama_lengkap ?? '-' }}</h1>
-                    <p class="text-muted mb-0">{{ $k?->jabatan }} · {{ $e->unit_kerja }}</p>
-                </div>
-            </div>
-            <span class="badge fs-6 {{ $e->badgeClass() }}">{{ $e->statusLabel() }}</span>
-        </div>
+    <div class="container-fluid">
+        <x-page-header :title="$p?->nama_lengkap ?? '-'" eyebrow="Evaluasi Kontrak"
+            :subtitle="collect([$k?->jabatan, $e->unit_kerja])->filter()->implode(' · ') ?: null"
+            :back="route('admin.evaluasi-kontrak.index')" back-label="Evaluasi Kontrak">
+            <x-status-badge :badge="$e->badgeClass()" size="lg" dot>{{ $e->statusLabel() }}</x-status-badge>
+            @if ($bisaIsi || $bisaPutuskan || $bisaAturTtd)
+                <x-slot:actions>
+                    @if ($bisaIsi)
+                        <x-button variant="secondary" href="#penilaian" icon="bi-list-check">{{ $e->diisi_pada ? 'Ubah Penilaian' : 'Isi Penilaian' }}</x-button>
+                    @endif
+                    @if ($satuLangkah || $bisaPutuskan)
+                        <x-button href="#keputusan" icon="bi-patch-check">{{ $e->keputusan ? 'Ubah Keputusan' : 'Isi Keputusan' }}</x-button>
+                    @elseif ($bisaAturTtd)
+                        <x-button href="#keputusan" icon="bi-calendar-check">Atur Jadwal TTD</x-button>
+                    @endif
+                </x-slot:actions>
+            @endif
+        </x-page-header>
 
-        {{-- Form keputusan & jadwal TTD berdiri sendiri; inputnya di panel kanan memakai atribut form="…". --}}
+        @if ($errors->any())
+            <x-alert tone="danger" title="Periksa kembali isian yang ditandai merah" class="mb-3">
+                Data belum tersimpan. Perbaiki isian berikut, lalu simpan lagi:
+                <ul class="mb-0 ps-3">@foreach ($errors->all() as $pesan)<li>{{ $pesan }}</li>@endforeach</ul>
+            </x-alert>
+        @endif
+
+        {{-- Form keputusan & jadwal TTD berdiri sendiri; isiannya memakai atribut form="…" (tidak bersarang di formIsi). --}}
         @if ($bisaPutuskan && ! $satuLangkah)
             <form action="{{ route('admin.evaluasi-kontrak.putuskan', $e) }}" method="POST" id="formPutuskan" data-confirm="Simpan keputusan? Data kontrak pegawai akan ikut diperbarui.">@csrf</form>
         @endif
@@ -44,197 +68,302 @@
                 @csrf
         @endif
 
-        <div class="row g-3 align-items-start">
-            <div class="col-xl-8">
-                <section class="panel mb-3">
-                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-vcard"></i>Identitas pegawai</h2>
-                    <dl class="pk-identitas">
-                        <dt>Nama</dt><dd>{{ $p?->nama_lengkap ?? '-' }}</dd>
-                        <dt>Tempat / tanggal lahir</dt><dd>{{ collect([$p?->tempat_lahir, $p?->tanggal_lahir?->translatedFormat('d F Y')])->filter()->implode(', ') ?: '-' }}</dd>
-                        <dt>TMT sebagai pegawai</dt><dd>{{ $k?->tanggal_masuk?->translatedFormat('d F Y') ?? '-' }}</dd>
-                        <dt>Masa kerja</dt><dd>{{ $masa ? ($masa->y ? $masa->y . ' tahun ' : '') . $masa->m . ' bulan' : '-' }}</dd>
-                        <dt>Jenis kelamin</dt><dd>{{ $p?->jenis_kelamin ?? '-' }}</dd>
-                        <dt>Divisi / bagian</dt><dd>{{ collect([$e->unit_kerja, $k?->jabatan])->filter()->implode(' · ') }}</dd>
-                        <dt>Status kerja</dt><dd>{{ $e->status_kerja ?? '-' }} · habis kontrak {{ $e->tanggal_habis_kontrak->translatedFormat('d F Y') }}
-                            @if ($e->status !== EK::STATUS_SELESAI)<span class="{{ $sisa <= 7 ? 'text-danger fw-semibold' : 'text-muted' }}">({{ $sisa < 0 ? 'lewat ' . abs($sisa) . ' hari' : ($sisa === 0 ? 'hari ini' : $sisa . ' hari lagi') }})</span>@endif
-                        </dd>
-                        <dt>Periode penilaian</dt>
-                        <dd>
-                            @if ($bisaIsi)
-                                <div class="d-flex flex-wrap align-items-center gap-2">
-                                    <input type="date" name="periode_mulai" class="form-control form-control-sm w-auto" value="{{ old('periode_mulai', $periodeMulai?->toDateString()) }}" aria-label="Awal periode">
-                                    <span>s/d</span>
-                                    <input type="date" name="periode_selesai" class="form-control form-control-sm w-auto" value="{{ old('periode_selesai', $periodeSelesai?->toDateString()) }}" aria-label="Akhir periode">
-                                </div>
-                            @else
-                                {{ $periodeMulai?->translatedFormat('d M Y') ?? '-' }} – {{ $periodeSelesai?->translatedFormat('d M Y') }}
+        <div class="row g-4">
+            {{-- ===== Kolom kiri: data pegawai, lalu penilaian & keputusan ===== --}}
+            <div class="col-xl-8 d-grid gap-4 align-content-start">
+                <x-card>
+                    <section class="hr-detail-bagian" aria-labelledby="judul-identitas">
+                        <h2 class="hr-detail-judul" id="judul-identitas"><i class="bi bi-person-vcard" aria-hidden="true"></i>Identitas Pegawai</h2>
+                        <x-info-list :items="array_filter([
+                            'Tempat, tanggal lahir' => collect([$p?->tempat_lahir, $p?->tanggal_lahir?->translatedFormat('d F Y')])->filter()->implode(', '),
+                            'Jenis kelamin' => $p?->jenis_kelamin,
+                            'TMT sebagai pegawai' => $k?->tanggal_masuk?->translatedFormat('d F Y'),
+                            'Masa kerja' => $masa ? ($masa->y ? $masa->y . ' tahun ' : '') . $masa->m . ' bulan' : null,
+                            'Divisi / bagian' => collect([$e->unit_kerja, $k?->jabatan])->filter()->implode(' · '),
+                            'Status kerja' => $e->status_kerja,
+                            'Periode penilaian' => $bisaIsi ? false : ($periodeMulai?->translatedFormat('d M Y') ?? '-') . ' – ' . $periodeSelesai?->translatedFormat('d M Y'),
+                        ], fn ($v) => $v !== false)" />
+                    </section>
+
+                    <section class="hr-detail-bagian" aria-labelledby="judul-pendukung">
+                        <h2 class="hr-detail-judul" id="judul-pendukung"><i class="bi bi-bar-chart" aria-hidden="true"></i>Data Pendukung</h2>
+                        <p class="hr-sel-sub mb-3">Absensi {{ $rentangAbsensi[0]->translatedFormat('d M Y') }} – {{ $rentangAbsensi[1]->translatedFormat('d M Y') }}, cuti tahun {{ now()->year }}.</p>
+                        <div class="ek-angka">
+                            @if ($absensi && ($absensi['hari_kerja'] ?? 0) > 0)
+                                <div class="ek-kartu"><span>Hadir</span><strong>{{ $absensi['hadir_total'] ?? 0 }}/{{ $absensi['hari_kerja'] }} hari</strong></div>
+                                <div class="ek-kartu {{ ($absensi['telat'] ?? 0) > 5 ? 'waspada' : '' }}"><span>Telat</span><strong>{{ $absensi['telat'] ?? 0 }} kali</strong><small>{{ $absensi['telat_menit'] ?? 0 }} menit</small></div>
+                                <div class="ek-kartu {{ ($absensi['alpa'] ?? 0) > 0 ? 'bahaya' : '' }}"><span>Alpa</span><strong>{{ $absensi['alpa'] ?? 0 }} hari</strong></div>
+                                <div class="ek-kartu"><span>Izin / sakit</span><strong>{{ ($absensi['izin'] ?? 0) + ($absensi['sakit'] ?? 0) }} hari</strong></div>
                             @endif
-                        </dd>
-                        <dt>Penilai</dt><dd>{{ $penilai->pluck('name')->implode(', ') ?: 'belum ada penilai tercatat' }}</dd>
-                        <dt>Pemutus</dt><dd>{{ $pemutus->pluck('name')->implode(', ') ?: '-' }} <span class="text-muted">({{ $labelPemutus }})</span></dd>
-                    </dl>
-                </section>
-
-                <section class="panel mb-3">
-                    <h2 class="h6 fw-bold mb-1"><i class="bi bi-bar-chart"></i>Data pendukung</h2>
-                    <p class="small text-muted mb-3">Absensi {{ $rentangAbsensi[0]->translatedFormat('d M Y') }} – {{ $rentangAbsensi[1]->translatedFormat('d M Y') }}, cuti tahun {{ now()->year }}.</p>
-                    <div class="ek-angka">
-                        @if ($absensi && ($absensi['hari_kerja'] ?? 0) > 0)
-                            <div class="ek-kartu"><span>Hadir</span><strong>{{ $absensi['hadir_total'] ?? 0 }}/{{ $absensi['hari_kerja'] }} hari</strong></div>
-                            <div class="ek-kartu {{ ($absensi['telat'] ?? 0) > 5 ? 'waspada' : '' }}"><span>Telat</span><strong>{{ $absensi['telat'] ?? 0 }} kali</strong><small>{{ $absensi['telat_menit'] ?? 0 }} menit</small></div>
-                            <div class="ek-kartu {{ ($absensi['alpa'] ?? 0) > 0 ? 'bahaya' : '' }}"><span>Alpa</span><strong>{{ $absensi['alpa'] ?? 0 }} hari</strong></div>
-                            <div class="ek-kartu"><span>Izin / sakit</span><strong>{{ ($absensi['izin'] ?? 0) + ($absensi['sakit'] ?? 0) }} hari</strong></div>
-                        @endif
-                        <div class="ek-kartu"><span>Cuti {{ now()->year }}</span><strong>{{ $cutiTahunIni }} hari</strong></div>
-                        <div class="ek-kartu {{ $spKontrak->isNotEmpty() ? ($spKontrak->max('tingkat') >= 3 ? 'bahaya' : 'waspada') : '' }}"><span>SP selama kontrak</span><strong>{{ $spKontrak->count() }} kali</strong>
-                            <small>{{ $spKontrak->isEmpty() ? 'tidak ada' : collect([1, 2, 3])->map(fn ($t) => 'SP' . $t . ': ' . $spKontrak->where('tingkat', $t)->count())->implode(' · ') }}</small></div>
-                        <div class="ek-kartu"><span>Evaluasi sebelumnya</span><strong>{{ $riwayat->count() }} kali</strong>
-                            @if ($r = $riwayat->first())<small>{{ $r->keputusan ? $r->labelKeputusan() : $r->statusLabel() }}{{ $r->rata_nilai ? ' · ' . $r->rata_nilai . '/4' : '' }}</small>@endif
-                        </div>
-                    </div>
-                    @unless ($absensi && ($absensi['hari_kerja'] ?? 0) > 0)
-                        <p class="small text-muted mb-0 mt-2">Belum ada data absensi pada rentang ini (pegawai mungkin tidak ikut absensi mesin).</p>
-                    @endunless
-                </section>
-
-                <section class="panel mb-3">
-                    <h2 class="h6 fw-bold mb-1"><i class="bi bi-exclamation-octagon"></i>Surat peringatan selama kontrak</h2>
-                    <p class="small text-muted mb-2">Periode {{ $periodeMulai?->translatedFormat('d M Y') ?? 'awal' }} – {{ $periodeSelesai?->translatedFormat('d M Y') }}.</p>
-                    @forelse ($spKontrak as $sp)
-                        <div class="d-flex justify-content-between align-items-start gap-2 py-2 border-top small">
-                            <div><span class="badge {{ $sp->badgeClass() }} me-1">{{ $sp->label() }}</span>{{ $sp->tanggal->translatedFormat('d M Y') }} · {{ $sp->alasan }}
-                                @if ($sp->keterangan)<span class="d-block text-muted">{{ $sp->keterangan }}</span>@endif
+                            <div class="ek-kartu"><span>Cuti {{ now()->year }}</span><strong>{{ $cutiTahunIni }} hari</strong></div>
+                            <div class="ek-kartu {{ $spKontrak->isNotEmpty() ? ($spKontrak->max('tingkat') >= 3 ? 'bahaya' : 'waspada') : '' }}"><span>SP selama kontrak</span><strong>{{ $spKontrak->count() }} kali</strong>
+                                <small>{{ $spKontrak->isEmpty() ? 'tidak ada' : collect([1, 2, 3])->map(fn ($t) => 'SP' . $t . ': ' . $spKontrak->where('tingkat', $t)->count())->implode(' · ') }}</small></div>
+                            <div class="ek-kartu"><span>Evaluasi sebelumnya</span><strong>{{ $riwayat->count() }} kali</strong>
+                                @if ($r = $riwayat->first())<small>{{ $r->keputusan ? $r->labelKeputusan() : $r->statusLabel() }}{{ $r->rata_nilai ? ' · ' . $r->rata_nilai . '/4' : '' }}</small>@endif
                             </div>
-                            <span class="text-muted text-nowrap">{{ $sp->pemberi?->name }}</span>
                         </div>
-                    @empty
-                        <p class="small text-muted mb-0"><i class="bi bi-check-circle text-success me-1"></i>Tidak ada surat peringatan selama periode ini.</p>
-                    @endforelse
-                </section>
+                        @unless ($absensi && ($absensi['hari_kerja'] ?? 0) > 0)
+                            <p class="hr-sel-sub mt-2 mb-0">Belum ada data absensi pada rentang ini (pegawai mungkin tidak ikut absensi mesin).</p>
+                        @endunless
+                    </section>
 
-                <section class="panel" id="penilaian">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                        <h2 class="h6 fw-bold mb-0"><i class="bi bi-list-check"></i>Penilaian</h2>
-                        <div class="pk-legenda">
-                            @foreach ($skala as $n => $ket)<span><b>{{ $n }}</b> {{ $ket }}</span>@endforeach
-                        </div>
-                    </div>
-                    @error('nilai')<div class="alert alert-danger small py-2">{{ $message }}</div>@enderror
+                    <section class="hr-detail-bagian" aria-labelledby="judul-sp">
+                        <h2 class="hr-detail-judul" id="judul-sp"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i>Surat Peringatan selama Kontrak</h2>
+                        <p class="hr-sel-sub mb-2">Periode {{ $periodeMulai?->translatedFormat('d M Y') ?? 'awal' }} – {{ $periodeSelesai?->translatedFormat('d M Y') }}.</p>
+                        @forelse ($spKontrak as $sp)
+                            <div class="d-flex justify-content-between align-items-start gap-2 py-2 border-top">
+                                <div class="min-w-0">
+                                    {{-- Warna SP1–SP3 makin tegas (kelas sp-badge di ui.css). --}}
+                                    <span class="badge {{ $sp->badgeClass() }} me-1">{{ $sp->label() }}</span>{{ $sp->tanggal->translatedFormat('d M Y') }} · {{ $sp->alasan }}
+                                    @if ($sp->keterangan)<span class="hr-sel-sub">{{ $sp->keterangan }}</span>@endif
+                                </div>
+                                <span class="hr-sel-sub text-nowrap">{{ $sp->pemberi?->name }}</span>
+                            </div>
+                        @empty
+                            <p class="mb-0"><x-badge tone="success" icon="bi-check-circle">Bersih</x-badge> Tidak ada surat peringatan selama periode ini.</p>
+                        @endforelse
+                    </section>
+                </x-card>
 
-                    @foreach ($bagian as $b)
-                        <div class="pk-bagian" data-bagian="{{ $b['kode'] }}">
-                            <div class="pk-bagian-kepala">
-                                <h3>{{ $b['kode'] }}. {{ $b['judul'] }}</h3>
-                                @if ($bisaIsi)
-                                    <div class="pk-isi-semua" aria-label="Isi semua butir {{ $b['judul'] }}">
-                                        <span>Isi semua:</span>
-                                        @foreach (array_keys($skala) as $n)
-                                            <button type="button" class="btn btn-link btn-sm p-0" data-isi-semua="{{ $b['kode'] }}" data-nilai="{{ $n }}">{{ $n }}</button>
+                <x-card>
+                    {{-- ===== Penilaian 50 butir ===== --}}
+                    <x-form-section id="penilaian" class="hr-bagian" title="Penilaian" icon="bi-list-check"
+                        :subtitle="$bisaIsi ? 'Beri nilai 1–4 untuk setiap butir; semua butir wajib dinilai.' : ($e->diisi_pada ? 'Dinilai ' . ($e->pengisi?->name ?? '-') . ' · ' . $e->diisi_pada->translatedFormat('d M Y H:i') : 'Belum dinilai.')">
+                        @if ($bisaIsi)
+                            <div class="col-md-6">
+                                <x-input type="date" name="periode_mulai" id="periode-mulai" label="Awal Periode Penilaian" optional
+                                    :value="$periodeMulai?->toDateString()" field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input type="date" name="periode_selesai" id="periode-selesai" label="Akhir Periode Penilaian" optional
+                                    :value="$periodeSelesai?->toDateString()" help="Bawaan: sejak kontrak sebelumnya berakhir (atau TMT) sampai habis kontrak." field-class="mb-0" />
+                            </div>
+                        @endif
+
+                        @if ($bisaIsi || $e->diisi_pada)
+                            <div class="col-12">
+                                <div class="pk-legenda mb-2" aria-label="Arti nilai">
+                                    @foreach ($skala as $n => $ket)<span><b>{{ $n }}</b> {{ $ket }}</span>@endforeach
+                                </div>
+                                @error('nilai')<x-alert tone="danger" class="mb-2">{{ $message }}</x-alert>@enderror
+
+                                @foreach ($bagian as $b)
+                                    <div class="pk-bagian" data-bagian="{{ $b['kode'] }}">
+                                        <div class="pk-bagian-kepala">
+                                            <h3>{{ $b['kode'] }}. {{ $b['judul'] }}</h3>
+                                            @if ($bisaIsi)
+                                                <div class="pk-isi-semua" role="group" aria-label="Isi semua butir {{ $b['judul'] }}">
+                                                    <span>Isi semua:</span>
+                                                    @foreach (array_keys($skala) as $n)
+                                                        <button type="button" class="btn btn-link btn-sm p-0" data-isi-semua="{{ $b['kode'] }}" data-nilai="{{ $n }}"
+                                                            aria-label="Isi semua butir {{ $b['judul'] }} dengan nilai {{ $n }}">{{ $n }}</button>
+                                                    @endforeach
+                                                </div>
+                                            @else
+                                                <span class="pk-rata-bagian">rata-rata {{ $e->rataBagian()[$b['kode']] ?? '-' }}</span>
+                                            @endif
+                                        </div>
+                                        @foreach ($b['kelompok'] as $kel)
+                                            @if ($kel['judul'])<div class="pk-kelompok">{{ $kel['judul'] }}</div>@endif
+                                            @foreach ($kel['butir'] as $no => $teks)
+                                                <div class="pk-butir">
+                                                    <span class="pk-no">{{ $no }}</span>
+                                                    <span class="pk-teks">{{ $teks }}</span>
+                                                    @if ($bisaIsi)
+                                                        <div class="btn-group btn-group-sm pk-skala" role="group" aria-label="Nilai butir {{ $no }}">
+                                                            @foreach (array_reverse(array_keys($skala)) as $n)
+                                                                <input type="radio" class="btn-check" name="nilai[{{ $no }}]" id="n{{ $no }}-{{ $n }}" value="{{ $n }}" @checked((int) ($nilai[$no] ?? 0) === $n)>{{-- wajib dicek JS (tandai kuning) & server --}}
+                                                                <label class="btn btn-outline-secondary" for="n{{ $no }}-{{ $n }}" title="{{ $skala[$n] }}">{{ $n }}</label>
+                                                            @endforeach
+                                                        </div>
+                                                    @else
+                                                        @php $v = $nilai[$no] ?? null; @endphp
+                                                        <span class="pk-hasil n{{ $v }}" title="{{ $v ? $skala[$v] : 'Belum dinilai' }}">{{ $v ?? '–' }}</span>
+                                                    @endif
+                                                </div>
+                                            @endforeach
                                         @endforeach
                                     </div>
-                                @else
-                                    <span class="pk-rata-bagian">rata-rata {{ $e->rataBagian()[$b['kode']] ?? '-' }}</span>
-                                @endif
-                            </div>
-                            @foreach ($b['kelompok'] as $kel)
-                                @if ($kel['judul'])<div class="pk-kelompok">{{ $kel['judul'] }}</div>@endif
-                                @foreach ($kel['butir'] as $no => $teks)
-                                    <div class="pk-butir">
-                                        <span class="pk-no">{{ $no }}</span>
-                                        <span class="pk-teks">{{ $teks }}</span>
-                                        @if ($bisaIsi)
-                                            <div class="btn-group btn-group-sm pk-skala" role="group" aria-label="Nilai butir {{ $no }}">
-                                                @foreach (array_reverse(array_keys($skala)) as $n)
-                                                    <input type="radio" class="btn-check" name="nilai[{{ $no }}]" id="n{{ $no }}-{{ $n }}" value="{{ $n }}" @checked((int) ($nilai[$no] ?? 0) === $n)>{{-- wajib dicek JS (tandai kuning) & server --}}
-                                                    <label class="btn btn-outline-secondary" for="n{{ $no }}-{{ $n }}" title="{{ $skala[$n] }}">{{ $n }}</label>
-                                                @endforeach
-                                            </div>
-                                        @else
-                                            @php $v = $nilai[$no] ?? null; @endphp
-                                            <span class="pk-hasil n{{ $v }}" title="{{ $v ? $skala[$v] : 'Belum dinilai' }}">{{ $v ?? '–' }}</span>
-                                        @endif
-                                    </div>
                                 @endforeach
-                            @endforeach
-                        </div>
-                    @endforeach
-                </section>
-            </div>
-
-            {{-- ===== Kolom kanan (lengket): hasil nilai, penilaian, keputusan & jadwal TTD ===== --}}
-            <div class="col-xl-4">
-                <div class="pk-lengket">
-                    <section class="panel mb-3">
-                        <h2 class="h6 fw-bold mb-3"><i class="bi bi-calculator"></i>Hasil penilaian</h2>
-                        <div class="ek-angka">
-                            <div class="ek-kartu"><span>Terisi</span><strong><span data-terisi>{{ count(array_filter($nilai)) }}</span>/{{ $jumlahButir }}</strong></div>
-                            <div class="ek-kartu"><span>Total nilai</span><strong data-total>{{ $e->total_nilai ?? array_sum($nilai) }}</strong><small data-predikat>{{ $e->total_nilai !== null ? EK::predikat($e->total_nilai) : 'maks. ' . $jumlahButir * 4 }}</small></div>
-                            <div class="ek-kartu"><span>Rata-rata</span><strong data-rata>{{ $e->rata_nilai ?? '-' }}</strong><small>skala 1–4</small></div>
-                        </div>
-                        <div class="pk-skor mt-3">
-                            <div class="small fw-semibold mb-1">Keterangan skor <span class="fw-normal text-muted">(total nilai = jumlah seluruh butir)</span></div>
-                            @foreach (EK::rentangPredikat() as [$min, $maks, $label])
-                                <div class="pk-skor-baris {{ $e->total_nilai !== null && $e->total_nilai >= $min && $e->total_nilai <= $maks ? 'aktif' : '' }}" data-min="{{ $min }}" data-maks="{{ $maks }}">
-                                    <span>{{ $min }} – {{ $maks }}</span><b>{{ $label }}</b>
-                                </div>
-                            @endforeach
-                        </div>
-                    </section>
-
-                    <section class="panel mb-3">
-                        <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-check"></i>Penilaian</h2>
-                        @if ($bisaIsi)
-                            <label class="form-label fw-semibold small" for="catatan">Catatan penilai <span class="fw-normal text-muted">(opsional)</span></label>
-                            <textarea name="catatan" id="catatan" rows="3" class="form-control mb-3" maxlength="1000" placeholder="Contoh: target tercapai; perlu meningkatkan ketepatan waktu">{{ old('catatan', $e->catatan) }}</textarea>
-                            @unless ($satuLangkah)
-                                <p class="small text-muted"><i class="bi bi-info-circle me-1"></i>Penilai hanya memberi nilai; keputusan kontrak diambil {{ $labelPemutus }}.</p>
-                                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send me-1"></i>{{ $e->diisi_pada ? 'Simpan perubahan nilai' : 'Kirim nilai ke ' . $labelPemutus }}</button>
-                            @endunless
-                            @if ($e->diisi_pada)
-                                <p class="small text-muted mt-2 mb-0">Terakhir diisi {{ $e->pengisi?->name }} · {{ $e->diisi_pada->translatedFormat('d M Y H:i') }}</p>
-                            @endif
-                        @elseif ($e->diisi_pada)
-                            @if ($e->catatan)<p class="small mb-1" style="white-space: pre-line;">{{ $e->catatan }}</p>@endif
-                            <p class="small text-muted mb-0">Dinilai {{ $e->pengisi?->name }} · {{ $e->diisi_pada->translatedFormat('d M Y H:i') }}</p>
+                            </div>
                         @else
-                            <p class="small text-muted mb-0"><i class="bi bi-hourglass-split me-1"></i>Menunggu penilaian oleh {{ $penilai->pluck('name')->implode(', ') ?: 'penilai' }}.</p>
+                            <div class="col-12">
+                                <x-empty-state icon="bi-hourglass-split" title="Belum dinilai" compact>
+                                    {{ $selesai ? 'Evaluasi ini diputuskan tanpa penilaian.' : 'Menunggu penilaian oleh ' . ($namaPenilai ?: 'penilai') . '.' }}
+                                </x-empty-state>
+                            </div>
                         @endif
-                    </section>
 
-                    {{-- ===== Keputusan (Kepala SDM; GM untuk Kepala SDM) ===== --}}
-                    <section class="panel">
-                        <h2 class="h6 fw-bold mb-3"><i class="bi bi-patch-check"></i>Keputusan {{ $labelPemutus }}</h2>
-                        @if ($e->keputusan)
-                            <p class="mb-1 fw-semibold">{{ $e->labelKeputusan() }}</p>
-                            @if ($e->catatan_sdm)<p class="small mb-1">{{ $e->catatan_sdm }}</p>@endif
-                            <p class="small text-muted mb-2">{{ $e->pemutus?->name }} · {{ $e->diputuskan_pada?->translatedFormat('d M Y H:i') }}</p>
-                            @if ($e->keputusan !== EK::TIDAK)
-                                <div class="ek-ttd-info mb-2"><i class="bi bi-pen me-1"></i><b>TTD kontrak:</b> {{ $e->labelTtd() ?? 'belum dijadwalkan' }}</div>
+                        <div class="col-12">
+                            @if ($bisaIsi)
+                                <x-textarea name="catatan" id="catatan" label="Catatan Penilai" optional rows="3" maxlength="1000" :value="$e->catatan"
+                                    placeholder="Ringkasan kinerja, contoh: target tercapai; perlu meningkatkan ketepatan waktu" field-class="mb-0" />
+                                <p class="hr-sel-sub mt-2 mb-0">
+                                    @unless ($satuLangkah)<i class="bi bi-info-circle me-1" aria-hidden="true"></i>Penilai hanya memberi nilai; keputusan kontrak diambil {{ $labelPemutus }}.@endunless
+                                    @if ($e->diisi_pada) Terakhir diisi {{ $e->pengisi?->name }} · {{ $e->diisi_pada->translatedFormat('d M Y H:i') }}.@endif
+                                </p>
+                            @elseif ($e->diisi_pada && $e->catatan)
+                                <x-info-list :items="['Catatan penilai' => new HtmlString(nl2br(e($e->catatan)))]" />
                             @endif
+                        </div>
+                    </x-form-section>
+
+                    {{-- ===== Keputusan (Kepala SDM; GM untuk Kepala SDM) & jadwal TTD ===== --}}
+                    <x-form-section id="keputusan" class="hr-bagian" :title="'Keputusan ' . $labelPemutus" icon="bi-patch-check"
+                        :subtitle="$bisaIsi && $bisaPutuskan && ! $satuLangkah ? 'Disimpan terpisah dari nilai lewat tombol Simpan Keputusan.' : null">
+                        @if ($e->keputusan)
+                            <div class="col-12">
+                                <x-info-list :items="array_filter([
+                                    'Keputusan' => $e->labelKeputusan(),
+                                    'Diputuskan' => collect([$e->pemutus?->name, $e->diputuskan_pada?->translatedFormat('d M Y H:i')])->filter()->implode(' · '),
+                                    'Catatan' => $e->catatan_sdm ?: false,
+                                    'Jadwal TTD kontrak' => $e->keputusan !== EK::TIDAK ? ($e->labelTtd() ?? 'Belum dijadwalkan') : false,
+                                ], fn ($v) => $v !== false)" />
+                            </div>
                             @if ($bisaAturTtd)
-                                <details class="small mb-2" @if (! $e->ttd_jadwal) open @endif>
-                                    <summary class="fw-semibold">{{ $e->ttd_jadwal ? 'Ubah jadwal TTD' : 'Atur jadwal TTD' }}</summary>
-                                    <input type="datetime-local" name="ttd_jadwal" form="formTtd" class="form-control form-control-sm my-2" required aria-label="Tanggal & jam TTD"
-                                        value="{{ old('ttd_jadwal', $e->ttd_jadwal?->format('Y-m-d\TH:i')) }}">
-                                    <input type="text" name="ttd_lokasi" form="formTtd" class="form-control form-control-sm mb-2" maxlength="150" required aria-label="Lokasi TTD"
-                                        value="{{ old('ttd_lokasi', $e->ttd_lokasi ?? EK::TTD_LOKASI_BAWAAN) }}">
-                                    <button type="submit" form="formTtd" class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-calendar-check me-1"></i>Simpan jadwal TTD</button>
-                                </details>
+                                <div class="col-12">
+                                    <details class="ek-ttd" @if (! $e->ttd_jadwal) open @endif>
+                                        <summary class="fw-semibold"><i class="bi bi-calendar-check me-1" aria-hidden="true"></i>{{ $e->ttd_jadwal ? 'Ubah jadwal TTD' : 'Atur jadwal TTD' }}</summary>
+                                        <div class="row g-3 mt-1">
+                                            <div class="col-md-6">
+                                                <x-input type="datetime-local" name="ttd_jadwal" id="ttd-ubah-jadwal" label="Tanggal & Jam" form="formTtd" required
+                                                    :value="$e->ttd_jadwal?->format('Y-m-d\TH:i')" field-class="mb-0" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <x-input name="ttd_lokasi" id="ttd-ubah-lokasi" label="Lokasi" icon="bi-geo-alt" form="formTtd" required maxlength="150"
+                                                    :value="$e->ttd_lokasi ?? EK::TTD_LOKASI_BAWAAN" placeholder="Tempat tanda tangan, contoh: Ruangan SDM" field-class="mb-0" />
+                                            </div>
+                                            <div class="col-12">
+                                                <x-button type="submit" variant="outline" form="formTtd" icon="bi-calendar-check">Simpan Jadwal TTD</x-button>
+                                            </div>
+                                        </div>
+                                    </details>
+                                </div>
+                            @endif
+                            @if ($bisaPutuskan || $satuLangkah)
+                                <div class="col-12"><p class="hr-form-section-sub mb-0">{{ $satuLangkah ? 'Ubah keputusan:' : 'Ubah keputusan (Admin):' }}</p></div>
                             @endif
                         @endif
+
                         @if ($satuLangkah)
                             {{-- Penilai sekaligus pemutus: keputusan diisi bersama nilai (di dalam formIsi). --}}
-                            <p class="small text-muted"><i class="bi bi-info-circle me-1"></i>Anda penilai sekaligus pemutus: nilai & keputusan disimpan sekaligus.</p>
-                            @include('admin.evaluasi-kontrak._isian-keputusan', ['form' => null])
-                            <button type="submit" class="btn btn-success w-100"><i class="bi bi-check-lg-circle me-1"></i>Simpan nilai & tetapkan kontrak</button>
+                            <div class="col-12">
+                                <x-alert tone="info" class="mb-0">Anda penilai sekaligus pemutus: nilai &amp; keputusan disimpan sekaligus.</x-alert>
+                            </div>
+                            <div class="col-12">@include('admin.evaluasi-kontrak._isian-keputusan', ['form' => null])</div>
                         @elseif ($bisaPutuskan)
-                            @if ($e->status === EK::STATUS_MENUNGGU_ATASAN)<p class="small text-warning-emphasis"><i class="bi bi-exclamation-triangle me-1"></i>Penilaian belum masuk (Admin tetap bisa memutuskan).</p>@endif
-                            @include('admin.evaluasi-kontrak._isian-keputusan', ['form' => 'formPutuskan'])
-                            <button type="submit" form="formPutuskan" class="btn btn-success w-100"><i class="bi bi-check-lg-circle me-1"></i>Simpan keputusan</button>
+                            @if ($e->status === EK::STATUS_MENUNGGU_ATASAN)
+                                <div class="col-12">
+                                    <x-alert tone="warning" class="mb-0">Penilaian belum masuk (Admin tetap bisa memutuskan).</x-alert>
+                                </div>
+                            @endif
+                            <div class="col-12">@include('admin.evaluasi-kontrak._isian-keputusan', ['form' => 'formPutuskan'])</div>
                         @elseif (! $e->keputusan)
-                            <p class="small text-muted mb-0"><i class="bi bi-hourglass-split me-1"></i>{{ $e->status === EK::STATUS_MENUNGGU_ATASAN ? 'Diputuskan setelah penilaian masuk.' : 'Menunggu keputusan ' . $labelPemutus . '.' }}</p>
+                            <div class="col-12">
+                                <x-empty-state icon="bi-hourglass-split" title="Belum diputuskan" compact>
+                                    {{ $e->status === EK::STATUS_MENUNGGU_ATASAN ? 'Diputuskan ' . $labelPemutus . ' setelah penilaian masuk.' : 'Menunggu keputusan ' . ($namaPemutus ?: $labelPemutus) . '.' }}
+                                </x-empty-state>
+                            </div>
                         @endif
-                    </section>                </div>
+                    </x-form-section>
+                </x-card>
+
+                @if ($adaBilah)
+                    <div class="hr-bilah-aksi">
+                        <x-button variant="secondary" :href="route('admin.evaluasi-kontrak.index')">Batal</x-button>
+                        <div class="d-flex flex-wrap justify-content-end gap-2 ms-auto">
+                            @if ($satuLangkah)
+                                <x-button type="submit" icon="bi-check-lg">Simpan Nilai &amp; Tetapkan Kontrak</x-button>
+                            @else
+                                {{-- Tombol utama (primer) selalu paling kanan. --}}
+                                @if ($bisaPutuskan && $utamaNilai)
+                                    <x-button type="submit" form="formPutuskan" variant="secondary" icon="bi-check-lg">Simpan Keputusan</x-button>
+                                @endif
+                                @if ($bisaIsi)
+                                    <x-button type="submit" :variant="$utamaNilai ? 'primary' : 'secondary'" icon="bi-send">{{ $e->diisi_pada ? 'Simpan Perubahan Nilai' : 'Kirim Nilai ke ' . $labelPemutus }}</x-button>
+                                @endif
+                                @if ($bisaPutuskan && ! $utamaNilai)
+                                    <x-button type="submit" form="formPutuskan" icon="bi-check-lg">Simpan Keputusan</x-button>
+                                @endif
+                            @endif
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+            {{-- ===== Kolom kanan (lengket): ringkasan, hasil nilai langsung, alur ===== --}}
+            <div class="col-xl-4">
+                <div class="hr-detail-samping ek-samping d-grid gap-4">
+                    <x-card title="Ringkasan" icon="bi-clipboard-data">
+                        <section class="hr-detail-bagian">
+                            <dl class="hr-info-list">
+                                <div class="hr-info-item"><dt>Habis kontrak</dt><dd>{{ $e->tanggal_habis_kontrak->translatedFormat('d M Y') }}</dd></div>
+                                <div class="hr-info-item"><dt>Sisa waktu</dt>
+                                    <dd class="{{ $selesai ? 'is-kosong' : ($sisa <= 7 ? 'text-danger fw-semibold' : '') }}">{{ $selesai ? 'Sudah diputuskan' : ucfirst($teksSisa) }}</dd></div>
+                                <div class="hr-info-item"><dt>Status</dt><dd><x-status-badge :badge="$e->badgeClass()" dot>{{ $e->statusLabel() }}</x-status-badge></dd></div>
+                                <div class="hr-info-item is-lebar"><dt>Penilai</dt><dd class="{{ $namaPenilai ? '' : 'is-kosong' }}">{{ $namaPenilai ?: 'Belum ada penilai tercatat' }}</dd></div>
+                                <div class="hr-info-item is-lebar"><dt>Pemutus ({{ $labelPemutus }})</dt><dd class="{{ $namaPemutus ? '' : 'is-kosong' }}">{{ $namaPemutus ?: '-' }}</dd></div>
+                            </dl>
+                        </section>
+
+                        <section class="hr-detail-bagian" aria-labelledby="judul-hasil">
+                            <h2 class="hr-detail-judul" id="judul-hasil"><i class="bi bi-calculator" aria-hidden="true"></i>Hasil Penilaian</h2>
+                            <div class="ek-angka">
+                                <div class="ek-kartu"><span>Terisi</span><strong><span data-terisi>{{ count(array_filter($nilai)) }}</span>/{{ $jumlahButir }}</strong></div>
+                                <div class="ek-kartu"><span>Total nilai</span><strong data-total>{{ $e->total_nilai ?? array_sum($nilai) }}</strong><small data-predikat>{{ $e->total_nilai !== null ? EK::predikat($e->total_nilai) : 'maks. ' . $jumlahButir * 4 }}</small></div>
+                                <div class="ek-kartu"><span>Rata-rata</span><strong data-rata>{{ $e->rata_nilai ?? '-' }}</strong><small>skala 1–4</small></div>
+                            </div>
+                            <div class="mt-3">
+                                <p class="form-label mb-1">Keterangan skor <span class="hr-field-opsional">(total = jumlah seluruh butir)</span></p>
+                                @foreach (EK::rentangPredikat() as [$min, $maks, $label])
+                                    <div class="pk-skor-baris {{ $e->total_nilai !== null && $e->total_nilai >= $min && $e->total_nilai <= $maks ? 'aktif' : '' }}" data-min="{{ $min }}" data-maks="{{ $maks }}">
+                                        <span>{{ $min }} – {{ $maks }}</span><b>{{ $label }}</b>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </section>
+                    </x-card>
+
+                    <x-card title="Alur Evaluasi" icon="bi-signpost-2">
+                        <x-timeline label="Alur evaluasi kontrak">
+                            <x-timeline.item state="done" title="Evaluasi dibuat" :meta="$e->created_at?->translatedFormat('d M Y')">
+                                Kontrak habis {{ $e->tanggal_habis_kontrak->translatedFormat('d M Y') }}.
+                            </x-timeline.item>
+
+                            @if ($e->diisi_pada)
+                                <x-timeline.item state="done" title="Penilaian" :meta="$e->diisi_pada->translatedFormat('d M Y')">
+                                    Oleh {{ $e->pengisi?->name ?? '-' }}{{ $e->total_nilai !== null ? ' · total ' . $e->total_nilai . ' (' . EK::predikat($e->total_nilai) . ')' : '' }}.
+                                </x-timeline.item>
+                            @elseif ($selesai)
+                                <x-timeline.item state="pending" title="Penilaian">Tidak diisi; langsung diputuskan.</x-timeline.item>
+                            @else
+                                <x-timeline.item state="active" title="Penilaian">Menunggu {{ $namaPenilai ?: 'penilai' }}.</x-timeline.item>
+                            @endif
+
+                            @if ($e->keputusan)
+                                <x-timeline.item state="done" :title="'Keputusan ' . $labelPemutus" :meta="$e->diputuskan_pada?->translatedFormat('d M Y')">
+                                    {{ $e->labelKeputusan() }}{{ $e->pemutus ? ' · ' . $e->pemutus->name : '' }}.
+                                </x-timeline.item>
+                            @elseif ($e->status === EK::STATUS_MENUNGGU_SDM)
+                                <x-timeline.item state="active" :title="'Keputusan ' . $labelPemutus">Menunggu {{ $namaPemutus ?: $labelPemutus }}.</x-timeline.item>
+                            @else
+                                <x-timeline.item state="pending" :title="'Keputusan ' . $labelPemutus">Setelah penilaian masuk.</x-timeline.item>
+                            @endif
+
+                            @if ($e->keputusan === EK::TIDAK)
+                                <x-timeline.item state="stopped" title="Kontrak tidak diperpanjang">Tidak ada penandatanganan kontrak baru.</x-timeline.item>
+                            @elseif ($e->keputusan && $e->ttd_jadwal)
+                                <x-timeline.item :state="$ttdLewat ? 'done' : 'active'" title="Tanda tangan kontrak" :meta="$e->ttd_jadwal->translatedFormat('d M Y')">
+                                    {{ $ttdLewat ? 'Dijadwalkan' : 'Terjadwal' }} {{ $e->labelTtd() }}.
+                                </x-timeline.item>
+                            @elseif ($e->keputusan)
+                                <x-timeline.item state="active" title="Tanda tangan kontrak">Jadwal belum diatur.</x-timeline.item>
+                            @else
+                                <x-timeline.item state="pending" title="Tanda tangan kontrak">Dijadwalkan bersama keputusan.</x-timeline.item>
+                            @endif
+                        </x-timeline>
+                    </x-card>
+                </div>
             </div>
         </div>
 
@@ -244,53 +373,6 @@
     </div>
 </main>
 
-<style>
-    .pk-identitas { display: grid; grid-template-columns: minmax(150px, max-content) 1fr; gap: .4rem 1rem; margin: 0; font-size: .875rem; }
-    .pk-identitas dt { color: var(--admin-muted); font-weight: 600; }
-    .pk-identitas dd { margin: 0; }
-    .ek-angka { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .5rem; }
-    .ek-kartu { display: flex; flex-direction: column; padding: .55rem .7rem; border: 1px solid var(--admin-border); border-radius: 9px; background: var(--admin-surface); }
-    .ek-kartu > span { font-size: .72rem; font-weight: 600; color: var(--admin-muted); }
-    .ek-kartu strong { font-size: .95rem; }
-    .ek-kartu small { font-size: .72rem; color: var(--admin-muted); }
-    .ek-kartu.waspada { border-color: #f5d48a; background: #fffbeb; }
-    .ek-kartu.bahaya { border-color: #f3b4b4; background: #fef2f2; }
-    .ek-ttd, .ek-ttd-info { padding: .5rem .6rem; border: 1px dashed var(--admin-border); border-radius: 8px; background: var(--admin-surface-soft); }
-    .ek-ttd-info { font-size: .85rem; border-style: solid; border-color: #bfdbfe; background: #eff6ff; }
-    html[data-theme="dark"] .ek-ttd-info { background: rgba(59, 130, 246, .12); border-color: rgba(59, 130, 246, .35); }
-    .pk-legenda { display: flex; flex-wrap: wrap; gap: .25rem .75rem; font-size: .75rem; color: var(--admin-muted); }
-    .pk-bagian { border: 1px solid var(--admin-border); border-radius: 10px; margin-bottom: .75rem; overflow: hidden; }
-    .pk-bagian-kepala { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem; padding: .5rem .75rem; background: var(--admin-surface-soft); border-bottom: 1px solid var(--admin-border); }
-    .pk-bagian-kepala h3 { font-size: .85rem; font-weight: 700; margin: 0; }
-    .pk-isi-semua, .pk-rata-bagian { font-size: .75rem; color: var(--admin-muted); display: flex; gap: .4rem; align-items: center; }
-    .pk-kelompok { padding: .35rem .75rem; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--hr-primary); background: var(--hr-primary-soft); }
-    .pk-butir { display: grid; grid-template-columns: 2rem 1fr auto; align-items: center; gap: .5rem; padding: .45rem .75rem; border-top: 1px dashed var(--admin-border); font-size: .85rem; }
-    .pk-kelompok + .pk-butir, .pk-bagian-kepala + .pk-butir { border-top: 0; }
-    .pk-no { color: var(--admin-muted); font-weight: 600; font-variant-numeric: tabular-nums; }
-    .pk-skala .btn { min-width: 2.25rem; font-weight: 700; }
-    .pk-butir.belum { background: #fff7e6; }
-    .pk-skor-baris { display: flex; justify-content: space-between; gap: .5rem; padding: .25rem .55rem; border-radius: 6px; font-size: .8rem; color: var(--admin-muted); }
-    .pk-skor-baris b { font-weight: 600; }
-    .pk-skor-baris.aktif { background: var(--hr-primary-soft); color: var(--hr-primary); }
-    .pk-skor-baris.aktif b { font-weight: 800; }
-    .pk-hasil { min-width: 2rem; text-align: center; font-weight: 700; border-radius: 6px; padding: .1rem .4rem; background: var(--admin-surface-soft); }
-    .pk-hasil.n4 { background: #dcfce7; color: #166534; } .pk-hasil.n3 { background: #e0f2fe; color: #075985; }
-    .pk-hasil.n2 { background: #fef3c7; color: #92400e; } .pk-hasil.n1 { background: #fee2e2; color: #991b1b; }
-    /* Kolom kanan lengket & dibatasi setinggi layar (gulir sendiri) agar tombol simpan selalu terjangkau
-       walau penilaian di kiri sangat panjang. */
-    @media (min-width: 1200px) {
-        .pk-lengket { position: sticky; top: 80px; max-height: calc(100vh - 96px); overflow-y: auto; scrollbar-width: thin; padding-right: 2px; }
-    }
-    @media (max-width: 575.98px) {
-        .pk-identitas { grid-template-columns: 1fr; gap: 0; }
-        .pk-identitas dd { margin-bottom: .45rem; }
-        /* Nilai baca-saja tetap sebaris di kanan; tombol 1–4 saat mengisi turun ke baris bawah. */
-        .pk-butir { grid-template-columns: 1.6rem 1fr auto; }
-        .pk-skala { grid-column: 2 / -1; justify-self: start; }
-    }
-    html[data-theme="dark"] .ek-kartu.waspada, html[data-theme="dark"] .pk-butir.belum { background: rgba(245, 158, 11, .1); }
-    html[data-theme="dark"] .ek-kartu.bahaya { background: rgba(239, 68, 68, .1); }
-</style>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const isi = document.getElementById('formIsi');
@@ -323,7 +405,8 @@
                     ev.preventDefault(); ev.stopImmediatePropagation();
                     belum.forEach((b) => b.classList.add('belum'));
                     belum[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    Swal.fire({ icon: 'info', title: 'Penilaian belum lengkap', text: belum.length + ' butir belum dinilai (ditandai kuning).', confirmButtonColor: '#8b1215' });
+                    Swal.fire({ icon: 'info', title: 'Penilaian belum lengkap', text: belum.length + ' butir belum dinilai (ditandai kuning).',
+                        confirmButtonText: 'Lengkapi', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--hr-primary').trim() });
                 }
             }, true);
             hitung();

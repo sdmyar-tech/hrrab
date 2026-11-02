@@ -1,232 +1,214 @@
 @extends('layouts.admin.app')
 
+@section('title', 'Bagian & Koordinator')
+
 @section('content')
+{{-- Galat isian ditampilkan di halaman ini (dan modalnya dibuka lagi); banner global tidak perlu. --}}
+@section('galat-di-halaman', '1')
 <main class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-buildings"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Kepegawaian</p>
-                    <h1 class="h3 mb-1">Master Bagian &amp; Koordinator</h1>
-                    <p class="text-muted mb-0">Daftar bagian dan koordinatornya. Koordinator dari bagian lain otomatis dicatat sebagai <strong>rangkap</strong> di Mutasi &amp; Rangkap.</p>
-                </div>
-            </div>
-            <div class="heading-actions">
+    <div class="container-fluid">
+        <x-page-header title="Bagian & Koordinator" eyebrow="Kepegawaian"
+            subtitle="Daftar bagian dan koordinatornya. Koordinator dari bagian lain otomatis dicatat sebagai rangkap di Mutasi & Rangkap.">
+            <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.unit.export'])
-                <a href="{{ route('admin.penugasan.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left-right"></i> Mutasi &amp; Rangkap</a>
-            </div>
-        </div>
+                <x-button :href="route('admin.penugasan.index')" variant="secondary" icon="bi-arrow-left-right">Mutasi &amp; Rangkap</x-button>
+                @if ($bisaKelola)
+                    <x-button icon="bi-plus-lg" data-bs-toggle="modal" data-bs-target="#modalTambahUnit">Tambah Bagian</x-button>
+                @endif
+            </x-slot:actions>
+        </x-page-header>
 
         @if ($peringatan = session('peringatan'))
-            <div class="alert alert-warning small">
-                <i class="bi bi-info-circle me-1"></i>{{ implode(' ', $peringatan) }}
-            </div>
+            <x-alert tone="warning" class="mb-3">{{ implode(' ', $peringatan) }}</x-alert>
         @endif
-        {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
-        @section('galat-di-halaman', '1')
         @if ($errors->any())
-            <div class="alert alert-danger small">{{ $errors->first() }}</div>
+            <x-alert tone="danger" title="Perubahan belum tersimpan" class="mb-3">{{ $errors->first() }}</x-alert>
         @endif
 
-        <section class="panel p-0 overflow-hidden">
-            <div class="un-bilah">
-                @if ($bisaKelola)
-                    <form action="{{ route('admin.unit.store') }}" method="POST" class="un-tambah">
-                        @csrf
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-plus-lg"></i></span>
-                            <input type="text" name="nama" class="form-control" placeholder="Bagian baru, contoh: LEGAL" aria-label="Nama bagian baru" maxlength="100" required autocomplete="off" value="{{ old('nama') }}">
-                            <input type="text" name="keterangan" class="form-control d-none d-md-block" placeholder="Keterangan, contoh: Bagian hukum" aria-label="Keterangan bagian (opsional)" maxlength="255" value="{{ old('keterangan') }}">
-                            <button type="submit" class="btn btn-primary">Tambah</button>
-                        </div>
-                    </form>
-                @endif
-                <div class="input-group un-cari">
-                    <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
-                    <input type="search" class="form-control" id="un-cari" placeholder="Cari bagian, contoh: SDM atau Siti" aria-label="Cari bagian menurut nama bagian atau koordinator" autocomplete="off" data-saring="#un-daftar">
-                </div>
-            </div>
-            <p class="small text-muted mb-0 px-3 pt-3" aria-live="polite"><strong class="text-body" data-saring-jumlah="#un-daftar">{{ $units->count() }}</strong> dari {{ $units->count() }} bagian</p>
+        <x-card :padding="false" aria-label="Daftar bagian">
+            <x-filter-bar target="#un-daftar" search="Cari bagian, contoh: SDM atau Siti" search-label="Cari bagian menurut nama bagian atau koordinator"
+                :count="$units->count()" unit="bagian" />
 
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th class="kolom-no" style="width:56px">No</th>
-                            <th>Bagian</th>
-                            <th>Koordinator</th>
-                            <th class="text-center">Pegawai</th>
-                            <th class="text-center">Jabatan</th>
-                            <th class="text-end">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="un-daftar">
-                        @forelse ($units as $u)
-                            @php
-                                $koor = $kepala->get($u->nama, collect());
-                                $gm = $gmKepala[$u->nama] ?? collect();
-                                // Koordinator sekarang untuk modal: pegawai (penugasan kepala) + GM tanpa data pegawai.
-                                $koorModal = $koor->map(fn ($p) => ['nilai' => 'pegawai:' . $p->data_pegawai_id, 'nama' => $p->dataPegawai?->nama_lengkap, 'ket' => $p->is_utama ? '' : ' (rangkap)'])
-                                    ->concat($gm->map(fn ($g) => ['nilai' => 'gm:' . $g->id, 'nama' => $g->name, 'ket' => ' (GM)']))->values();
-                            @endphp
-                            <tr data-cari="{{ mb_strtolower($u->nama . ' ' . $koor->pluck('dataPegawai.nama_lengkap')->implode(' ') . ' ' . $gm->pluck('name')->implode(' ')) }}">
-                                <td class="text-muted kolom-no">{{ $u->urutan }}</td>
-                                <td class="kolom-penuh">
-                                    <span class="fw-semibold d-block">{{ $u->nama }}</span>
-                                    @if ($u->keterangan)<small class="text-muted">{{ $u->keterangan }}</small>@endif
-                                </td>
-                                <td class="kolom-penuh">
-                                    @forelse ($koor as $p)
-                                        <span class="un-koor">
-                                            <i class="bi bi-person-badge"></i>{{ $p->dataPegawai?->nama_lengkap ?? '-' }}
-                                            <span class="badge {{ $p->is_utama ? 'text-bg-light border' : 'text-bg-info' }}">{{ $p->is_utama ? 'Bagian utama' : 'Rangkap' }}</span>
-                                        </span>
-                                    @empty
-                                        @if ($gm->isEmpty())<span class="text-danger small"><i class="bi bi-exclamation-circle me-1"></i>Belum ada koordinator</span>@endif
-                                    @endforelse
-                                    @foreach ($gm as $g)
-                                        <span class="un-koor"><i class="bi bi-person-gear"></i>{{ $g->name }} <span class="badge text-bg-warning">GM</span></span>
-                                    @endforeach
-                                </td>
-                                <td class="text-center">{{ $anggota[$u->nama] ?? 0 }}</td>
-                                <td class="text-center">
-                                    <a href="{{ route('admin.jabatan.index', ['unit' => $u->nama]) }}" class="text-decoration-none" title="Lihat jabatan bagian ini">{{ $u->jabatans_count }}</a>
-                                </td>
-                                <td class="text-end un-aksi">
-                                    <div class="d-inline-flex gap-1 justify-content-end">
-                                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalKoordinator"
-                                            data-unit="{{ $u->nama }}" data-url="{{ route('admin.unit.koordinator', $u) }}"
-                                            data-koor='@json($koorModal)'>
-                                            <i class="bi bi-person-badge"></i> Koordinator
-                                        </button>
-                                        @if ($bisaKelola)
-                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalUbahUnit"
-                                                data-url="{{ route('admin.unit.update', $u) }}" data-nama="{{ $u->nama }}" data-urutan="{{ $u->urutan }}" data-keterangan="{{ $u->keterangan }}">
-                                                <i class="bi bi-pencil"></i> Ubah
-                                            </button>
-                                            <form action="{{ route('admin.unit.destroy', $u) }}" method="POST">
-                                                @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="true" data-icon="warning" data-title="Hapus bagian?"
-                                                    data-text="Bagian {{ $u->nama }} akan dihapus. Penghapusan hanya bisa bila bagian ini tidak dipakai data apa pun."
-                                                    data-confirm-text="Ya, Hapus" data-confirm-color="#dc3545" data-cancel-text="Batal"><i class="bi bi-trash"></i> Hapus</button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            @include('partials.kosong-tabel', ['kosongKolom' => 6, 'kosongTeks' => 'Belum ada bagian.', 'kosongIkon' => 'bi-building'])
-                        @endforelse
-                        <tr data-saring-kosong="#un-daftar" hidden><td colspan="6">@include('partials.kosong', ['teks' => 'Tidak ada bagian yang cocok dengan pencarian ini.', 'ikonKosong' => 'bi-search'])</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
+            <x-table caption="Daftar bagian dan koordinator" id="un-daftar" sticky striped scroll>
+                <x-slot:head>
+                    <tr>
+                        <th class="kolom-no">No</th>
+                        <th>Bagian</th>
+                        <th>Koordinator</th>
+                        <th class="text-end">Pegawai</th>
+                        <th class="text-end">Jabatan</th>
+                        <th class="hr-kolom-aksi">Aksi</th>
+                    </tr>
+                </x-slot:head>
+                @forelse ($units as $u)
+                    @php
+                        $koor = $kepala->get($u->nama, collect());
+                        $gm = $gmKepala[$u->nama] ?? collect();
+                        // Koordinator sekarang untuk modal: pegawai (penugasan kepala) + GM tanpa data pegawai.
+                        $koorModal = $koor->map(fn ($p) => ['nilai' => 'pegawai:' . $p->data_pegawai_id, 'nama' => $p->dataPegawai?->nama_lengkap, 'ket' => $p->is_utama ? '' : ' (rangkap)'])
+                            ->concat($gm->map(fn ($g) => ['nilai' => 'gm:' . $g->id, 'nama' => $g->name, 'ket' => ' (GM)']))->values();
+                    @endphp
+                    <tr data-cari="{{ mb_strtolower($u->nama . ' ' . $koor->pluck('dataPegawai.nama_lengkap')->implode(' ') . ' ' . $gm->pluck('name')->implode(' ')) }}">
+                        <td class="kolom-no text-muted hr-angka">{{ $u->urutan }}</td>
+                        <td class="kolom-penuh">
+                            <span class="hr-sel-judul">{{ $u->nama }}</span>
+                            @if ($u->keterangan)<span class="hr-sel-sub">{{ $u->keterangan }}</span>@endif
+                        </td>
+                        <td class="kolom-penuh">
+                            <div class="un-koor-daftar">
+                                @forelse ($koor as $p)
+                                    <span class="un-koor">
+                                        <i class="bi bi-person-badge" aria-hidden="true"></i>{{ $p->dataPegawai?->nama_lengkap ?? '-' }}
+                                        <x-badge :tone="$p->is_utama ? 'neutral' : 'info'">{{ $p->is_utama ? 'Bagian utama' : 'Rangkap' }}</x-badge>
+                                    </span>
+                                @empty
+                                    @if ($gm->isEmpty())
+                                        <x-badge tone="danger" icon="bi-exclamation-circle">Belum ada koordinator</x-badge>
+                                    @endif
+                                @endforelse
+                                @foreach ($gm as $g)
+                                    <span class="un-koor"><i class="bi bi-person-gear" aria-hidden="true"></i>{{ $g->name }} <x-badge tone="warning">GM</x-badge></span>
+                                @endforeach
+                            </div>
+                        </td>
+                        <td class="hr-angka">{{ $anggota[$u->nama] ?? 0 }}</td>
+                        <td class="hr-angka">
+                            <a href="{{ route('admin.jabatan.index', ['unit' => $u->nama]) }}" title="Lihat jabatan bagian ini">{{ $u->jabatans_count }}</a>
+                        </td>
+                        <td class="text-end hr-kolom-aksi">
+                            <div class="hr-aksi-baris">
+                                <x-icon-button icon="bi-person-badge" label="Atur koordinator" tone="primary" data-bs-toggle="modal" data-bs-target="#modalKoordinator"
+                                    data-unit="{{ $u->nama }}" data-url="{{ route('admin.unit.koordinator', $u) }}" data-koor='@json($koorModal)' />
+                                @if ($bisaKelola)
+                                    <x-icon-button icon="bi-pencil" label="Ubah bagian" data-bs-toggle="modal" data-bs-target="#modalUbahUnit"
+                                        data-url="{{ route('admin.unit.update', $u) }}" data-nama="{{ $u->nama }}" data-urutan="{{ $u->urutan }}" data-keterangan="{{ $u->keterangan }}" />
+                                    <form action="{{ route('admin.unit.destroy', $u) }}" method="POST">
+                                        @csrf @method('DELETE')
+                                        <x-icon-button type="submit" icon="bi-trash" label="Hapus bagian" tone="danger" data-confirm="true" data-icon="warning"
+                                            data-title="Hapus bagian?" data-text="Bagian {{ $u->nama }} akan dihapus. Penghapusan hanya bisa bila bagian ini tidak dipakai data apa pun."
+                                            data-confirm-text="Ya, Hapus" data-cancel-text="Batal" />
+                                    </form>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <x-table-empty :colspan="6" icon="bi-buildings" title="Belum ada bagian">
+                        Bagian dipakai untuk mengelompokkan pegawai dan menentukan koordinator penyetuju.
+                        @if ($bisaKelola)
+                            <x-slot:action><x-button icon="bi-plus-lg" data-bs-toggle="modal" data-bs-target="#modalTambahUnit">Tambah Bagian</x-button></x-slot:action>
+                        @endif
+                    </x-table-empty>
+                @endforelse
+                <x-table-empty :colspan="6" icon="bi-search" title="Tidak ada bagian yang cocok" data-saring-kosong="#un-daftar" hidden>
+                    Coba kata kunci lain, misalnya nama bagian atau nama koordinatornya.
+                </x-table-empty>
+            </x-table>
+        </x-card>
     </div>
 </main>
 
-<div class="modal fade" id="modalKoordinator" tabindex="-1" aria-labelledby="judulKoordinator" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content" id="formKoordinator" data-confirm="Simpan koordinator bagian ini?">
-            @csrf
-            <div class="modal-header">
-                <h5 class="modal-title" id="judulKoordinator">Koordinator <span data-unit></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-            </div>
-            <div class="modal-body">
-                <div class="small mb-3" data-sekarang></div>
-                <label class="form-label" for="un-cari-pegawai">Pilih koordinator baru <span class="text-muted fw-normal">(dari Data Pegawai)</span></label>
-                <input type="search" class="form-control form-control-sm mb-2" id="un-cari-pegawai" placeholder="Cari koordinator, contoh: Siti atau SMK" autocomplete="off">
-                <select name="koordinator" class="form-select" size="9" required>
-                    <option value="" disabled hidden>Pilih pegawai…</option>
-                    @foreach ($pegawaiOpsi as $pg)
-                        @php $gmPg = in_array($pg->id, $gmPegawaiIds, true); @endphp
-                        <option value="pegawai:{{ $pg->id }}" data-unit="{{ $pg->kepegawaian?->unit_kerja }}" @if ($gmPg) data-gm="1" @endif
-                            data-cari="{{ mb_strtolower($pg->nama_lengkap . ' ' . $pg->nip . ' ' . $pg->kepegawaian?->unit_kerja . ($gmPg ? ' gm' : '')) }}">
-                            {{ $pg->nama_lengkap }}{{ $gmPg ? ' · GM' : '' }} — {{ $pg->kepegawaian?->jabatan ?? '-' }} ({{ $pg->kepegawaian?->unit_kerja ?? '-' }})
-                        </option>
-                    @endforeach
-                </select>
-                <div class="form-text" data-info-rangkap>Pilih pegawai untuk melihat cara pencatatannya.</div>
+{{-- Atur koordinator --}}
+<x-modal id="modalKoordinator" title="Koordinator" icon="bi-person-badge" size="lg">
+    <form method="POST" id="formKoordinator" data-confirm="Simpan koordinator bagian ini?">
+        @csrf
+        <div class="small mb-3" data-sekarang></div>
+        <label class="form-label" for="un-cari-pegawai">Pilih koordinator baru <span class="hr-field-opsional">(dari Data Pegawai)</span></label>
+        <input type="search" class="form-control form-control-sm mb-2" id="un-cari-pegawai" placeholder="Cari koordinator, contoh: Siti atau SMK" autocomplete="off">
+        <select name="koordinator" class="form-select un-pilih-pegawai" size="9" required aria-label="Pilih koordinator baru">
+            <option value="" disabled hidden>Pilih pegawai…</option>
+            @foreach ($pegawaiOpsi as $pg)
+                @php $gmPg = in_array($pg->id, $gmPegawaiIds, true); @endphp
+                <option value="pegawai:{{ $pg->id }}" data-unit="{{ $pg->kepegawaian?->unit_kerja }}" @if ($gmPg) data-gm="1" @endif
+                    data-cari="{{ mb_strtolower($pg->nama_lengkap . ' ' . $pg->nip . ' ' . $pg->kepegawaian?->unit_kerja . ($gmPg ? ' gm' : '')) }}">
+                    {{ $pg->nama_lengkap }}{{ $gmPg ? ' · GM' : '' }} — {{ $pg->kepegawaian?->jabatan ?? '-' }} ({{ $pg->kepegawaian?->unit_kerja ?? '-' }})
+                </option>
+            @endforeach
+        </select>
+        <div class="form-text" data-info-rangkap>Pilih pegawai untuk melihat cara pencatatannya.</div>
 
-                <label class="form-label mt-3" for="un-jabatan">Jabatan koordinator <span class="text-muted fw-normal">(opsional)</span></label>
-                <input type="text" name="jabatan" id="un-jabatan" class="form-control" list="un-jabatan-daftar" maxlength="150" autocomplete="off">
-                <datalist id="un-jabatan-daftar"></datalist>
-                <div class="form-text">Kosongkan: jabatan bagian utamanya tetap, atau "KEPALA &lt;BAGIAN&gt;" untuk rangkap.</div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-danger me-auto" data-kosongkan hidden><i class="bi bi-person-x"></i> Kosongkan</button>
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Simpan</button>
-            </div>
-        </form>
-        <form method="POST" id="formKosongkan" hidden data-confirm="Kosongkan koordinator bagian ini? Pengajuan pegawai bagian ini akan diteruskan ke GM.">
-            @csrf
-            <input type="hidden" name="koordinator" value="">
-        </form>
-    </div>
-</div>
+        <label class="form-label mt-3" for="un-jabatan">Jabatan koordinator <span class="hr-field-opsional">(opsional)</span></label>
+        <input type="text" name="jabatan" id="un-jabatan" class="form-control" list="un-jabatan-daftar" maxlength="150" autocomplete="off">
+        <datalist id="un-jabatan-daftar"></datalist>
+        <div class="form-text">Kosongkan: jabatan bagian utamanya tetap, atau "KEPALA &lt;BAGIAN&gt;" untuk rangkap.</div>
+    </form>
+    <form method="POST" id="formKosongkan" hidden data-confirm="Kosongkan koordinator bagian ini? Pengajuan pegawai bagian ini akan diteruskan ke GM.">
+        @csrf
+        <input type="hidden" name="koordinator" value="">
+    </form>
+    <x-slot:footer>
+        <x-button variant="danger-outline" icon="bi-person-x" class="me-auto" data-kosongkan hidden>Kosongkan</x-button>
+        <x-button variant="secondary" data-bs-dismiss="modal">Batal</x-button>
+        <x-button type="submit" form="formKoordinator" icon="bi-check-lg">Simpan</x-button>
+    </x-slot:footer>
+</x-modal>
 
 @if ($bisaKelola)
-    <div class="modal fade" id="modalUbahUnit" tabindex="-1" aria-labelledby="judulUbahUnit" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <form method="POST" class="modal-content" data-confirm="Simpan perubahan bagian? Bila nama diganti, semua data yang memakai nama lama ikut diperbarui.">
-                @csrf @method('PUT')
-                <div class="modal-header">
-                    <h5 class="modal-title" id="judulUbahUnit">Ubah Bagian</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+    {{-- Tambah bagian --}}
+    <x-modal id="modalTambahUnit" title="Tambah Bagian" icon="bi-buildings" subtitle="Bagian baru langsung muncul di semua pilihan bagian.">
+        <form action="{{ route('admin.unit.store') }}" method="POST" id="formTambahUnit">
+            @csrf
+            <input type="hidden" name="_form" value="tambah">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label required" for="un-tambah-nama">Nama bagian</label>
+                    <input type="text" name="nama" id="un-tambah-nama" class="form-control text-uppercase" maxlength="100" required autocomplete="off"
+                        placeholder="Tulis nama bagian, contoh: LEGAL" value="{{ old('_form') === 'tambah' ? old('nama') : '' }}">
                 </div>
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-8">
-                            <label class="form-label">Nama bagian</label>
-                            <input type="text" name="nama" class="form-control text-uppercase" maxlength="100" required>
-                        </div>
-                        <div class="col-4">
-                            <label for="f-urutan" class="form-label">Urutan</label>
-                            <input id="f-urutan" type="number" name="urutan" class="form-control" min="0" max="9999" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Keterangan <span class="text-muted fw-normal">(opsional)</span></label>
-                            <input type="text" name="keterangan" class="form-control" maxlength="255">
-                        </div>
-                    </div>
-                    <p class="form-text mt-2 mb-0">Urutan menentukan posisi bagian di semua daftar pilihan.</p>
+                <div class="col-12">
+                    <label class="form-label" for="un-tambah-ket">Keterangan <span class="hr-field-opsional">(opsional)</span></label>
+                    <input type="text" name="keterangan" id="un-tambah-ket" class="form-control" maxlength="255"
+                        placeholder="Tulis keterangan singkat, contoh: Bagian hukum" value="{{ old('_form') === 'tambah' ? old('keterangan') : '' }}">
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Simpan</button>
+            </div>
+        </form>
+        <x-slot:footer>
+            <x-button variant="secondary" data-bs-dismiss="modal">Batal</x-button>
+            <x-button type="submit" form="formTambahUnit" icon="bi-plus-lg">Tambah Bagian</x-button>
+        </x-slot:footer>
+    </x-modal>
+
+    {{-- Ubah bagian --}}
+    <x-modal id="modalUbahUnit" title="Ubah Bagian" icon="bi-pencil-square">
+        <form method="POST" id="formUbahUnit" data-confirm="Simpan perubahan bagian? Bila nama diganti, semua data yang memakai nama lama ikut diperbarui.">
+            @csrf @method('PUT')
+            <input type="hidden" name="_form" value="ubah">
+            <input type="hidden" name="_url">
+            <div class="row g-3">
+                <div class="col-8">
+                    <label class="form-label required" for="un-ubah-nama">Nama bagian</label>
+                    <input type="text" name="nama" id="un-ubah-nama" class="form-control text-uppercase" maxlength="100" required placeholder="Contoh: LEGAL">
                 </div>
-            </form>
-        </div>
-    </div>
+                <div class="col-4">
+                    <label class="form-label required" for="un-ubah-urutan">Urutan</label>
+                    <input type="number" name="urutan" id="un-ubah-urutan" class="form-control" min="0" max="9999" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="un-ubah-ket">Keterangan <span class="hr-field-opsional">(opsional)</span></label>
+                    <input type="text" name="keterangan" id="un-ubah-ket" class="form-control" maxlength="255" placeholder="Tulis keterangan singkat, contoh: Bagian hukum">
+                </div>
+            </div>
+            <p class="form-text mt-2 mb-0">Urutan menentukan posisi bagian di semua daftar pilihan.</p>
+        </form>
+        <x-slot:footer>
+            <x-button variant="secondary" data-bs-dismiss="modal">Batal</x-button>
+            <x-button type="submit" form="formUbahUnit" icon="bi-check-lg">Simpan</x-button>
+        </x-slot:footer>
+    </x-modal>
 @endif
 
-<style>
-    .un-bilah { display: flex; flex-wrap: wrap; gap: .75rem; padding: 1rem; border-bottom: 1px solid var(--admin-border); background: var(--admin-surface-soft); }
-    .un-tambah { flex: 2 1 420px; margin: 0; }
-    .un-cari { flex: 1 1 260px; }
-    /* Nama koordinator dibungkus per kata (bukan per huruf) bila kolom sempit, badge ikut turun baris. */
-.un-koor { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin: .1rem .5rem .1rem 0; font-weight: 600; font-size: .86rem; max-width: 100%; overflow-wrap: normal; word-break: normal; }
-    .un-koor > .bi { color: var(--hr-primary); }
-    #modalKoordinator select[size] { font-size: .86rem; }
-    /* Tombol aksi sebaris (tidak membungkus) agar ukurannya seragam; tabel bisa digeser di layar sempit. */
-    .table tbody td.un-aksi { white-space: nowrap !important; width: 1%; }
-    .un-aksi form { margin: 0; }
-</style>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Saring langsung ditangani global (main.js: data-saring).
-
         const jabatanPerUnit = @json($jabatanPerUnit);
         const modal = document.getElementById('modalKoordinator');
+        const judul = document.getElementById('modalKoordinator-judul');
         const form = document.getElementById('formKoordinator');
         const formKosong = document.getElementById('formKosongkan');
         const pilih = form.querySelector('[name=koordinator]');
         const cariPg = document.getElementById('un-cari-pegawai');
         const info = form.querySelector('[data-info-rangkap]');
-        const tombolKosong = form.querySelector('[data-kosongkan]');
+        const tombolKosong = modal.querySelector('[data-kosongkan]');
         let unitAktif = '';
 
         function jelaskan() {
@@ -249,16 +231,14 @@
         }
         function saring() {
             const kata = cariPg.value.trim().toLowerCase();
-            Array.from(pilih.options).forEach((o) => { o.hidden = !o.dataset.cari.includes(kata); });
-            // Grup tanpa hasil disembunyikan juga.
-            pilih.querySelectorAll('optgroup').forEach((g) => { g.hidden = !Array.from(g.children).some((o) => !o.hidden); });
+            Array.from(pilih.options).forEach((o) => { o.hidden = !o.dataset.cari?.includes(kata); });
         }
 
         modal.addEventListener('show.bs.modal', (e) => {
             const t = e.relatedTarget;
             unitAktif = t.dataset.unit;
             form.action = formKosong.action = t.dataset.url;
-            modal.querySelectorAll('[data-unit]').forEach((el) => { if (el.tagName === 'SPAN') el.textContent = unitAktif; });
+            judul.textContent = 'Koordinator ' + unitAktif;
             const koor = JSON.parse(t.dataset.koor || '[]');
             const sekarang = modal.querySelector('[data-sekarang]');
             sekarang.innerHTML = koor.length ? 'Koordinator sekarang: <strong></strong>' : '<span class="text-danger">Bagian ini belum punya koordinator.</span>';
@@ -271,7 +251,7 @@
             dl.innerHTML = '';
             (jabatanPerUnit[unitAktif] || []).forEach((j) => dl.append(new Option(j)));
             form.jabatan.value = '';
-            form.jabatan.placeholder = 'KEPALA ' + unitAktif;
+            form.jabatan.placeholder = 'Contoh: KEPALA ' + unitAktif;
             jelaskan();
         });
         modal.addEventListener('shown.bs.modal', () => cariPg.focus());
@@ -280,13 +260,22 @@
         tombolKosong.addEventListener('click', () => formKosong.requestSubmit());
 
         const modalUbah = document.getElementById('modalUbahUnit');
-        modalUbah?.addEventListener('show.bs.modal', (e) => {
-            const t = e.relatedTarget, f = modalUbah.querySelector('form');
-            f.action = t.dataset.url;
-            f.nama.value = t.dataset.nama;
-            f.urutan.value = t.dataset.urutan;
-            f.keterangan.value = t.dataset.keterangan || '';
-        });
+        const formUbah = document.getElementById('formUbahUnit');
+        const isiUbah = (d) => {
+            formUbah.action = formUbah._url.value = d.url;
+            formUbah.nama.value = d.nama;
+            formUbah.urutan.value = d.urutan;
+            formUbah.keterangan.value = d.keterangan || '';
+        };
+        modalUbah?.addEventListener('show.bs.modal', (e) => { if (e.relatedTarget) isiUbah(e.relatedTarget.dataset); });
+
+        // Galat validasi dari server → buka lagi modal yang sama dengan isian terakhir.
+        @if ($errors->any() && old('_form') === 'tambah')
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalTambahUnit')).show();
+        @elseif ($errors->any() && old('_form') === 'ubah' && old('_url'))
+            isiUbah({{ \Illuminate\Support\Js::from(['url' => old('_url'), 'nama' => old('nama'), 'urutan' => old('urutan'), 'keterangan' => old('keterangan')]) }});
+            bootstrap.Modal.getOrCreateInstance(modalUbah).show();
+        @endif
     });
 </script>
 @endsection
