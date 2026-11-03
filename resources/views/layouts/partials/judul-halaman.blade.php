@@ -3,7 +3,8 @@
     agar tab/riwayat browser bisa dibedakan & dibacakan pembaca layar. Param: $cadangan (judul bila tidak ada h1).
 --}}
 @php
-    if (! ($judulHalaman = trim($__env->yieldContent('title')))) {
+    // yieldContent sudah ter-escape (@section singkat memakai e()); di-decode agar {{ }} di bawah tidak menggandakan &amp;.
+    if (! ($judulHalaman = trim(html_entity_decode($__env->yieldContent('title'), ENT_QUOTES)))) {
         preg_match('/<h1\b[^>]*>(.*?)<\/h1>/s', $__env->yieldContent('content'), $h1);
         $judulHalaman = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($h1[1] ?? ''), ENT_QUOTES)));
     }

@@ -8,7 +8,8 @@
     $navBeranda = request()->attributes->get('navBeranda');
 
     // Judul halaman: @section('title') atau isi <h1> (sama dengan layouts.partials.judul-halaman).
-    if (! ($judulKini = trim($__env->yieldContent('title')))) {
+    // yieldContent sudah ter-escape (@section singkat memakai e()); di-decode agar {{ }} di bawah tidak menggandakan &amp;.
+    if (! ($judulKini = trim(html_entity_decode($__env->yieldContent('title'), ENT_QUOTES)))) {
         preg_match('/<h1\b[^>]*>(.*?)<\/h1>/s', $__env->yieldContent('content'), $h1);
         $judulKini = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($h1[1] ?? ''), ENT_QUOTES)));
     }
