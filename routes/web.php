@@ -9,7 +9,6 @@ use App\Http\Controllers\Admin\AlurPegawaiController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EditorDataController as AdminEditorDataController;
 use App\Http\Controllers\Admin\EvaluasiKontrakController as AdminEvaluasiKontrakController;
-use App\Http\Controllers\Admin\HakAksesJabatanController;
 use App\Http\Controllers\Admin\IzinAbsensiController as AdminIzinAbsensiController;
 use App\Http\Controllers\Admin\IzinKeluarController as AdminIzinKeluarController;
 use App\Http\Controllers\Admin\JabatanController as AdminJabatanController;
@@ -100,27 +99,30 @@ Route::get('/berkas/{path}', [BerkasController::class, 'lihat'])->name('berkas.l
 
 Route::middleware(['auth', 'nocache'])->group(function () {
     Route::prefix('admin')->name('admin.')->middleware('internal')->group(function () {
-        Route::middleware('can:lihat-tabel-karyawan')->group(function () {
+        // Hak akses rute = permission (App\Support\Izin). Grup 'internal' terbuka untuk Staff yang dicentang permission-nya.
+        Route::middleware('can:pegawai.view')->group(function () {
             Route::get('/pegawai', [AdminPegawaiController::class, 'index'])->name('pegawai.index');
             Route::get('/pegawai/export', [AdminPegawaiController::class, 'export'])->name('pegawai.export');
         });
-        Route::middleware('can:kelola-pegawai')->group(function () {
+        Route::middleware('can:pegawai.create')->group(function () {
             Route::get('/pegawai/create', [AdminPegawaiController::class, 'create'])->name('pegawai.create');
             Route::post('/pegawai', [AdminPegawaiController::class, 'store'])->name('pegawai.store');
+        });
+        Route::middleware('can:pegawai.update')->group(function () {
             Route::get('/pegawai/{pegawai}/edit', [AdminPegawaiController::class, 'edit'])->name('pegawai.edit');
             Route::put('/pegawai/{pegawai}', [AdminPegawaiController::class, 'update'])->name('pegawai.update');
-            Route::delete('/pegawai/{pegawai}', [AdminPegawaiController::class, 'destroy'])->name('pegawai.destroy');
             // Pegawai keluar (resign dll.): status Tidak Aktif, akun jadi pelamar (tidak dihapus); bisa dibatalkan.
             Route::get('/pegawai/{pegawai}/keluar', [PegawaiKeluarController::class, 'form'])->name('pegawai.keluar.form');
             Route::post('/pegawai/{pegawai}/keluar', [PegawaiKeluarController::class, 'store'])->name('pegawai.keluar');
             Route::delete('/pegawai/{pegawai}/keluar', [PegawaiKeluarController::class, 'destroy'])->name('pegawai.keluar.batal');
         });
-        Route::get('/pegawai/{pegawai}', [AdminPegawaiController::class, 'show'])->name('pegawai.show')->middleware('can:lihat-tabel-karyawan');
-        Route::get('/pegawai/{pegawai}/export', [AdminPegawaiController::class, 'exportDetail'])->name('pegawai.export-detail')->middleware('can:lihat-tabel-karyawan');
+        Route::delete('/pegawai/{pegawai}', [AdminPegawaiController::class, 'destroy'])->name('pegawai.destroy')->middleware('can:pegawai.delete');
+        Route::get('/pegawai/{pegawai}', [AdminPegawaiController::class, 'show'])->name('pegawai.show')->middleware('can:pegawai.view');
+        Route::get('/pegawai/{pegawai}/export', [AdminPegawaiController::class, 'exportDetail'])->name('pegawai.export-detail')->middleware('can:pegawai.view');
 
-        // Absensi (mesin fingerprint): lihat = Kepala Bagian (unitnya) & pengelola; kelola = Kepala SDM, Admin, staf SDM.
+        // Absensi (mesin fingerprint): lihat = absensi.view (Kepala Bagian: unitnya); kelola = absensi.manage (semua unit).
         Route::prefix('absensi')->name('absensi.')->group(function () {
-            Route::middleware('can:lihat-absensi')->group(function () {
+            Route::middleware('can:absensi.view')->group(function () {
                 Route::get('/', [AdminAbsensiController::class, 'harian'])->name('harian');
                 Route::get('/export', [AdminAbsensiController::class, 'harianExport'])->name('harian.export');
                 Route::get('/rekap', [AdminAbsensiController::class, 'rekap'])->name('rekap');
@@ -128,7 +130,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
                 Route::get('/pegawai/{pegawai}', [AdminAbsensiController::class, 'pegawai'])->name('pegawai');
                 Route::get('/pegawai/{pegawai}/export', [AdminAbsensiController::class, 'pegawaiExport'])->name('pegawai.export');
             });
-            Route::middleware('can:kelola-absensi')->group(function () {
+            Route::middleware('can:absensi.manage')->group(function () {
                 Route::post('/pegawai/{pegawai}/koreksi', [AdminAbsensiController::class, 'koreksi'])->name('koreksi');
                 Route::get('/import', [AdminAbsensiImportController::class, 'index'])->name('import');
                 Route::get('/import/export', [AdminAbsensiImportController::class, 'export'])->name('import.export');
@@ -153,7 +155,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard/export', [AdminDashboardController::class, 'export'])->name('dashboard.export');
 
-        Route::prefix('users')->name('users.')->middleware('can:kelola-sistem')->group(function () {
+        Route::prefix('users')->name('users.')->middleware('can:sistem.akun.manage')->group(function () {
             Route::get('/', [AdminUserController::class, 'index'])->name('index');
             Route::get('/export', [AdminUserController::class, 'export'])->name('export');
             Route::get('/create', [AdminUserController::class, 'create'])->name('create');
@@ -163,14 +165,14 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::delete('/{user}', [AdminUserController::class, 'destroy'])->name('destroy');
         });
 
-        Route::prefix('log-aktivitas')->name('log.')->middleware('can:kelola-sistem')->group(function () {
+        Route::prefix('log-aktivitas')->name('log.')->middleware('can:sistem.log.view')->group(function () {
             Route::get('/', [AdminLogAktivitasController::class, 'index'])->name('index');
             Route::get('/export', [AdminLogAktivitasController::class, 'export'])->name('export');
             Route::get('/arsip/{nama}', [AdminLogAktivitasController::class, 'unduhArsip'])->name('arsip')->where('nama', '[A-Za-z0-9\-\.]+');
         });
 
         // Editor Data: Admin bisa mengubah/menghapus data apa pun langsung (tercatat di log).
-        Route::prefix('data')->name('data.')->middleware('can:kelola-sistem')->group(function () {
+        Route::prefix('data')->name('data.')->middleware('can:sistem.editor_data')->group(function () {
             Route::get('/', [AdminEditorDataController::class, 'index'])->name('index');
             Route::get('/export-semua', [AdminEditorDataController::class, 'exportSemua'])->name('export-semua');
             Route::get('/{entitas}', [AdminEditorDataController::class, 'daftar'])->name('daftar')->where('entitas', '[a-z_]+');
@@ -183,11 +185,11 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         });
 
         // Master Unit: Kepala SDM & Admin mengatur koordinator (terhubung ke rangkap); tambah/ubah/hapus unit khusus Admin.
-        Route::prefix('unit')->name('unit.')->middleware('can:kelola-penugasan')->group(function () {
+        Route::prefix('unit')->name('unit.')->middleware('can:penugasan.manage')->group(function () {
             Route::get('/', [AdminUnitController::class, 'index'])->name('index');
             Route::get('/export', [AdminUnitController::class, 'export'])->name('export');
             Route::post('/{unit}/koordinator', [AdminUnitController::class, 'koordinator'])->name('koordinator');
-            Route::middleware('can:kelola-sistem')->group(function () {
+            Route::middleware('can:sistem.master.manage')->group(function () {
                 Route::post('/', [AdminUnitController::class, 'store'])->name('store');
                 Route::put('/{unit}', [AdminUnitController::class, 'update'])->name('update');
                 Route::delete('/{unit}', [AdminUnitController::class, 'destroy'])->name('destroy');
@@ -195,7 +197,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         });
 
         // Master Unit (tanpa koordinator): pengelompokan pegawai, dipilih di data pegawai.
-        Route::prefix('master-unit')->name('master-unit.')->middleware('can:kelola-penugasan')->group(function () {
+        Route::prefix('master-unit')->name('master-unit.')->middleware('can:penugasan.manage')->group(function () {
             Route::get('/', [AdminUnitOrganisasiController::class, 'index'])->name('index');
             Route::get('/export', [AdminUnitOrganisasiController::class, 'export'])->name('export');
             Route::post('/', [AdminUnitOrganisasiController::class, 'store'])->name('store');
@@ -203,19 +205,15 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::delete('/{unitOrganisasi}', [AdminUnitOrganisasiController::class, 'destroy'])->name('destroy');
         });
 
-        Route::prefix('jabatan')->name('jabatan.')->middleware('can:kelola-sistem')->group(function () {
+        Route::prefix('jabatan')->name('jabatan.')->middleware('can:sistem.master.manage')->group(function () {
             Route::get('/', [AdminJabatanController::class, 'index'])->name('index');
             Route::get('/export', [AdminJabatanController::class, 'export'])->name('export');
-            // Hak akses tambahan per jabatan di tiap unit (di atas hak role akun).
-            Route::get('/hak-akses', [HakAksesJabatanController::class, 'index'])->name('hak-akses');
-            Route::get('/hak-akses/export', [HakAksesJabatanController::class, 'export'])->name('hak-akses.export');
-            Route::put('/{jabatan}/hak-akses/{unit}', [HakAksesJabatanController::class, 'update'])->name('hak-akses.update');
             Route::post('/', [AdminJabatanController::class, 'store'])->name('store');
             Route::put('/{jabatan}', [AdminJabatanController::class, 'update'])->name('update');
             Route::delete('/{jabatan}', [AdminJabatanController::class, 'destroy'])->name('destroy');
         });
 
-        Route::prefix('role')->name('role.')->middleware('can:kelola-sistem')->group(function () {
+        Route::prefix('role')->name('role.')->middleware('can:sistem.role.manage')->group(function () {
             Route::get('/', [AdminRoleController::class, 'index'])->name('index');
             Route::get('/export', [AdminRoleController::class, 'export'])->name('export');
             Route::get('/tambah', [AdminRoleController::class, 'create'])->name('create');
@@ -230,7 +228,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::delete('/{role}', [AdminRoleController::class, 'destroy'])->name('destroy');
         });
 
-        Route::prefix('lokasi-kerja')->name('lokasi-kerja.')->middleware('can:kelola-sistem')->group(function () {
+        Route::prefix('lokasi-kerja')->name('lokasi-kerja.')->middleware('can:sistem.master.manage')->group(function () {
             Route::get('/', [AdminLokasiKerjaController::class, 'index'])->name('index');
             Route::get('/export', [AdminLokasiKerjaController::class, 'export'])->name('export');
             Route::post('/', [AdminLokasiKerjaController::class, 'store'])->name('store');
@@ -238,7 +236,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::delete('/{lokasiKerja}', [AdminLokasiKerjaController::class, 'destroy'])->name('destroy');
         });
 
-        Route::middleware('can:kelola-penugasan')->group(function () {
+        Route::middleware('can:penugasan.manage')->group(function () {
             Route::get('/penugasan', [AdminPenugasanController::class, 'index'])->name('penugasan.index');
             Route::get('/penugasan/export', [AdminPenugasanController::class, 'export'])->name('penugasan.export');
             Route::get('/penugasan/tambah', [AdminPenugasanController::class, 'tambah'])->name('penugasan.tambah');
@@ -246,50 +244,50 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::post('/pegawai/{pegawai}/penugasan', [AdminPenugasanController::class, 'store'])->name('penugasan.store');
             Route::post('/penugasan/{penugasan}/akhiri', [AdminPenugasanController::class, 'akhiri'])->name('penugasan.akhiri');
             Route::delete('/penugasan/{penugasan}', [AdminPenugasanController::class, 'destroy'])->name('penugasan.destroy');
-            Route::middleware('can:kelola-sistem')->group(function () {
+            Route::middleware('can:sistem.override')->group(function () {
                 Route::get('/penugasan/{penugasan}/edit', [AdminPenugasanController::class, 'edit'])->name('penugasan.edit');
                 Route::put('/penugasan/{penugasan}', [AdminPenugasanController::class, 'update'])->name('penugasan.update');
             });
         });
 
-        Route::prefix('pengajuan-lembur')->name('pengajuan-lembur.')->middleware('can:lihat-laporan')->group(function () {
+        Route::prefix('pengajuan-lembur')->name('pengajuan-lembur.')->middleware('can:pengajuan.report')->group(function () {
             Route::get('/', [AdminPengajuanLemburController::class, 'index'])->name('index');
             Route::get('/export', [AdminPengajuanLemburController::class, 'export'])->name('export');
             Route::get('/{pengajuanLembur}', [AdminPengajuanLemburController::class, 'show'])->name('show');
-            Route::post('/{pengajuanLembur}/approve', [AdminPengajuanLemburController::class, 'approve'])->name('approve')->middleware('can:proses-pengajuan');
-            Route::post('/{pengajuanLembur}/reject', [AdminPengajuanLemburController::class, 'reject'])->name('reject')->middleware('can:proses-pengajuan');
-            Route::middleware('can:kelola-sistem')->group(function () {
+            Route::post('/{pengajuanLembur}/approve', [AdminPengajuanLemburController::class, 'approve'])->name('approve')->middleware('can:pengajuan.approve');
+            Route::post('/{pengajuanLembur}/reject', [AdminPengajuanLemburController::class, 'reject'])->name('reject')->middleware('can:pengajuan.approve');
+            Route::middleware('can:sistem.override')->group(function () {
                 Route::put('/{pengajuanLembur}/ubah-admin', [AdminPengajuanLemburController::class, 'ubahAdmin'])->name('ubah-admin');
                 Route::delete('/{pengajuanLembur}', [AdminPengajuanLemburController::class, 'destroy'])->name('destroy');
             });
         });
 
         // Izin keluar saat jam kerja: alur persetujuan sama dengan cuti (atasan langsung → Kepala SDM).
-        Route::prefix('izin-keluar')->name('izin-keluar.')->middleware('can:lihat-laporan')->group(function () {
+        Route::prefix('izin-keluar')->name('izin-keluar.')->middleware('can:pengajuan.report')->group(function () {
             Route::get('/', [AdminIzinKeluarController::class, 'index'])->name('index');
             Route::get('/export', [AdminIzinKeluarController::class, 'export'])->name('export');
             Route::get('/{izinKeluar}', [AdminIzinKeluarController::class, 'show'])->name('show');
-            Route::post('/{izinKeluar}/approve', [AdminIzinKeluarController::class, 'approve'])->name('approve')->middleware('can:proses-pengajuan');
-            Route::post('/{izinKeluar}/reject', [AdminIzinKeluarController::class, 'reject'])->name('reject')->middleware('can:proses-pengajuan');
-            Route::middleware('can:kelola-sistem')->group(function () {
+            Route::post('/{izinKeluar}/approve', [AdminIzinKeluarController::class, 'approve'])->name('approve')->middleware('can:pengajuan.approve');
+            Route::post('/{izinKeluar}/reject', [AdminIzinKeluarController::class, 'reject'])->name('reject')->middleware('can:pengajuan.approve');
+            Route::middleware('can:sistem.override')->group(function () {
                 Route::put('/{izinKeluar}/ubah-admin', [AdminIzinKeluarController::class, 'ubahAdmin'])->name('ubah-admin');
                 Route::delete('/{izinKeluar}', [AdminIzinKeluarController::class, 'destroy'])->name('destroy');
             });
         });
 
-        Route::prefix('pengajuan-cuti')->name('pengajuan-cuti.')->middleware('can:lihat-laporan')->group(function () {
+        Route::prefix('pengajuan-cuti')->name('pengajuan-cuti.')->middleware('can:pengajuan.report')->group(function () {
             Route::get('/', [AdminPengajuanCutiController::class, 'index'])->name('index');
             Route::get('/export', [AdminPengajuanCutiController::class, 'export'])->name('export');
             Route::get('/{pengajuanCuti}', [AdminPengajuanCutiController::class, 'show'])->name('show');
-            Route::post('/{pengajuanCuti}/approve', [AdminPengajuanCutiController::class, 'approve'])->name('approve')->middleware('can:proses-pengajuan');
-            Route::post('/{pengajuanCuti}/reject', [AdminPengajuanCutiController::class, 'reject'])->name('reject')->middleware('can:proses-pengajuan');
-            Route::middleware('can:kelola-sistem')->group(function () {
+            Route::post('/{pengajuanCuti}/approve', [AdminPengajuanCutiController::class, 'approve'])->name('approve')->middleware('can:pengajuan.approve');
+            Route::post('/{pengajuanCuti}/reject', [AdminPengajuanCutiController::class, 'reject'])->name('reject')->middleware('can:pengajuan.approve');
+            Route::middleware('can:sistem.override')->group(function () {
                 Route::put('/{pengajuanCuti}/ubah-admin', [AdminPengajuanCutiController::class, 'ubahAdmin'])->name('ubah-admin');
                 Route::delete('/{pengajuanCuti}', [AdminPengajuanCutiController::class, 'destroy'])->name('destroy');
             });
         });
 
-        Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->group(function () {
+        Route::prefix('pengajuan-formasi')->name('pengajuan-formasi.')->middleware('can:rekrutmen.view')->group(function () {
             Route::get('/', [AdminPengajuanFormasiController::class, 'index'])->name('index');
             Route::get('/export', [AdminPengajuanFormasiController::class, 'export'])->name('export');
             Route::get('/create', [AdminPengajuanFormasiController::class, 'create'])->name('create');
@@ -297,7 +295,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::post('/{pengajuanFormasi}/approve', [AdminPengajuanFormasiController::class, 'approve'])->name('approve');
             Route::post('/{pengajuanFormasi}/reject', [AdminPengajuanFormasiController::class, 'reject'])->name('reject');
             Route::post('/{pengajuanFormasi}/batalkan', [AdminPengajuanFormasiController::class, 'batalkan'])->name('batalkan');
-            Route::delete('/{pengajuanFormasi}', [AdminPengajuanFormasiController::class, 'destroy'])->name('destroy')->middleware('can:kelola-sistem');
+            Route::delete('/{pengajuanFormasi}', [AdminPengajuanFormasiController::class, 'destroy'])->name('destroy')->middleware('can:sistem.override');
         });
 
         // Evaluasi kontrak (H-30): atasan mengisi, Kepala SDM memutuskan. Hak akses dicek di controller.
@@ -318,11 +316,11 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::delete('/{suratPeringatan}', [AdminSuratPeringatanController::class, 'destroy'])->name('destroy');
         });
 
-        Route::prefix('lowongan')->name('lowongan.')->group(function () {
+        Route::prefix('lowongan')->name('lowongan.')->middleware('can:rekrutmen.view')->group(function () {
             Route::get('/', [AdminLowonganController::class, 'index'])->name('index');
             Route::get('/export', [AdminLowonganController::class, 'export'])->name('export');
-            Route::get('/create', [AdminLowonganController::class, 'create'])->name('create');
-            Route::post('/', [AdminLowonganController::class, 'store'])->name('store');
+            Route::get('/create', [AdminLowonganController::class, 'create'])->name('create')->middleware('can:rekrutmen.lowongan.create');
+            Route::post('/', [AdminLowonganController::class, 'store'])->name('store')->middleware('can:rekrutmen.lowongan.create');
             Route::get('/{lowongan}/edit', [AdminLowonganController::class, 'edit'])->name('edit');
             Route::put('/{lowongan}', [AdminLowonganController::class, 'update'])->name('update');
             Route::post('/{lowongan}/publish', [AdminLowonganController::class, 'publish'])->name('publish');
@@ -330,7 +328,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::post('/{lowongan}/reopen', [AdminLowonganController::class, 'reopen'])->name('reopen');
         });
 
-        Route::prefix('lamaran')->name('lamaran.')->group(function () {
+        Route::prefix('lamaran')->name('lamaran.')->middleware('can:rekrutmen.view')->group(function () {
             Route::get('/', [AdminLamaranController::class, 'index'])->name('index');
             Route::get('/export', [AdminLamaranController::class, 'export'])->name('export');
             Route::get('/export-jadwal', [AdminLamaranController::class, 'exportJadwal'])->name('export-jadwal');
@@ -358,11 +356,11 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::delete('/{lamaran}/kontrak/{kontrak}', [AdminLamaranController::class, 'kontrakDestroy'])->name('kontrak.destroy');
             Route::post('/{lamaran}/rekrut', [AdminLamaranController::class, 'rekrut'])->name('rekrut');
             Route::post('/{lamaran}/tolak', [AdminLamaranController::class, 'tolak'])->name('tolak');
-            Route::put('/{lamaran}/ubah-admin', [AdminLamaranController::class, 'ubahAdmin'])->name('ubah-admin')->middleware('can:kelola-sistem');
+            Route::put('/{lamaran}/ubah-admin', [AdminLamaranController::class, 'ubahAdmin'])->name('ubah-admin')->middleware('can:sistem.override');
         });
     });
 
-    Route::prefix('pegawai')->name('pegawai.')->middleware('can:mengajukan')->group(function () {
+    Route::prefix('pegawai')->name('pegawai.')->middleware('can:pengajuan.create')->group(function () {
         Route::middleware('can:ajukan-lembur')->group(function () {
             Route::get('/pengajuan-lembur', [PegawaiPengajuanLemburController::class, 'index'])->name('pengajuan-lembur');
             Route::post('/pengajuan-lembur', [PegawaiPengajuanLemburController::class, 'store'])->name('pengajuan-lembur.store');
@@ -413,7 +411,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         // Kalender pegawai: semua akun internal melihat; tanggal merah hanya diatur Super Admin & Kepala SDM.
         Route::get('/kalender', [KalenderController::class, 'index'])->name('kalender.index');
         Route::get('/kalender/export', [KalenderController::class, 'export'])->name('kalender.export');
-        Route::middleware('can:kelola-kalender')->prefix('kalender')->name('kalender.')->group(function () {
+        Route::middleware('can:kalender.manage')->prefix('kalender')->name('kalender.')->group(function () {
             Route::post('/sinkron', [KalenderController::class, 'sinkron'])->name('sinkron');
             Route::post('/', [KalenderController::class, 'store'])->name('store');
             Route::put('/{hariLibur}', [KalenderController::class, 'update'])->name('update');
@@ -432,7 +430,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         Route::get('/pengumuman/{pengumuman}/absen/qr/token', [AbsenAcaraController::class, 'qrToken'])->name('pengumuman.absen.qr-token');
         Route::post('/pengumuman/{pengumuman}/absen/ingatkan', [AbsenAcaraController::class, 'ingatkan'])->name('pengumuman.absen.ingatkan')->middleware('throttle:6,1');
         Route::post('/pengumuman/{pengumuman}/absen/{peserta}', [AbsenAcaraController::class, 'tandai'])->name('pengumuman.absen.tandai');
-        Route::middleware('can:kelola-pengumuman')->group(function () {
+        Route::middleware('can:pengumuman.manage')->group(function () {
             Route::get('/pengumuman/create', [PengumumanController::class, 'create'])->name('pengumuman.create');
             Route::get('/pengumuman/export', [PengumumanController::class, 'export'])->name('pengumuman.export');
             Route::post('/pengumuman', [PengumumanController::class, 'store'])->name('pengumuman.store');
@@ -441,7 +439,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::delete('/pengumuman/{pengumuman}', [PengumumanController::class, 'destroy'])->name('pengumuman.destroy');
         });
 
-        Route::middleware('can:kirim-notifikasi')->group(function () {
+        Route::middleware('can:notifikasi.send')->group(function () {
             Route::get('/notifikasi/kirim', [NotifikasiController::class, 'kirimForm'])->name('notifikasi.kirim');
             Route::post('/notifikasi/kirim', [NotifikasiController::class, 'kirim'])->name('notifikasi.kirim.store')->middleware('throttle:10,1');
         });
@@ -462,7 +460,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
     Route::post('/akun/ganti-password', [WajibPasswordController::class, 'simpan'])->middleware('throttle:10,1')->name('akun.ganti-password.simpan');
 
     // Kepala SDM & Admin: alur persetujuan/atasan pegawai + paksa ganti password akun.
-    Route::prefix('admin')->name('admin.')->middleware(['internal', 'can:atur-akun-pegawai'])->group(function () {
+    Route::prefix('admin')->name('admin.')->middleware(['internal', 'can:pegawai.alur.manage'])->group(function () {
         Route::put('/pegawai/{pegawai}/alur', [AlurPegawaiController::class, 'update'])->name('pegawai.alur.update');
         Route::delete('/pegawai/{pegawai}/alur', [AlurPegawaiController::class, 'destroy'])->name('pegawai.alur.destroy');
         Route::post('/akun/{user}/wajib-password', [WajibPasswordController::class, 'atur'])->name('akun.wajib-password');

@@ -19,7 +19,7 @@
         <x-page-header title="Data Pegawai" eyebrow="Kepegawaian" subtitle="Kelola data pegawai, informasi kepegawaian, dan dokumennya.">
             <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pegawai.export'])
-                @can('kelola-pegawai')
+                @can('pegawai.create')
                     <x-button :href="route('admin.pegawai.create')" icon="bi-person-plus">Tambah Pegawai</x-button>
                 @endcan
             </x-slot:actions>
@@ -133,7 +133,7 @@
                         <td class="text-end hr-kolom-aksi">
                             <div class="hr-aksi-baris">
                                 <x-icon-button icon="bi-eye" label="Lihat detail" :href="route('admin.pegawai.show', $pegawai->id)" />
-                                @can('kelola-pegawai')
+                                @can('pegawai.update')
                                     <x-icon-button icon="bi-pencil" label="Ubah data" :href="route('admin.pegawai.edit', $pegawai->id)" />
                                     @if (($kp->status_rekrutmen ?? null) === 'Aktif')
                                         <x-icon-button icon="bi-box-arrow-right" label="Resign / Keluar" tone="warning"
@@ -162,7 +162,7 @@
                             @if ($adaFilter)
                                 <x-button :href="route('admin.pegawai.index')" variant="secondary" icon="bi-x-circle">Reset filter</x-button>
                             @else
-                                @can('kelola-pegawai')<x-button :href="route('admin.pegawai.create')" icon="bi-person-plus">Tambah Pegawai</x-button>@endcan
+                                @can('pegawai.create')<x-button :href="route('admin.pegawai.create')" icon="bi-person-plus">Tambah Pegawai</x-button>@endcan
                             @endif
                         </x-slot:action>
                     </x-table-empty>

@@ -11,14 +11,14 @@ use Illuminate\Support\Collection;
 
 /**
  * Hak akses surat peringatan. Pemberi SP = atasan yang menilai pegawai itu (atasan langsung; GM untuk kepala bagian
- * & Kepala SDM — sama dengan penilai evaluasi kontrak), Kepala SDM, dan Admin.
+ * & Kepala SDM — sama dengan penilai evaluasi kontrak), ditambah pemegang permission sp.manage_all.
  */
 class SuratPeringatanAkses
 {
-    /** Pimpinan yang melihat semua SP. */
+    /** Melihat SP seluruh pegawai. */
     public static function lihatSemua(User $user): bool
     {
-        return $user->isAdmin() || $user->isKepalaSdm() || $user->isGm() || $user->isPembina();
+        return $user->can(Izin::SP_VIEW_ALL);
     }
 
     public static function bolehMembuka(User $user): bool
@@ -32,14 +32,14 @@ class SuratPeringatanAkses
             return false; // tidak memberi SP untuk diri sendiri
         }
 
-        return $user->isAdmin() || $user->isKepalaSdm()
+        return $user->can(Izin::SP_MANAGE_ALL)
             || EvaluasiKontrakAlur::penilai($pegawai)->contains(fn (User $a) => PengajuanWorkflow::orangSama($user, $a->id));
     }
 
-    /** SP boleh dihapus pemberinya, Kepala SDM, atau Admin — hanya SP terakhir di bulannya (urutan tak bolong). */
+    /** SP boleh dihapus pemberinya atau pemegang sp.manage_all — hanya SP terakhir di bulannya (urutan tak bolong). */
     public static function bisaHapus(User $user, SuratPeringatan $sp): bool
     {
-        return ($user->isAdmin() || $user->isKepalaSdm() || $sp->diberikan_oleh === $user->id) && $sp->terakhirDiBulannya();
+        return ($user->can(Izin::SP_MANAGE_ALL) || $sp->diberikan_oleh === $user->id) && $sp->terakhirDiBulannya();
     }
 
     /**
@@ -50,7 +50,7 @@ class SuratPeringatanAkses
     public static function pegawaiBoleh(User $user): Collection
     {
         $aktif = DataPegawai::with('kepegawaian')->whereHas('kepegawaian', fn ($q) => $q->where('status_rekrutmen', 'Aktif'))->orderBy('nama_lengkap');
-        if ($user->isAdmin() || $user->isKepalaSdm()) {
+        if ($user->can(Izin::SP_MANAGE_ALL)) {
             return $aktif->get()->reject(fn (DataPegawai $p) => $p->id === $user->data_pegawai_id)->values();
         }
 

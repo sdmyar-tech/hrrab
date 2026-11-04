@@ -17,7 +17,7 @@
             @if ($jumlahBelum)<x-badge tone="danger" dot>{{ $jumlahBelum }} belum dibaca</x-badge>@endif
             <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'notifikasi.export'])
-                @can('kirim-notifikasi')
+                @can('notifikasi.send')
                     <x-button :href="route('notifikasi.kirim')" variant="secondary" icon="bi-send">Kirim Notifikasi</x-button>
                 @endcan
                 @if ($jumlahBelum)

@@ -52,7 +52,7 @@
                     . '<span class="abs-kal-ket">' . e($h['status'] === 'belum' ? '' : $h['label']) . '</span>'
                     . '</span>';
             @endphp
-            @if (($bisaKoreksi ?? false) && ($t->lte(now()) || auth()->user()->isAdmin()))
+            @if (($bisaKoreksi ?? false) && ($t->lte(now()) || auth()->user()->can('sistem.override')))
                 @include('admin.absensi._tombol-koreksi', [
                     'pegawai' => $pegawai, 'h' => $h, 'kelasTombol' => $kelas, 'isiTombol' => $isi,
                     'judulTombol' => $judulHari, 'labelTombol' => $judulHari . '. Klik untuk mengoreksi.',

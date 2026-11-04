@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Support\Izin;
 
 class PengajuanCutiController extends Controller
 {
@@ -135,7 +136,7 @@ class PengajuanCutiController extends Controller
                 'pengganti_nama.required' => 'Nama pengganti tugas wajib dipilih sebelum pengajuan diteruskan.',
             ]);
 
-            if (! $pengajuanCuti->substituteOptions()->contains($validated['pengganti_nama']) && ! $approver->isAdmin()) {
+            if (! $pengajuanCuti->substituteOptions()->contains($validated['pengganti_nama']) && ! $approver->can(Izin::OVERRIDE)) {
                 return redirect()->back()->with('error', 'Nama pengganti harus berasal dari divisi yang sama dengan pemohon.');
             }
 

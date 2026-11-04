@@ -87,7 +87,7 @@ class TanggaAlurWorkflow
 
         return self::$memo[$kunci] ??= collect($tahap['penyetuju'] ?? [])
             ->flatMap(fn (array $sumber) => self::dariSumber($sumber, $unitPengaju))
-            ->filter(fn (User $u) => ! ($pegawaiId && $u->data_pegawai_id === $pegawaiId) && ! $u->isAdmin() && $u->hasAbility(User::ABILITY_APPROVE))
+            ->filter(fn (User $u) => ! ($pegawaiId && $u->data_pegawai_id === $pegawaiId) && $u->adalahPenyetuju())
             ->unique(fn (User $u) => self::kunciOrang($u))
             ->values();
     }
@@ -165,7 +165,7 @@ class TanggaAlurWorkflow
         $ke = (int) $pengajuan->tahap_ke;
         $semua = (bool) ($pengajuan->tangga[$ke]['semua'] ?? false);
 
-        if ($semua && ! $approver->isAdmin() && self::penyetujuMenunggu($pengajuan, $approver)->isNotEmpty()) {
+        if ($semua && ! $approver->can(Izin::OVERRIDE) && self::penyetujuMenunggu($pengajuan, $approver)->isNotEmpty()) {
             return ['current_level' => PengajuanWorkflow::LEVEL_TANGGA];
         }
         if ($ke + 1 < count((array) $pengajuan->tangga)) {

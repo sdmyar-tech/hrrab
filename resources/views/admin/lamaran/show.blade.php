@@ -169,7 +169,7 @@
                 @if ($cvUrl)
                     <x-button variant="secondary" icon="bi-download" :href="$cvUrl" :download="$namaBerkasCv">Unduh CV</x-button>
                 @endif
-                @if (auth()->user()->isAdmin())
+                @if (auth()->user()->can('sistem.override'))
                     <x-button variant="secondary" icon="bi-shield-lock" data-bs-toggle="modal" data-bs-target="#modalUbahAdmin">Ubah Status (Admin)</x-button>
                 @endif
                 @if ($admin)
@@ -618,7 +618,7 @@
                                                         </div>
                                                         <div class="col-md-6">
                                                             <label class="form-label" for="il-tanggal">Tanggal</label>
-                                                            <input type="date" name="tanggal" id="il-tanggal" class="form-control" value="{{ \App\Support\Kalender::hariKerjaTerdekat(now())->format('Y-m-d') }}" @unless (auth()->user()->isAdmin()) min="{{ now()->format('Y-m-d') }}" @endunless required>
+                                                            <input type="date" name="tanggal" id="il-tanggal" class="form-control" value="{{ \App\Support\Kalender::hariKerjaTerdekat(now())->format('Y-m-d') }}" @unless (auth()->user()->can('sistem.override')) min="{{ now()->format('Y-m-d') }}" @endunless required>
                                                         </div>
                                                         <div class="col-6 col-md-3">
                                                             <label class="form-label" for="il-mulai">Jam Mulai</label>
@@ -733,7 +733,7 @@
 
                                                     @if ($bisaKonfirmasiSisi)
                                                         @push('modal-lamaran')
-                                                            @php $lulusTerkunci = ! \App\Support\OnboardingFlow::bolehKonfirmasiLulus($screening) && ! auth()->user()->isAdmin(); @endphp
+                                                            @php $lulusTerkunci = ! \App\Support\OnboardingFlow::bolehKonfirmasiLulus($screening) && ! auth()->user()->can('sistem.override'); @endphp
                                                             <x-modal :id="'modalKonfirmasi-' . $screening->id . '-' . $sisi" :title="'Konfirmasi Onboarding — ' . $k['label']" icon="bi-clipboard-check" tone="success"
                                                                 :subtitle="$nama . ' · ' . $screening->tanggal_mulai->translatedFormat('d M') . ' – ' . $screening->tanggal_selesai->translatedFormat('d M Y')">
                                                                 <form action="{{ route('admin.lamaran.screening.hasil', [$lamaran, $screening]) }}" method="POST" id="form-konfirmasi-{{ $screening->id }}-{{ $sisi }}"
@@ -794,7 +794,7 @@
                                                         <div class="col-md-7">
                                                             <label for="onboarding-mulai" class="form-label">Hari Pertama</label>
                                                             <input type="date" name="tanggal_mulai" id="onboarding-mulai" class="form-control"
-                                                                value="{{ \App\Support\Kalender::hariKerjaTerdekat(now())->format('Y-m-d') }}" @unless (auth()->user()->isAdmin()) min="{{ now()->format('Y-m-d') }}" @endunless required>
+                                                                value="{{ \App\Support\Kalender::hariKerjaTerdekat(now())->format('Y-m-d') }}" @unless (auth()->user()->can('sistem.override')) min="{{ now()->format('Y-m-d') }}" @endunless required>
                                                         </div>
                                                         <div class="col-md-5">
                                                             <label for="onboarding-durasi" class="form-label">Durasi (hari kerja)</label>
@@ -872,7 +872,7 @@
                                                         <div class="col-md-5">
                                                             <label class="form-label" for="uk-tanggal-{{ $jadwal->id }}">Tanggal</label>
                                                             <input type="date" name="tanggal" id="uk-tanggal-{{ $jadwal->id }}" class="form-control form-control-sm" value="{{ $jadwal->tanggal->format('Y-m-d') }}"
-                                                                @unless (auth()->user()->isAdmin()) min="{{ $tanggalKontrakMinimal->format('Y-m-d') }}" @endunless required>
+                                                                @unless (auth()->user()->can('sistem.override')) min="{{ $tanggalKontrakMinimal->format('Y-m-d') }}" @endunless required>
                                                         </div>
                                                         <div class="col-md-3">
                                                             <label class="form-label" for="uk-waktu-{{ $jadwal->id }}">Jam</label>
@@ -919,7 +919,7 @@
                                                 <div class="col-md-4">
                                                     <label class="form-label" for="jk-tanggal">Tanggal</label>
                                                     <input type="date" name="tanggal" id="jk-tanggal" class="form-control form-control-sm" value="{{ ($tanggalKontrakMinimal ?? \App\Support\Kalender::hariKerjaTerdekat(now()))->format('Y-m-d') }}"
-                                                        @unless (auth()->user()->isAdmin()) min="{{ $tanggalKontrakMinimal->format('Y-m-d') }}" @endunless required>
+                                                        @unless (auth()->user()->can('sistem.override')) min="{{ $tanggalKontrakMinimal->format('Y-m-d') }}" @endunless required>
                                                 </div>
                                                 <div class="col-md-3">
                                                     <label class="form-label" for="jk-waktu">Jam <span class="hr-field-opsional">(opsional)</span></label>
@@ -949,11 +949,11 @@
                                         data-confirm="{{ $lamaran->isKandidatPegawai() ? 'Tetapkan ' . $nama . ' ke posisi ' . $lamaran->jabatanTujuan() . ' (' . $lamaran->unitKerjaTujuan() . ')? Status lamaran berubah menjadi Diterima.' : 'Rekrut ' . $nama . ' menjadi pegawai (' . $posisiLengkap . ')? Status lamaran berubah menjadi Diterima.' }}">
                                         @csrf
                                         @php
-                                            $adminBebas = auth()->user()->isAdmin() && ! $onboardingLulus;
+                                            $adminBebas = auth()->user()->can('sistem.override') && ! $onboardingLulus;
                                             // Sama dengan aturan server: rekrut setelah tanda tangan kontrak & kuota lowongan belum penuh (Admin bebas).
                                             $kontrakBerikut = $lamaran->kontrakJadwals->where('status', \App\Models\KontrakJadwal::STATUS_TERJADWAL)->sortBy('tanggal')->first();
-                                            $tungguKontrak = ! auth()->user()->isAdmin() && $kontrakBerikut && $kontrakBerikut->tanggal->gt(now()->startOfDay());
-                                            $kuotaPenuh = ! auth()->user()->isAdmin() && $lamaran->lowongan?->isKuotaPenuh();
+                                            $tungguKontrak = ! auth()->user()->can('sistem.override') && $kontrakBerikut && $kontrakBerikut->tanggal->gt(now()->startOfDay());
+                                            $kuotaPenuh = ! auth()->user()->can('sistem.override') && $lamaran->lowongan?->isKuotaPenuh();
                                         @endphp
                                         @if ($adminBebas)
                                             <div class="col-12">
@@ -1170,7 +1170,7 @@
     </x-slot:footer>
 </x-modal>
 
-@if (auth()->user()->isAdmin())
+@if (auth()->user()->can('sistem.override'))
     <x-modal id="modalUbahAdmin" title="Ubah Langsung (Admin)" icon="bi-shield-lock" tone="warning" size="lg"
         subtitle="Pindahkan tahap/status lamaran tanpa mengikuti alur (mis. lompat ke onboarding, buka kembali lamaran yang ditolak).">
         <form action="{{ route('admin.lamaran.ubah-admin', $lamaran) }}" method="POST" class="row g-3"

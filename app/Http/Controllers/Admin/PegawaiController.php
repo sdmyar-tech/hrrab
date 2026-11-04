@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Support\Izin;
 
 class PegawaiController extends Controller
 {
@@ -165,14 +166,14 @@ class PegawaiController extends Controller
 
     public function create(): View
     {
-        $this->authorizeManage();
+        $this->authorizeManage(Izin::PEGAWAI_CREATE);
 
         return view('admin.pegawai.create');
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $this->authorizeManage();
+        $this->authorizeManage(Izin::PEGAWAI_CREATE);
 
         $validated = $this->validateRequest($request);
 
@@ -201,14 +202,10 @@ class PegawaiController extends Controller
         return redirect()->route('admin.pegawai.show', $pegawai->id)->with('success', 'Data pegawai berhasil ditambahkan.');
     }
 
-    private function authorizeManage(): void
+    /** Pertahanan lapis kedua (rute sudah dijaga can:pegawai.*). */
+    private function authorizeManage(string $izin): void
     {
-        /** @var User|null $user */
-        $user = Auth::user();
-
-        if (! $user?->hasAbility(User::ABILITY_KELOLA_PEGAWAI)) {
-            abort(403, 'Hanya Admin, Kepala SDM, dan Staff SDM yang bisa mengubah data pegawai.');
-        }
+        abort_unless(Auth::user()?->can($izin), 403, 'Anda tidak memiliki izin ' . Izin::nama($izin) . '.');
     }
 
     private function authorizeDivisi(DataPegawai $pegawai): void
@@ -237,7 +234,7 @@ class PegawaiController extends Controller
             'pegawai' => $pegawai,
             ...$this->alurApproval($pegawai),
             // Tombol & dialog "Proses Keluar": hanya pegawai aktif, untuk pengelola data pegawai.
-            'dampakKeluar' => $pegawai->kepegawaian?->status_rekrutmen === 'Aktif' && Auth::user()->can('kelola-pegawai')
+            'dampakKeluar' => $pegawai->kepegawaian?->status_rekrutmen === 'Aktif' && Auth::user()->can(Izin::PEGAWAI_UPDATE)
                 ? PegawaiKeluar::dampak($pegawai) : null,
         ]);
     }
@@ -269,12 +266,12 @@ class PegawaiController extends Controller
 
         $semuaAkun = User::where('data_pegawai_id', $pegawai->id)->orderBy('id')->get()->each->setRelation('dataPegawai', $pegawai);
         $unitsDisetujui = $semuaAkun
-            ->filter(fn (User $u) => $u->hasAbility(User::ABILITY_APPROVE))
+            ->filter(fn (User $u) => $u->hasAbility(Izin::PENGAJUAN_APPROVE))
             ->flatMap(fn (User $u) => $u->unitsDipimpin())
             ->unique()->values()->all();
 
         // Pengaturan alur khusus & wajib ganti password (Kepala SDM/Admin).
-        $bolehAtur = Auth::user()->can('atur-akun-pegawai');
+        $bolehAtur = Auth::user()->can(Izin::PEGAWAI_ALUR);
 
         return [
             'akun' => $akun,
@@ -289,7 +286,7 @@ class PegawaiController extends Controller
 
     public function edit(string $id): View
     {
-        $this->authorizeManage();
+        $this->authorizeManage(Izin::PEGAWAI_UPDATE);
 
         $pegawai = DataPegawai::with(['kepegawaian', 'kontakDarurat', 'bpjs', 'dokumen'])
             ->findOrFail($id);
@@ -299,7 +296,7 @@ class PegawaiController extends Controller
 
     public function update(Request $request, string $id): RedirectResponse
     {
-        $this->authorizeManage();
+        $this->authorizeManage(Izin::PEGAWAI_UPDATE);
 
         $pegawai = DataPegawai::with(['dokumen', 'bpjs', 'kepegawaian'])->findOrFail($id);
         $validated = $this->validateRequest($request, $pegawai->id);
@@ -315,7 +312,7 @@ class PegawaiController extends Controller
         }
 
         // Selain Admin, unit utama hanya bisa diubah lewat Mutasi. Admin boleh koreksi langsung.
-        $unitBaru = Auth::user()->isAdmin() ? ($validated['kepegawaian']['unit_kerja'] ?? null) : null;
+        $unitBaru = Auth::user()->can(Izin::OVERRIDE) ? ($validated['kepegawaian']['unit_kerja'] ?? null) : null;
         unset($validated['kepegawaian']['unit_kerja']);
 
         try {
@@ -378,7 +375,7 @@ class PegawaiController extends Controller
 
     public function destroy(string $id): RedirectResponse
     {
-        $this->authorizeManage();
+        $this->authorizeManage(Izin::PEGAWAI_DELETE);
 
         $pegawai = DataPegawai::with(['dokumen', 'bpjs'])->findOrFail($id);
 
@@ -458,7 +455,7 @@ class PegawaiController extends Controller
         ];
 
         // Admin boleh menyimpan data yang belum lengkap (mis. data lama): hanya kolom yang wajib di database tetap wajib.
-        if (Auth::user()?->isAdmin()) {
+        if (Auth::user()?->can(Izin::OVERRIDE)) {
             // status_rekrutmen & status_kerja NOT NULL di database (pilihan form selalu terisi).
             $tetapWajib = ['nama_lengkap', 'jabatan', 'status_rekrutmen', 'status_kerja', ...($ignoreId ? [] : ['unit_kerja'])];
             foreach ($aturan as $kolom => $r) {

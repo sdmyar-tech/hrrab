@@ -22,6 +22,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Support\Izin;
 
 class AbsensiController extends Controller
 {
@@ -245,7 +246,7 @@ class AbsensiController extends Controller
     {
         $v = $request->validate([
             // Admin boleh mengisi tanggal ke depan (mis. dinas luar/izin yang sudah diketahui).
-            'tanggal' => ['required', 'date', ...(Auth::user()->isAdmin() ? [] : ['before_or_equal:today'])],
+            'tanggal' => ['required', 'date', ...(Auth::user()->can(Izin::OVERRIDE) ? [] : ['before_or_equal:today'])],
             'aksi' => ['nullable', Rule::in(['simpan', 'reset'])],
             'jam_masuk' => ['nullable', 'date_format:H:i'],
             'jam_keluar' => ['nullable', 'date_format:H:i'],

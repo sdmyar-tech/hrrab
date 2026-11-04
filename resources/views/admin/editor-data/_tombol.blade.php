@@ -2,7 +2,7 @@
     Tombol "Ubah/Hapus (Admin)" ke Editor Data untuk satu baris. Hanya tampil untuk Admin.
     Parameter: $entitas, $id, opsional $teks (label tombol ubah), $hapus (bool, default true), $kembaliKe (URL setelah hapus).
 --}}
-@if (auth()->user()?->isAdmin())
+@if (auth()->user()?->can('sistem.editor_data'))
     <span class="d-inline-flex gap-1 align-items-center tombol-admin-data">
         <a href="{{ route('admin.data.edit', [$entitas, $id, 'kembali' => request()->fullUrl()]) }}" class="btn btn-outline-warning btn-sm"
             title="Ubah langsung semua kolom (Admin)"><i class="bi bi-shield-lock me-1"></i>{{ $teks ?? 'Ubah (Admin)' }}</a>

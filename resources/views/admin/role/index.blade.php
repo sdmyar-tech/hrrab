@@ -6,8 +6,9 @@
 @php
     use App\Models\Role;
     use App\Models\User;
+    use App\Support\Izin;
 
-    $totalHak = count(Role::HAK_AKSES);
+    $totalHak = count(Izin::semua());
     // Keterangan singkat role bawaan bila belum diisi di Master Role.
     $ketBawaan = [
         User::ROLE_PEMBINA => 'Pemilik yayasan: memantau (hanya-baca) & ikut menyetujui formasi.',
@@ -74,8 +75,8 @@
                     @foreach ($roles as $r)
                         @php
                             // Ringkas per kelompok, mis. "Umum, Pengajuan, Kepegawaian" (rinciannya di tooltip & tampilan Matriks).
-                            $grupMilik = collect(Role::GRUP_HAK)->filter(fn ($g) => array_intersect($g[1], $r->hak))->keys();
-                            $rincianHak = collect($r->hak)->map(fn ($h) => Role::HAK_AKSES[$h][0] ?? $h)->implode(', ');
+                            $grupMilik = collect(Izin::KATALOG)->filter(fn ($g) => array_intersect(array_keys($g[1]), $r->hak))->keys();
+                            $rincianHak = collect($r->hak)->map(fn ($h) => Izin::nama($h))->implode(', ');
                         @endphp
                         <tr data-cari="{{ mb_strtolower($r->nama . ' ' . ($r->namaAsli ?? '') . ' ' . $labelJenis[$r->jenis] . ' ' . (User::LABEL_ROLE[$r->dasar] ?? '')) }}"
                             data-jenis="{{ $r->jenis === 'kustom' ? 'kustom' : 'bawaan' }}">
@@ -177,12 +178,12 @@
                         </tr>
                     </thead>
                     <tbody>
-                    @foreach (Role::GRUP_HAK as $judul => [$ikon, $hakGrup])
+                    @foreach (Izin::KATALOG as $judul => [$ikon, $daftarHak])
                         <tr class="rl-baris-grup"><th colspan="{{ $roles->count() + 1 }}"><i class="bi {{ $ikon }} me-1" aria-hidden="true"></i>{{ $judul }}</th></tr>
                         {{-- Hak terkunci = tidak bisa dicabut dari role itu. --}}
-                        @foreach ($hakGrup as $h)
+                        @foreach ($daftarHak as $h => [$namaHak, $ketHak])
                             <tr>
-                                <th scope="row" class="rl-kol-hak">{{ Role::HAK_AKSES[$h][0] }}<small>{{ Role::HAK_AKSES[$h][1] }}</small></th>
+                                <th scope="row" class="rl-kol-hak">{{ $namaHak }}<small>{{ $ketHak }}</small></th>
                                 @foreach ($roles as $r)
                                     <td class="text-center">
                                         @if (in_array($h, $r->kunci, true))

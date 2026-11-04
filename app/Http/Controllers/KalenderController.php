@@ -20,6 +20,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
+use App\Support\Izin;
 
 /**
  * Kalender pegawai: tanggal merah (manual + hasil sinkron API), hari kerja, serta cuti & izin keluar milik pegawai yang login.
@@ -65,7 +66,7 @@ class KalenderController extends Controller
             'hariKerjaBulan' => Kalender::jumlahHariKerja($bulan, $bulan->copy()->endOfMonth()),
             'tahun' => $tahun,
             'daftarTahun' => HariLibur::whereYear('tanggal', $tahun)->orderBy('tanggal')->get(),
-            'bisaKelola' => $user->can('kelola-kalender'),
+            'bisaKelola' => $user->can(Izin::KALENDER_MANAGE),
             'sinkronTerakhir' => SinkronLibur::terakhir(),
         ]);
     }

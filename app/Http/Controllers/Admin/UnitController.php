@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Support\Izin;
 
 /**
  * Master Unit: daftar unit kerja + koordinator (kepala) tiap unit.
@@ -43,7 +44,7 @@ class UnitController extends Controller
                 ->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip']),
             'gmPegawaiIds' => $gmPegawaiIds,
             'jabatanPerUnit' => Jabatan::perUnit(),
-            'bisaKelola' => Auth::user()->can('kelola-sistem'),
+            'bisaKelola' => Auth::user()->can(Izin::MASTER_MANAGE),
         ]);
     }
 

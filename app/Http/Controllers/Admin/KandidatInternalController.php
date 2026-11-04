@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use App\Support\Izin;
 
 class KandidatInternalController extends Controller
 {
@@ -103,7 +104,7 @@ class KandidatInternalController extends Controller
         $lowongan = $validated['posisi'] === 'lowongan' ? Lowongan::find($validated['lowongan_id']) : null;
 
         // Admin bebas dari batas kuota, lamaran ganda, dan jabatan sama.
-        $admin = (bool) Auth::user()?->isAdmin();
+        $admin = (bool) Auth::user()?->can(Izin::OVERRIDE);
 
         if ($lowongan?->isKuotaPenuh() && ! $admin) {
             return back()->withInput()->with('error', 'Kuota lowongan ini sudah terpenuhi.');
@@ -195,7 +196,7 @@ class KandidatInternalController extends Controller
             return $pelamar;
         });
 
-        if (Lamaran::where('data_pelamar_id', $pelamar->id)->where('status', Lamaran::STATUS_PROSES)->exists() && ! Auth::user()?->isAdmin()) {
+        if (Lamaran::where('data_pelamar_id', $pelamar->id)->where('status', Lamaran::STATUS_PROSES)->exists() && ! Auth::user()?->can(Izin::OVERRIDE)) {
             return back()->withInput()->with('error', "{$pelamar->nama_lengkap} masih punya lamaran yang sedang berjalan.");
         }
 
@@ -206,14 +207,14 @@ class KandidatInternalController extends Controller
     {
         $pegawai = DataPegawai::with('kepegawaian')->findOrFail($validated['data_pegawai_id']);
 
-        if (Lamaran::where('data_pegawai_id', $pegawai->id)->where('status', Lamaran::STATUS_PROSES)->exists() && ! Auth::user()?->isAdmin()) {
+        if (Lamaran::where('data_pegawai_id', $pegawai->id)->where('status', Lamaran::STATUS_PROSES)->exists() && ! Auth::user()?->can(Izin::OVERRIDE)) {
             return back()->withInput()->with('error', "{$pegawai->nama_lengkap} masih punya proses seleksi yang sedang berjalan.");
         }
 
         $jabatan = $lowongan?->jabatan ?? $validated['jabatan_tujuan'] ?? null;
         $unit = $lowongan?->unit_kerja ?? $validated['unit_kerja_tujuan'] ?? null;
 
-        if ($pegawai->kepegawaian?->jabatan === $jabatan && $pegawai->kepegawaian?->unit_kerja === $unit && ! Auth::user()?->isAdmin()) {
+        if ($pegawai->kepegawaian?->jabatan === $jabatan && $pegawai->kepegawaian?->unit_kerja === $unit && ! Auth::user()?->can(Izin::OVERRIDE)) {
             return back()->withInput()->with('error', "{$pegawai->nama_lengkap} sudah menjabat {$jabatan} di {$unit}.");
         }
 

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use App\Support\Izin;
 
 /** Kepala SDM & Admin: ubah alur persetujuan cuti/lembur dan atasan seorang pegawai. */
 class AlurPegawaiController extends Controller
@@ -28,10 +29,10 @@ class AlurPegawaiController extends Controller
             ->where(fn ($q) => $q->whereNull('data_pegawai_id')->orWhere('data_pegawai_id', '!=', $pegawai->id))
             ->orderBy('name')
             ->get()
-            ->filter(fn (User $u) => $u->hasAbility(User::ABILITY_APPROVE))
+            ->filter(fn (User $u) => $u->hasAbility(Izin::PENGAJUAN_APPROVE))
             ->values();
 
-        return ['atasan' => $calon, 'gm' => $calon->filter->isGm()->values()];
+        return ['atasan' => $calon, 'gm' => $calon->filter(fn (User $u) => $u->isGm() && $u->hasAbility(Izin::PENGAJUAN_APPROVE_GM))->values()];
     }
 
     public function update(Request $request, DataPegawai $pegawai): RedirectResponse

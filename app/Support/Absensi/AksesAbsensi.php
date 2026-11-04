@@ -4,6 +4,7 @@ namespace App\Support\Absensi;
 
 use App\Models\DataPegawai;
 use App\Models\User;
+use App\Support\Izin;
 use Illuminate\Database\Eloquent\Builder;
 
 /** Siapa boleh melihat absensi siapa. */
@@ -11,7 +12,7 @@ class AksesAbsensi
 {
     public static function bisaKelola(User $user): bool
     {
-        return $user->hasAbility(User::ABILITY_KELOLA_ABSENSI);
+        return $user->hasAbility(Izin::ABSENSI_MANAGE);
     }
 
     /**
@@ -25,11 +26,11 @@ class AksesAbsensi
             return null;
         }
 
-        if (! $user->hasAbility(User::ABILITY_LIHAT_ABSENSI)) {
+        if (! $user->hasAbility(Izin::ABSENSI_VIEW)) {
             return [];
         }
 
-        // Kepala Bagian: unit yang dipimpin; pegawai lain yang diberi hak lihat (role kustom / hak jabatan): unit tempatnya bertugas.
+        // Kepala Bagian: unit yang dipimpin; pegawai lain yang dicentang hak lihat (role kustom / centang akun): unit tempatnya bertugas.
         return $user->isKepalaBagian() ? $user->unitsDipimpin() : $user->unitsAktif();
     }
 

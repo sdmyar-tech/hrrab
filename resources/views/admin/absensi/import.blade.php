@@ -5,7 +5,7 @@
     $ik = \App\Support\Absensi\TampilanAbsensi::IKON;
     $hasil = session('hasil_import');
     $tgl = fn ($t) => $t ? \Carbon\Carbon::parse($t)->translatedFormat('d M Y') : '–';
-    $admin = auth()->user()->isAdmin();
+    $admin = auth()->user()->can('sistem.override');
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid">

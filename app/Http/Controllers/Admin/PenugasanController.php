@@ -20,6 +20,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Support\Izin;
 
 class PenugasanController extends Controller
 {
@@ -211,7 +212,7 @@ class PenugasanController extends Controller
         $pegawai = $penugasan->dataPegawai;
 
         try {
-            $peringatan = PenugasanService::hapus($penugasan, (bool) Auth::user()?->isAdmin());
+            $peringatan = PenugasanService::hapus($penugasan, (bool) Auth::user()?->can(Izin::OVERRIDE));
         } catch (ValidationException $e) {
             return back()->with('error', collect($e->errors())->flatten()->first());
         }

@@ -6,7 +6,7 @@
 --}}
 @php
     $ubah = isset($lowongan) && $lowongan->exists;
-    $isAdmin = auth()->user()->isAdmin();
+    $isAdmin = auth()->user()->can('sistem.override');
     $status = $ubah ? $lowongan->status : \App\Models\Lowongan::STATUS_DRAFT;
     $statusInfo = [
         \App\Models\Lowongan::STATUS_DRAFT => ['Draf', 'neutral', 'bi-pencil-square'],

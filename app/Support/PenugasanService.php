@@ -159,7 +159,7 @@ class PenugasanService
     /** Admin bebas dari aturan urutan penugasan (koreksi data). */
     private static function admin(): bool
     {
-        return (bool) Auth::user()?->isAdmin();
+        return (bool) Auth::user()?->can(Izin::OVERRIDE);
     }
 
     /**

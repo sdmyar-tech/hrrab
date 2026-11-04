@@ -34,7 +34,7 @@ class DashboardData
         $interviewSaya = $user->bisaMenginterview()
             ? InterviewJadwal::where('interviewer_id', $user->id)->where('status', InterviewJadwal::STATUS_TERJADWAL)->count()
             : 0;
-        $bisaLaporan = $user->can(User::ABILITY_LIHAT_LAPORAN) || $user->isAdmin();
+        $bisaLaporan = $user->can(Izin::PENGAJUAN_REPORT);
         $kontrakHabis = self::kontrakSegeraHabis($aktif, 60);
         $cutiHariIni = $bisaLaporan ? self::cutiHariIni($user, $lingkup) : collect();
 
@@ -57,8 +57,8 @@ class DashboardData
             'pengumuman' => Pengumuman::untuk($user)->berlaku()->orderByDesc('penting')->latest()->take(4)->get(),
             'cutiHariIni' => $cutiHariIni,
             'anggota' => ($user->isKepalaBagian() || $unit) ? self::anggota($aktif, $cutiHariIni) : collect(),
-            'pipeline' => (RekrutmenAccess::canReview($user) || $user->isPembina()) ? self::pipeline() : null,
-            'akunPerRole' => $user->isAdmin() ? User::where('role', '!=', User::ROLE_PELAMAR)->selectRaw('role, count(*) n')->groupBy('role')->pluck('n', 'role') : null,
+            'pipeline' => RekrutmenAccess::canLihatSemua($user) ? self::pipeline() : null,
+            'akunPerRole' => $user->can(Izin::AKUN_MANAGE) ? User::where('role', '!=', User::ROLE_PELAMAR)->selectRaw('role, count(*) n')->groupBy('role')->pluck('n', 'role') : null,
             'bisaLaporan' => $bisaLaporan,
         ];
     }
@@ -117,24 +117,24 @@ class DashboardData
         $kartu = [[
             'label' => $user->isKepalaBagian() ? 'Anggota Bagian' : 'Pegawai Aktif', 'nilai' => $aktif->count(),
             'meta' => "{$tetap} tetap · " . ($aktif->count() - $tetap) . ' kontrak/lainnya', 'ikon' => 'bi-people', 'warna' => 'primary',
-            'url' => $user->can(User::ABILITY_LIHAT_TABEL_KARYAWAN) ? route('admin.pegawai.index', array_filter(['status_rekrutmen' => 'Aktif', 'unit_kerja' => $unit])) : null,
+            'url' => $user->can(Izin::PEGAWAI_VIEW) ? route('admin.pegawai.index', array_filter(['status_rekrutmen' => 'Aktif', 'unit_kerja' => $unit])) : null,
         ]];
 
-        if ($user->isAdmin()) {
+        if ($user->can(Izin::AKUN_MANAGE)) {
             $kartu[] = ['label' => 'Akun Login', 'nilai' => User::where('role', '!=', User::ROLE_PELAMAR)->count(), 'meta' => 'akun internal', 'ikon' => 'bi-person-lock', 'warna' => 'success', 'url' => route('admin.users.index')];
         }
-        if ($user->can(User::ABILITY_APPROVE)) {
+        if ($user->adalahPenyetuju()) {
             $kartu[] = ['label' => 'Menunggu Persetujuan', 'nilai' => $approvalCuti + $approvalLembur, 'meta' => "{$approvalCuti} cuti · {$approvalLembur} lembur", 'ikon' => 'bi-inbox', 'warna' => 'warning', 'url' => route($approvalCuti || ! $approvalLembur ? 'admin.pengajuan-cuti.index' : 'admin.pengajuan-lembur.index', ['status' => 'pending'])];
         }
         $kartu[] = ['label' => 'Kontrak ≤ 60 Hari', 'nilai' => $kontrakHabis->count(), 'meta' => 'perlu perpanjangan/keputusan', 'ikon' => 'bi-hourglass-split', 'warna' => 'danger',
-            'url' => $user->can(User::ABILITY_LIHAT_TABEL_KARYAWAN) ? route('admin.pegawai.index', array_filter(['status_rekrutmen' => 'Aktif', 'kontrak' => 60, 'unit_kerja' => $unit])) : null];
-        if ($user->can(User::ABILITY_LIHAT_LAPORAN)) {
+            'url' => $user->can(Izin::PEGAWAI_VIEW) ? route('admin.pegawai.index', array_filter(['status_rekrutmen' => 'Aktif', 'kontrak' => 60, 'unit_kerja' => $unit])) : null];
+        if ($user->can(Izin::PENGAJUAN_REPORT)) {
             $kartu[] = ['label' => 'Cuti Hari Ini', 'nilai' => $cutiHariIni->count(), 'meta' => 'pegawai tidak masuk', 'ikon' => 'bi-calendar-x', 'warna' => 'prpl', 'url' => route('admin.pengajuan-cuti.index', ['berlangsung' => 1])];
         }
         if ($user->bisaMenginterview()) {
             $kartu[] = ['label' => 'Interview Saya', 'nilai' => $interviewSaya, 'meta' => 'jadwal terjadwal', 'ikon' => 'bi-calendar2-week', 'warna' => 'prpl', 'url' => route('interview.saya')];
         }
-        if ($user->isPembina() || RekrutmenAccess::canReview($user)) {
+        if (RekrutmenAccess::canLihatSemua($user)) {
             $kartu[] = ['label' => 'Lamaran Diproses', 'nilai' => Lamaran::where('status', Lamaran::STATUS_PROSES)->count(),
                 'meta' => Lowongan::where('status', Lowongan::STATUS_DIPUBLIKASIKAN)->count() . ' lowongan dibuka', 'ikon' => 'bi-person-plus', 'warna' => 'success', 'url' => route('admin.lamaran.index')];
         }
@@ -145,12 +145,12 @@ class DashboardData
     private static function tugas(User $user, int $approvalCuti, int $approvalLembur): array
     {
         $tugas = [];
-        if ($user->can(User::ABILITY_APPROVE)) {
+        if ($user->adalahPenyetuju()) {
             $tugas[] = ['label' => 'Approve pengajuan cuti', 'jumlah' => $approvalCuti, 'url' => route('admin.pengajuan-cuti.index'), 'ikon' => 'bi-calendar2-check'];
             $tugas[] = ['label' => 'Approve pengajuan lembur', 'jumlah' => $approvalLembur, 'url' => route('admin.pengajuan-lembur.index'), 'ikon' => 'bi-clock-history'];
             $tugas[] = ['label' => 'Approve izin keluar', 'jumlah' => self::menungguSaya(PengajuanIzinKeluar::class, $user), 'url' => route('admin.izin-keluar.index'), 'ikon' => 'bi-door-open'];
         }
-        if (RekrutmenAccess::canReview($user) || $user->isPembina()) {
+        if (RekrutmenAccess::canLihatSemua($user)) {
             $formasi = PengajuanFormasi::where('status', PengajuanFormasi::STATUS_PENDING)->get()->filter(fn ($f) => RekrutmenAccess::canReviewFormasi($user, $f))->count();
             $tugas[] = ['label' => $user->isPembina() ? 'Review formasi SMK' : 'Review pengajuan formasi', 'jumlah' => $formasi, 'url' => route('admin.pengajuan-formasi.index'), 'ikon' => 'bi-person-plus'];
         }
@@ -170,11 +170,11 @@ class DashboardData
             $tugas[] = ['label' => 'Formasi saya menunggu review', 'jumlah' => PengajuanFormasi::where('diajukan_oleh', $user->id)->where('status', PengajuanFormasi::STATUS_PENDING)->count(),
                 'url' => route('admin.pengajuan-formasi.index'), 'ikon' => 'bi-hourglass'];
         }
-        if ($user->can(User::ABILITY_KELOLA_PENUGASAN)) {
+        if ($user->can(Izin::PENUGASAN_MANAGE)) {
             $tugas[] = ['label' => 'Bagian tanpa kepala', 'jumlah' => count(PenugasanService::unitsTanpaKepala()), 'url' => route('admin.penugasan.index'), 'ikon' => 'bi-diagram-3'];
             $tugas[] = ['label' => 'Mutasi terjadwal', 'jumlah' => Penugasan::where('tanggal_mulai', '>', now()->toDateString())->count(), 'url' => route('admin.penugasan.index', ['status' => 'terjadwal']), 'ikon' => 'bi-arrow-left-right'];
         }
-        if ($user->isAdmin()) {
+        if ($user->can(Izin::EDITOR_DATA)) {
             $tugas[] = ['label' => 'Pegawai aktif tanpa dokumen KTP', 'jumlah' => DataPegawai::whereHas('kepegawaian', fn ($q) => $q->where('status_rekrutmen', 'Aktif'))
                 ->whereDoesntHave('dokumen', fn ($q) => $q->whereNotNull('upload_ktp'))->count(), 'url' => route('admin.pegawai.index'), 'ikon' => 'bi-file-earmark-x'];
         }
@@ -187,7 +187,7 @@ class DashboardData
      */
     public static function menungguSaya(string $model, User $user, ?array $lingkup = null): int
     {
-        if (! $user->can(User::ABILITY_APPROVE)) {
+        if (! $user->adalahPenyetuju()) {
             return 0;
         }
 

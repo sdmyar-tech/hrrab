@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use App\Support\Izin;
 
 /** Kepala SDM & Admin: atur Tangga Alur Pengajuan per bagian (pegawai biasa & koordinator). */
 class TanggaAlurController extends Controller
@@ -196,7 +197,7 @@ class TanggaAlurController extends Controller
     {
         return User::with('dataPegawai.kepegawaian')->whereIn('role', User::INTERNAL_ROLES)->where('role', '!=', User::ROLE_ADMIN)
             ->orderBy('name')->get()
-            ->filter(fn (User $u) => $u->hasAbility(User::ABILITY_APPROVE))
+            ->filter(fn (User $u) => $u->hasAbility(Izin::PENGAJUAN_APPROVE))
             ->values();
     }
 
@@ -233,7 +234,7 @@ class TanggaAlurController extends Controller
             ->merge(Kepegawaian::where('status_rekrutmen', 'Aktif')->get(['data_pegawai_id', 'unit_kerja', 'jabatan', 'jabatan_tambahan'])
                 ->flatMap(fn ($k) => [[$k->data_pegawai_id, $k->unit_kerja, $k->jabatan], [$k->data_pegawai_id, $k->unit_kerja, $k->jabatan_tambahan]]));
         $akun = User::whereIn('data_pegawai_id', $baris->pluck(0)->unique())->whereIn('role', User::INTERNAL_ROLES)->where('role', '!=', User::ROLE_ADMIN)->get()
-            ->filter(fn (User $u) => $u->hasAbility(User::ABILITY_APPROVE))->keyBy('data_pegawai_id');
+            ->filter(fn (User $u) => $u->hasAbility(Izin::PENGAJUAN_APPROVE))->keyBy('data_pegawai_id');
 
         $peta = [];
         foreach ($baris as [$pegawai, $namaUnit, $jabatan]) {

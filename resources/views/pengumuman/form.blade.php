@@ -60,7 +60,7 @@
                         </div>
                         <div data-jadwal="sekali">
                             <x-input name="tanggal" id="tanggal" type="date" label="Tanggal" :value="$pengumuman->tanggal?->format('Y-m-d')"
-                                :min="auth()->user()->isAdmin() ? null : now()->format('Y-m-d')" />
+                                :min="auth()->user()->can('sistem.override') ? null : now()->format('Y-m-d')" />
                         </div>
                         <div data-jadwal="mingguan">
                             <x-select name="hari" id="hari" label="Setiap hari" :options="\App\Models\Pengumuman::HARI" :selected="(string) ($pengumuman->hari ?? 3)" />
@@ -95,7 +95,7 @@
                             <x-toggle name="penting" id="penting" label="Sematkan sebagai penting" :checked="(bool) $pengumuman->penting" help="Tampil paling atas dengan tanda merah." />
                         </div>
                         <x-input name="tampil_sampai" id="tampil_sampai" type="date" label="Tampil sampai" optional field-class="mt-3 mb-0"
-                            :value="$pengumuman->tampil_sampai?->format('Y-m-d')" :min="auth()->user()->isAdmin() ? null : now()->format('Y-m-d')"
+                            :value="$pengumuman->tampil_sampai?->format('Y-m-d')" :min="auth()->user()->can('sistem.override') ? null : now()->format('Y-m-d')"
                             help="Kosong: acara sekali tampil sampai hari-H (info tanpa tanggal 14 hari); kegiatan rutin tampil terus." />
                     </x-card>
                 </div>

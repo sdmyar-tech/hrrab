@@ -39,7 +39,7 @@
             data-confirm="Tutup lowongan {{ $lowongan->judul }} ({{ $lowongan->unit_kerja }})? Lowongan tidak lagi menerima lamaran baru; pelamar yang sudah masuk tetap bisa diproses.">
             @csrf
         </form>
-        @if ($lowongan->bisaDibukaKembali() || ($lowongan->status === \App\Models\Lowongan::STATUS_DITUTUP && auth()->user()->isAdmin()))
+        @if ($lowongan->bisaDibukaKembali() || ($lowongan->status === \App\Models\Lowongan::STATUS_DITUTUP && auth()->user()->can('sistem.override')))
             <form id="reopen-form" action="{{ route('admin.lowongan.reopen', $lowongan) }}" method="POST" class="d-none form-reopen-lowongan">
                 @csrf
                 <input type="hidden" name="tanggal_tutup" value="">

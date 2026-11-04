@@ -15,7 +15,6 @@
             subtitle="Satu daftar untuk semua pilihan jabatan: data pegawai, mutasi, lowongan, formasi, dan kandidat. Ganti nama otomatis memperbarui semua data.">
             <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.jabatan.export'])
-                <x-button :href="route('admin.jabatan.hak-akses')" variant="secondary" icon="bi-person-badge">Hak Akses Jabatan</x-button>
                 <x-button icon="bi-plus-lg" data-bs-toggle="modal" data-bs-target="#modalTambahJabatan">Tambah Jabatan</x-button>
             </x-slot:actions>
         </x-page-header>

@@ -51,7 +51,7 @@
             <div class="col-xl-4">
                 <div class="hr-detail-samping d-grid gap-4">
                     @include('admin.pengajuan._kartu-aksi', $aksi)
-                    @can('kelola-sistem')
+                    @can('sistem.override')
                         @include('admin.izin-keluar._ubah-admin')
                     @endcan
                 </div>

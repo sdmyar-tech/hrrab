@@ -113,7 +113,7 @@
                 @endforeach
 
                 <x-slot:actions>
-                    @if (auth()->user()->isAdmin())
+                    @if (auth()->user()->can('sistem.editor_data'))
                         {{-- Admin: buka data mentah pegawai ini di Editor Data (semua kolom, tanpa aturan). --}}
                         <x-dropdown label="Data mentah (Admin)" icon="bi-shield-lock" icon-only>
                             <a class="dropdown-item" href="{{ route('admin.data.edit', ['pegawai', $pegawai->id, 'kembali' => request()->fullUrl()]) }}"><i class="bi bi-person me-2" aria-hidden="true"></i>Data pribadi</a>
@@ -125,10 +125,10 @@
                         </x-dropdown>
                     @endif
                     @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.pegawai.export-detail', 'eksporParam' => ['pegawai' => $pegawai->id]])
-                    @can('kelola-pegawai')
-                        @if ($dampakKeluar)
-                            <x-button variant="danger-outline" icon="bi-box-arrow-right" data-bs-toggle="modal" data-bs-target="#modalKeluar">Resign / Keluar</x-button>
-                        @endif
+                    @if ($dampakKeluar)
+                        <x-button variant="danger-outline" icon="bi-box-arrow-right" data-bs-toggle="modal" data-bs-target="#modalKeluar">Resign / Keluar</x-button>
+                    @endif
+                    @can('pegawai.delete')
                         <form action="{{ route('admin.pegawai.destroy', $pegawai->id) }}" method="POST" class="d-inline-flex">
                             @csrf
                             @method('DELETE')
@@ -137,6 +137,8 @@
                                 data-text="Data {{ $pegawai->nama_lengkap }} akan dihapus permanen beserta dokumen terkait."
                                 data-confirm-text="Ya, Hapus" data-cancel-text="Batal">Hapus</x-button>
                         </form>
+                    @endcan
+                    @can('pegawai.update')
                         <x-button :href="route('admin.pegawai.edit', $pegawai)" icon="bi-pencil">Ubah Data</x-button>
                     @endcan
                 </x-slot:actions>
@@ -153,7 +155,7 @@
                     :title="'Keluar per ' . ($kepeg->tanggal_keluar?->translatedFormat('d F Y') ?? '-') . ' · ' . $kepeg->jenisKeluarLabel()">
                     @if ($kepeg->alasan_keluar)<span class="d-block">{{ $kepeg->alasan_keluar }}</span>@endif
                     <span class="d-block text-muted small">Diproses oleh {{ $kepeg->pemrosesKeluar?->name ?? '-' }}. Akunnya kini akun pelamar; untuk kembali bekerja harus melamar lagi.</span>
-                    @can('kelola-pegawai')
+                    @can('pegawai.update')
                         @if ($kepeg->keluar_snapshot)
                             <x-slot:action>
                                 <form action="{{ route('admin.pegawai.keluar.batal', $pegawai) }}" method="POST"
@@ -267,7 +269,7 @@
                                 <section class="hr-detail-bagian hr-bagian" id="riwayat-penugasan" aria-labelledby="judul-riwayat-penugasan">
                                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                                         <h2 class="hr-detail-judul mb-0" id="judul-riwayat-penugasan"><i class="bi bi-clock-history" aria-hidden="true"></i> Riwayat Penugasan & Mutasi</h2>
-                                        @can('kelola-penugasan')
+                                        @can('penugasan.manage')
                                             <div class="d-flex flex-wrap gap-2">
                                                 <x-button size="sm" variant="secondary" icon="bi-plus-lg" :href="route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'rangkap'])">Tambah Rangkap</x-button>
                                                 <x-button size="sm" icon="bi-arrow-left-right" :href="route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'mutasi'])">Mutasi</x-button>
@@ -287,7 +289,7 @@
                                                     <th>Jabatan / Peran</th>
                                                     <th>Periode &amp; Status</th>
                                                     <th>SK / Keterangan</th>
-                                                    @can('kelola-penugasan')<th class="hr-kolom-aksi">Aksi</th>@endcan
+                                                    @can('penugasan.manage')<th class="hr-kolom-aksi">Aksi</th>@endcan
                                                 </tr>
                                             </x-slot:head>
                                             @foreach ($pegawai->penugasans as $p)
@@ -320,10 +322,10 @@
                                                         @if ($p->keterangan)<span class="hr-sel-sub">{{ $p->keterangan }}</span>@endif
                                                         <span class="hr-sel-sub">Dicatat: {{ $p->dibuatOleh?->name ?? 'sistem' }}</span>
                                                     </td>
-                                                    @can('kelola-penugasan')
+                                                    @can('penugasan.manage')
                                                         <td class="text-end hr-kolom-aksi">
                                                             <div class="hr-aksi-baris">
-                                                                @if (auth()->user()->isAdmin())
+                                                                @if (auth()->user()->can('sistem.override'))
                                                                     <x-icon-button icon="bi-pencil" label="Ubah langsung (Admin)" :href="route('admin.penugasan.edit', $p)" />
                                                                 @endif
                                                                 @if ($p->isAkanDatang())
@@ -353,14 +355,14 @@
                                                                     {{-- Pengganti selebar tombol agar ikon antarbaris tetap sejajar. --}}
                                                                     <span class="hr-ikon-btn invisible" aria-hidden="true"></span>
                                                                 @endif
-                                                                @if (! $p->isAkanDatang() && ($p->jenis !== \App\Models\Penugasan::JENIS_AWAL || auth()->user()->isAdmin()))
+                                                                @if (! $p->isAkanDatang() && ($p->jenis !== \App\Models\Penugasan::JENIS_AWAL || auth()->user()->can('sistem.override')))
                                                                     <form action="{{ route('admin.penugasan.destroy', $p) }}" method="POST"
                                                                         data-confirm="Hapus {{ strtolower($p->jenisLabel()) }} ke {{ $p->unit_kerja }} (koreksi salah input)?{{ $p->is_utama ? ' Pegawai dikembalikan ke bagian sebelumnya.' : '' }}">
                                                                         @csrf
                                                                         @method('DELETE')
                                                                         <x-icon-button type="submit" icon="bi-trash" label="Hapus (koreksi salah input)" tone="danger" />
                                                                     </form>
-                                                                @elseif ($p->jenis === \App\Models\Penugasan::JENIS_AWAL && ! auth()->user()->isAdmin())
+                                                                @elseif ($p->jenis === \App\Models\Penugasan::JENIS_AWAL && ! auth()->user()->can('sistem.override'))
                                                                     <span class="text-muted" aria-label="Tidak ada aksi">&mdash;</span>
                                                                 @endif
                                                             </div>
@@ -558,7 +560,7 @@
                                     @endif
                                 </p>
                                 @if ($kurang)
-                                    @can('kelola-pegawai')
+                                    @can('pegawai.update')
                                         <a href="{{ route('admin.pegawai.edit', $pegawai) }}" class="small fw-semibold d-inline-flex align-items-center gap-1 mt-2">
                                             <i class="bi bi-pencil-square" aria-hidden="true"></i>Lengkapi data
                                         </a>

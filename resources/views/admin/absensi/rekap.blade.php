@@ -12,7 +12,7 @@
     $rentangParam = ['dari' => $dari->toDateString(), 'sampai' => $sampai->toDateString()];
     $adaFilter = request()->filled('q') || request()->filled('unit');
     $reset = route('admin.absensi.rekap', $rentangParam);
-    $kelola = auth()->user()->can('kelola-absensi');
+    $kelola = auth()->user()->can('absensi.manage');
     // Angka 0 diredupkan agar angka yang perlu perhatian menonjol.
     $angka = fn ($n, $kelas = '') => $n ? '<span class="' . $kelas . '">' . $n . '</span>' : '<span class="abs-nol">0</span>';
     // Judul kolom yang bisa diklik untuk mengurutkan (memakai pilihan urutan yang sudah ada: URUT_REKAP).

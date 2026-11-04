@@ -5,7 +5,7 @@
 @section('content')
 @php
     $adaFilter = request()->hasAny(['q', 'jenis', 'status', 'tanggal_dari', 'tanggal_sampai']);
-    $isAdmin = auth()->user()->isAdmin();
+    $isAdmin = auth()->user()->can('sistem.override');
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid">

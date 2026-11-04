@@ -19,6 +19,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Support\Izin;
 
 class PengajuanFormasiController extends Controller
 {
@@ -123,10 +124,10 @@ class PengajuanFormasiController extends Controller
         return view('admin.pengajuan-formasi.create', [
             'unitOptions' => $units,
             // Jabatan per unit: dropdown jabatan hanya menampilkan jabatan yang ada di unit terpilih.
-            'jabatanPerUnit' => collect($units)->mapWithKeys(fn ($u) => [$u => $user->isAdmin() ? Jabatan::daftar() : RekrutmenAccess::jabatanUnit($u)])->all(),
+            'jabatanPerUnit' => collect($units)->mapWithKeys(fn ($u) => [$u => $user->can(Izin::OVERRIDE) ? Jabatan::daftar() : RekrutmenAccess::jabatanUnit($u)])->all(),
             // Atasan langsung = pengaju (readonly); Admin memilih dari daftar kepala & GM.
             'atasanBawaan' => $this->namaAtasan($user),
-            'pilihanAtasan' => $user->isAdmin() ? $this->pilihanAtasan() : [],
+            'pilihanAtasan' => $user->can(Izin::OVERRIDE) ? $this->pilihanAtasan() : [],
             // Bagan unit (kepala + pegawai per jabatan) untuk memilih pegawai yang digantikan / posisi baru.
             'baganPerUnit' => $bagan = collect($units)->mapWithKeys(fn ($u) => [$u => RekrutmenAccess::baganUnit($u)])->all(),
             // Replacement: klik pegawai di bagan → jabatan terisi otomatis (nama jabatan bagan → nama di Master Jabatan).
@@ -159,17 +160,17 @@ class PengajuanFormasiController extends Controller
 
         $unitBoleh = RekrutmenAccess::unitAjuanFormasi($user);
         // Satu unit → terkunci ke unit itu; memimpin beberapa unit → pilih salah satunya (divalidasi di bawah).
-        if (count($unitBoleh) === 1 && ! $user->isAdmin()) {
+        if (count($unitBoleh) === 1 && ! $user->can(Izin::OVERRIDE)) {
             $request->merge(['unit_kerja' => $unitBoleh[0]]);
         }
         $unit = (string) $request->input('unit_kerja');
         // Atasan langsung tidak bisa diubah pengaju (selalu dirinya); hanya Admin yang memilih.
-        if (! $user->isAdmin()) {
+        if (! $user->can(Izin::OVERRIDE)) {
             $request->merge(['atasan_langsung' => $this->namaAtasan($user)]);
         }
         $bagan = in_array($unit, $unitBoleh, true) ? RekrutmenAccess::baganUnit($unit) : ['grup' => []];
         $idBagan = collect($bagan['grup'])->flatten(1)->pluck('id')->all();
-        $jabatanBoleh = $user->isAdmin() ? Jabatan::daftar() : (in_array($unit, $unitBoleh, true) ? RekrutmenAccess::jabatanUnit($unit) : []);
+        $jabatanBoleh = $user->can(Izin::OVERRIDE) ? Jabatan::daftar() : (in_array($unit, $unitBoleh, true) ? RekrutmenAccess::jabatanUnit($unit) : []);
         // Replacement: jabatan pegawai yang digantikan (termasuk yang sudah tidak aktif) juga sah.
         if ($request->input('jenis_kebutuhan') === PengajuanFormasi::JENIS_REPLACEMENT) {
             $jabatanBoleh = array_values(array_unique([...$jabatanBoleh, ...array_values($this->jabatanBagan($bagan))]));
@@ -186,12 +187,12 @@ class PengajuanFormasiController extends Controller
             'diganti.*' => ['integer', Rule::in($idBagan)],
             'slot_tambahan' => ['nullable', 'array', 'max:50'],
             'slot_tambahan.*' => ['nullable', 'string', 'max:150'],
-            'target_waktu' => ['required', 'date', ...($user->isAdmin() ? [] : ['after_or_equal:today'])],
+            'target_waktu' => ['required', 'date', ...($user->can(Izin::OVERRIDE) ? [] : ['after_or_equal:today'])],
             'min_pendidikan' => ['required', Rule::in(PengajuanFormasi::PENDIDIKAN)],
             'min_usia' => ['nullable', 'integer', 'min:15', 'max:70'],
             'kualifikasi' => ['required', 'string', 'max:2000'],
             'jabatan' => ['required', 'string', Rule::in($jabatanBoleh)],
-            'atasan_langsung' => ['required', 'string', 'max:150', ...($user->isAdmin() ? [Rule::in(array_keys($this->pilihanAtasan()))] : [])],
+            'atasan_langsung' => ['required', 'string', 'max:150', ...($user->can(Izin::OVERRIDE) ? [Rule::in(array_keys($this->pilihanAtasan()))] : [])],
             // Daftar tugas (satu baris per tugas dari formulir); disimpan sebagai teks per baris.
             'tugas' => ['required', 'array', 'min:1', 'max:30'],
             'tugas.*' => ['nullable', 'string', 'max:500'],
@@ -235,7 +236,7 @@ class PengajuanFormasiController extends Controller
             }
             // Satu pengajuan untuk satu jabatan: pegawai yang digantikan sejabatan, dan jabatan pengajuan = jabatan mereka
             // (bila jabatannya terdaftar di Master Jabatan). Admin bebas menyesuaikan.
-            if (! $user->isAdmin()) {
+            if (! $user->can(Izin::OVERRIDE)) {
                 $jabatanDiganti = collect($diganti)->pluck('jabatan')->unique();
                 if ($jabatanDiganti->count() > 1) {
                     throw ValidationException::withMessages(['diganti' => 'Pegawai yang digantikan harus dari satu jabatan (sekarang: ' . $jabatanDiganti->implode(', ') . ').']);
@@ -281,12 +282,12 @@ class PengajuanFormasiController extends Controller
             abort(403, 'Anda tidak berwenang mereview pengajuan formasi ini.');
         }
 
-        if (! $pengajuanFormasi->isPending() && ! $reviewer->isAdmin()) {
+        if (! $pengajuanFormasi->isPending() && ! $reviewer->can(Izin::OVERRIDE)) {
             return redirect()->back()->with('error', 'Pengajuan formasi ini sudah diproses.');
         }
 
         // Penambahan karyawan bertahap: GM unit → Owner. Final (lowongan terbit) setelah tahap Owner.
-        if ($pengajuanFormasi->butuhDuaPersetujuan() && ! $reviewer->isAdmin()) {
+        if ($pengajuanFormasi->butuhDuaPersetujuan() && ! $reviewer->can(Izin::OVERRIDE)) {
             $sisi = RekrutmenAccess::sisiPersetujuan($reviewer, $pengajuanFormasi);
             $pengajuanFormasi->update([
                 "{$sisi}_disetujui_oleh" => $reviewer->id,
@@ -373,7 +374,7 @@ class PengajuanFormasiController extends Controller
             abort(403, 'Anda tidak berwenang mereview pengajuan formasi ini.');
         }
 
-        if (! $pengajuanFormasi->isPending() && ! $reviewer->isAdmin()) {
+        if (! $pengajuanFormasi->isPending() && ! $reviewer->can(Izin::OVERRIDE)) {
             return redirect()->back()->with('error', 'Pengajuan formasi ini sudah diproses.');
         }
 
@@ -408,11 +409,11 @@ class PengajuanFormasiController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        if ($pengajuanFormasi->diajukan_oleh !== $user->id && ! $user->isAdmin()) {
+        if ($pengajuanFormasi->diajukan_oleh !== $user->id && ! $user->can(Izin::OVERRIDE)) {
             abort(403, 'Anda hanya bisa membatalkan pengajuan formasi milik sendiri.');
         }
 
-        if (! $pengajuanFormasi->isPending() && ! $user->isAdmin()) {
+        if (! $pengajuanFormasi->isPending() && ! $user->can(Izin::OVERRIDE)) {
             return redirect()->back()->with('error', 'Pengajuan formasi ini sudah diproses dan tidak bisa dibatalkan.');
         }
 

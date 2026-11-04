@@ -4,8 +4,10 @@ namespace App\Models;
 
 use App\Models\Concerns\DicatatLog;
 use App\Support\Berkas;
+use App\Support\Izin;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
@@ -38,90 +40,12 @@ class User extends Authenticatable
         self::ROLE_ADMIN,
     ];
 
-    public const ABILITY_LIHAT_DASHBOARD = 'lihat-dashboard';
-
-    public const ABILITY_LIHAT_TABEL_KARYAWAN = 'lihat-tabel-karyawan';
-
-    public const ABILITY_LIHAT_LAPORAN = 'lihat-laporan';
-
-    public const ABILITY_APPROVE = 'approve';
-
-    public const ABILITY_MENGAJUKAN = 'mengajukan';
-
-    public const ABILITY_KELOLA_SISTEM = 'kelola-sistem';
-
-    public const ABILITY_KELOLA_PENUGASAN = 'kelola-penugasan';
-
-    public const ABILITY_KELOLA_PEGAWAI = 'kelola-pegawai';
-
-    public const ABILITY_KELOLA_PENGUMUMAN = 'kelola-pengumuman';
-
-    public const ABILITY_KIRIM_NOTIFIKASI = 'kirim-notifikasi';
-
-    public const ABILITY_KELOLA_ABSENSI = 'kelola-absensi'; // import, koreksi, pengaturan absensi
-
-    public const ABILITY_LIHAT_ABSENSI = 'lihat-absensi';   // melihat absensi (Kepala Bagian: unitnya saja)
-
+    // Gate turunan (bukan permission yang dicentang): pengajuan.create + aturan unit/data pegawai.
     public const ABILITY_AJUKAN_CUTI = 'ajukan-cuti';
 
     public const ABILITY_AJUKAN_LEMBUR = 'ajukan-lembur';
 
     public const ABILITY_AJUKAN_IZIN_KELUAR = 'ajukan-izin-keluar';
-
-    public const ABILITIES = [
-        self::ROLE_PEMBINA => [
-            self::ABILITY_LIHAT_DASHBOARD,
-            self::ABILITY_LIHAT_TABEL_KARYAWAN,
-            self::ABILITY_LIHAT_LAPORAN,
-        ],
-        self::ROLE_GM => [
-            self::ABILITY_LIHAT_DASHBOARD,
-            self::ABILITY_LIHAT_TABEL_KARYAWAN,
-            self::ABILITY_LIHAT_LAPORAN,
-            self::ABILITY_APPROVE,
-            self::ABILITY_KELOLA_PENGUMUMAN,
-            self::ABILITY_KIRIM_NOTIFIKASI,
-        ],
-        self::ROLE_KEPALA_BAGIAN => [
-            self::ABILITY_LIHAT_DASHBOARD,
-            self::ABILITY_LIHAT_TABEL_KARYAWAN,
-            self::ABILITY_LIHAT_LAPORAN,
-            self::ABILITY_APPROVE,
-            self::ABILITY_MENGAJUKAN,
-            self::ABILITY_KELOLA_PENGUMUMAN,
-            self::ABILITY_KIRIM_NOTIFIKASI,
-            self::ABILITY_LIHAT_ABSENSI,
-        ],
-        self::ROLE_KEPALA_SDM => [
-            self::ABILITY_LIHAT_DASHBOARD,
-            self::ABILITY_LIHAT_TABEL_KARYAWAN,
-            self::ABILITY_LIHAT_LAPORAN,
-            self::ABILITY_APPROVE,
-            self::ABILITY_MENGAJUKAN,
-            self::ABILITY_KELOLA_PENUGASAN,
-            self::ABILITY_KELOLA_PENGUMUMAN,
-            self::ABILITY_KIRIM_NOTIFIKASI,
-            self::ABILITY_KELOLA_PEGAWAI,
-            self::ABILITY_KELOLA_ABSENSI,
-            self::ABILITY_LIHAT_ABSENSI,
-        ],
-        self::ROLE_STAFF => [
-            self::ABILITY_LIHAT_DASHBOARD,
-            self::ABILITY_MENGAJUKAN,
-        ],
-        self::ROLE_ADMIN => [
-            self::ABILITY_LIHAT_DASHBOARD,
-            self::ABILITY_LIHAT_TABEL_KARYAWAN,
-            self::ABILITY_LIHAT_LAPORAN,
-            self::ABILITY_KELOLA_SISTEM,
-            self::ABILITY_KELOLA_PENUGASAN,
-            self::ABILITY_KELOLA_PENGUMUMAN,
-            self::ABILITY_KIRIM_NOTIFIKASI,
-            self::ABILITY_KELOLA_PEGAWAI,
-            self::ABILITY_KELOLA_ABSENSI,
-            self::ABILITY_LIHAT_ABSENSI,
-        ],
-    ];
 
     protected $fillable = [
         'name',
@@ -177,63 +101,75 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Apakah akun memegang permission $ability (lihat App\Support\Izin) atau lolos gate turunan pengajuan.
+     * Sumber permission HANYA centang di database: role akun (role_permission) + centang tambahan akun (user_permission).
+     * Aturan bisnis yang tetap berlaku (mengurangi, tidak menambah): unit tanpa pengajuan (mis. sekolah) tidak ikut
+     * mengajukan/menyetujui/melihat data pengajuan, dan pengajuan butuh data pegawai.
+     */
     public function hasAbility(string $ability): bool
     {
         return match ($ability) {
-            self::ABILITY_AJUKAN_CUTI => $this->hasAbility(self::ABILITY_MENGAJUKAN)
+            self::ABILITY_AJUKAN_CUTI => $this->hasAbility(Izin::PENGAJUAN_CREATE) && $this->data_pegawai_id
                 && ! ($this->isStaff() && in_array($this->unitKerja(), config('kepegawaian.unit_tanpa_pengajuan', []), true)),
-            self::ABILITY_AJUKAN_LEMBUR => $this->hasAbility(self::ABILITY_MENGAJUKAN) && $this->unitsLembur() !== [],
+            self::ABILITY_AJUKAN_LEMBUR => $this->hasAbility(Izin::PENGAJUAN_CREATE) && $this->data_pegawai_id && $this->unitsLembur() !== [],
             // Izin keluar saat jam kerja: siapa pun yang boleh mengajukan cuti (unit sama, alur sama).
             self::ABILITY_AJUKAN_IZIN_KELUAR => $this->hasAbility(self::ABILITY_AJUKAN_CUTI),
-            self::ABILITY_KELOLA_PEGAWAI => $this->punyaDiMatriks($ability) || ($this->isStaff() && in_array('SDM', $this->unitsAktif(), true)),
-            self::ABILITY_LIHAT_TABEL_KARYAWAN => $this->punyaDiMatriks($ability) || $this->hasAbility(self::ABILITY_KELOLA_PEGAWAI),
-            // Staf unit SDM ikut mengelola absensi (sama seperti kelola pegawai).
-            self::ABILITY_KELOLA_ABSENSI => $this->punyaDiMatriks($ability) || ($this->isStaff() && in_array('SDM', $this->unitsAktif(), true)),
-            self::ABILITY_LIHAT_ABSENSI => $this->punyaDiMatriks($ability) || $this->hasAbility(self::ABILITY_KELOLA_ABSENSI),
-            self::ABILITY_MENGAJUKAN, self::ABILITY_APPROVE, self::ABILITY_LIHAT_LAPORAN => $this->punyaDiMatriks($ability)
-                && ! $this->diUnitTanpaPengajuan(),
-            default => $this->punyaDiMatriks($ability),
+            Izin::PENGAJUAN_CREATE, Izin::PENGAJUAN_APPROVE, Izin::PENGAJUAN_REPORT => $this->punyaIzin($ability) && ! $this->diUnitTanpaPengajuan(),
+            default => $this->punyaIzin($ability),
         };
     }
 
-    /**
-     * Hak akses dari Master Role (role kustom bila ada, selain itu role bawaan), ditambah hak akses
-     * jabatan yang sedang dipegang di unitnya (Hak Akses Jabatan).
-     */
-    private function punyaDiMatriks(string $ability): bool
-    {
-        $kustom = $this->roleKustom();
-
-        return in_array($ability, $kustom ? $kustom->hakAksesEfektif() : Role::hakAksesBawaan((string) $this->role), true)
-            || in_array($ability, $this->hakJabatan(), true);
-    }
-
-    /** @var list<string>|null hasil hakJabatan() untuk instance ini */
-    private ?array $hakJabatanMemo = null;
+    /** @var list<string>|null hasil izin() untuk instance ini */
+    private ?array $izinMemo = null;
 
     /**
-     * Hak akses tambahan dari jabatan yang dipegang di tiap unit (penugasan aktif: utama & rangkap, plus jabatan tambahan
-     * di unit utama). Hanya akun internal yang tertaut ke data pegawai.
+     * Permission yang dipegang akun: dari role (role kustom bila ada, selain itu role sistem) + centang tambahan akun.
      *
      * @return list<string>
      */
-    public function hakJabatan(): array
+    public function izin(): array
     {
-        if ($this->hakJabatanMemo !== null) {
-            return $this->hakJabatanMemo;
+        if ($this->izinMemo !== null) {
+            return $this->izinMemo;
         }
-        $peta = Jabatan::hakAksesPerUnit();
-        if (! $peta || ! $this->data_pegawai_id || ! in_array($this->role, self::INTERNAL_ROLES, true)) {
-            return $this->hakJabatanMemo = [];
+        if (! in_array($this->role, self::INTERNAL_ROLES, true)) {
+            return $this->izinMemo = [];
         }
+        $kustom = $this->roleKustom();
 
-        $kep = $this->dataPegawai?->kepegawaian;
-        $pasangan = collect($this->penugasanAktif()->map(fn ($p) => [$p->unit_kerja, $p->jabatan])->all())
-            ->push([$kep?->unit_kerja, $kep?->jabatan], [$kep?->unit_kerja, $kep?->jabatan_tambahan]);
+        return $this->izinMemo = array_values(array_unique([
+            ...($kustom ? $kustom->hakAksesEfektif() : Role::hakAksesBawaan((string) $this->role)),
+            ...$this->izinTambahan(),
+        ]));
+    }
 
-        return $this->hakJabatanMemo = $pasangan
-            ->flatMap(fn ($p) => $peta[Jabatan::kunciHak($p[0], $p[1])] ?? [])
-            ->unique()->values()->all();
+    /** @return list<string> permission yang dicentang langsung di akun ini (di luar role) */
+    public function izinTambahan(): array
+    {
+        return $this->id ? Permission::tambahanUntuk($this->id) : [];
+    }
+
+    private function punyaIzin(string $kode): bool
+    {
+        return in_array($kode, $this->izin(), true);
+    }
+
+    /** Lupakan memo permission (setelah role / centang akun berubah dalam proses yang sama). */
+    public function segarkanIzin(): void
+    {
+        $this->izinMemo = null;
+        Permission::lupakan();
+    }
+
+    /**
+     * Ikut dalam rantai persetujuan (antrean & daftar calon penyetuju): memegang pengajuan.approve dan bukan role penuh.
+     * Admin memegang semua permission tetapi memproses pengajuan lewat Mode Admin (sistem.override), bukan sebagai
+     * penyetuju di alur.
+     */
+    public function adalahPenyetuju(): bool
+    {
+        return $this->role !== Izin::ROLE_PENUH && $this->hasAbility(Izin::PENGAJUAN_APPROVE);
     }
 
     public function diUnitTanpaPengajuan(): bool
@@ -307,9 +243,10 @@ class User extends Authenticatable
         return $this->role === self::ROLE_PELAMAR;
     }
 
+    /** Menu Jadwal Interview Saya. Penunjukan interviewer tetap mengikuti alur rekrutmen (InterviewFlow). */
     public function bisaMenginterview(): bool
     {
-        return in_array($this->role, [self::ROLE_KEPALA_SDM, self::ROLE_GM, self::ROLE_KEPALA_BAGIAN], true);
+        return $this->hasAbility(Izin::INTERVIEW);
     }
 
     public function fotoUrl(): string
@@ -482,6 +419,12 @@ class User extends Authenticatable
     public function dataPelamar()
     {
         return $this->belongsTo(DataPelamar::class, 'data_pelamar_id');
+    }
+
+    /** Permission yang dicentang langsung di akun ini (di luar role), beserta keterangan asal-usulnya. */
+    public function permissionTambahan(): BelongsToMany
+    {
+        return $this->belongsToMany(Permission::class, 'user_permission')->withPivot(['keterangan', 'diberikan_oleh'])->withTimestamps();
     }
 
     public function pengajuanFormasis()

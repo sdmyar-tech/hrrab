@@ -5,7 +5,7 @@
 @section('content')
 @php
     $pengguna = auth()->user();
-    $isAdmin = $pengguna->isAdmin();
+    $isAdmin = $pengguna->can('sistem.editor_data'); // tautan Editor Data
     $adaFilter = request()->hasAny(['q', 'status', 'tanggal_dari', 'tanggal_sampai']);
     $statusAktif = (string) request('status');
     $param = request()->except(['status', 'page']);

@@ -30,6 +30,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Support\Izin;
 
 class LamaranController extends Controller
 {
@@ -192,8 +193,8 @@ class LamaranController extends Controller
             'kepalaTerkait' => OnboardingFlow::kepalaTerkait($lamaran),
             'onboardingLulus' => $onboardingLulus,
             'tanggalKontrakMinimal' => $onboardingLulus ? OnboardingFlow::tanggalKontrakMinimal($onboardingLulus) : null,
-            'admin' => $user->isAdmin(),
-            'opsiInterviewerAdmin' => $user->isAdmin() ? InterviewFlow::opsiInterviewerAdmin() : collect(),
+            'admin' => $user->can(Izin::OVERRIDE),
+            'opsiInterviewerAdmin' => $user->can(Izin::OVERRIDE) ? InterviewFlow::opsiInterviewerAdmin() : collect(),
         ]);
     }
 
@@ -953,7 +954,7 @@ class LamaranController extends Controller
     /** Admin (super admin) bebas dari aturan urutan tahap rekrutmen. */
     private function adminBebas(): bool
     {
-        return (bool) Auth::user()?->isAdmin();
+        return (bool) Auth::user()?->can(Izin::OVERRIDE);
     }
 
     public function tolak(Request $request, Lamaran $lamaran): RedirectResponse

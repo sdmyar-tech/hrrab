@@ -6,7 +6,7 @@
         return $i['label'] === 'Belum diisi' ? 'var(--viz-netral)' : 'var(--viz-' . ($peta[$i['label']] ?? ++$slot) . ')';
     })->all();
     // Item dengan 'url' bisa diklik (potongan batang & baris legenda) → halaman detail yang tersaring.
-    $bisaKlik = ! ($tanpaTautan ?? false) && auth()->user()?->can('lihat-tabel-karyawan');
+    $bisaKlik = ! ($tanpaTautan ?? false) && auth()->user()?->can('pegawai.view');
 @endphp
 <div class="viz">
     @if ($total === 0)

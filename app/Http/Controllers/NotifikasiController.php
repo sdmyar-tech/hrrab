@@ -18,6 +18,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use App\Support\Izin;
 
 class NotifikasiController extends Controller
 {
@@ -104,7 +105,7 @@ class NotifikasiController extends Controller
     public function kirimForm(): View
     {
         $user = $this->user();
-        abort_unless($user->can(User::ABILITY_KIRIM_NOTIFIKASI), 403);
+        abort_unless($user->can(Izin::NOTIFIKASI_SEND), 403);
 
         $lingkup = $this->lingkup($user)->with('dataPegawai.kepegawaian')->orderBy('name')->get();
 
@@ -112,7 +113,7 @@ class NotifikasiController extends Controller
             'layout' => $user->panelLayout(),
             'pilihanPegawai' => $lingkup,
             'pilihanUnit' => $this->unitLingkup($user),
-            'bisaPilihRole' => $user->isAdmin() || $user->isKepalaSdm(),
+            'bisaPilihRole' => $user->can(Izin::NOTIFIKASI_SEND_ROLE),
             'belumLengkap' => $this->belumLengkap($user),
         ]);
     }
@@ -120,10 +121,10 @@ class NotifikasiController extends Controller
     public function kirim(Request $request): RedirectResponse
     {
         $user = $this->user();
-        abort_unless($user->can(User::ABILITY_KIRIM_NOTIFIKASI), 403);
+        abort_unless($user->can(Izin::NOTIFIKASI_SEND), 403);
 
         $targets = [self::TARGET_BELUM_LENGKAP, self::TARGET_UNIT, self::TARGET_PEGAWAI, self::TARGET_SEMUA];
-        if ($user->isAdmin() || $user->isKepalaSdm()) {
+        if ($user->can(Izin::NOTIFIKASI_SEND_ROLE)) {
             $targets[] = self::TARGET_ROLE;
         }
 

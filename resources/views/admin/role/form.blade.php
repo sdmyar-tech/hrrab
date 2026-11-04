@@ -6,14 +6,15 @@
 @php
     use App\Models\Role;
     use App\Models\User;
+    use App\Support\Izin;
 
     $bawaan = $mode === 'bawaan';
     $baru = ! $bawaan && ! $role->exists;
-    $kunci = Role::DIKUNCI[$role->jenis_dasar] ?? [];
-    $dipilih = old('hak_akses', $role->hak_akses ?? []);
+    $kunci = Role::terkunci($role->jenis_dasar);
+    $dipilih = old('hak_akses', $hakDipilih ?? []);
     $aksi = $bawaan ? route('admin.role.bawaan.update', $role->kode) : ($baru ? route('admin.role.store') : route('admin.role.update', $role));
     $dasarTerkunci = ! $bawaan && $jumlahAkun > 0;
-    $totalHak = count(Role::HAK_AKSES);
+    $totalHak = count(Izin::semua());
     $judul = $bawaan ? 'Ubah Role Bawaan' : ($baru ? 'Tambah Role' : 'Ubah Role');
 @endphp
 {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
@@ -108,7 +109,7 @@
                             </div>
                             <div class="col-12">
                                 <div class="rl-modul-daftar">
-                                    @foreach (Role::GRUP_HAK as $judulGrup => [$ikon, $hakGrup])
+                                    @foreach (Izin::KATALOG as $judulGrup => [$ikon, $daftarHak])
                                         <fieldset class="rl-modul" data-grup>
                                             <legend class="rl-modul-kepala">
                                                 <span class="form-check mb-0">
@@ -118,8 +119,8 @@
                                                 <span class="rl-modul-jumlah" data-jumlah-grup></span>
                                             </legend>
                                             <div class="rl-hak">
-                                                @foreach ($hakGrup as $kode)
-                                                    @php [$label, $ket] = Role::HAK_AKSES[$kode]; $dikunci = in_array($kode, $kunci, true); @endphp
+                                                @foreach ($daftarHak as $kode => [$label, $ket])
+                                                    @php $dikunci = in_array($kode, $kunci, true); @endphp
                                                     <label class="rl-hak-item {{ $dikunci ? 'terkunci' : '' }}" data-teks="{{ mb_strtolower($label . ' ' . $ket . ' ' . $judulGrup) }}">
                                                         <input type="checkbox" class="form-check-input" name="hak_akses[]" value="{{ $kode }}"
                                                             @checked($dikunci || in_array($kode, $dipilih, true)) @disabled($dikunci)>

@@ -25,7 +25,7 @@ class SidebarHitung
             'notifikasi' => $user->unreadNotifications()->count(),
         ];
 
-        if ($user->can(User::ABILITY_APPROVE)) {
+        if ($user->adalahPenyetuju()) {
             $hitung['cuti'] = DashboardData::menungguSaya(PengajuanCuti::class, $user);
             $hitung['lembur'] = DashboardData::menungguSaya(PengajuanLembur::class, $user);
             $hitung['izin_keluar'] = DashboardData::menungguSaya(PengajuanIzinKeluar::class, $user);
@@ -33,7 +33,7 @@ class SidebarHitung
         if ($user->bisaMenginterview()) {
             $hitung['interview'] = InterviewJadwal::where('interviewer_id', $user->id)->where('status', InterviewJadwal::STATUS_TERJADWAL)->count();
         }
-        if (RekrutmenAccess::canReview($user) || $user->isPembina()) {
+        if (RekrutmenAccess::canLihatSemua($user)) {
             $hitung['formasi'] = PengajuanFormasi::with('diajukanOleh')->where('status', PengajuanFormasi::STATUS_PENDING)->get()
                 ->filter(fn ($f) => RekrutmenAccess::canReviewFormasi($user, $f))->count();
         }

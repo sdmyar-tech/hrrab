@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Support\Izin;
 
 /**
  * Editor Data — khusus Admin. Mengubah/menghapus baris data apa pun secara langsung:
@@ -327,6 +328,6 @@ class EditorDataController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        abort_unless($user?->isAdmin(), 403, 'Editor Data khusus Admin.');
+        abort_unless($user?->can(Izin::EDITOR_DATA), 403, 'Editor Data butuh permission sistem.editor_data.');
     }
 }

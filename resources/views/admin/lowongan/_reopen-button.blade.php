@@ -6,7 +6,7 @@
     Kuota penuh & bukan Admin → tidak bisa dibuka kembali (label "Kuota terpenuhi").
 --}}
 @php
-    $bisaBuka = $lowongan->bisaDibukaKembali() || ($lowongan->status === \App\Models\Lowongan::STATUS_DITUTUP && auth()->user()->isAdmin());
+    $bisaBuka = $lowongan->bisaDibukaKembali() || ($lowongan->status === \App\Models\Lowongan::STATUS_DITUTUP && auth()->user()->can('sistem.override'));
     $kuotaPenuh = $lowongan->status === \App\Models\Lowongan::STATUS_DITUTUP && $lowongan->isKuotaPenuh();
     // Konteks di dialog: judul + bagian (dipasang lewat textContent, bukan disambung ke HTML).
     $judulDialog = $lowongan->judul . ' · ' . $lowongan->unit_kerja;
@@ -41,7 +41,7 @@
                     // Tombol di dalam form-nya sendiri, atau terhubung lewat atribut form="…" (halaman Ubah).
                     const form = btn.form || btn.closest('form');
                     const today = new Date();
-                    const adminBebas = @json(auth()->user()->isAdmin()); // Admin boleh tanggal lampau
+                    const adminBebas = @json(auth()->user()->can('sistem.override')); // Admin boleh tanggal lampau
                     const toISO = function (d) {
                         return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
                     };

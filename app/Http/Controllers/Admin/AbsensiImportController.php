@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Support\Izin;
 
 /**
  * Import file absensi dari flashdisk mesin: unggah → pratinjau → simpan.
@@ -142,7 +143,7 @@ class AbsensiImportController extends Controller
      */
     public function hapus(AbsensiImport $import): RedirectResponse
     {
-        abort_unless(Auth::user()?->isAdmin(), 403);
+        abort_unless(Auth::user()?->can(Izin::OVERRIDE), 403);
 
         [$hapus, $simpan] = DB::transaction(function () use ($import) {
             $baris = Absensi::where('absensi_import_id', $import->id);

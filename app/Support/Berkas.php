@@ -50,7 +50,7 @@ class Berkas
         ['pegawai' => $pegawaiId, 'pelamar' => $pelamarId, 'foto' => $foto] = self::pemilik($path);
         if ($pegawaiId === null && $pelamarId === null) {
             // File yatim (tidak tercatat di data mana pun): hanya pengelola data pegawai.
-            return $user->can(User::ABILITY_KELOLA_PEGAWAI);
+            return $user->can(Izin::PEGAWAI_UPDATE);
         }
 
         $internal = in_array($user->role, User::INTERNAL_ROLES, true);
@@ -58,8 +58,8 @@ class Berkas
         return ($pegawaiId !== null && $user->data_pegawai_id !== null && (int) $user->data_pegawai_id === $pegawaiId)
             || ($pelamarId !== null && $user->data_pelamar_id !== null && (int) $user->data_pelamar_id === $pelamarId)
             || ($foto && $internal)
-            || ($pegawaiId !== null && $user->can(User::ABILITY_LIHAT_TABEL_KARYAWAN))
-            || ($pelamarId !== null && $internal && ! $user->isStaff());
+            || ($pegawaiId !== null && $user->can(Izin::PEGAWAI_VIEW))
+            || ($pelamarId !== null && $internal && $user->can(Izin::REKRUTMEN_VIEW));
     }
 
     /** @return array{pegawai: ?int, pelamar: ?int, foto: bool} */

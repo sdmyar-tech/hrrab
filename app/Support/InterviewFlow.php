@@ -121,7 +121,7 @@ class InterviewFlow
     /** Jadwal (tanggal/jam/lokasi/catatan) boleh diubah selama interview belum selesai. Admin: kapan saja. */
     public static function bisaUbahJadwal(User $user, InterviewJadwal $jadwal): bool
     {
-        return $user->isAdmin() || self::bisaIsiHasil($user, $jadwal);
+        return $user->can(Izin::OVERRIDE) || self::bisaIsiHasil($user, $jadwal);
     }
 
     /** Pilihan interviewer untuk Admin: semua akun internal (Admin bebas memilih siapa pun). */
@@ -134,7 +134,7 @@ class InterviewFlow
     public static function bisaIsiHasil(User $user, InterviewJadwal $jadwal): bool
     {
         // Admin boleh mengisi/mengubah hasil kapan saja, termasuk interview yang sudah selesai/dibatalkan.
-        if ($user->isAdmin()) {
+        if ($user->can(Izin::OVERRIDE)) {
             return true;
         }
 

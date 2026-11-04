@@ -7,6 +7,7 @@ use App\Models\LokasiKerja;
 use App\Models\Pengumuman;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\Izin;
 use App\Support\PencatatLog;
 use App\Support\SidebarHitung;
 use App\Support\TugasNotifikasi;
@@ -45,22 +46,10 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(Failed::class, fn (Failed $e) => $e->user instanceof User
             && PencatatLog::tulis($e->user, 'login', 'Akun', 'Percobaan masuk gagal (kata sandi salah)', 'gagal'));
 
-        $abilities = array_unique([
-            ...array_merge(...array_values(User::ABILITIES)),
-            User::ABILITY_AJUKAN_CUTI,
-            User::ABILITY_AJUKAN_LEMBUR,
-            User::ABILITY_AJUKAN_IZIN_KELUAR,
-        ]);
-
-        foreach ($abilities as $ability) {
+        // Setiap permission di katalog = satu gate (route can:..., @can, $user->can()). Sumbernya hanya centang di database.
+        foreach ([...Izin::semua(), User::ABILITY_AJUKAN_CUTI, User::ABILITY_AJUKAN_LEMBUR, User::ABILITY_AJUKAN_IZIN_KELUAR] as $ability) {
             Gate::define($ability, fn (User $user) => $user->hasAbility($ability));
         }
-        // Menyetujui/menolak cuti, lembur & izin keluar: penyetuju sesuai tahap, atau Admin (boleh di tahap mana pun).
-        Gate::define('proses-pengajuan', fn (User $user) => $user->hasAbility(User::ABILITY_APPROVE) || $user->isAdmin());
-        // Atur alur persetujuan/atasan pegawai & paksa ganti password akun: hanya Kepala SDM dan Admin.
-        Gate::define('atur-akun-pegawai', fn (User $user) => $user->isAdmin() || $user->isKepalaSdm());
-        // Kalender (tanggal merah): hanya Super Admin & Kepala SDM yang mengubah; akun lain hanya melihat.
-        Gate::define('kelola-kalender', fn (User $user) => $user->isAdmin() || $user->isKepalaSdm());
 
         View::composer(['layouts.admin.sidebar', 'layouts.pegawai.sidebar'], function ($view) {
             $user = Auth::user();

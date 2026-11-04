@@ -127,12 +127,13 @@ class PengajuanWorkflow
                 ->orWhereIn('id', User::gmKepalaTanpaPegawai($unit)->select('id')))
             ->orderBy('name')
             ->get()
-            ->filter(fn (User $u) => $u->hasAbility(User::ABILITY_APPROVE))
+            ->filter(fn (User $u) => $u->hasAbility(Izin::PENGAJUAN_APPROVE))
             ->values());
     }
 
     /**
-     * GM yang bisa approve pengajuan pegawai $pegawaiId (semua GM selain dirinya sendiri).
+     * GM yang bisa approve pengajuan pegawai $pegawaiId: akun ber-role GM (alur) yang memegang permission
+     * pengajuan.approve_gm, selain dirinya sendiri.
      *
      * @return Collection<int, User>
      */
@@ -141,7 +142,9 @@ class PengajuanWorkflow
         return once(fn () => User::where('role', User::ROLE_GM)
             ->when($pegawaiId, fn ($q) => $q->where(fn ($w) => $w->whereNull('data_pegawai_id')->orWhere('data_pegawai_id', '!=', $pegawaiId)))
             ->orderBy('name')
-            ->get());
+            ->get()
+            ->filter(fn (User $u) => $u->hasAbility(Izin::PENGAJUAN_APPROVE_GM))
+            ->values());
     }
 
     /**
@@ -247,12 +250,12 @@ class PengajuanWorkflow
     /** Apakah $approver berwenang menyetujui/menolak pengajuan ini pada tahap saat ini. */
     public static function canAct(User $approver, PengajuanCuti|PengajuanLembur|PengajuanIzinKeluar $pengajuan): bool
     {
-        // Admin boleh memproses pengajuan yang masih menunggu di tahap mana pun (bertindak sebagai penyetuju tahap itu).
-        if ($approver->isAdmin()) {
+        // Mode Admin (sistem.override): boleh memproses pengajuan yang masih menunggu di tahap mana pun.
+        if ($approver->can(Izin::OVERRIDE)) {
             return $pengajuan->isPending() && (bool) $pengajuan->current_level;
         }
 
-        if (! $pengajuan->isPending() || ! $pengajuan->current_level || ! $approver->hasAbility(User::ABILITY_APPROVE)) {
+        if (! $pengajuan->isPending() || ! $pengajuan->current_level || ! $approver->hasAbility(Izin::PENGAJUAN_APPROVE)) {
             return false;
         }
 
@@ -271,8 +274,10 @@ class PengajuanWorkflow
             self::LEVEL_KEPALA_DIVISI => $alur?->atasan_user_id
                 ? self::orangSama($approver, $alur->atasan_user_id)
                 : $approver->memimpinUnit($submitterUnit)
-                    || ($approver->isGm() && self::kepalaUnit($submitterUnit, $pengajuan->data_pegawai_id)->isEmpty()),
-            self::LEVEL_GM => $alur?->gm_user_id ? self::orangSama($approver, $alur->gm_user_id) : $approver->isGm(),
+                    || ($approver->isGm() && $approver->hasAbility(Izin::PENGAJUAN_APPROVE_GM) && self::kepalaUnit($submitterUnit, $pengajuan->data_pegawai_id)->isEmpty()),
+            // Tahap GM: role GM (alur) + permission pengajuan.approve_gm.
+            self::LEVEL_GM => $approver->hasAbility(Izin::PENGAJUAN_APPROVE_GM)
+                && ($alur?->gm_user_id ? self::orangSama($approver, $alur->gm_user_id) : $approver->isGm()),
             self::LEVEL_KEPALA_SDM => $approver->isKepalaSdm(),
             default => false,
         };
@@ -518,7 +523,7 @@ class PengajuanWorkflow
             // Staff: pengajuannya sendiri; bila diberi hak lihat laporan (role kustom / hak jabatan) juga pengajuan unit tempatnya bertugas.
             default => $query->where(function ($q) use ($viewer) {
                 $q->where('data_pegawai_id', $viewer->data_pegawai_id ?? 0);
-                if ($viewer->hasAbility(User::ABILITY_LIHAT_LAPORAN) && ($units = $viewer->unitsAktif())) {
+                if ($viewer->hasAbility(Izin::PENGAJUAN_REPORT) && ($units = $viewer->unitsAktif())) {
                     $q->orWhereIn('unit_kerja', $units);
                 }
             }),

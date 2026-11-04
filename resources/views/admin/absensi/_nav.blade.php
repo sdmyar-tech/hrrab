@@ -1,7 +1,7 @@
 {{-- Tab navigasi antarhalaman modul Absensi (ikon dari satu sumber: TampilanAbsensi::IKON). Gaya: .hr-tabs (ui.css). --}}
 @php
     $ikAbs = \App\Support\Absensi\TampilanAbsensi::IKON;
-    $kelolaAbs = auth()->user()->can('kelola-absensi');
+    $kelolaAbs = auth()->user()->can('absensi.manage');
     $tabAbsensi = array_filter([
         ['admin.absensi.harian', ['admin.absensi.harian', 'admin.absensi.pegawai'], $ikAbs['harian'], 'Harian', true],
         ['admin.absensi.rekap', 'admin.absensi.rekap*', $ikAbs['rekap'], 'Rekap', true],

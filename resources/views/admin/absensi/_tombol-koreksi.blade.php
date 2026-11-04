@@ -24,7 +24,7 @@
     ];
     $labelBawaan = 'Koreksi absensi ' . $pegawai->nama_lengkap . ' ' . $h['tanggal']->translatedFormat('d M');
 @endphp
-@if ($h['tanggal']->lte(now()) || auth()->user()->isAdmin())
+@if ($h['tanggal']->lte(now()) || auth()->user()->can('sistem.override'))
     @isset($isiTombol)
         <button type="button" class="{{ $kelasTombol ?? 'btn btn-outline-secondary btn-sm' }}" data-koreksi='@json($dataKoreksi)'
             title="{{ $judulTombol ?? $labelBawaan }}" aria-label="{{ $labelTombol ?? $labelBawaan }}">{!! $isiTombol !!}</button>

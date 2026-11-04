@@ -4,7 +4,7 @@
 @php
     $p = $pegawai;
     // Admin boleh menyimpan data belum lengkap: hanya kolom ini yang tetap wajib (sama dengan aturan server).
-    $longgar = auth()->user()->isAdmin();
+    $longgar = auth()->user()->can('sistem.override');
     $wajib = fn (string $kolom) => ! $longgar || in_array($kolom, ['nama_lengkap', 'jabatan', 'status_rekrutmen', 'status_kerja'], true);
     $opsi = fn (array $daftar) => array_combine($daftar, $daftar);
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\Izin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,8 +16,8 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
- * Master Role: sesuaikan role bawaan (nama tampilan, keterangan, hak akses) dan buat role kustom berbasis jenis dasar.
- * Panel & alur persetujuan selalu mengikuti jenis dasar (users.role); hak akses mengikuti Master Role.
+ * Master Role: sesuaikan role sistem (nama tampilan, keterangan, centang permission) dan buat role kustom berbasis jenis dasar.
+ * Panel & alur persetujuan selalu mengikuti jenis dasar (users.role); permission mengikuti centang di role_permission.
  */
 class RoleController extends Controller
 {
@@ -40,12 +41,12 @@ class RoleController extends Controller
 
         $daftar = $roles->map(fn ($r) => [
             $r->nama, $jenis[$r->jenis], User::LABEL_ROLE[$r->dasar] ?? $r->dasar, $r->keterangan, $r->jumlah, count($r->hak),
-            collect($r->hak)->map(fn ($h) => Role::HAK_AKSES[$h][0] ?? $h)->implode(', '), 'Aktif',
+            collect($r->hak)->map(fn ($h) => Izin::nama($h))->implode(', '), 'Aktif',
         ])->concat($dihapus->map(fn ($d) => [
             $d->nama, 'Bawaan (dihapus)', $d->namaAsli, null, $d->jumlah, null, null, 'Dihapus' . ($d->pengganti ? " → akun ke {$d->pengganti}" : ''),
         ]));
-        $matriks = collect(Role::HAK_AKSES)->map(fn ($info, $hak) => [
-            $info[0],
+        $matriks = collect(Izin::semua())->map(fn ($hak) => [
+            Izin::nama($hak),
             ...$roles->map(fn ($r) => in_array($hak, $r->kunci, true) ? 'Ya (terkunci)' : (in_array($hak, $r->hak, true) ? 'Ya' : '-'))->all(),
         ])->values();
 
@@ -63,17 +64,17 @@ class RoleController extends Controller
 
         // Satu bentuk data untuk baris daftar & kolom matriks: role bawaan aktif lebih dulu, lalu role kustom.
         $roles = collect(Role::bawaanAktif())->map(fn (string $kode) => (object) [
-            'jenis' => Role::penyesuaian($kode) ? 'disesuaikan' : 'bawaan',
+            'jenis' => Role::disesuaikan($kode) ? 'disesuaikan' : 'bawaan',
             'nama' => User::roleLabelFor($kode),
             'namaAsli' => User::LABEL_ROLE[$kode],
             'dasar' => $kode,
             'keterangan' => Role::penyesuaian($kode)?->keterangan,
             'hak' => Role::hakAksesBawaan($kode),
-            'kunci' => Role::DIKUNCI[$kode] ?? [],
+            'kunci' => Role::terkunci($kode),
             'jumlah' => (int) ($jumlahBawaan[$kode] ?? 0),
             'urlUbah' => route('admin.role.bawaan.edit', $kode),
             'urlAkun' => route('admin.users.index', ['role' => $kode]),
-            'urlReset' => Role::penyesuaian($kode) ? route('admin.role.bawaan.reset', $kode) : null,
+            'urlReset' => Role::disesuaikan($kode) ? route('admin.role.bawaan.reset', $kode) : null,
             'urlHapus' => in_array($kode, Role::TIDAK_BISA_DIHAPUS, true) ? null : route('admin.role.bawaan.hapus', $kode),
             'nilai' => $kode,
             'otomatis' => in_array($kode, Role::DIPASANG_OTOMATIS, true),
@@ -115,7 +116,8 @@ class RoleController extends Controller
 
         return view('admin.role.form', [
             'mode' => 'kustom',
-            'role' => new Role(['jenis_dasar' => $dasar, 'hak_akses' => Role::hakAksesBawaan($dasar)]),
+            'role' => new Role(['jenis_dasar' => $dasar]),
+            'hakDipilih' => Role::hakAksesBawaan($dasar),
             'jumlahAkun' => 0,
         ]);
     }
@@ -128,9 +130,9 @@ class RoleController extends Controller
             'nama' => $v['nama'],
             'keterangan' => $v['keterangan'] ?? null,
             'jenis_dasar' => $v['jenis_dasar'],
-            'hak_akses' => Role::rapikan($v['jenis_dasar'], $v['hak_akses'] ?? []),
             'bawaan' => false,
         ]);
+        $role->aturPermission($v['hak_akses'] ?? []);
 
         return redirect()->route('admin.role.index')->with('success', "Role {$role->nama} dibuat. Pasang ke akun lewat Kelola Akun.");
     }
@@ -139,7 +141,7 @@ class RoleController extends Controller
     {
         abort_if($role->bawaan, 404);
 
-        return view('admin.role.form', ['mode' => 'kustom', 'role' => $role, 'jumlahAkun' => $role->users()->count()]);
+        return view('admin.role.form', ['mode' => 'kustom', 'role' => $role, 'hakDipilih' => $role->hakAksesEfektif(), 'jumlahAkun' => $role->users()->count()]);
     }
 
     public function update(Request $request, Role $role): RedirectResponse
@@ -154,8 +156,8 @@ class RoleController extends Controller
             'nama' => $v['nama'],
             'keterangan' => $v['keterangan'] ?? null,
             'jenis_dasar' => $dasar,
-            'hak_akses' => Role::rapikan($dasar, $v['hak_akses'] ?? []),
         ]);
+        $role->aturPermission($v['hak_akses'] ?? []);
 
         return redirect()->route('admin.role.index')->with('success', "Role {$role->nama} diperbarui." . ($jumlahAkun ? " Berlaku untuk {$jumlahAkun} akun." : ''));
     }
@@ -199,15 +201,18 @@ class RoleController extends Controller
 
         $jumlah = DB::transaction(function () use ($akun, $tujuan, $kode, $p, $request) {
             $n = $tujuan ? $akun->update($tujuan) : 0;
-            Role::updateOrCreate(['kode' => $kode], [
+            $baris = Role::updateOrCreate(['kode' => $kode], [
                 'nama' => $p?->nama ?? User::LABEL_ROLE[$kode],
                 'keterangan' => $p?->keterangan,
                 'jenis_dasar' => $kode,
-                'hak_akses' => Role::hakAksesBawaan($kode),
                 'bawaan' => true,
                 'aktif' => false,
                 'pengganti' => $tujuan ? $request->input('pengganti') : null,
             ]);
+            // Centang permission yang sudah ada dipertahankan agar bisa dipulihkan apa adanya.
+            if (! $p) {
+                $baris->aturPermission(Izin::bawaanRole($kode));
+            }
 
             return $n;
         });
@@ -223,10 +228,8 @@ class RoleController extends Controller
         $p = Role::penyesuaian($kode);
         abort_unless($p && $p->aktif === false, 404);
 
-        // Baris yang dibuat hanya untuk menonaktifkan (nama & hak masih bawaan) dihapus agar role kembali "Bawaan" murni.
-        $hakAsli = collect(Role::rapikan($kode, User::ABILITIES[$kode] ?? []))->sort()->values()->all();
-        $masihAsli = $p->nama === User::LABEL_ROLE[$kode] && ! $p->keterangan && collect($p->hakAksesEfektif())->sort()->values()->all() === $hakAsli;
-        $masihAsli ? $p->delete() : $p->update(['aktif' => true, 'pengganti' => null]);
+        // Baris role sistem tetap ada (memegang centang permission); cukup diaktifkan lagi.
+        $p->update(['aktif' => true, 'pengganti' => null]);
 
         return redirect()->route('admin.role.index')->with('success', 'Role ' . User::roleLabelFor($kode) . ' dipulihkan dan bisa dipilih lagi di Kelola Akun.');
     }
@@ -243,10 +246,10 @@ class RoleController extends Controller
                 'nama' => $p?->nama ?? User::LABEL_ROLE[$kode],
                 'keterangan' => $p?->keterangan,
                 'jenis_dasar' => $kode,
-                'hak_akses' => Role::hakAksesBawaan($kode),
             ]),
+            'hakDipilih' => Role::hakAksesBawaan($kode),
             'jumlahAkun' => User::where('role', $kode)->whereNull('role_id')->count(),
-            'disesuaikan' => (bool) $p,
+            'disesuaikan' => Role::disesuaikan($kode),
         ]);
     }
 
@@ -260,18 +263,18 @@ class RoleController extends Controller
             'nama' => $v['nama'],
             'keterangan' => $v['keterangan'] ?? null,
             'jenis_dasar' => $kode,
-            'hak_akses' => Role::rapikan($kode, $v['hak_akses'] ?? []),
             'bawaan' => true,
-        ]);
+        ])->aturPermission($v['hak_akses'] ?? []);
 
         return redirect()->route('admin.role.index')->with('success', "Role bawaan {$v['nama']} disesuaikan.");
     }
 
-    /** Kembalikan role bawaan ke nama & hak akses dari sistem. */
+    /** Kembalikan role sistem ke nama & centang permission bawaan (Izin::BAWAAN_ROLE). */
     public function resetBawaan(string $kode): RedirectResponse
     {
         abort_unless(in_array($kode, User::INTERNAL_ROLES, true), 404);
-        Role::penyesuaian($kode)?->delete();
+        Role::updateOrCreate(['kode' => $kode], ['nama' => User::LABEL_ROLE[$kode], 'keterangan' => null, 'jenis_dasar' => $kode, 'bawaan' => true])
+            ->aturPermission(Izin::bawaanRole($kode));
 
         return redirect()->route('admin.role.index')->with('success', 'Role ' . User::LABEL_ROLE[$kode] . ' dikembalikan ke pengaturan bawaan.');
     }
@@ -294,7 +297,7 @@ class RoleController extends Controller
             // Jenis dasar aktif; jenis dasar role ini sendiri tetap sah walau sudah dihapus (role lama yang terkunci).
             'jenis_dasar' => [$kodeBawaan ? 'nullable' : 'required', Rule::in([...$this->jenisDasarAktif(), ...array_filter([$role?->jenis_dasar])])],
             'hak_akses' => ['nullable', 'array'],
-            'hak_akses.*' => [Rule::in(array_keys(Role::HAK_AKSES))],
+            'hak_akses.*' => [Rule::in(Izin::semua())],
         ], ['nama.required' => 'Nama role wajib diisi.', 'jenis_dasar.required' => 'Pilih jenis dasar role.']);
     }
 

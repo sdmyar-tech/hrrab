@@ -5,7 +5,7 @@
 @section('content')
 @php
     $adaFilter = request()->hasAny(['q', 'status', 'tanggal_dari', 'tanggal_sampai']);
-    $isAdmin = auth()->user()->isAdmin();
+    $isAdmin = auth()->user()->can('sistem.override');
     $reset = route('admin.pengajuan-formasi.index');
 @endphp
 <main class="dashboard-content">

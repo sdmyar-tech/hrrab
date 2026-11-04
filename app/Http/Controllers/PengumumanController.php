@@ -19,6 +19,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Support\Izin;
 
 class PengumumanController extends Controller
 {
@@ -60,7 +61,7 @@ class PengumumanController extends Controller
             'pengumumans' => $pengumumans,
             'kategori' => $kategori,
             'arsip' => $arsip,
-            'bisaKelola' => $user->can(User::ABILITY_KELOLA_PENGUMUMAN),
+            'bisaKelola' => $user->can(Izin::PENGUMUMAN_MANAGE),
             'bisaPantauAbsen' => AbsenAcara::bolehKelola($user),
         ]);
     }
@@ -68,7 +69,7 @@ class PengumumanController extends Controller
     public function export(Request $request): BinaryFileResponse
     {
         $user = $this->user();
-        abort_unless($user->can(User::ABILITY_KELOLA_PENGUMUMAN), 403);
+        abort_unless($user->can(Izin::PENGUMUMAN_MANAGE), 403);
         $kategori = array_key_exists($request->query('kategori'), Pengumuman::KATEGORI) ? $request->query('kategori') : null;
 
         $rows = Pengumuman::with('pembuat')->withCount(['pembaca', 'peserta as peserta_total',
@@ -99,7 +100,7 @@ class PengumumanController extends Controller
     public function create(): View
     {
         $user = $this->user();
-        abort_unless($user->can(User::ABILITY_KELOLA_PENGUMUMAN), 403);
+        abort_unless($user->can(Izin::PENGUMUMAN_MANAGE), 403);
 
         return view('pengumuman.form', ['layout' => $user->panelLayout(), 'pengumuman' => new Pengumuman(['kategori' => 'kegiatan', 'jadwal' => 'sekali']),
             'pilihanUnit' => $this->pilihanUnit($user), 'wajibUnit' => $user->isKepalaBagian(), 'absen' => $this->dataFormAbsen($user)]);
@@ -108,7 +109,7 @@ class PengumumanController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = $this->user();
-        abort_unless($user->can(User::ABILITY_KELOLA_PENGUMUMAN), 403);
+        abort_unless($user->can(Izin::PENGUMUMAN_MANAGE), 403);
 
         $data = $this->validasi($request, $user);
         $absen = $this->validasiAbsen($request, $user, null, $data); // bisa memperpanjang tampil_sampai
@@ -166,7 +167,7 @@ class PengumumanController extends Controller
             'kategori' => ['required', Rule::in(array_keys(Pengumuman::KATEGORI))],
             'jadwal' => ['required', Rule::in([Pengumuman::JADWAL_SEKALI, Pengumuman::JADWAL_HARIAN, Pengumuman::JADWAL_MINGGUAN])],
             // Admin boleh tanggal lampau (mis. mencatat/merapikan acara yang sudah lewat).
-            'tanggal' => ['nullable', 'date', ...($user->isAdmin() ? [] : ['after_or_equal:today'])],
+            'tanggal' => ['nullable', 'date', ...($user->can(Izin::OVERRIDE) ? [] : ['after_or_equal:today'])],
             'hari' => ['required_if:jadwal,mingguan', 'nullable', 'integer', 'between:0,6'],
             'jam_mulai' => ['nullable', 'date_format:H:i'],
             'jam_selesai' => ['nullable', 'date_format:H:i', 'after:jam_mulai'],
@@ -174,7 +175,7 @@ class PengumumanController extends Controller
             'sasaran_unit' => [$user->isKepalaBagian() ? 'required' : 'nullable', 'array'],
             'sasaran_unit.*' => [Rule::in($pilihan)],
             'penting' => ['nullable', 'boolean'],
-            'tampil_sampai' => ['nullable', 'date', ...($user->isAdmin() ? [] : ['after_or_equal:today'])],
+            'tampil_sampai' => ['nullable', 'date', ...($user->can(Izin::OVERRIDE) ? [] : ['after_or_equal:today'])],
         ], [
             'hari.required_if' => 'Pilih hari untuk kegiatan mingguan.',
             'jam_selesai.after' => 'Jam selesai harus setelah jam mulai.',
@@ -226,7 +227,7 @@ class PengumumanController extends Controller
 
         $v = $request->validate([
             'absen_buka' => ['required', 'date_format:Y-m-d\TH:i'],
-            'absen_tutup' => ['required', 'date_format:Y-m-d\TH:i', 'after:absen_buka', ...($tutupBerubah && ! $user->isAdmin() ? ['after:now'] : [])],
+            'absen_tutup' => ['required', 'date_format:Y-m-d\TH:i', 'after:absen_buka', ...($tutupBerubah && ! $user->can(Izin::OVERRIDE) ? ['after:now'] : [])],
             'absen_semua' => ['nullable', 'boolean'],
             'absen_unit' => ['nullable', 'array'],
             'absen_unit.*' => [Rule::in(array_keys($pilihan['unit']))],
@@ -289,8 +290,8 @@ class PengumumanController extends Controller
 
     private function bolehUbah(User $user, Pengumuman $pengumuman): void
     {
-        abort_unless($user->can(User::ABILITY_KELOLA_PENGUMUMAN)
-            && ($pengumuman->dibuat_oleh === $user->id || $user->isAdmin() || $user->isKepalaSdm()), 403);
+        abort_unless($user->can(Izin::PENGUMUMAN_MANAGE)
+            && ($pengumuman->dibuat_oleh === $user->id || $user->can(Izin::PENGUMUMAN_MANAGE_ALL)), 403);
     }
 
     private function tandaiDibaca(User $user, array $ids): void

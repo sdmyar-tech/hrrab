@@ -6,7 +6,7 @@
 @section('content')
 @php
     $pengguna = auth()->user();
-    $isAdmin = $pengguna->isAdmin();
+    $isAdmin = $pengguna->can('sistem.override');
     $unitAwal = old('unit_kerja', $unitOptions[0] ?? '');
     $jenis = old('jenis_kebutuhan');
     $opsi = fn (array $daftar) => array_combine($daftar, $daftar);

@@ -9,7 +9,7 @@
     $paletGender = ['Laki-laki' => 1, 'Perempuan' => 2];
     $adaAgenda = $agenda->isNotEmpty() || $user->bisaMenginterview();
     $jam = fn ($n) => rtrim(rtrim(number_format($n, 1, ',', '.'), '0'), ',');
-    $bisaPegawai = $user->can('lihat-tabel-karyawan');
+    $bisaPegawai = $user->can('pegawai.view');
     $toneKartu = ['primary' => 'primary', 'success' => 'success', 'warning' => 'warning', 'danger' => 'danger', 'prpl' => 'info'];
 
     // Tren: bulan penuh terakhir dibanding bulan sebelumnya (bulan berjalan belum lengkap → tidak dibandingkan).
@@ -403,7 +403,7 @@
                                 <th>Masa Kerja</th>
                                 <th>Kontrak s/d</th>
                                 <th>Keterangan</th>
-                                @can('lihat-tabel-karyawan')<th class="text-end">Aksi</th>@endcan
+                                @can('pegawai.view')<th class="text-end">Aksi</th>@endcan
                             </tr>
                         </x-slot:head>
                         @foreach ($anggota as $a)
@@ -440,13 +440,13 @@
                                         @if ($a['cuti'])<x-badge tone="warning">Cuti</x-badge>@endif
                                     </div>
                                 </td>
-                                @can('lihat-tabel-karyawan')
+                                @can('pegawai.view')
                                     <td class="text-end"><x-button variant="ghost" size="sm" :href="route('admin.pegawai.show', $a['id'])" icon-right="bi-chevron-right">Detail</x-button></td>
                                 @endcan
                             </tr>
                         @endforeach
                         <tr data-saring-kosong="#tabel-anggota" hidden>
-                            <td colspan="{{ auth()->user()->can('lihat-tabel-karyawan') ? 6 : 5 }}">
+                            <td colspan="{{ auth()->user()->can('pegawai.view') ? 6 : 5 }}">
                                 <x-empty-state icon="bi-search" title="Tidak ditemukan" compact>Tidak ada pegawai yang cocok dengan pencarian ini.</x-empty-state>
                             </td>
                         </tr>

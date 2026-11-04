@@ -28,10 +28,10 @@ class AbsenAcara
     /** Setelah scan sah, pegawai punya waktu sekian menit untuk menekan konfirmasi hadir. */
     public const MENIT_SCAN_BERLAKU = 5;
 
-    /** Hanya SDM (kepala SDM), Admin, dan GM yang boleh menetapkan & memantau absen acara. */
+    /** Menetapkan & memantau absen acara: pemegang permission acara.absen.manage. */
     public static function bolehKelola(User $user): bool
     {
-        return $user->isAdmin() || $user->isKepalaSdm() || $user->isGm();
+        return $user->can(Izin::ACARA_ABSEN);
     }
 
     public static function bolehPantau(User $user, Pengumuman $pengumuman): bool

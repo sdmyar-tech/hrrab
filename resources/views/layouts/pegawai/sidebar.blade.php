@@ -1,10 +1,10 @@
 @php
     $u = Auth::user();
     $ik = \App\Support\Absensi\TampilanAbsensi::IKON;
-    // Menu mengikuti hak akses (Master Role): staf unit SDM ikut mengelola pegawai & absensi, role kustom berbasis Staff
-    // mendapat menu sesuai hak yang dicentang. Staf biasa tetap hanya melihat menu pribadinya.
+    // Menu mengikuti permission yang dicentang (role kustom berbasis Staff / centang per akun, mis. staf SDM yang
+    // mengelola pegawai & absensi). Staf tanpa centang tambahan hanya melihat menu pribadinya.
     $bisa = fn (string $hak) => (bool) $u?->can($hak);
-    $kelolaAbsensi = $bisa('kelola-absensi');
+    $kelolaAbsensi = $bisa('absensi.manage');
     // Bagian selalu terbuka. Notifikasi & pengumuman dibaca lewat ikon lonceng di navbar.
     $menu = [
         ['bagian' => null, 'item' => [
@@ -22,32 +22,36 @@
             ['Absensi Saya', $ik['saya'], 'absensi.saya', 'absensi.saya', (bool) $u?->dataPegawai?->ikut_absensi, null],
         ]],
         ['bagian' => 'Data Pengajuan', 'item' => [
-            ['Cuti', 'bi-calendar2-check', 'admin.pengajuan-cuti.index', 'admin.pengajuan-cuti.*', $bisa('lihat-laporan'), null],
-            ['Lembur', 'bi-clock-history', 'admin.pengajuan-lembur.index', 'admin.pengajuan-lembur.*', $bisa('lihat-laporan'), null],
-            ['Izin Keluar', 'bi-door-open', 'admin.izin-keluar.index', 'admin.izin-keluar.*', $bisa('lihat-laporan'), null],
+            ['Cuti', 'bi-calendar2-check', 'admin.pengajuan-cuti.index', 'admin.pengajuan-cuti.*', $bisa('pengajuan.report'), null],
+            ['Lembur', 'bi-clock-history', 'admin.pengajuan-lembur.index', 'admin.pengajuan-lembur.*', $bisa('pengajuan.report'), null],
+            ['Izin Keluar', 'bi-door-open', 'admin.izin-keluar.index', 'admin.izin-keluar.*', $bisa('pengajuan.report'), null],
         ]],
         ['bagian' => 'Kepegawaian', 'item' => [
-            ['Data Pegawai', 'bi-people', 'admin.pegawai.index', 'admin.pegawai.*', $bisa('lihat-tabel-karyawan'), null],
-            ['Mutasi & Rangkap', 'bi-arrow-left-right', 'admin.penugasan.index', 'admin.penugasan.*', $bisa('kelola-penugasan'), null],
-            ['Bagian & Koordinator', 'bi-buildings', 'admin.unit.index', 'admin.unit.*', $bisa('kelola-penugasan'), null],
+            ['Data Pegawai', 'bi-people', 'admin.pegawai.index', 'admin.pegawai.*', $bisa('pegawai.view'), null],
+            ['Mutasi & Rangkap', 'bi-arrow-left-right', 'admin.penugasan.index', 'admin.penugasan.*', $bisa('penugasan.manage'), null],
+            ['Bagian & Koordinator', 'bi-buildings', 'admin.unit.index', 'admin.unit.*', $bisa('penugasan.manage'), null],
         ]],
         ['bagian' => 'Absensi', 'item' => [
-            ['Absensi Harian', $ik['harian'], 'admin.absensi.harian', ['admin.absensi.harian', 'admin.absensi.pegawai', 'admin.absensi.izin*'], $bisa('lihat-absensi'), null],
-            ['Rekap Absensi', $ik['rekap'], 'admin.absensi.rekap', 'admin.absensi.rekap*', $bisa('lihat-absensi'), null],
+            ['Absensi Harian', $ik['harian'], 'admin.absensi.harian', ['admin.absensi.harian', 'admin.absensi.pegawai', 'admin.absensi.izin*'], $bisa('absensi.view'), null],
+            ['Rekap Absensi', $ik['rekap'], 'admin.absensi.rekap', 'admin.absensi.rekap*', $bisa('absensi.view'), null],
             ['Import Data Mesin', $ik['import'], 'admin.absensi.import', 'admin.absensi.import*', $kelolaAbsensi, null],
             ['Pengaturan Absensi', $ik['pengaturan'], 'admin.absensi.pengaturan', 'admin.absensi.pengaturan*', $kelolaAbsensi, null],
         ]],
+        ['bagian' => 'Rekrutmen', 'item' => [
+            ['Pengajuan Formasi', 'bi-person-plus', 'admin.pengajuan-formasi.index', 'admin.pengajuan-formasi.*', $bisa('rekrutmen.view'), null],
+            ['Lamaran Masuk', 'bi-inbox', 'admin.lamaran.index', 'admin.lamaran.*', $bisa('rekrutmen.view'), null],
+            ['Lowongan', 'bi-briefcase', 'admin.lowongan.index', 'admin.lowongan.*', $bisa('rekrutmen.view'), null],
+        ]],
         ['bagian' => 'Informasi', 'item' => [
-            ['Kelola Pengumuman', 'bi-megaphone', 'pengumuman.index', 'pengumuman.*', $bisa('kelola-pengumuman'), null],
-            ['Kirim Notifikasi', 'bi-send', 'notifikasi.kirim', 'notifikasi.kirim*', $bisa('kirim-notifikasi'), null],
+            ['Kelola Pengumuman', 'bi-megaphone', 'pengumuman.index', 'pengumuman.*', $bisa('pengumuman.manage'), null],
+            ['Kirim Notifikasi', 'bi-send', 'notifikasi.kirim', 'notifikasi.kirim*', $bisa('notifikasi.send'), null],
         ]],
         ['bagian' => 'Sistem', 'item' => [
-            ['Kelola Akun', 'bi-person-lock', 'admin.users.index', 'admin.users.*', $bisa('kelola-sistem'), null],
-            ['Master Role', 'bi-shield-check', 'admin.role.index', 'admin.role.*', $bisa('kelola-sistem'), null],
-            ['Hak Akses Jabatan', 'bi-person-badge', 'admin.jabatan.hak-akses', 'admin.jabatan.hak-akses*', $bisa('kelola-sistem'), null],
-            ['Master Jabatan', 'bi-diagram-3', 'admin.jabatan.index', ['admin.jabatan.index', 'admin.jabatan.export'], $bisa('kelola-sistem'), null],
-            ['Master Lokasi Kerja', 'bi-geo-alt', 'admin.lokasi-kerja.index', 'admin.lokasi-kerja.*', $bisa('kelola-sistem'), null],
-            ['Log Aktivitas', 'bi-journal-text', 'admin.log.index', 'admin.log.*', $bisa('kelola-sistem'), null],
+            ['Kelola Akun', 'bi-person-lock', 'admin.users.index', 'admin.users.*', $bisa('sistem.akun.manage'), null],
+            ['Master Role', 'bi-shield-check', 'admin.role.index', 'admin.role.*', $bisa('sistem.role.manage'), null],
+            ['Master Jabatan', 'bi-diagram-3', 'admin.jabatan.index', ['admin.jabatan.index', 'admin.jabatan.export'], $bisa('sistem.master.manage'), null],
+            ['Master Lokasi Kerja', 'bi-geo-alt', 'admin.lokasi-kerja.index', 'admin.lokasi-kerja.*', $bisa('sistem.master.manage'), null],
+            ['Log Aktivitas', 'bi-journal-text', 'admin.log.index', 'admin.log.*', $bisa('sistem.log.view'), null],
         ]],
     ];
 @endphp

@@ -139,37 +139,37 @@ class EvaluasiKontrakAlur
         return ! $user->isAdmin() && self::adalahPenilai($user, $e) && self::adalahPemutus($user, $e);
     }
 
-    /** Penilai mengisi/mengubah nilai selama belum diputuskan; Admin selalu bisa. */
+    /** Penilai mengisi/mengubah nilai selama belum diputuskan; Mode Admin selalu bisa. */
     public static function bisaIsi(User $user, EvaluasiKontrak $e): bool
     {
-        if ($user->isAdmin()) {
+        if ($user->can(Izin::OVERRIDE)) {
             return true;
         }
 
         return $e->status !== EvaluasiKontrak::STATUS_SELESAI && self::adalahPenilai($user, $e);
     }
 
-    /** Pemutus memutuskan setelah nilai masuk; Admin kapan saja. */
+    /** Pemutus memutuskan setelah nilai masuk; Mode Admin kapan saja. */
     public static function bisaPutuskan(User $user, EvaluasiKontrak $e): bool
     {
-        if ($user->isAdmin()) {
+        if ($user->can(Izin::OVERRIDE)) {
             return true;
         }
 
         return $e->status === EvaluasiKontrak::STATUS_MENUNGGU_SDM && self::adalahPemutus($user, $e);
     }
 
-    /** Jadwal TTD boleh diatur/diubah pemutus (atau Admin) setelah keputusan perpanjang / angkat tetap. */
+    /** Jadwal TTD boleh diatur/diubah pemutus (atau Mode Admin) setelah keputusan perpanjang / angkat tetap. */
     public static function bisaAturTtd(User $user, EvaluasiKontrak $e): bool
     {
         return $e->status === EvaluasiKontrak::STATUS_SELESAI && $e->keputusan && $e->keputusan !== EvaluasiKontrak::TIDAK
-            && ($user->isAdmin() || self::adalahPemutus($user, $e));
+            && ($user->can(Izin::OVERRIDE) || self::adalahPemutus($user, $e));
     }
 
-    /** Pimpinan (Kepala SDM, GM, Owner, Admin) melihat semua; selain itu hanya yang dinilainya. */
+    /** Melihat evaluasi seluruh pegawai (permission evaluasi_kontrak.view_all); selain itu hanya yang dinilainya. */
     public static function lihatSemua(User $user): bool
     {
-        return $user->isAdmin() || $user->isKepalaSdm() || $user->isGm() || $user->isPembina();
+        return $user->can(Izin::EVALUASI_VIEW_ALL);
     }
 
     public static function bisaLihat(User $user, EvaluasiKontrak $e): bool
@@ -180,7 +180,7 @@ class EvaluasiKontrakAlur
     /** Pimpinan, penyetuju, kepala unit (termasuk kepala sekolah), atau atasan di alur khusus seseorang. */
     public static function bolehMembuka(User $user): bool
     {
-        return self::lihatSemua($user) || $user->can(User::ABILITY_APPROVE) || ! empty($user->unitsDipimpin())
+        return self::lihatSemua($user) || $user->can(Izin::PENGAJUAN_APPROVE) || ! empty($user->unitsDipimpin())
             || AlurPegawai::where('atasan_user_id', $user->id)->exists();
     }
 

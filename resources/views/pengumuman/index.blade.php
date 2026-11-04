@@ -67,7 +67,7 @@
                                     @if ($p->penting)<x-badge tone="danger" icon="bi-pin-angle-fill">Penting</x-badge>@endif
                                     @unless ($p->sudah_dibaca)<x-badge tone="primary" dot>Baru</x-badge>@endunless
                                 </div>
-                                @if ($bisaKelola && ($p->dibuat_oleh === auth()->id() || auth()->user()->isAdmin() || auth()->user()->isKepalaSdm()))
+                                @if ($bisaKelola && ($p->dibuat_oleh === auth()->id() || auth()->user()->can('pengumuman.manage_all')))
                                     <div class="d-flex gap-1">
                                         <x-button :href="route('pengumuman.edit', $p)" variant="ghost" size="sm" class="btn-ikon" icon="bi-pencil" title="Ubah" aria-label="Ubah pengumuman {{ $p->judul }}" />
                                         <form action="{{ route('pengumuman.destroy', $p) }}" method="POST" class="m-0">

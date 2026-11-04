@@ -11,31 +11,34 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
-/** Hak akses modul rekrutmen: Kepala SDM, GM & Admin bisa approve/aksi di semua divisi. */
+/**
+ * Hak akses modul rekrutmen. Fitur dibuka lewat permission (App\Support\Izin); siapa yang menyetujui tahap formasi
+ * (GM unit, Owner, Kepala SDM) tetap mengikuti role/alur.
+ */
 class RekrutmenAccess
 {
+    /** Memproses lamaran: verifikasi, interview, onboarding, kontrak, rekrut/tolak, kandidat internal. */
     public static function canReview(User $user): bool
     {
-        return $user->isKepalaSdm() || $user->isGm() || $user->isAdmin();
+        return $user->can(Izin::LAMARAN_PROCESS);
     }
 
-    /** Admin (super admin) mengelola lowongan semua divisi bersama Kepala SDM & GM. */
+    /** Mengubah, mempublikasikan, menutup & membuka kembali lowongan semua unit. */
     public static function canKelolaSemuaLowongan(User $user): bool
     {
-        return self::canReview($user) || $user->isAdmin();
+        return $user->can(Izin::LOWONGAN_MANAGE);
     }
 
     /** Hak lihat seluruh data rekrutmen (lamaran, formasi) tanpa batas divisi. */
     public static function canLihatSemua(User $user): bool
     {
-        return self::canReview($user) || $user->isAdmin() || $user->isPembina();
+        return $user->can(Izin::FORMASI_VIEW_ALL);
     }
 
-    /** Kepala Bagian mengajukan untuk unit yang dipimpin; Kepala SDM boleh mengajukan untuk unit mana pun. */
+    /** Mengajukan formasi (untuk unit yang dipimpin; Mode Admin: unit mana pun). */
     public static function bisaAjukanFormasi(User $user): bool
     {
-        return $user->isKepalaSdm() || $user->isAdmin()
-            || PengajuanWorkflow::submitterLevel($user) === PengajuanWorkflow::LEVEL_KEPALA_DIVISI;
+        return $user->can(Izin::FORMASI_CREATE);
     }
 
     /**
@@ -46,7 +49,7 @@ class RekrutmenAccess
      */
     public static function unitAjuanFormasi(User $user): array
     {
-        if ($user->isAdmin()) {
+        if ($user->can(Izin::OVERRIDE)) {
             return config('kepegawaian.unit_kerja');
         }
         $utama = $user->unitKerja();
@@ -153,8 +156,8 @@ class RekrutmenAccess
 
     public static function canReviewFormasi(User $user, PengajuanFormasi $formasi): bool
     {
-        // Admin bebas mereview formasi apa pun (termasuk unit langsung Pembina).
-        if ($user->isAdmin()) {
+        // Mode Admin: bebas mereview formasi apa pun (termasuk unit langsung Pembina).
+        if ($user->can(Izin::OVERRIDE)) {
             return true;
         }
 
@@ -174,7 +177,8 @@ class RekrutmenAccess
             return $user->isPembina();
         }
 
-        return self::canReview($user);
+        // Penggantian karyawan: diputuskan Kepala SDM atau GM (alur menurut role, bukan permission).
+        return $user->isKepalaSdm() || $user->isGm();
     }
 
     public static function canLihatSemuaFormasi(User $user): bool
@@ -184,7 +188,7 @@ class RekrutmenAccess
 
     public static function scopeUnitKerja(Builder $query, User $user, string $column = 'unit_kerja'): Builder
     {
-        if (self::canReview($user) || $user->isAdmin() || $user->isPembina()) {
+        if (self::canLihatSemua($user)) {
             return $query;
         }
 

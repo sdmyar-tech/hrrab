@@ -7,7 +7,7 @@
     $k30 = $data['keluar30']->count();
     $selisih = $m30 - $k30;
     $maks = max(1, collect($data['bulan'])->max(fn ($b) => max($b['masuk'], $b['keluar'])));
-    $bisaBuka = auth()->user()->can('lihat-tabel-karyawan');
+    $bisaBuka = auth()->user()->can('pegawai.view');
 @endphp
 <section class="panel mt-3" id="keluar-masuk">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
