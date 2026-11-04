@@ -1,40 +1,40 @@
 @extends('layouts.admin.app')
 
+@section('title', 'Tambah Akun')
+
 @section('content')
+{{-- Galat isian ditampilkan di bawah isiannya + ringkasan di atas form; banner global tidak perlu. --}}
+@section('galat-di-halaman', '1')
 <main class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-person-plus"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Sistem</p>
-                    <h1 class="h3 mb-1">Tambah Akun</h1>
-                    <p class="text-muted mb-0">Buat akun baru untuk masuk ke HRRAB. Pilih dari Data Pegawai agar nama, email & NIP terisi dan akun langsung tertaut.</p>
-                </div>
-            </div>
-            <div class="heading-actions">
-                <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i>Kembali</a>
-            </div>
-        </div>
+    <div class="container-fluid">
+        <x-page-header title="Tambah Akun" eyebrow="Sistem"
+            subtitle="Buat akun untuk masuk ke HRRAB. Pilih dari Data Pegawai agar nama, email, dan NIP terisi dan akun langsung tertaut."
+            :back="route('admin.users.index')" back-label="Kelola Akun" />
 
-        <form data-fokus-awal action="{{ route('admin.users.store') }}" method="POST" data-confirm="Tambah akun user baru ini?">
+        @if ($errors->any())
+            <x-alert tone="danger" title="Periksa kembali isian yang ditandai merah" class="mb-4">
+                <ul class="mb-0 ps-3">@foreach ($errors->all() as $pesan)<li>{{ $pesan }}</li>@endforeach</ul>
+            </x-alert>
+        @endif
+
+        <form data-fokus-awal action="{{ route('admin.users.store') }}" method="POST" data-confirm="Tambah akun baru ini?">
             @csrf
-
-            <div class="row g-3 align-items-start">
-                <div class="col-lg-5">
-                    <section class="panel">
-                        <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-lock"></i>Data Akun</h2>
-                        @include('admin.users._akun', ['akun' => null, 'wajibPassword' => true])
-
-                        <div class="d-flex gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-check-lg"></i>Simpan</button>
-                            <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">Batal</a>
-                        </div>
-                    </section>
+            <div class="row g-4">
+                <div class="col-xl-8">
+                    <x-card>
+                        @include('admin.users._akun', ['akun' => null, 'wajibPassword' => true, 'selectedDivisi' => old('divisi', []), 'selectedKepalaUnit' => old('kepala_unit')])
+                    </x-card>
                 </div>
-                <div class="col-lg-7">
-                    @include('admin.users._divisi', ['selectedDivisi' => old('divisi', []), 'selectedKepalaUnit' => old('kepala_unit')])
+                <div class="col-xl-4">
+                    <div class="hr-detail-samping d-grid gap-4">
+                        @include('admin.users._ringkasan', ['akun' => null])
+                    </div>
                 </div>
+            </div>
+
+            <div class="hr-bilah-aksi mt-4">
+                <x-button variant="secondary" :href="route('admin.users.index')">Batal</x-button>
+                <x-button type="submit" icon="bi-check-lg">Simpan Akun</x-button>
             </div>
         </form>
     </div>

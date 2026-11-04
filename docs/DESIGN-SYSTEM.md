@@ -188,6 +188,14 @@ Partial bersama di `resources/views/admin/pengajuan/` (jangan menulis ulang per 
 Detail pengajuan: kiri `col-xl-8` (`_aksi-cepat`, kartu Detail Pengajuan, `_riwayat-alur`), kanan `col-xl-4 .hr-detail-samping` (`_kartu-aksi`, Ubah Langsung Admin). Parameter tindakan disusun sekali di `$aksi` dan dipakai kedua partial.
 Kelas pendukung: `.hr-konteks` (daftar label–nilai di dialog/kartu), `.hr-kartu-aksi-tombol`, `.hr-aksi-cepat`, `.hr-ikon-btn-success`.
 
+### Pola Batch 6 — rekrutmen & sistem
+
+- **Form 2 kolom seragam** (lowongan, kandidat internal, akun, role): `row g-4` → `col-xl-8` satu `x-card` berisi `x-form-section` · `col-xl-4 .hr-detail-samping` kartu **pratinjau/ringkasan** yang ikut berubah saat diketik → `.hr-bilah-aksi`.
+- `.hr-subbagian` (+ `-judul`, `-sub`): blok pengaturan bersyarat di dalam satu bagian form; `.hr-pilih-grid`: grid kotak centang.
+- **Matriks hak akses** (form role): modul = `fieldset.rl-modul` dengan centang induk (indeterminate), "Pilih semua" global, cari hak.
+- **Baris bisa dibuka** (log aktivitas): `tr[data-buka-rinci]` + `tr.log-rinci[hidden]`, tombol `x-icon-button` ber-`aria-expanded`; zebra pakai kelas `is-genap` (bukan `striped`, karena baris rincian).
+- Detail lamaran memakai pola detail Batch 5 (kartu Tindakan lengket + `x-timeline` + bilah cepat HP); dialog alasan Tolak/Batalkan satu `x-modal #modalAlasan`.
+
 Partial lama yang tetap dipakai: `partials.tombol-ekspor`, `partials.daftar-cari`, `partials.filter-tanggal`, `partials.urut`,
 `partials.daftar-ringkas`, `partials.kosong(-tabel)`, `partials.tombol-aksi-lain`, `partials.pilih-pegawai`,
 `partials.preview-file(-modal)`, `partials.viz.*`, `partials.kembali`.

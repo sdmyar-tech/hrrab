@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Jabatan;
+use App\Models\Lamaran;
 use App\Models\Lowongan;
 use App\Models\User;
 use App\Support\ExcelExporter;
@@ -36,7 +37,20 @@ class LowonganController extends Controller
         ]);
         $lowongans = $query->paginate(15)->withQueryString();
 
-        return view('admin.lowongan.index', compact('lowongans') + $urut);
+        // Kartu angka (baca-saja): saringan yang sama tanpa status; kolom hitungan pelamar (withCount) dibuang dulu.
+        $dasar = $this->filteredQuery($request->duplicate($request->except('status')), $user)
+            ->toBase()->cloneWithout(['columns', 'orders'])->cloneWithoutBindings(['select', 'order']);
+        $perStatus = (clone $dasar)->selectRaw('lowongans.status as status_hitung, count(*) as jumlah')
+            ->groupBy('lowongans.status')->pluck('jumlah', 'status_hitung');
+        $hitungStatus = [
+            'semua' => (int) $perStatus->sum(),
+            'draft' => (int) ($perStatus[Lowongan::STATUS_DRAFT] ?? 0),
+            'dipublikasikan' => (int) ($perStatus[Lowongan::STATUS_DIPUBLIKASIKAN] ?? 0),
+            'ditutup' => (int) ($perStatus[Lowongan::STATUS_DITUTUP] ?? 0),
+            'pelamar' => Lamaran::whereIn('lowongan_id', (clone $dasar)->select('lowongans.id'))->count(),
+        ];
+
+        return view('admin.lowongan.index', compact('lowongans', 'hitungStatus') + $urut);
     }
 
     public function export(Request $request): BinaryFileResponse

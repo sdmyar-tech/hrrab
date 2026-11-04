@@ -1,24 +1,45 @@
-@if ($lowongan->bisaDibukaKembali() || ($lowongan->status === \App\Models\Lowongan::STATUS_DITUTUP && auth()->user()->isAdmin()))
+{{--
+    Tombol "Buka Kembali" lowongan berstatus Ditutup: dialog memilih tanggal tutup baru → POST admin.lowongan.reopen.
+    Param: $lowongan, opsional:
+      $ikon (bool)    : tombol ikon untuk kolom aksi tabel (x-icon-button); bila tidak bisa dibuka → pengganti tak terlihat (ikon tetap sejajar).
+      $form (string)  : id <form> reopen terpisah (mis. di luar form utama halaman Ubah) → hanya tombolnya yang dirender (atribut form).
+    Kuota penuh & bukan Admin → tidak bisa dibuka kembali (label "Kuota terpenuhi").
+--}}
+@php
+    $bisaBuka = $lowongan->bisaDibukaKembali() || ($lowongan->status === \App\Models\Lowongan::STATUS_DITUTUP && auth()->user()->isAdmin());
+    $kuotaPenuh = $lowongan->status === \App\Models\Lowongan::STATUS_DITUTUP && $lowongan->isKuotaPenuh();
+    // Konteks di dialog: judul + bagian (dipasang lewat textContent, bukan disambung ke HTML).
+    $judulDialog = $lowongan->judul . ' · ' . $lowongan->unit_kerja;
+@endphp
+@if ($bisaBuka && ($ikon ?? false))
     <form action="{{ route('admin.lowongan.reopen', $lowongan) }}" method="POST" class="form-reopen-lowongan">
         @csrf
         <input type="hidden" name="tanggal_tutup" value="">
-        <button type="button" class="btn btn-outline-success {{ ($small ?? false) ? 'btn-sm' : '' }} btn-reopen-lowongan"
-            data-judul="{{ $lowongan->judul }}">
-            <i class="bi bi-unlock{{ ($small ?? false) ? '' : ' me-1' }}"></i> Buka Kembali
-        </button>
+        <x-icon-button icon="bi-unlock" tone="success" label="Buka kembali" class="btn-reopen-lowongan" :data-judul="$judulDialog" />
     </form>
-@elseif ($lowongan->status === \App\Models\Lowongan::STATUS_DITUTUP && $lowongan->isKuotaPenuh())
-    <span class="badge text-bg-light border align-self-center" title="Kuota sudah terpenuhi, tidak bisa dibuka kembali">
-        <i class="bi bi-check2-all"></i> Kuota terpenuhi
-    </span>
+@elseif ($bisaBuka && ! empty($form))
+    <x-button variant="success" size="sm" icon="bi-unlock" class="btn-reopen-lowongan" :form="$form" :data-judul="$judulDialog">Buka Kembali</x-button>
+@elseif ($bisaBuka)
+    <form action="{{ route('admin.lowongan.reopen', $lowongan) }}" method="POST" class="form-reopen-lowongan">
+        @csrf
+        <input type="hidden" name="tanggal_tutup" value="">
+        <x-button variant="success" size="sm" icon="bi-unlock" class="btn-reopen-lowongan" :data-judul="$judulDialog">Buka Kembali</x-button>
+    </form>
+@elseif ($ikon ?? false)
+    <span class="hr-ikon-btn invisible" aria-hidden="true"></span>
+@elseif ($kuotaPenuh)
+    <x-badge tone="neutral" icon="bi-check2-all" title="Kuota sudah terpenuhi, tidak bisa dibuka kembali">Kuota terpenuhi</x-badge>
 @endif
 
 @once
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Warna tombol dialog dari token ui.css (tanpa hex di sini).
+            const token = (nama) => getComputedStyle(document.documentElement).getPropertyValue(nama).trim() || undefined;
             document.querySelectorAll('.btn-reopen-lowongan').forEach(function (btn) {
                 btn.addEventListener('click', function () {
-                    const form = btn.closest('form');
+                    // Tombol di dalam form-nya sendiri, atau terhubung lewat atribut form="…" (halaman Ubah).
+                    const form = btn.form || btn.closest('form');
                     const today = new Date();
                     const adminBebas = @json(auth()->user()->isAdmin()); // Admin boleh tanggal lampau
                     const toISO = function (d) {
@@ -35,12 +56,12 @@
                         didOpen: function (el) { el.querySelector('[data-judul]').textContent = btn.dataset.judul; },
                         input: 'date',
                         inputValue: toISO(defaultTutup),
-                        inputAttributes: adminBebas ? {} : { min: toISO(today) },
+                        inputAttributes: adminBebas ? { 'aria-label': 'Tanggal tutup baru' } : { min: toISO(today), 'aria-label': 'Tanggal tutup baru' },
                         showCancelButton: true,
                         confirmButtonText: 'Ya, Buka Kembali',
                         cancelButtonText: 'Batal',
-                        confirmButtonColor: '#198754',
-                        cancelButtonColor: '#6c757d',
+                        confirmButtonColor: token('--hr-success'),
+                        cancelButtonColor: token('--hr-gray-500'),
                         reverseButtons: true,
                         preConfirm: function (value) {
                             if (!value) {

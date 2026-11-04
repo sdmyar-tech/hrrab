@@ -1,74 +1,103 @@
 {{--
-    Penanda tahap lamaran + "langkah berikutnya" di atas kolom aksi, supaya penyetuju langsung tahu posisi & apa yang dikerjakan.
-    Memakai variabel halaman detail lamaran ($lamaran, $canReview, $tahapBerikutnya, $bisaKonfirmasiInterview, $onboardingLulus, $jumlahInterviewLulus).
+    Kartu "Timeline Lamaran" (kolom kanan detail lamaran, Batch 6): lamar → verifikasi → interview → onboarding → kontrak → keputusan,
+    lengkap dengan tanggal & pengguna. Hanya dipakai admin.lamaran.show; memakai $lamaran (relasi sudah dimuat controller).
+    - Lamaran berjalan: tahap sebelum tahap sekarang = selesai, tahap sekarang = berjalan, sesudahnya = belum.
+    - Lamaran selesai (diterima/ditolak/dibatalkan): hanya tahap yang benar-benar dilalui (punya data) + butir keputusan.
 --}}
 @php
     $L = \App\Models\Lamaran::class;
-    $urutan = [$L::TAHAP_VERIFIKASI => 'Verifikasi', $L::TAHAP_INTERVIEW => 'Interview', $L::TAHAP_SCREENING => 'Onboarding', $L::TAHAP_KONTRAK => 'Kontrak', $L::TAHAP_SELESAI => 'Selesai'];
-    $kunci = array_keys($urutan);
-    $posisi = array_search($lamaran->tahap, $kunci, true);
-    $posisi = $posisi === false ? 0 : $posisi;
-    $berhenti = in_array($lamaran->status, [$L::STATUS_DITOLAK, $L::STATUS_DIBATALKAN], true);
-    $terjadwal = $lamaran->interviewJadwals->first(fn ($j) => $j->isTerjadwal() && ! $j->hasil_status);
-    $onboardingJalan = $lamaran->screeningOnboardings->firstWhere('status', \App\Models\ScreeningOnboarding::STATUS_BERJALAN);
+    $tgl = fn ($d, string $f = 'd M Y') => $d?->translatedFormat($f);
+    $urutan = [$L::TAHAP_VERIFIKASI => 0, $L::TAHAP_INTERVIEW => 1, $L::TAHAP_SCREENING => 2, $L::TAHAP_KONTRAK => 3, $L::TAHAP_SELESAI => 4];
+    $posisi = $urutan[$lamaran->tahap] ?? 0;
+    $berjalan = $lamaran->isProses() || $lamaran->isMenungguVerifikasi();
+    $diterima = $lamaran->status === $L::STATUS_DITERIMA;
+    $interviews = $lamaran->interviewJadwals->sortBy([['tanggal', 'asc'], ['id', 'asc']]);
+    $onboarding = $lamaran->screeningOnboardings->sortByDesc('id')->first();
+    $kontrak = $lamaran->kontrakJadwals->sortByDesc('id')->first();
+    // Ditolak langsung saat verifikasi: waktu verifikasi = waktu keputusan (lihat LamaranController::verifikasiTolak).
+    $tolakDiVerifikasi = $lamaran->status === $L::STATUS_DITOLAK && $lamaran->diverifikasi_pada && $lamaran->diputuskan_pada
+        && $lamaran->diverifikasi_pada->equalTo($lamaran->diputuskan_pada) && $interviews->isEmpty();
+    // Status satu tahap: berjalan → menurut posisi tahap; selesai → tahap yang punya data dianggap sudah dilalui.
+    $status = fn (int $i, bool $adaData) => $berjalan
+        ? ($posisi > $i ? 'done' : ($posisi === $i ? 'active' : 'pending'))
+        : ($adaData ? 'done' : null);
 
-    // Langkah berikutnya: [teks, anchor bagian]. Hanya untuk yang bisa memproses (Kepala SDM/GM/Admin).
-    [$langkah, $ke] = match (true) {
-        $berhenti => ['Lamaran ' . strtolower($lamaran->statusLabel()) . '. Tidak ada langkah lanjutan.', null],
-        $lamaran->status === $L::STATUS_DITERIMA => ['Kandidat sudah direkrut. Proses selesai.', null],
-        ! $canReview => ['Tahap ini diproses Kepala SDM/GM.' . ($terjadwal && $terjadwal->interviewer_id === auth()->id() ? ' Isi hasil interview yang ditugaskan kepada Anda.' : ''), $terjadwal ? 'bagian-interview' : null],
-        $lamaran->tahap === $L::TAHAP_VERIFIKASI => ['Periksa data pelamar, lalu Terima atau Tolak verifikasi.', 'bagian-verifikasi'],
-        $lamaran->tahap === $L::TAHAP_INTERVIEW && $terjadwal => ['Isi hasil ' . $terjadwal->tahapLabel() . ' (' . $terjadwal->tanggal->translatedFormat('d M') . ').', 'bagian-interview'],
-        $lamaran->tahap === $L::TAHAP_INTERVIEW && $bisaKonfirmasiInterview => ["{$jumlahInterviewLulus} interview lulus — konfirmasi interview selesai untuk lanjut ke onboarding.", 'bagian-interview'],
-        $lamaran->tahap === $L::TAHAP_INTERVIEW && $tahapBerikutnya => ['Jadwalkan interview berikutnya.', 'bagian-interview'],
-        $lamaran->tahap === $L::TAHAP_INTERVIEW => ['Tunggu hasil interview.', 'bagian-interview'],
-        $lamaran->tahap === $L::TAHAP_SCREENING && ! $onboardingJalan => ['Mulai masa onboarding.', 'bagian-onboarding'],
-        $lamaran->tahap === $L::TAHAP_SCREENING => ['Konfirmasi hasil onboarding (Lulus bisa mulai ' . $onboardingJalan->tanggal_selesai->translatedFormat('d M') . ').', 'bagian-onboarding'],
-        $lamaran->tahap === $L::TAHAP_KONTRAK => ['Tanda tangan kontrak, lalu Rekrut di Keputusan Akhir.', 'bagian-keputusan'],
-        default => ['Periksa status lamaran.', null],
+    $butir = [];
+    $butir[] = [
+        'state' => 'done', 'icon' => $lamaran->isJalurInternal() ? 'bi-person-check' : 'bi-send',
+        'title' => $lamaran->isJalurInternal() ? 'Diusulkan (Jalur Langsung)' : 'Lamaran masuk',
+        'meta' => $tgl($lamaran->created_at),
+        'teks' => [$lamaran->isJalurInternal()
+            ? 'Diusulkan ' . ($lamaran->direkomendasikan_oleh ?: '-') . ' · ditambahkan ' . ($lamaran->diverifikasiOleh?->name ?? '-')
+            : 'Melamar lewat situs karier'],
+    ];
+
+    $verifikasi = $status(0, $lamaran->diverifikasi_pada !== null && ! $tolakDiVerifikasi);
+    if ($verifikasi) {
+        $butir[] = [
+            'state' => $verifikasi, 'icon' => null, 'title' => 'Verifikasi data',
+            'meta' => $verifikasi === 'done' ? $tgl($lamaran->diverifikasi_pada) : null,
+            'teks' => [match (true) {
+                $verifikasi === 'active' => 'Menunggu pemeriksaan data & berkas oleh Kepala SDM/GM.',
+                $verifikasi === 'pending' => null,
+                default => $lamaran->diverifikasiOleh ? 'Oleh ' . $lamaran->diverifikasiOleh->name : 'Data diterima',
+            }],
+        ];
+    }
+
+    $tahapInterview = $status(1, $interviews->isNotEmpty());
+    if ($tahapInterview) {
+        $butir[] = [
+            'state' => $tahapInterview, 'icon' => null, 'title' => 'Interview',
+            'meta' => $interviews->isNotEmpty() ? $interviews->where('hasil_status', 'lulus')->count() . ' lulus' : null,
+            'teks' => $interviews->isNotEmpty()
+                ? $interviews->map(fn ($j) => $j->tahapLabel() . ' · ' . $tgl($j->tanggal, 'd M') . ' · ' . ($j->status === 'dibatalkan' ? 'Dibatalkan' : $j->hasilLabel()))->all()
+                : [$tahapInterview === 'active' ? 'Belum ada jadwal interview.' : null],
+        ];
+    }
+
+    $tahapOnboarding = $status(2, $onboarding !== null);
+    if ($tahapOnboarding) {
+        $butir[] = [
+            'state' => $tahapOnboarding, 'icon' => null, 'title' => 'Screening / Onboarding',
+            'meta' => $onboarding ? $tgl($onboarding->tanggal_mulai, 'd M') . ' – ' . $tgl($onboarding->tanggal_selesai, 'd M') : null,
+            'teks' => $onboarding
+                ? [$onboarding->statusLabel() . ' · ' . $onboarding->hasilLabel(), 'Pengawas ' . ($onboarding->pengawas?->name ?? '-')]
+                : [$tahapOnboarding === 'active' ? 'Onboarding belum dimulai.' : null],
+        ];
+    }
+
+    $tahapKontrak = $status(3, $kontrak !== null);
+    if ($tahapKontrak) {
+        $butir[] = [
+            'state' => $tahapKontrak, 'icon' => null, 'title' => 'Tanda tangan kontrak',
+            'meta' => $kontrak ? $tgl($kontrak->tanggal) : null,
+            'teks' => $kontrak
+                ? [$kontrak->statusLabel() . ($kontrak->waktu ? ' · ' . substr($kontrak->waktu, 0, 5) : '') . ($kontrak->lokasi ? ' · ' . \App\Support\Lokasi::label($kontrak->lokasi) : '')]
+                : [$tahapKontrak === 'active' ? 'Jadwal kontrak dibuat otomatis setelah onboarding lulus.' : null],
+        ];
+    }
+
+    $oleh = $lamaran->diputuskanOleh?->name;
+    $butir[] = match ($lamaran->status) {
+        $L::STATUS_DITERIMA => ['state' => 'done', 'icon' => 'bi-trophy', 'title' => 'Diterima', 'meta' => $tgl($lamaran->diputuskan_pada),
+            'teks' => [$lamaran->isKandidatPegawai() ? 'Ditetapkan ke posisi baru' : 'Direkrut menjadi pegawai', $oleh ? 'Oleh ' . $oleh : null], 'kelas' => ''],
+        $L::STATUS_DITOLAK => ['state' => 'stopped', 'icon' => null, 'title' => $tolakDiVerifikasi ? 'Ditolak saat verifikasi' : 'Ditolak', 'meta' => $tgl($lamaran->diputuskan_pada),
+            'teks' => [$lamaran->catatan_admin ? 'Alasan: ' . $lamaran->catatan_admin : null, $oleh ? 'Oleh ' . $oleh : null], 'kelas' => ''],
+        $L::STATUS_DIBATALKAN => ['state' => 'stopped', 'icon' => 'bi-slash-circle', 'title' => 'Dibatalkan pelamar', 'meta' => $tgl($lamaran->diputuskan_pada),
+            'teks' => [$lamaran->catatan_admin], 'kelas' => 'lm-batal'],
+        default => ['state' => 'pending', 'icon' => null, 'title' => 'Keputusan akhir', 'meta' => null,
+            'teks' => ['Rekrut atau tolak setelah onboarding lulus & kontrak ditandatangani.'], 'kelas' => ''],
     };
 @endphp
-<div class="panel p-3 mb-3 tahapan-lamaran">
-    <ol class="tahapan-deret" aria-label="Tahapan lamaran">
-        @foreach ($urutan as $kode => $label)
-            @php
-                $i = $loop->index;
-                $kelas = $berhenti && $i === $posisi ? 'berhenti' : ($i < $posisi || $lamaran->status === $L::STATUS_DITERIMA ? 'selesai' : ($i === $posisi ? 'kini' : ''));
-            @endphp
-            <li class="{{ $kelas }}" @if ($kelas === 'kini') aria-current="step" @endif>
-                <span class="tahapan-titik">@if ($kelas === 'selesai')<i class="bi bi-check-lg"></i>@elseif ($kelas === 'berhenti')<i class="bi bi-x-lg"></i>@else{{ $i + 1 }}@endif</span>
-                <span class="tahapan-label">{{ $label }}</span>
-            </li>
+<x-card title="Timeline Lamaran" icon="bi-signpost-split" id="timeline-lamaran">
+    <x-timeline label="Timeline lamaran {{ $lamaran->namaKandidat() }}">
+        @foreach ($butir as $b)
+            <x-timeline.item :state="$b['state']" :icon="$b['icon']" :title="$b['title']" :meta="$b['meta']" :class="$b['kelas'] ?? ''">
+                @foreach (array_filter($b['teks']) as $baris)
+                    <span class="d-block">{{ $baris }}</span>
+                @endforeach
+            </x-timeline.item>
         @endforeach
-    </ol>
-    <div class="tahapan-langkah {{ $berhenti ? 'berhenti' : '' }}">
-        <i class="bi {{ $berhenti ? 'bi-x-octagon' : 'bi-signpost-2' }}"></i>
-        <div><strong>Langkah berikutnya:</strong> {{ $langkah }}</div>
-        @if ($ke)
-            <a href="#{{ $ke }}" class="btn btn-sm btn-outline-secondary ms-auto">Ke bagian ini <i class="bi bi-arrow-down"></i></a>
-        @endif
-    </div>
-</div>
-@once
-<style>
-    .tahapan-deret { display: flex; list-style: none; margin: 0 0 .75rem; padding: 0; counter-reset: none; }
-    .tahapan-deret li { flex: 1 1 0; position: relative; display: flex; flex-direction: column; align-items: center; gap: .3rem; min-width: 0; }
-    /* Garis penghubung antar-titik. */
-    .tahapan-deret li + li::before { content: ''; position: absolute; top: 13px; right: 50%; width: 100%; height: 2px; background: var(--admin-border); z-index: 0; }
-    .tahapan-deret li.selesai + li::before, .tahapan-deret li.selesai + li.kini::before { background: #198754; }
-    .tahapan-titik { position: relative; z-index: 1; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: .78rem; font-weight: 700;
-        background: var(--admin-surface); border: 2px solid var(--admin-border); color: var(--admin-muted); }
-    .tahapan-label { font-size: .74rem; font-weight: 600; color: var(--admin-muted); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-    .tahapan-deret li.selesai .tahapan-titik { background: #198754; border-color: #198754; color: #fff; }
-    .tahapan-deret li.kini .tahapan-titik { background: var(--hr-primary); border-color: var(--hr-primary); color: #fff; box-shadow: 0 0 0 4px var(--hr-primary-soft); }
-    .tahapan-deret li.kini .tahapan-label { color: var(--hr-primary); }
-    .tahapan-deret li.berhenti .tahapan-titik { background: #dc3545; border-color: #dc3545; color: #fff; }
-    .tahapan-langkah { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .6rem; padding: .6rem .75rem; border-radius: .6rem;
-        background: var(--hr-primary-soft); font-size: .86rem; }
-    .tahapan-langkah > .bi { color: var(--hr-primary); font-size: 1.1rem; }
-    .tahapan-langkah > div { flex: 1 1 14rem; }
-    .tahapan-langkah.berhenti { background: #fdecec; }
-    .tahapan-langkah.berhenti > .bi { color: #b42318; }
-    [id^="bagian-"] { scroll-margin-top: 84px; }
-</style>
-@endonce
+    </x-timeline>
+</x-card>

@@ -2519,3 +2519,126 @@ html[data-theme="dark"] .abs-khusus > summary { color: var(--hr-link); }
     .abs-petakan-aksi { flex-direction: column; align-items: stretch; }
 }
 @media (max-width: 575.98px) { .abs-petakan { padding: 0 var(--hr-space-4) var(--hr-space-4); } }
+
+/* =====================================================================
+   BATCH 6: REKRUTMEN + SISTEM (akun, role, log aktivitas)
+   Form seragam: row g-4 → col-xl-8 x-card { x-form-section… } · col-xl-4 .hr-detail-samping { ringkasan/pratinjau } → .hr-bilah-aksi
+   ===================================================================== */
+.hr-form-section[id], .hr-detail-bagian[id] { scroll-margin-top: calc(var(--hr-topbar-h, 64px) + var(--hr-space-4)); }
+
+/* Sub-bagian di dalam x-form-section (mis. pengaturan per role di form akun). */
+.hr-subbagian { padding: var(--hr-space-4); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); background: var(--admin-surface-soft); }
+.hr-subbagian + .hr-subbagian { margin-top: var(--hr-space-3); }
+.hr-subbagian-judul { display: flex; align-items: center; gap: var(--hr-space-2); margin: 0; font-size: var(--hr-text-base); font-weight: var(--hr-weight-semibold); color: var(--admin-heading); }
+.hr-subbagian-judul > .bi { color: var(--hr-primary); }
+.hr-subbagian-sub { margin: var(--hr-space-1) 0 var(--hr-space-3); font-size: var(--hr-text-sm); color: var(--admin-muted); }
+.hr-subbagian-preset { max-width: 360px; }
+.hr-pilih-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--hr-space-1) var(--hr-space-4); }
+.hr-pilih-grid .form-check { margin: 0; font-size: var(--hr-text-sm); }
+
+/* Master Role: daftar & matriks hanya-baca */
+.rl-tampilan .btn.active { background: var(--hr-primary); border-color: var(--hr-primary); color: #fff; }
+.rl-dihapus > td { color: var(--admin-muted); }
+.rl-matriks-wadah { overflow: auto; max-height: max(420px, calc(100vh - 300px)); border-top: 1px solid var(--admin-border); }
+.rl-matriks { font-size: var(--hr-text-sm); }
+.rl-matriks thead th { position: sticky; top: 0; z-index: 2; vertical-align: bottom; min-width: 104px; max-width: 136px; white-space: normal; text-transform: none; letter-spacing: normal; box-shadow: inset 0 -1px 0 var(--admin-border); }
+.rl-matriks .rl-kol-nama { display: block; margin-bottom: var(--hr-space-1); font-weight: var(--hr-weight-semibold); line-height: var(--hr-leading-tight); color: var(--admin-heading); text-decoration: none; }
+.rl-matriks .rl-kol-nama > .bi { display: block; margin: 0 auto var(--hr-space-1); font-size: var(--hr-text-lg); color: var(--hr-primary); }
+.rl-matriks .rl-kol-nama:hover { color: var(--hr-primary); }
+.rl-kol-hak { position: sticky; left: 0; z-index: 1; min-width: 220px; background: var(--admin-surface); font-weight: var(--hr-weight-semibold); }
+thead .rl-kol-hak { z-index: 3; background: var(--admin-surface-soft); }
+.rl-kol-hak small { display: block; font-weight: var(--hr-weight-regular, 400); font-size: var(--hr-text-xs); color: var(--admin-muted); }
+.rl-baris-grup > th { background: var(--admin-surface-soft) !important; font-size: var(--hr-text-xs); text-transform: uppercase; letter-spacing: .04em; color: var(--admin-muted); }
+.rl-ya { color: var(--hr-success); font-size: var(--hr-text-lg); }
+.rl-tidak { color: var(--admin-muted); }
+.rl-kunci { color: var(--hr-warning); }
+.rl-baris-total > * { border-top: 2px solid var(--admin-border); font-weight: var(--hr-weight-semibold); }
+
+/* Master Role: form hak akses per modul */
+.rl-alat { display: flex; flex-wrap: wrap; align-items: center; gap: var(--hr-space-2) var(--hr-space-4); padding: var(--hr-space-3); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); background: var(--admin-surface-soft); }
+.rl-alat-cari { flex: 1 1 240px; max-width: 360px; }
+.rl-modul-daftar { display: grid; gap: var(--hr-space-3); }
+.rl-modul { margin: 0; padding: 0; border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); overflow: hidden; }
+.rl-modul-kepala { float: none; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--hr-space-2); margin: 0; padding: var(--hr-space-2) var(--hr-space-4); background: var(--admin-surface-soft); border-bottom: 1px solid var(--admin-border); font-size: var(--hr-text-sm); font-weight: var(--hr-weight-semibold); color: var(--admin-heading); }
+.rl-modul-jumlah { font-size: var(--hr-text-xs); font-weight: var(--hr-weight-medium); color: var(--admin-muted); font-variant-numeric: tabular-nums; }
+.rl-hak { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--hr-space-2); padding: var(--hr-space-3); }
+@media (max-width: 575.98px) { .rl-hak { grid-template-columns: minmax(0, 1fr); } }
+.rl-hak-item { display: flex; gap: var(--hr-space-2); align-items: flex-start; margin: 0; padding: var(--hr-space-2) var(--hr-space-3); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-sm); cursor: pointer; transition: border-color var(--hr-durasi) var(--hr-easing), background-color var(--hr-durasi) var(--hr-easing); }
+.rl-hak-item:hover { border-color: var(--admin-border-strong); }
+.rl-hak-item:has(input:checked) { border-color: var(--hr-primary); background: var(--hr-primary-soft); }
+.rl-hak-item:has(input:focus-visible) { outline: 2px solid var(--hr-focus); outline-offset: 1px; }
+.rl-hak-item.terkunci { cursor: not-allowed; }
+.rl-hak-item .form-check-input { flex: none; margin-top: 2px; }
+.rl-hak-item strong { font-size: var(--hr-text-sm); color: var(--admin-heading); }
+.rl-hak-item small { display: block; font-size: var(--hr-text-xs); color: var(--admin-muted); }
+.rl-ringkas-modul { display: grid; gap: var(--hr-space-1); margin: 0; padding: 0; list-style: none; font-size: var(--hr-text-sm); color: var(--admin-muted); }
+.rl-ringkas-modul li.ada { color: var(--admin-heading); font-weight: var(--hr-weight-medium); }
+
+/* Log Aktivitas: baris bisa dibuka → rincian & perubahan sebelum/sesudah */
+.log-baris { cursor: pointer; }
+.log-tabel-wadah .hr-table > tbody > tr.is-genap { background: var(--admin-surface-soft); }
+.log-tabel-wadah .hr-table > tbody > tr.log-baris:hover, .log-tabel-wadah .hr-table > tbody > tr.is-terbuka { background: var(--admin-surface-hover); }
+.log-baris.is-gagal > td:first-child { box-shadow: inset 3px 0 0 var(--hr-danger); }
+.log-buka > .bi { transition: transform var(--hr-durasi) var(--hr-easing); }
+.log-baris.is-terbuka .log-buka > .bi { transform: rotate(180deg); }
+.log-deskripsi { max-width: 360px; overflow-wrap: anywhere; }
+.log-rinci > td { background: var(--admin-surface-soft) !important; }
+.log-rinci-isi { display: grid; gap: var(--hr-space-3); padding: var(--hr-space-2) 0; }
+.log-perubahan { padding: var(--hr-space-3); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); background: var(--admin-surface); }
+.log-perubahan-judul { margin: 0 0 var(--hr-space-2); font-size: var(--hr-text-sm); font-weight: var(--hr-weight-semibold); color: var(--admin-heading); }
+.log-perubahan-judul > span { font-weight: var(--hr-weight-medium); color: var(--admin-muted); }
+.log-banding th, .log-banding td { padding: var(--hr-space-1) var(--hr-space-2) !important; vertical-align: top; font-size: var(--hr-text-sm); overflow-wrap: anywhere; }
+.log-banding tbody th { width: 30%; font-weight: var(--hr-weight-medium); color: var(--admin-muted); background: transparent; }
+.log-banding tbody tr:hover { background: transparent; }
+.log-banding td.lama { color: var(--hr-danger); text-decoration: line-through; }
+.log-banding td.baru { color: var(--hr-success); font-weight: var(--hr-weight-semibold); }
+.log-arsip { display: flex; align-items: center; gap: var(--hr-space-2); margin-bottom: var(--hr-space-2); padding: var(--hr-space-2) var(--hr-space-3); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); color: var(--admin-heading); text-decoration: none; transition: background-color var(--hr-durasi) var(--hr-easing), border-color var(--hr-durasi) var(--hr-easing); }
+.log-arsip:hover { background: var(--hr-primary-soft); border-color: transparent; color: var(--hr-primary-soft-text); }
+.log-arsip > .bi-file-earmark-excel { color: var(--hr-success); }
+
+/* Detail lamaran (lm-*) */
+/* Batch 6 — Detail Lamaran (admin/lamaran/show): token saja. */
+/* Kartu satu jadwal (interview / onboarding / kontrak) di dalam tab; jadwal yang sedang berjalan diberi garis aksen. */
+.lm-item { min-width: 0; padding: var(--hr-space-4); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); background: var(--admin-surface); }
+.lm-item + .lm-item { margin-top: var(--hr-space-3); }
+.lm-item.is-aktif { border-color: var(--hr-primary); box-shadow: inset 3px 0 0 var(--hr-primary); }
+/* Timeline lamaran: "Dibatalkan pelamar" berhenti dengan penanda abu (bukan merah seperti Ditolak). */
+.hr-timeline-item.lm-batal .hr-timeline-penanda { border-color: var(--hr-neutral); background: var(--hr-neutral); }
+/* Kolom kanan lengket dibatasi setinggi layar (gulir sendiri) agar Tindakan, timeline & info lowongan tetap terjangkau. */
+@media (min-width: 1200px) {
+    .lm-samping { max-height: calc(100vh - var(--hr-topbar-h, 64px) - var(--hr-space-6)); overflow-y: auto; scrollbar-width: thin; }
+}
+
+/* Rekrutmen: lowongan, lamaran masuk, kandidat internal (rk-*) */
+/* ---------- Batch 6a: Rekrutmen (daftar lowongan · daftar lamaran · form lowongan · kandidat internal) — token saja ---------- */
+/* Daftar lowongan: jumlah pelamar = tautan ke Lamaran Masuk yang tersaring ke lowongan itu. */
+/* Spesifisitas di atas aturan tautan umum ".dashboard-content a:where(…)" (yang hanya mengecualikan kelas hr-*). */
+.dashboard-content a.rk-tautan-angka { font-weight: var(--hr-weight-semibold); color: var(--admin-heading); text-decoration: none; font-variant-numeric: tabular-nums; }
+.dashboard-content a.rk-tautan-angka:hover, .dashboard-content a.rk-tautan-angka:focus-visible { color: var(--hr-primary); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Daftar lamaran: saringan lowongan (judul panjang) tidak melebarkan bilah filter. */
+@media (min-width: 576px) { .rk-saring-lowongan { max-width: calc(var(--hr-space-8) * 4); } }
+
+/* Daftar lamaran: "Nx lamaran sebelumnya" (buka/tutup) + daftar riwayat — pengganti style inline lama. */
+.rk-riwayat-buka { display: inline-flex; align-items: center; gap: var(--hr-space-1); margin-top: var(--hr-space-1); padding: 0; font-size: var(--hr-text-sm); text-align: left; text-decoration: none; }
+/* Boleh turun baris (aturan tabel lama ".table tbody td .btn" memaksa nowrap → kolom kandidat melebar di tablet). */
+.hr-table tbody td .rk-riwayat-buka { white-space: normal; }
+.rk-riwayat-panah { transition: transform var(--hr-durasi) var(--hr-easing); }
+.rk-riwayat-buka[aria-expanded="true"] .rk-riwayat-panah { transform: rotate(180deg); }
+.rk-riwayat { margin: var(--hr-space-2) 0 0; padding: 0 var(--hr-space-3); list-style: none; border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); background: var(--admin-surface-soft); font-size: var(--hr-text-sm); }
+.rk-riwayat > li { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--hr-space-2); padding: var(--hr-space-2) 0; }
+.rk-riwayat > li + li { border-top: 1px solid var(--admin-border); }
+.rk-riwayat .hr-badge { flex: none; }
+
+/* Pratinjau di kolom kanan form (lowongan: gaya ringkas halaman karier; kandidat: profil terpilih). */
+.rk-pratinjau-judul { margin: 0; font-size: var(--hr-text-xl); font-weight: var(--hr-weight-bold); line-height: var(--hr-leading-tight); color: var(--admin-heading); overflow-wrap: anywhere; }
+.rk-pratinjau-sub { margin: var(--hr-space-1) 0 var(--hr-space-4); font-size: var(--hr-text-sm); color: var(--admin-muted); overflow-wrap: anywhere; }
+.rk-pratinjau-label { display: flex; align-items: center; gap: var(--hr-space-2); margin: 0 0 var(--hr-space-1); font-size: var(--hr-text-sm); font-weight: var(--hr-weight-semibold); color: var(--admin-heading); }
+.rk-pratinjau-label > .bi { color: var(--hr-primary); }
+.rk-pratinjau-teks { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; margin: 0 0 var(--hr-space-4); white-space: pre-line; font-size: var(--hr-text-sm); line-height: var(--hr-leading); color: var(--hr-gray-700); overflow-wrap: anywhere; }
+.rk-pratinjau-nama { margin: 0; font-size: var(--hr-text-lg); font-weight: var(--hr-weight-semibold); line-height: var(--hr-leading-tight); color: var(--admin-heading); overflow-wrap: anywhere; }
+.rk-pratinjau .dash-dl dd { overflow-wrap: anywhere; }
+.rk-pratinjau .is-kosong { color: var(--admin-muted); font-style: italic; font-weight: var(--hr-weight-medium); }
+
+/* Kandidat internal: kartu riwayat (partials.pelamar-riwayat) di dalam kartu form → datar, tanpa bayangan ganda. */
+.rk-riwayat-pelamar > .hr-card { box-shadow: none; background: var(--admin-surface-soft); }

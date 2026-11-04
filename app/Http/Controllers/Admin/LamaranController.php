@@ -51,9 +51,17 @@ class LamaranController extends Controller
         ]);
         $lamarans = $query->paginate(15)->withQueryString();
 
+        // Kartu angka (baca-saja): saringan yang sama tanpa status.
+        $perStatus = $this->filteredQuery($request->duplicate($request->except('status')), $user)->toBase()
+            ->selectRaw('lamarans.status as status_hitung, count(*) as jumlah')->groupBy('lamarans.status')->pluck('jumlah', 'status_hitung');
+        $hitungStatus = ['semua' => (int) $perStatus->sum()] + collect([
+            Lamaran::STATUS_MENUNGGU_VERIFIKASI, Lamaran::STATUS_PROSES, Lamaran::STATUS_DITERIMA, Lamaran::STATUS_DITOLAK, Lamaran::STATUS_DIBATALKAN,
+        ])->mapWithKeys(fn ($s) => [$s => (int) ($perStatus[$s] ?? 0)])->all();
+
         return view('admin.lamaran.index', [
             'lamarans' => $lamarans,
             'canReview' => RekrutmenAccess::canReview($user),
+            'hitungStatus' => $hitungStatus,
             ...$urut,
         ]);
     }

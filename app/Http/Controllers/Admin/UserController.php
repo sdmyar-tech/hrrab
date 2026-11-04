@@ -42,6 +42,13 @@ class UserController extends Controller
             'users' => $query->paginate(15)->withQueryString(),
             'roles' => $this->roles(),
             'rolesKustom' => Role::kustom(),
+            // Kartu angka di atas daftar (baca-saja).
+            'ringkas' => [
+                'semua' => User::count(),
+                'internal' => User::whereIn('role', User::INTERNAL_ROLES)->count(),
+                'pelamar' => User::where('role', User::ROLE_PELAMAR)->count(),
+                'wajibGanti' => User::where('wajib_ganti_password', true)->count(),
+            ],
             ...$urut,
         ]);
     }

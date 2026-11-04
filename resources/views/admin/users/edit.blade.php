@@ -1,50 +1,51 @@
 @extends('layouts.admin.app')
 
-@section('content')
-<main class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-person-gear"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Sistem</p>
-                    <h1 class="h3 mb-1">Ubah Akun</h1>
-                    <p class="text-muted mb-0">{{ $user->email }}</p>
-                </div>
-            </div>
-            <div class="heading-actions">
-                <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i>Kembali</a>
-            </div>
-        </div>
+@section('title', 'Ubah Akun')
 
-        <form action="{{ route('admin.users.update', $user) }}" method="POST" data-confirm="Simpan perubahan akun user ini?">
+@section('content')
+{{-- Galat isian ditampilkan di bawah isiannya + ringkasan di atas form; banner global tidak perlu. --}}
+@section('galat-di-halaman', '1')
+<main class="dashboard-content">
+    <div class="container-fluid">
+        <x-page-header title="Ubah Akun" eyebrow="Sistem" :subtitle="$user->name . ' · ' . $user->email"
+            :back="route('admin.users.index')" back-label="Kelola Akun">
+            <x-badge tone="neutral" icon="bi-shield-check">{{ $user->roleLabel() }}</x-badge>
+            @if ($user->wajib_ganti_password)<x-badge tone="warning" icon="bi-shield-exclamation">Wajib ganti kata sandi</x-badge>@endif
+        </x-page-header>
+
+        @if ($errors->any())
+            <x-alert tone="danger" title="Periksa kembali isian yang ditandai merah" class="mb-4">
+                <ul class="mb-0 ps-3">@foreach ($errors->all() as $pesan)<li>{{ $pesan }}</li>@endforeach</ul>
+            </x-alert>
+        @endif
+
+        <form action="{{ route('admin.users.update', $user) }}" method="POST" data-confirm="Simpan perubahan akun ini?">
             @csrf
             @method('PUT')
-
-            <div class="row g-3 align-items-start">
-                <div class="col-lg-5">
-                    <section class="panel">
-                        <h2 class="h6 fw-bold mb-3"><i class="bi bi-person-lock"></i>Data Akun</h2>
-                        @include('admin.users._akun', ['akun' => $user, 'wajibPassword' => false])
-
+            <div class="row g-4">
+                <div class="col-xl-8">
+                    <x-card>
                         @if ($user->dataPegawai || $user->dataPelamar)
-                            <div class="alert alert-light border small mt-3 mb-0">
-                                <i class="bi bi-link-45deg me-1"></i>Terhubung dengan
-                                {{ $user->dataPegawai ? 'pegawai' : 'pelamar' }}
+                            <x-alert tone="info" class="mb-4">
+                                Terhubung dengan {{ $user->dataPegawai ? 'pegawai' : 'pelamar' }}
                                 <strong>{{ $user->dataPegawai?->nama_lengkap ?? $user->dataPelamar?->nama_lengkap }}</strong>.
                                 Tautan dikelola otomatis lewat NIP & proses rekrutmen.
-                            </div>
+                            </x-alert>
                         @endif
+                        @include('admin.users._akun', ['akun' => $user, 'wajibPassword' => false,
+                            'selectedDivisi' => old('divisi', $user->divisi ?? []), 'selectedKepalaUnit' => old('kepala_unit', $user->unitsDipimpin())])
+                    </x-card>
+                </div>
+                <div class="col-xl-4">
+                    <div class="hr-detail-samping d-grid gap-4">
+                        @include('admin.users._ringkasan', ['akun' => $user])
+                    </div>
+                </div>
+            </div>
 
-                        <div class="d-flex gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-check-lg"></i>Simpan Perubahan</button>
-                            <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">Batal</a>
-                        </div>
-                    </section>
-                </div>
-                <div class="col-lg-7">
-                    @include('admin.users._divisi', ['selectedDivisi' => old('divisi', $user->divisi ?? []), 'selectedKepalaUnit' => old('kepala_unit', $user->unitsDipimpin())])
-                </div>
+            <div class="hr-bilah-aksi mt-4">
+                <x-button variant="secondary" :href="route('admin.users.index')">Batal</x-button>
+                <x-button type="submit" icon="bi-check-lg">Simpan Perubahan</x-button>
             </div>
         </form>
     </div>
