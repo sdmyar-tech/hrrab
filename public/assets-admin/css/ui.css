@@ -791,7 +791,7 @@ nav[aria-label] .small.text-muted, nav .text-muted.small { font-size: .8125rem; 
 .swal2-toast .swal2-close { font-size: 1.25rem; }
 
 /* ---------- Mode gelap: elemen yang masih memakai warna terang ---------- */
-html[data-theme="dark"] .input-group-text { background: var(--admin-surface-soft); border-color: var(--admin-border); color: var(--admin-muted); }
+html[data-theme="dark"] .input-group-text { background: var(--admin-surface-soft); border-color: var(--admin-border-strong); color: var(--admin-muted); }
 html[data-theme="dark"] .eyebrow { color: #f08a8c; }
 html[data-theme="dark"] .page-icon { background: var(--hr-primary-soft); color: #f5b3b4; }
 html[data-theme="dark"] .alert-warning { background: rgba(245, 158, 11, .12); border-color: rgba(245, 158, 11, .3); color: #fcd34d; }
@@ -1073,6 +1073,10 @@ html[data-theme="dark"] .btn-ghost { --bs-btn-color: var(--admin-text); --bs-btn
 .hr-input-group > .input-group-text { background: var(--admin-surface); border-right: 0; color: var(--hr-gray-500); padding-right: 0; }
 .hr-input-group > .input-group-text + .form-control { border-left: 0; }
 .hr-input-group:focus-within > .input-group-text { border-color: var(--hr-primary); color: var(--hr-primary); }
+/* Saat fokus seluruh bingkai grup (ikon, isian, tombol lihat sandi) satu warna; tanpa ini garis isian tetap abu (gelap)
+   atau sedikit berbeda (terang) sehingga kolom tampak terpotong di batas ikon. Galat tetap merah (aturan .is-invalid di bawah). */
+.hr-input-group:focus-within > :is(.input-group-text, .form-control, .hr-lihat-sandi),
+html[data-theme="dark"] .hr-input-group:focus-within:not(:has(> .is-invalid)) > :is(.input-group-text, .form-control, .hr-lihat-sandi) { border-color: var(--hr-primary); }
 .hr-input-group:focus-within > .form-control.is-invalid ~ .hr-lihat-sandi, .hr-input-group > .form-control.is-invalid ~ .hr-lihat-sandi { border-color: var(--hr-danger); }
 .hr-input-group > .form-control:focus { box-shadow: none; }
 .hr-input-group:focus-within { border-radius: var(--hr-radius-sm); box-shadow: var(--admin-ring); }
