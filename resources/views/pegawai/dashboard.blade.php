@@ -249,6 +249,12 @@
                 </x-card>
             </div>
         </section>
+
+        {{-- Bagan tiap bagian tempat pegawai bertugas (utama + rangkap). --}}
+        @php $unitBagan = $penugasan->pluck('unit_kerja')->push($kep?->unit_kerja)->filter()->unique()->values(); @endphp
+        @foreach ($unitBagan as $u)
+            <section class="hr-section">@include('partials.bagan-bagian', ['unit' => $u])</section>
+        @endforeach
     </div>
 </main>
 @endsection

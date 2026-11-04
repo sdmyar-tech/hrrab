@@ -368,6 +368,22 @@
             </div>
         </section>
 
+        {{-- ============ Bagan bagian: bagian terpilih, atau bagian yang dipimpin pengguna ============ --}}
+        @php $unitBagan = $unitDipilih ? [$unitDipilih] : $user->unitsDipimpin(); @endphp
+        @if ($unitBagan)
+            @foreach ($unitBagan as $u)
+                <section class="hr-section">@include('partials.bagan-bagian', ['unit' => $u])</section>
+            @endforeach
+        @elseif (count($pilihanUnit) > 1)
+            <section class="hr-section">
+                <x-card title="Bagan Bagian" icon="bi-diagram-3">
+                    <x-empty-state icon="bi-diagram-3" title="Pilih bagian untuk melihat bagannya" compact>
+                        Gunakan pilihan <strong>Semua bagian</strong> di kanan atas, contoh: pilih SDM untuk melihat susunan pegawai bagian SDM.
+                    </x-empty-state>
+                </x-card>
+            </section>
+        @endif
+
         @if ($anggota->isNotEmpty())
             <section class="hr-section">
                 <x-card :title="'Anggota ' . $labelLingkup" icon="bi-person-lines-fill" :padding="false"

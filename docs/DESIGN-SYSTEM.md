@@ -196,6 +196,12 @@ Kelas pendukung: `.hr-konteks` (daftar label–nilai di dialog/kartu), `.hr-kart
 - **Baris bisa dibuka** (log aktivitas): `tr[data-buka-rinci]` + `tr.log-rinci[hidden]`, tombol `x-icon-button` ber-`aria-expanded`; zebra pakai kelas `is-genap` (bukan `striped`, karena baris rincian).
 - Detail lamaran memakai pola detail Batch 5 (kartu Tindakan lengket + `x-timeline` + bilah cepat HP); dialog alasan Tolak/Batalkan satu `x-modal #modalAlasan`.
 
+**Bagan bagian di dashboard** — `@include('partials.bagan-bagian', ['unit' => 'SDM'])`: kartu bagan hanya-baca (legenda,
+cari nama, zoom −/+ 40–150 %, Pas layar otomatis saat dimuat, seret untuk menggeser). Data dari `BaganStatis::susun(RekrutmenAccess::baganUnit())`,
+tampilan memakai `_bagan-statis-cabang` & `_bagan-gaya` yang sama dengan formulir Pengajuan Formasi. Boleh dipasang beberapa kali per halaman.
+Dashboard admin: bagian terpilih (`?unit=`) atau bagian yang dipimpin; Admin/SDM/GM tanpa pilihan melihat ajakan memilih bagian.
+Dashboard pegawai: tiap bagian tempat pegawai bertugas (utama + rangkap).
+
 Partial lama yang tetap dipakai: `partials.tombol-ekspor`, `partials.daftar-cari`, `partials.filter-tanggal`, `partials.urut`,
 `partials.daftar-ringkas`, `partials.kosong(-tabel)`, `partials.tombol-aksi-lain`, `partials.pilih-pegawai`,
 `partials.preview-file(-modal)`, `partials.viz.*`, `partials.kembali`.
