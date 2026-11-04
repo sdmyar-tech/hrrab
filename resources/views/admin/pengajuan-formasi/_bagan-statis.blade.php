@@ -1,10 +1,10 @@
 {{-- Bagan unit hanya baca. $bagan = App\Support\BaganStatis::susun(), $unit = nama unit, $legendaBaru = label kotak merah (opsional). --}}
 @include('admin.pengajuan-formasi._bagan-statis-aset')
-<div class="bagan-legenda">
-    <span><i class="kotak" style="background:#15803d"></i>Pegawai aktif</span>
-    <span><i class="kotak" style="background:#9ca3af"></i>Pegawai tidak aktif</span>
-    <span><i class="kotak" style="background:#b42318"></i>{{ $legendaBaru ?? 'Posisi baru' }}</span>
-    <span><i class="bi bi-arrow-repeat"></i>digantikan</span>
+<div class="bagan-legenda" aria-label="Keterangan warna bagan">
+    <span><i class="kotak aktif" aria-hidden="true"></i>Pegawai aktif</span>
+    <span><i class="kotak nonaktif" aria-hidden="true"></i>Pegawai tidak aktif</span>
+    <span><i class="kotak kosong" aria-hidden="true"></i>{{ $legendaBaru ?? 'Posisi baru' }}</span>
+    <span><i class="bi bi-arrow-repeat" aria-hidden="true"></i>digantikan</span>
 </div>
 <div class="bagan bagan-statis">
     <div class="bagan-layar">

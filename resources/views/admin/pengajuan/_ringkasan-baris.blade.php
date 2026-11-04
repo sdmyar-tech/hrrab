@@ -24,7 +24,7 @@
             <div class="rk-riwayat-mini">
                 <span class="rk-label">{{ $r['riwayatJudul'] }}:</span>
                 @forelse (array_slice($r['riwayat'], 0, 3) as $h)
-                    <span>{{ $h['utama'] }} <span class="badge {{ $h['kelas'] }}">{{ $h['status'] }}</span></span>
+                    <span>{{ $h['utama'] }} <x-status-badge :badge="$h['kelas']">{{ $h['status'] }}</x-status-badge></span>
                 @empty
                     <span class="rk-catatan">belum ada</span>
                 @endforelse

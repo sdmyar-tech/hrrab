@@ -1,4 +1,8 @@
-{{-- Tombol pembuka modal koreksi. Param: $pegawai, $h, (opsional) $tombolKecil, (opsional) $kelasTombol --}}
+{{--
+    Tombol pembuka modal koreksi (_koreksi) ber-atribut data-koreksi='{...}'. Param: $pegawai, $h.
+    Bawaan: x-icon-button (kolom aksi tabel). Mode sel kalender: $kelasTombol + $isiTombol (HTML) + (opsional) $judulTombol, $labelTombol.
+    Tanggal mendatang hanya untuk Admin; selain itu (mode ikon) diganti pengganti selebar tombol agar ikon antarbaris sejajar.
+--}}
 @php
     $a = $h['absensi'];
     $durasiK = fn ($m) => \App\Support\Absensi\PenilaianAbsensi::durasi($m);
@@ -18,14 +22,16 @@
         'dikoreksi' => (bool) $a?->dikoreksi,
         'surat' => $h['lembur_surat_menit'] ? 'Surat lembur ' . $durasiK($h['lembur_surat_menit']) : '',
     ];
+    $labelBawaan = 'Koreksi absensi ' . $pegawai->nama_lengkap . ' ' . $h['tanggal']->translatedFormat('d M');
 @endphp
 @if ($h['tanggal']->lte(now()) || auth()->user()->isAdmin())
-    <button type="button" class="{{ $kelasTombol ?? 'btn btn-outline-secondary btn-sm' }}" data-koreksi='@json($dataKoreksi)'
-        title="{{ $judulTombol ?? 'Koreksi absensi ' . $h['tanggal']->translatedFormat('d M') }}" aria-label="Koreksi absensi {{ $pegawai->nama_lengkap }} {{ $h['tanggal']->translatedFormat('d M') }}">
-        @isset($isiTombol)
-            {!! $isiTombol !!}
-        @else
-            <i class="bi {{ \App\Support\Absensi\TampilanAbsensi::IKON['koreksi'] }}"></i>@unless ($tombolKecil ?? false)<span class="ms-1">Koreksi</span>@endunless
-        @endisset
-    </button>
+    @isset($isiTombol)
+        <button type="button" class="{{ $kelasTombol ?? 'btn btn-outline-secondary btn-sm' }}" data-koreksi='@json($dataKoreksi)'
+            title="{{ $judulTombol ?? $labelBawaan }}" aria-label="{{ $labelTombol ?? $labelBawaan }}">{!! $isiTombol !!}</button>
+    @else
+        <x-icon-button :icon="\App\Support\Absensi\TampilanAbsensi::IKON['koreksi']" label="Koreksi absensi" tone="primary"
+            :aria-label="$labelBawaan" :data-koreksi="json_encode($dataKoreksi)" />
+    @endisset
+@elseif (! isset($isiTombol))
+    <span class="hr-ikon-btn invisible" aria-hidden="true"></span>
 @endif

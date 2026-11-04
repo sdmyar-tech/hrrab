@@ -1,4 +1,6 @@
-{{-- Ringkasan lengkap untuk penyetuju. $r = App\Support\RingkasanPengajuan::{cuti|lembur|formasi}(). --}}
+{{-- Ringkasan lengkap untuk penyetuju. $r = App\Support\RingkasanPengajuan::{cuti|lembur|formasi}().
+     Opsional $tanpaAlur = true: bagian "Alur persetujuan" tidak ditampilkan (halaman detail menampilkannya sebagai timeline sendiri). --}}
+@php $tanpaAlur ??= false; @endphp
 @include('admin.pengajuan._ringkasan-gaya')
 @php
     $ikonAlur = ['selesai' => 'bi-check-circle-fill', 'berjalan' => 'bi-hourglass-split', 'menunggu' => 'bi-circle', 'ditolak' => 'bi-x-circle-fill', 'lewati' => 'bi-dash-circle'];
@@ -28,7 +30,7 @@
         @endforeach
     </div>
 
-    <div class="rk-grid">
+    <div class="rk-grid {{ $tanpaAlur ? 'rk-grid-tunggal' : '' }}">
         <section>
             <h3 class="rk-h">Pengajuan</h3>
             <dl class="rk-detail">
@@ -49,22 +51,24 @@
                 </div>
             @endif
         </section>
-        <section>
-            <h3 class="rk-h">Alur persetujuan</h3>
-            <ol class="rk-alur">
-                @foreach ($r['alur'] as $l)
-                    <li class="{{ $l['status'] }}">
-                        <i class="bi {{ $ikonAlur[$l['status']] }}"></i>
-                        <div>
-                            <strong>{{ $l['label'] }}</strong>
-                            @if ($l['oleh'])<span>{{ $l['status'] === 'menunggu' || $l['status'] === 'berjalan' ? 'oleh ' : '' }}{{ $l['oleh'] }}</span>@endif
-                            @if ($l['waktu'])<span class="rk-catatan">{{ $l['waktu'] }}</span>@endif
-                            @if ($l['catatan'])<span class="rk-catatan">{{ $l['status'] === 'ditolak' ? 'Alasan: ' : '' }}{{ $l['catatan'] }}</span>@endif
-                        </div>
-                    </li>
-                @endforeach
-            </ol>
-        </section>
+        @unless ($tanpaAlur)
+            <section>
+                <h3 class="rk-h">Alur persetujuan</h3>
+                <ol class="rk-alur">
+                    @foreach ($r['alur'] as $l)
+                        <li class="{{ $l['status'] }}">
+                            <i class="bi {{ $ikonAlur[$l['status']] }}"></i>
+                            <div>
+                                <strong>{{ $l['label'] }}</strong>
+                                @if ($l['oleh'])<span>{{ $l['status'] === 'menunggu' || $l['status'] === 'berjalan' ? 'oleh ' : '' }}{{ $l['oleh'] }}</span>@endif
+                                @if ($l['waktu'])<span class="rk-catatan">{{ $l['waktu'] }}</span>@endif
+                                @if ($l['catatan'])<span class="rk-catatan">{{ $l['status'] === 'ditolak' ? 'Alasan: ' : '' }}{{ $l['catatan'] }}</span>@endif
+                            </div>
+                        </li>
+                    @endforeach
+                </ol>
+            </section>
+        @endunless
     </div>
 
     @if (isset($r['bagan']))
@@ -80,7 +84,7 @@
         @forelse ($r['riwayat'] as $h)
             <div class="rk-riwayat">
                 <div class="min-w-0"><span>{{ $h['utama'] }}</span><span class="rk-catatan">{{ $h['sub'] }}</span></div>
-                <span class="badge {{ $h['kelas'] }}">{{ $h['status'] }}</span>
+                <x-status-badge :badge="$h['kelas']">{{ $h['status'] }}</x-status-badge>
             </div>
         @empty
             <p class="rk-catatan mb-0">Belum ada riwayat sebelumnya.</p>

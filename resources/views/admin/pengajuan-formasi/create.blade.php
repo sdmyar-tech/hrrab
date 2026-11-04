@@ -1,244 +1,263 @@
 @extends('layouts.admin.app')
 
+{{-- Galat isian ditampilkan di halaman ini (ringkasan + di bawah isian); banner global tidak perlu. --}}
+@section('galat-di-halaman', '1')
+
 @section('content')
+@php
+    $pengguna = auth()->user();
+    $isAdmin = $pengguna->isAdmin();
+    $unitAwal = old('unit_kerja', $unitOptions[0] ?? '');
+    $jenis = old('jenis_kebutuhan');
+    $opsi = fn (array $daftar) => array_combine($daftar, $daftar);
+
+    // Pilihan "kebutuhan karyawan karena": ikon + keterangan alur persetujuan.
+    $jenisInfo = [
+        \App\Models\PengajuanFormasi::JENIS_REPLACEMENT => ['bi-arrow-repeat', 'Mengganti karyawan yang keluar/berhenti. Direview ' . ($pengguna->isKepalaSdm() ? 'GM' : 'Kepala SDM atau GM') . ' (bagian SMK oleh Pembina).'],
+        \App\Models\PengajuanFormasi::JENIS_PENAMBAHAN => ['bi-person-plus', 'Menambah posisi baru. Disetujui bertahap: GM bagian, lalu Owner.'],
+    ];
+
+    // Tugas & tanggung jawab: satu baris per tugas (bawaan 1 baris). Disimpan server sebagai teks per baris.
+    $tugasLama = old('tugas');
+    $barisTugas = is_array($tugasLama) ? $tugasLama : array_values(array_filter(preg_split('/\r?\n/', (string) $tugasLama), 'strlen'));
+    $barisTugas = $barisTugas ?: [''];
+
+    // Navigasi bagian: bagian yang memuat galat server diberi tanda.
+    $bagian = [
+        ['id' => 'bagian-info', 'label' => 'Info Formasi', 'icon' => 'bi-clipboard-plus',
+            'kolom' => ['unit_kerja', 'jabatan', 'target_waktu', 'atasan_langsung', 'jenis_kebutuhan', 'jumlah_laki', 'jumlah_perempuan', 'jumlah_bebas']],
+        ['id' => 'bagian-alasan', 'label' => 'Alasan & Justifikasi', 'icon' => 'bi-diagram-3', 'kolom' => ['diganti', 'diganti.*', 'slot_tambahan', 'slot_tambahan.*']],
+        ['id' => 'bagian-persyaratan', 'label' => 'Persyaratan', 'icon' => 'bi-list-check', 'kolom' => ['min_pendidikan', 'min_usia', 'kualifikasi']],
+        ['id' => 'bagian-tugas', 'label' => 'Tugas', 'icon' => 'bi-card-checklist', 'kolom' => ['tugas', 'tugas.*']],
+    ];
+    $nav = array_map(fn ($b) => ['id' => $b['id'], 'label' => $b['label'], 'icon' => $b['icon'], 'status' => $errors->hasAny($b['kolom']) ? false : null], $bagian);
+@endphp
 <main class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        @include('partials.kembali', ['ke' => route('admin.pengajuan-formasi.index'), 'label' => 'Pengajuan Formasi'])
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-person-plus"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Rekrutmen</p>
-                    <h1 class="h3 mb-1">Ajukan Formasi</h1>
-                    <p class="text-muted mb-0">Permintaan kekurangan pegawai untuk divisi Anda.</p>
+    <div class="container-fluid">
+        <x-page-header title="Ajukan Formasi" eyebrow="Rekrutmen" :back="route('admin.pengajuan-formasi.index')" back-label="Pengajuan Formasi"
+            subtitle="Permintaan kekurangan pegawai untuk bagian Anda. Bila disetujui, lowongan otomatis terbit dan pelamar bisa mulai melamar. Kolom bertanda * wajib diisi." />
+
+        @if ($errors->any())
+            <x-alert tone="danger" title="Periksa kembali isian yang ditandai merah" class="mb-3">
+                Pengajuan belum terkirim. Perbaiki isian berikut, lalu ajukan lagi:
+                <ul class="mb-0 ps-3">@foreach ($errors->all() as $pesan)<li>{{ $pesan }}</li>@endforeach</ul>
+            </x-alert>
+        @endif
+
+        <form data-fokus-awal action="{{ route('admin.pengajuan-formasi.store') }}" method="POST" id="formFormasi" novalidate
+            data-confirm="Ajukan formasi ini sekarang? Pengajuan langsung dikirim ke penyetuju.">
+            @csrf
+
+            <div class="row g-4 align-items-start">
+                <aside class="col-lg-3 hr-samping">
+                    <x-section-nav label="Bagian formulir pengajuan formasi" :items="$nav" />
+                </aside>
+
+                <div class="col-lg-9">
+                    <x-card>
+                        {{-- ================= 1. Info formasi ================= --}}
+                        <x-form-section id="bagian-info" class="hr-bagian" title="Info Formasi" icon="bi-clipboard-plus"
+                            subtitle="Bagian dan jabatan yang membutuhkan pegawai, waktu dibutuhkan, alasan, serta jumlahnya.">
+                            <div class="col-md-6">
+                                @if ($isAdmin || count($unitOptions) > 1)
+                                    {{-- Admin: semua bagian. Kepala beberapa bagian: hanya bagian yang dipimpinnya. --}}
+                                    <x-select name="unit_kerja" id="f-unit" label="Bagian" :options="$opsi($unitOptions)" :selected="$unitAwal"
+                                        :placeholder="$isAdmin ? 'Pilih bagian' : null" required field-class="mb-0"
+                                        :help="$isAdmin ? 'Admin dapat mengajukan untuk bagian mana pun.' : 'Hanya bagian yang Anda pimpin.'" />
+                                @else
+                                    {{-- Hanya satu bagian → terkunci (server juga memaksa nilai ini). --}}
+                                    <x-input name="unit_kerja" id="f-unit" label="Bagian" :value="$unitOptions[0] ?? ''" icon="bi-lock-fill" readonly
+                                        help="Bagian Anda; tidak bisa diubah." field-class="mb-0" />
+                                @endif
+                            </div>
+                            <div class="col-md-6">
+                                {{-- Pilihan diisi skrip sesuai bagian; ikut terisi saat pegawai / posisi kosong di bagan diklik. --}}
+                                <x-select name="jabatan" id="f-jabatan" label="Jabatan / posisi" placeholder="Pilih bagian dulu" required field-class="mb-0"
+                                    help="Hanya jabatan di bagian terpilih. Terisi otomatis saat Anda mengklik bagan." />
+                            </div>
+                            <div class="col-md-6">
+                                <x-input name="target_waktu" id="f-tanggal" type="date" label="Tanggal dibutuhkan" required field-class="mb-0"
+                                    :min="$isAdmin ? null : now()->toDateString()"
+                                    data-pesan="Tanggal dibutuhkan tidak boleh sebelum hari ini."
+                                    help="Menjadi batas tutup lowongan bila pengajuan disetujui." />
+                            </div>
+                            <div class="col-md-6">
+                                @if ($isAdmin)
+                                    {{-- Admin: pilih dari Kepala Bagian, Kepala SDM, dan GM. --}}
+                                    <x-select name="atasan_langsung" id="f-atasan" label="Atasan langsung" :options="$pilihanAtasan"
+                                        placeholder="Pilih kepala bagian / GM" required field-class="mb-0"
+                                        help="Kepala bagian, Kepala SDM, atau GM yang membawahi posisi ini." />
+                                @else
+                                    {{-- Pengaju = atasan langsung; tidak bisa diubah (server juga memaksa nilai ini). --}}
+                                    <x-input name="atasan_langsung" id="f-atasan" label="Atasan langsung" :value="$atasanBawaan" icon="bi-lock-fill" readonly
+                                        help="Otomatis Anda sebagai pengaju." field-class="mb-0" />
+                                @endif
+                            </div>
+
+                            <div class="col-12">
+                                <fieldset class="hr-field mb-0">
+                                    <legend class="form-label required">Kebutuhan karyawan karena</legend>
+                                    <div class="hr-opsi-grup">
+                                        @foreach (\App\Models\PengajuanFormasi::JENIS_LABEL as $kode => $label)
+                                            <label class="hr-opsi" for="jenis-{{ $kode }}">
+                                                <input type="radio" class="form-check-input @error('jenis_kebutuhan') is-invalid @enderror" name="jenis_kebutuhan"
+                                                    id="jenis-{{ $kode }}" value="{{ $kode }}" @checked($jenis === $kode) required
+                                                    data-pesan-kosong="Pilih alasan kebutuhan: replacement atau penambahan karyawan.">
+                                                <i class="bi {{ $jenisInfo[$kode][0] ?? 'bi-person' }} hr-opsi-ikon" aria-hidden="true"></i>
+                                                <span><strong>{{ \Illuminate\Support\Str::before($label, ' / ') }}</strong><small>{{ $jenisInfo[$kode][1] ?? $label }}</small></span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                    @error('jenis_kebutuhan')
+                                        <div class="invalid-feedback d-block"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
+                                    @enderror
+                                    {{-- Langkah berikutnya sesuai pilihan (span[data-jenis] diatur skrip). --}}
+                                    <p class="form-text mb-0" data-info-jenis>
+                                        <span data-jenis="" @if ($jenis) hidden @endif>Pilih salah satu; bagan di bagian Alasan &amp; Justifikasi menyesuaikan pilihan Anda.</span>
+                                        <span data-jenis="replacement" @if ($jenis !== 'replacement') hidden @endif><i class="bi bi-person-check me-1" aria-hidden="true"></i>Lanjutkan dengan mengklik pegawai yang digantikan di bagan. Jumlah &amp; jenis kelamin terisi otomatis.</span>
+                                        <span data-jenis="penambahan" @if ($jenis !== 'penambahan') hidden @endif><i class="bi bi-people me-1" aria-hidden="true"></i>Lanjutkan dengan mengklik “Posisi kosong” pada jabatan yang dibutuhkan di bagan.</span>
+                                    </p>
+                                </fieldset>
+                            </div>
+
+                            <div class="col-12">
+                                <fieldset class="hr-field mb-0" data-wadah-jumlah aria-describedby="f-total-jumlah">
+                                    <legend class="form-label">Jumlah dibutuhkan</legend>
+                                    <div class="row g-3">
+                                        @foreach ([['jumlah_laki', 'f-laki', 'Laki-laki', true], ['jumlah_perempuan', 'f-perempuan', 'Perempuan', true], ['jumlah_bebas', 'f-bebas', 'Bebas (L/P)', false]] as [$nama, $id, $label, $wajib])
+                                            <div class="col-6 col-sm-4">
+                                                {{-- Galat jumlah_laki (termasuk "total 1–50 orang") tampil di bawah grup, bukan di bawah kolom ini. --}}
+                                                <x-form-group :label="$label" :for="$id" :name="$nama === 'jumlah_laki' ? null : $nama" :required="$wajib" class="mb-0">
+                                                    <div class="input-group">
+                                                        <input type="number" name="{{ $nama }}" id="{{ $id }}" class="form-control @error($nama) is-invalid @enderror"
+                                                            min="0" max="50" step="1" inputmode="numeric" value="{{ old($nama, 0) }}" @if ($wajib) required @endif
+                                                            data-satuan="orang" @if ($nama === 'jumlah_bebas') title="Laki-laki atau perempuan sama saja" @endif
+                                                            @error($nama) aria-invalid="true" @enderror>
+                                                        <span class="input-group-text">orang</span>
+                                                    </div>
+                                                </x-form-group>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    @error('jumlah_laki')
+                                        <div class="invalid-feedback d-block" data-galat-server="jumlah"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
+                                    @enderror
+                                    <p class="form-text mb-0" id="f-total-jumlah"><span data-total-jumlah></span></p>
+                                </fieldset>
+                            </div>
+                        </x-form-section>
+
+                        {{-- ================= 2. Alasan & justifikasi (bagan unit) ================= --}}
+                        <x-form-section id="bagian-alasan" class="hr-bagian" title="Alasan & Justifikasi" icon="bi-diagram-3"
+                            subtitle="Tandai di bagan pegawai yang digantikan atau posisi baru yang diajukan. Pilihan ini tercatat sebagai alasan pengajuan.">
+                            <div class="col-12" data-wadah-bagan>
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                    <x-badge tone="primary" data-bagan-judul>Pilih kebutuhan karyawan dulu</x-badge>
+                                    <div class="bagan-legenda mb-0" aria-label="Keterangan warna bagan">
+                                        <span><i class="kotak aktif" aria-hidden="true"></i>Pegawai aktif</span>
+                                        <span><i class="kotak nonaktif" aria-hidden="true"></i>Pegawai tidak aktif</span>
+                                        <span><i class="kotak kosong" aria-hidden="true"></i>Posisi kosong (baru)</span>
+                                        <span><i class="bi bi-arrow-repeat" aria-hidden="true"></i>digantikan</span>
+                                    </div>
+                                </div>
+                                <p class="small mb-2" data-bagan-petunjuk aria-live="polite"></p>
+                                <div class="bagan" data-bagan>
+                                    <div class="bagan-alat">
+                                        <input type="search" class="form-control form-control-sm" placeholder="Cari nama pegawai, contoh: Siti"
+                                            aria-label="Cari nama pegawai di bagan" data-bagan-cari>
+                                        <div class="ms-auto d-flex align-items-center gap-1">
+                                            <x-icon-button icon="bi-zoom-out" label="Perkecil bagan" data-zoom="-" />
+                                            <span class="bagan-skala" data-bagan-skala aria-live="polite">100%</span>
+                                            <x-icon-button icon="bi-zoom-in" label="Perbesar bagan" data-zoom="+" />
+                                            <x-button variant="secondary" size="sm" icon="bi-arrows-angle-contract" data-zoom="pas"
+                                                title="Muat seluruh bagan di layar">Pas layar</x-button>
+                                        </div>
+                                    </div>
+                                    {{-- Wadah bergulir bisa difokus (panah keyboard untuk menggeser bagan lebar). --}}
+                                    <div class="bagan-layar" data-bagan-layar tabindex="0" role="region" aria-label="Bagan bagian: geser untuk melihat semua">
+                                        <div class="bagan-pohon" id="baganUnit"></div>
+                                    </div>
+                                </div>
+                                {{-- Nilai terkirim dari bagan: diganti[] (replacement) / slot_tambahan[] (penambahan), diisi skrip. --}}
+                                <div data-bagan-input></div>
+                                @error('diganti')
+                                    <div class="invalid-feedback d-block" data-galat-server="bagan"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
+                                @enderror
+                                @error('diganti.*')
+                                    <div class="invalid-feedback d-block" data-galat-server="bagan"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
+                                @enderror
+                            </div>
+                        </x-form-section>
+
+                        {{-- ================= 3. Persyaratan ================= --}}
+                        <x-form-section id="bagian-persyaratan" class="hr-bagian" title="Persyaratan" icon="bi-list-check"
+                            subtitle="Menjadi kualifikasi lowongan bila pengajuan disetujui.">
+                            <div class="col-md-6">
+                                <x-select name="min_pendidikan" id="f-pendidikan" label="Minimal pendidikan" :options="$opsi(\App\Models\PengajuanFormasi::PENDIDIKAN)"
+                                    placeholder="Pilih jenjang pendidikan" required field-class="mb-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <x-form-group label="Minimal usia" for="f-usia" name="min_usia" optional help="Kosongkan bila usia tidak dibatasi." class="mb-0">
+                                    <div class="input-group">
+                                        <input type="number" name="min_usia" id="f-usia" class="form-control @error('min_usia') is-invalid @enderror" min="15" max="70" step="1"
+                                            inputmode="numeric" value="{{ old('min_usia') }}" placeholder="Usia minimal, contoh: 20"
+                                            data-pesan="Isi usia 15–70 tahun, atau kosongkan bila tidak dibatasi." aria-describedby="{{ $errors->has('min_usia') ? 'f-usia-galat' : 'f-usia-bantuan' }}"
+                                            @error('min_usia') aria-invalid="true" @enderror>
+                                        <span class="input-group-text">tahun</span>
+                                    </div>
+                                </x-form-group>
+                            </div>
+                            <div class="col-12">
+                                <x-textarea name="kualifikasi" id="f-keahlian" label="Minimal kemampuan / keahlian" rows="3" maxlength="2000" required field-class="mb-0"
+                                    placeholder="Kemampuan yang wajib dimiliki pelamar, contoh: menguasai Excel, pengalaman administrasi keuangan 1 tahun" />
+                            </div>
+                        </x-form-section>
+
+                        {{-- ================= 4. Tugas & tanggung jawab ================= --}}
+                        <x-form-section id="bagian-tugas" class="hr-bagian" title="Tugas & Tanggung Jawab" icon="bi-card-checklist"
+                            subtitle="Menjadi deskripsi pekerjaan di lowongan.">
+                            <div class="col-12">
+                                <fieldset class="hr-field mb-0" aria-describedby="f-tugas-bantuan">
+                                    <legend class="form-label required">Daftar tugas</legend>
+                                    <div data-daftar-tugas data-tempat-galat>
+                                        @foreach ($barisTugas as $i => $isi)
+                                            <div class="input-group mb-2 tugas-baris">
+                                                <span class="input-group-text tugas-no" aria-hidden="true">{{ $i + 1 }}</span>
+                                                <input type="text" name="tugas[]" class="form-control @error('tugas.' . $i) is-invalid @enderror" value="{{ $isi }}" maxlength="500"
+                                                    placeholder="Tulis satu tugas, contoh: menginput transaksi harian ke sistem keuangan" aria-label="Tugas {{ $i + 1 }}"
+                                                    data-pesan-kosong="Isi minimal satu tugas, contoh: menginput transaksi harian ke sistem keuangan." @if ($i === 0) required @endif>
+                                                <button type="button" class="btn btn-outline-danger" data-hapus-tugas aria-label="Hapus tugas {{ $i + 1 }}" title="Hapus tugas ini">
+                                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    @error('tugas')
+                                        <div class="invalid-feedback d-block mb-2"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
+                                    @enderror
+                                    @error('tugas.*')
+                                        <div class="invalid-feedback d-block mb-2"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
+                                    @enderror
+                                    <x-button variant="outline" size="sm" icon="bi-plus-lg" data-tambah-tugas>Tambah tugas</x-button>
+                                    <div class="form-text" id="f-tugas-bantuan">
+                                        Satu baris untuk satu tugas (maks. 30). Tekan <kbd>Enter</kbd> di sebuah baris untuk menambah baris baru di bawahnya.
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </x-form-section>
+                    </x-card>
+
+                    {{-- Tidak ada "Simpan sebagai draft": backend selalu menyimpan pengajuan berstatus Menunggu (tanpa status draft). --}}
+                    <div class="hr-bilah-aksi mt-3">
+                        <x-button variant="secondary" :href="route('admin.pengajuan-formasi.index')">Batal</x-button>
+                        <x-button type="submit" icon="bi-send">Ajukan</x-button>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <div class="row g-3 align-items-start">
-        <div class="col-xxl-8">
-        <section class="panel p-4">
-            <form data-fokus-awal action="{{ route('admin.pengajuan-formasi.store') }}" method="POST" id="formFormasi" data-confirm="Kirim pengajuan formasi ini?">
-                @csrf
-                @php
-                    $unitAwal = old('unit_kerja', $unitOptions[0] ?? '');
-                    $jenis = old('jenis_kebutuhan');
-                @endphp
-
-                <h2 class="form-bagian"><i class="bi bi-clipboard-plus"></i>Kebutuhan Karyawan</h2>
-
-                @if (auth()->user()->isAdmin() || count($unitOptions) > 1)
-                    {{-- Admin: semua unit. Kepala beberapa unit: hanya unit yang dipimpinnya. --}}
-                    <div class="mb-3">
-                        <label class="form-label" for="f-unit">Bagian <span class="text-muted fw-normal">({{ auth()->user()->isAdmin() ? 'Admin' : 'bagian yang Anda pimpin' }})</span></label>
-                        <select name="unit_kerja" id="f-unit" class="form-select @error('unit_kerja') is-invalid @enderror" required>
-                            @if (auth()->user()->isAdmin())<option value="">-- Pilih bagian --</option>@endif
-                            @foreach ($unitOptions as $u)
-                                <option value="{{ $u }}" @selected($unitAwal === $u)>{{ $u }}</option>
-                            @endforeach
-                        </select>
-                        @error('unit_kerja')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                @else
-                    {{-- Hanya satu unit → terkunci. --}}
-                    <div class="mb-3">
-                        <label class="form-label">Bagian</label>
-                        <div class="unit-terkunci"><i class="bi bi-lock-fill"></i><strong>{{ $unitOptions[0] ?? '-' }}</strong><span class="text-muted small ms-auto">bagian Anda</span></div>
-                        <input type="hidden" name="unit_kerja" id="f-unit" value="{{ $unitOptions[0] ?? '' }}">
-                        @error('unit_kerja')<div class="text-danger small">{{ $message }}</div>@enderror
-                    </div>
-                @endif
-
-                <label class="form-label">Kebutuhan karyawan karena</label>
-                <div class="row g-2 mb-1">
-                    @foreach (\App\Models\PengajuanFormasi::JENIS_LABEL as $kode => $label)
-                        <div class="col-md-6">
-                            <input type="radio" class="btn-check" name="jenis_kebutuhan" id="jenis-{{ $kode }}" value="{{ $kode }}" @checked($jenis === $kode) required>
-                            <label class="btn btn-outline-secondary w-100 text-start jenis-pilih" for="jenis-{{ $kode }}">
-                                <i class="bi {{ $kode === 'penambahan' ? 'bi-person-plus' : 'bi-arrow-repeat' }}"></i>{{ $label }}
-                            </label>
-                        </div>
-                    @endforeach
-                </div>
-                @error('jenis_kebutuhan')<div class="text-danger small">{{ $message }}</div>@enderror
-                <p class="form-text mb-3" data-info-jenis>
-                    <span data-jenis="penambahan" @if ($jenis !== 'penambahan') hidden @endif><i class="bi bi-people me-1"></i>Penambahan karyawan disetujui bertahap: <strong>GM bagian</strong>, lalu <strong>Owner</strong>.</span>
-                    <span data-jenis="replacement" @if ($jenis !== 'replacement') hidden @endif><i class="bi bi-person-check me-1"></i>Replacement direview Kepala SDM/GM seperti biasa. Pegawai yang bisa dipilih di bagan sebanyak jumlah yang dibutuhkan.</span>
-                </p>
-
-                <div class="row g-3 mb-3">
-                    <div class="col-6 col-md-3">
-                        <label class="form-label" for="f-laki">Laki-laki</label>
-                        <div class="input-group">
-                            <input type="number" name="jumlah_laki" id="f-laki" class="form-control @error('jumlah_laki') is-invalid @enderror" min="0" max="50" value="{{ old('jumlah_laki', 0) }}" required>
-                            <span class="input-group-text">orang</span>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label" for="f-perempuan">Perempuan</label>
-                        <div class="input-group">
-                            <input type="number" name="jumlah_perempuan" id="f-perempuan" class="form-control @error('jumlah_perempuan') is-invalid @enderror" min="0" max="50" value="{{ old('jumlah_perempuan', 0) }}" required>
-                            <span class="input-group-text">orang</span>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label" for="f-bebas" title="Laki-laki atau perempuan sama saja">Bebas (L/P)</label>
-                        <div class="input-group">
-                            <input type="number" name="jumlah_bebas" id="f-bebas" class="form-control @error('jumlah_bebas') is-invalid @enderror" min="0" max="50" value="{{ old('jumlah_bebas', 0) }}">
-                            <span class="input-group-text">orang</span>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label" for="f-tanggal">Tanggal dibutuhkan</label>
-                        <input type="date" name="target_waktu" id="f-tanggal" class="form-control @error('target_waktu') is-invalid @enderror"
-                            value="{{ old('target_waktu') }}" @unless (auth()->user()->isAdmin()) min="{{ now()->toDateString() }}" @endunless required>
-                    </div>
-                    <div class="col-12">
-                        @error('jumlah_laki')<div class="text-danger small">{{ $message }}</div>@enderror
-                        @error('target_waktu')<div class="text-danger small">{{ $message }}</div>@enderror
-                        <span class="small text-muted" data-total-jumlah></span>
-                    </div>
-                </div>
-
-                <h2 class="form-bagian"><i class="bi bi-list-check"></i>Persyaratan</h2>
-                <div class="row g-3 mb-3">
-                    <div class="col-sm-6">
-                        <label class="form-label" for="f-pendidikan">Minimal pendidikan</label>
-                        <select name="min_pendidikan" id="f-pendidikan" class="form-select @error('min_pendidikan') is-invalid @enderror" required>
-                            <option value="">-- Pilih --</option>
-                            @foreach (\App\Models\PengajuanFormasi::PENDIDIKAN as $p)
-                                <option value="{{ $p }}" @selected(old('min_pendidikan') === $p)>{{ $p }}</option>
-                            @endforeach
-                        </select>
-                        @error('min_pendidikan')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-sm-6">
-                        <label class="form-label" for="f-usia">Minimal usia <span class="text-muted fw-normal">(opsional)</span></label>
-                        <div class="input-group">
-                            <input type="number" name="min_usia" id="f-usia" class="form-control @error('min_usia') is-invalid @enderror" min="15" max="70" value="{{ old('min_usia') }}">
-                            <span class="input-group-text">tahun</span>
-                        </div>
-                        @error('min_usia')<div class="text-danger small">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label" for="f-keahlian">Minimal kemampuan / keahlian yang dibutuhkan</label>
-                        <textarea name="kualifikasi" id="f-keahlian" rows="2" class="form-control @error('kualifikasi') is-invalid @enderror" required
-                            placeholder="Contoh: menguasai Excel, pengalaman administrasi keuangan 1 tahun">{{ old('kualifikasi') }}</textarea>
-                        @error('kualifikasi')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-sm-6">
-                        <label class="form-label" for="f-jabatan">Jabatan / posisi</label>
-                        <select name="jabatan" id="f-jabatan" class="form-select @error('jabatan') is-invalid @enderror" required></select>
-                        <div class="form-text" data-info-jabatan>Hanya jabatan yang ada di bagian ini.</div>
-                        @error('jabatan')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-sm-6">
-                        <label class="form-label" for="f-atasan">Atasan langsung</label>
-                        @if (auth()->user()->isAdmin())
-                            {{-- Admin: pilih dari Kepala Bagian, Kepala SDM, dan GM. --}}
-                            <select name="atasan_langsung" id="f-atasan" class="form-select @error('atasan_langsung') is-invalid @enderror" required>
-                                <option value="">-- Pilih kepala / GM --</option>
-                                @foreach ($pilihanAtasan as $nama => $label)
-                                    <option value="{{ $nama }}" @selected(old('atasan_langsung') === $nama)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        @else
-                            {{-- Pengaju = atasan langsung; tidak bisa diubah (server juga memaksa nilai ini). --}}
-                            <input type="text" name="atasan_langsung" id="f-atasan" class="form-control" value="{{ $atasanBawaan }}" readonly>
-                            <div class="form-text"><i class="bi bi-lock-fill me-1"></i>Otomatis sesuai pengaju.</div>
-                        @endif
-                        @error('atasan_langsung')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-12">
-                        {{-- Tugas & tanggung jawab: satu baris per tugas (bawaan 1 baris, bisa ditambah). Disimpan sebagai teks per baris. --}}
-                        @php
-                            $tugasLama = old('tugas');
-                            $barisTugas = is_array($tugasLama) ? $tugasLama : array_values(array_filter(preg_split('/\r?\n/', (string) $tugasLama), 'strlen'));
-                            $barisTugas = $barisTugas ?: [''];
-                        @endphp
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-label mb-0">Tugas dan tanggung jawab</label>
-                            <button type="button" class="btn btn-outline-primary btn-sm" data-tambah-tugas><i class="bi bi-plus-lg"></i> Tambah tugas</button>
-                        </div>
-                        <div data-daftar-tugas>
-                            @foreach ($barisTugas as $i => $isi)
-                                <div class="input-group mb-2 tugas-baris">
-                                    <span class="input-group-text tugas-no">{{ $i + 1 }}</span>
-                                    <input type="text" name="tugas[]" class="form-control @error('tugas.' . $i) is-invalid @enderror" value="{{ $isi }}" maxlength="500"
-                                        placeholder="Contoh: menginput transaksi harian ke sistem keuangan" aria-label="Tugas {{ $i + 1 }}" @if ($i === 0) required @endif>
-                                    <button type="button" class="btn btn-outline-danger" data-hapus-tugas title="Hapus tugas ini"><i class="bi bi-trash"></i></button>
-                                </div>
-                            @endforeach
-                        </div>
-                        @error('tugas')<div class="text-danger small">{{ $message }}</div>@enderror
-                        @error('tugas.*')<div class="text-danger small">{{ $message }}</div>@enderror
-                        <div class="form-text">Satu baris untuk satu tugas. Tekan <kbd>Enter</kbd> di baris terakhir untuk menambah baris baru.</div>
-                    </div>
-                </div>
-
-                <h2 class="form-bagian"><i class="bi bi-diagram-3"></i>Keterangan <span class="text-muted fw-normal small ms-1" data-bagan-judul>— pilih kebutuhan karyawan dulu</span></h2>
-                <div class="bagan-legenda">
-                    <span><i class="kotak" style="background:#15803d"></i>Pegawai aktif</span>
-                    <span><i class="kotak" style="background:#9ca3af"></i>Pegawai tidak aktif</span>
-                    <span><i class="kotak" style="background:#b42318"></i>Posisi kosong (baru)</span>
-                    <span><i class="bi bi-arrow-repeat"></i>digantikan</span>
-                </div>
-                <p class="small mb-2" data-bagan-petunjuk></p>
-                <div class="bagan">
-                    <div class="bagan-alat">
-                        <input type="search" class="form-control form-control-sm" placeholder="Cari di bagan, contoh: Siti" aria-label="Cari nama pegawai di bagan" data-bagan-cari>
-                        <div class="ms-auto d-flex align-items-center gap-1">
-                            <button type="button" class="btn btn-outline-secondary" data-zoom="-" title="Perkecil" aria-label="Perkecil"><i class="bi bi-zoom-out"></i></button>
-                            <span class="bagan-skala" data-bagan-skala>100%</span>
-                            <button type="button" class="btn btn-outline-secondary" data-zoom="+" title="Perbesar" aria-label="Perbesar"><i class="bi bi-zoom-in"></i></button>
-                            <button type="button" class="btn btn-outline-secondary" data-zoom="pas" title="Muat seluruh bagan di layar"><i class="bi bi-arrows-angle-contract me-1"></i>Pas layar</button>
-                        </div>
-                    </div>
-                    <div class="bagan-layar" data-bagan-layar>
-                        <div class="bagan-pohon" id="baganUnit" aria-live="polite"></div>
-                    </div>
-                </div>
-                <div data-bagan-input></div>
-                @error('diganti')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
-                @error('diganti.*')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
-                <div class="row g-3 mb-3 mt-1">
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-send me-1"></i> Kirim Pengajuan
-                    </button>
-                    <a href="{{ route('admin.pengajuan-formasi.index') }}" class="btn btn-outline-secondary">Batal</a>
-                </div>
-            </form>
-        </section>
-        </div>
-
-        <div class="col-xxl-4">
-            <section class="panel">
-                <h2 class="h6 fw-bold mb-3"><i class="bi bi-signpost-split"></i>Alur Pengajuan</h2>
-                <ol class="alur-langkah">
-                    <li><strong>Diajukan</strong><span>Anda mengisi kebutuhan pegawai beserta alasannya.</span></li>
-                    <li><strong>Disetujui</strong><span><b>Penambahan karyawan</b>: bertahap, GM bagian dulu lalu Owner (keduanya wajib). <b>Replacement</b>: {{ auth()->user()->isKepalaSdm() ? 'GM' : 'Kepala SDM atau GM' }} (bagian SMK oleh Pembina).</span></li>
-                    <li><strong>Lowongan terbit</strong><span>Bila disetujui, lowongan otomatis tampil di halaman publik dan pelamar bisa mulai melamar.</span></li>
-                </ol>
-                <div class="alert alert-light border small mb-0">
-                    <i class="bi bi-lightbulb me-1"></i>Persyaratan (pendidikan, usia, keahlian) otomatis menjadi kualifikasi lowongan, dan tugas menjadi deskripsinya.
-                </div>
-            </section>
-        </div>
-        </div>
+        </form>
     </div>
 </main>
 @include('admin.pengajuan-formasi._bagan-gaya')
-<style>
-    .form-bagian { display: flex; align-items: center; gap: .5rem; font-size: .9375rem; font-weight: 700; margin: 0 0 .9rem; padding-bottom: .5rem; border-bottom: 1px solid var(--admin-border); }
-    .form-bagian i { color: var(--hr-primary); }
-    * + .form-bagian { margin-top: 1.25rem; }
-    .unit-terkunci { display: flex; align-items: center; gap: .5rem; padding: .55rem .8rem; border: 1px solid var(--admin-border); border-radius: 9px; background: var(--admin-surface-soft); }
-    .unit-terkunci .bi-lock-fill { color: var(--admin-muted); }
-    .jenis-pilih { display: flex; align-items: center; gap: .5rem; min-height: 46px; white-space: normal; }
-</style>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('formFormasi');
@@ -247,15 +266,21 @@
         const perUnit = @json($jabatanPerUnit);
         const baganPerUnit = @json($baganPerUnit);
         const jabatanBagan = @json($jabatanBaganPerUnit);
-        const ADMIN = @json(auth()->user()->isAdmin());
+        const ADMIN = @json($isAdmin);
         const lama = @json(old('jabatan'));
-        const digantiLama = (@json(old('diganti', []))).map(Number);
-        const slotLama = @json(old('slot_tambahan', []));
+        const digantiLama = ({{ \Illuminate\Support\Js::from(old('diganti', [])) }}).map(Number);
+        const slotLama = {{ \Illuminate\Support\Js::from(old('slot_tambahan', [])) }};
+        // Warna tombol dialog = warna merek dari token ui.css (tanpa hex di sini).
+        const WARNA = getComputedStyle(document.documentElement).getPropertyValue('--hr-primary').trim() || undefined;
+        const MAKS_TUGAS = 30;   // sama dengan aturan server (tugas max:30)
         const wadah = document.getElementById('baganUnit');
         const masukan = form.querySelector('[data-bagan-input]');
         const petunjuk = form.querySelector('[data-bagan-petunjuk]');
         const judulBagan = form.querySelector('[data-bagan-judul]');
         const cari = form.querySelector('[data-bagan-cari]');
+        const kotakBagan = form.querySelector('[data-bagan]');
+        const wadahBagan = form.querySelector('[data-wadah-bagan]');
+        const wadahJumlah = form.querySelector('[data-wadah-jumlah]');
         const dipilih = new Set(digantiLama);   // id pegawai yang digantikan
         let slot = Array.isArray(slotLama) ? slotLama.slice() : [];  // keterangan posisi baru
 
@@ -268,15 +293,18 @@
             const daftar = perUnit[unit.value] || [];
             const nilai = jabatan.value || lama;
             jabatan.innerHTML = '';
-            jabatan.add(new Option(unit.value ? (daftar.length ? '-- Pilih jabatan --' : 'Belum ada jabatan di bagian ini') : '-- Pilih bagian dulu --', ''));
+            jabatan.add(new Option(unit.value ? (daftar.length ? 'Pilih jabatan' : 'Belum ada jabatan di bagian ini') : 'Pilih bagian dulu', ''));
             daftar.forEach((j) => jabatan.add(new Option(j, j, false, j === nilai)));
             jabatan.disabled = !daftar.length;
         }
 
         const layar = form.querySelector('[data-bagan-layar]');
         const labelSkala = form.querySelector('[data-bagan-skala]');
-        // Ukuran harus sama dengan CSS (--node, padding cabang) agar pembagian baris tepat.
+        const tombolKecil = form.querySelector('[data-zoom="-"]');
+        const tombolBesar = form.querySelector('[data-zoom="+"]');
+        // Ukuran harus sama dengan CSS (--node, --b-tulang, padding cabang) agar pembagian baris tepat.
         const LEBAR_NODE = 148, TULANG = 28, MAKS_SEJAJAR = 4, BATAS_LIPAT = 12;
+        const SKALA_MIN = 0.4, SKALA_MAKS = 1.5;
         const terbuka = new Set();          // jabatan yang raknya dibuka penuh
         let skala = 1, skalaOtomatis = true;
 
@@ -284,16 +312,21 @@
             const b = el('button', 'bagan-node ' + kelas);
             b.type = 'button';
             b.title = judul || nama;
-            b.append(el('i', 'bi ' + ikon), el('span', 'nm', nama));
+            const i = el('i', 'bi ' + ikon);
+            i.setAttribute('aria-hidden', 'true');
+            b.append(i, el('span', 'nm', nama));
             return b;
         }
 
         // ---- Zoom & geser (untuk struktur besar) ----
         function setSkala(s, otomatis) {
-            skala = Math.min(1.5, Math.max(0.4, s));
+            skala = Math.min(SKALA_MAKS, Math.max(SKALA_MIN, s));
             skalaOtomatis = !!otomatis;
             wadah.style.zoom = skala;
             labelSkala.textContent = Math.round(skala * 100) + '%';
+            // Batas zoom tercapai → tombolnya nonaktif.
+            tombolKecil.disabled = skala <= SKALA_MIN;
+            tombolBesar.disabled = skala >= SKALA_MAKS;
         }
         // Perkecil secukupnya agar seluruh bagan muat lebar layar (tidak memperbesar di atas 100%).
         function pasLayar() {
@@ -332,6 +365,7 @@
             if (!opsi) { opsi = new Option(nama, nama); jabatan.add(opsi); }
             jabatan.disabled = false;
             jabatan.value = opsi.value;
+            bersihkanIsian(jabatan);
         }
 
         // Replacement: jumlah dibutuhkan = kuota pegawai yang bisa dipilih di bagan.
@@ -363,6 +397,7 @@
         // Replacement: klik pegawai → pilih/batal (jabatan terisi otomatis). Bila kuota penuh, pilihan pindah ke yang diklik.
         // Satu pengajuan untuk satu jabatan.
         function pilihGanti(o, jab) {
+            buangGalatServerBagan();
             if (dipilih.has(o.id)) { dipilih.delete(o.id); gambar(); return; }   // batal: jumlah tetap, tinggal klik pegawai lain
             const lain = [...dipilih].filter((id) => jabatanDari(id) !== jab);
             const pilih = () => {
@@ -383,7 +418,7 @@
             Swal.fire({
                 icon: 'question', titleText: 'Ganti jabatan?',
                 text: 'Satu pengajuan untuk satu jabatan: ' + lain.length + ' pegawai yang dipilih di ' + jabatanDari(lain[0]) + ' akan dibatalkan dan diganti ' + o.nama + ' (' + jab + ').',
-                showCancelButton: true, confirmButtonText: 'Ya, ganti', cancelButtonText: 'Batal', confirmButtonColor: '#8b1215',
+                showCancelButton: true, reverseButtons: true, confirmButtonText: 'Ya, ganti', cancelButtonText: 'Batal', confirmButtonColor: WARNA,
             }).then((r) => { if (r.isConfirmed) pilih(); });
         }
 
@@ -396,6 +431,7 @@
                     + (ganti ? 'batal' : (total() > 0 && dipilih.size >= total() ? 'memindahkan pilihan ke sini' : 'pilih sebagai yang digantikan')) : ''));
             if (ganti) { const l = el('span', 'bagan-lencana'); l.append(el('i', 'bi bi-arrow-repeat')); b.append(l); }
             if (mode === 'replacement') {
+                b.setAttribute('aria-pressed', String(ganti));
                 b.addEventListener('click', () => pilihGanti(o, jab));
             } else {
                 b.disabled = true;
@@ -419,8 +455,9 @@
             b.addEventListener('click', () => {
                 Swal.fire({
                     titleText: 'Posisi baru #' + (i + 1) + ' (' + jk[1] + ')', input: 'text', inputValue: slot[i] || '',
-                    inputLabel: 'Keterangan', inputPlaceholder: 'mis. untuk shift malam / gedung B', inputAttributes: { maxlength: 150 },
-                    showCancelButton: true, showDenyButton: true, confirmButtonText: 'Simpan', denyButtonText: 'Hapus posisi', cancelButtonText: 'Batal', confirmButtonColor: '#8b1215',
+                    inputLabel: 'Keterangan (opsional)', inputPlaceholder: 'Keterangan posisi, contoh: untuk shift malam di gedung B', inputAttributes: { maxlength: 150 },
+                    showCancelButton: true, showDenyButton: true, reverseButtons: true,
+                    confirmButtonText: 'Simpan', denyButtonText: 'Hapus posisi', cancelButtonText: 'Batal', confirmButtonColor: WARNA,
                 }).then((r) => {
                     if (r.isConfirmed) { slot[i] = r.value.trim(); gambar(); }
                     if (r.isDenied) { slot.splice(i, 1); ubahJumlah(jkSlot(i), -1); gambar(); }
@@ -443,7 +480,7 @@
             const wadahSwal = el('div', 'text-start');
             wadahSwal.innerHTML = '<div class="small fw-semibold mb-1">Jenis kelamin</div><div class="d-flex flex-wrap gap-2 mb-3" data-jk></div>'
                 + '<label class="small fw-semibold mb-1" for="swal-ket">Keterangan <span class="fw-normal text-muted">(opsional)</span></label>'
-                + '<input id="swal-ket" class="form-control" maxlength="150" placeholder="Contoh: untuk shift malam di gedung B">'
+                + '<input id="swal-ket" class="form-control" maxlength="150" placeholder="Keterangan posisi, contoh: untuk shift malam di gedung B">'
                 + (pindah ? '<div class="alert alert-warning small mt-3 mb-0" data-pindah></div>' : '');
             JK.forEach(([nama, label], k) => {
                 const r = el('input', 'btn-check'); r.type = 'radio'; r.name = 'swal-jk'; r.id = 'swal-jk-' + k; r.value = k; r.checked = k === 2;
@@ -453,13 +490,15 @@
             if (pindah) wadahSwal.querySelector('[data-pindah]').textContent = 'Satu pengajuan untuk satu jabatan: ' + total() + ' posisi baru di ' + jabatan.value + ' akan dipindah ke ' + jab + '.';
             Swal.fire({
                 titleText: 'Ajukan pegawai baru — ' + jab, html: wadahSwal, focusConfirm: false,
-                showCancelButton: true, confirmButtonText: 'Tambah', cancelButtonText: 'Batal', confirmButtonColor: '#8b1215',
+                showCancelButton: true, reverseButtons: true, confirmButtonText: 'Tambah', cancelButtonText: 'Batal', confirmButtonColor: WARNA,
                 didOpen: () => document.getElementById('swal-ket').focus(),
                 preConfirm: () => ({ jk: +document.querySelector('[name=swal-jk]:checked').value, ket: document.getElementById('swal-ket').value.trim() }),
             }).then((r) => {
                 if (!r.isConfirmed) return;
+                buangGalatServerBagan();
                 if (![...jabatan.options].some((o) => o.value === jab)) jabatan.add(new Option(jab, jab));
                 jabatan.value = jab;
+                bersihkanIsian(jabatan);
                 // Sisipkan di akhir kelompok jenis kelaminnya agar urutan slot tetap L, P, bebas.
                 const l = +form.jumlah_laki.value || 0, p = +form.jumlah_perempuan.value || 0;
                 slot.splice([l, l + p, total()][r.value.jk], 0, r.value.ket);
@@ -542,7 +581,7 @@
             });
 
             if (!cabang.length) {
-                wadah.append(el('div', 'bagan-kosong-info', kata ? 'Tidak ada pegawai yang cocok.' : 'Belum ada pegawai tercatat di bagian ini.'));
+                wadah.append(el('div', 'bagan-kosong-info', kata ? 'Tidak ada pegawai yang cocok. Coba kata lain atau kosongkan pencarian.' : 'Belum ada pegawai tercatat di bagian ini.'));
             } else if (cabang.length === 1) {
                 // Satu jabatan saja: pakai lebar penuh (bukan setengah) untuk berjajar/rak.
                 const lebarPenuh = Math.max(layar.clientWidth - 24, 200);
@@ -589,14 +628,15 @@
                 for (let i = 0; i < n; i++) { const x = el('input'); x.type = 'hidden'; x.name = 'slot_tambahan[]'; x.value = slot[i] || ''; masukan.append(x); }
             }
 
-            judulBagan.textContent = mode === 'replacement' ? '— klik pegawai yang digantikan' : mode === 'penambahan' ? '— posisi baru (kotak merah)' : '— pilih kebutuhan karyawan dulu';
+            judulBagan.textContent = mode === 'replacement' ? 'Klik pegawai yang digantikan' : mode === 'penambahan' ? 'Klik “Posisi kosong” (kotak merah)' : 'Pilih kebutuhan karyawan dulu';
             petunjuk.className = 'small mb-2 ' + (mode === 'replacement' && dipilih.size !== n ? 'text-danger fw-semibold' : 'text-muted');
             petunjuk.textContent = mode === 'replacement'
                 ? 'Dipilih ' + dipilih.size + ' dari ' + n + ' orang yang dibutuhkan. Pegawai yang bisa diklik sebanyak jumlah dibutuhkan; bila sudah penuh, klik pegawai lain untuk memindahkan pilihan. Jabatan terisi otomatis; jenis kelamin pengganti boleh diubah asal totalnya sama. Hijau = masih aktif, abu = sudah tidak aktif.'
                 : mode === 'penambahan'
                     ? 'Klik kotak merah "Posisi kosong" (+) pada jabatan yang dibutuhkan untuk mengajukan pegawai baru (jabatan & jumlah terisi otomatis).'
                         + (n && jabatan.value ? ' Sekarang ' + n + ' posisi baru di ' + jabatan.value + '; klik kotaknya untuk ubah keterangan atau hapus.' : '')
-                    : 'Bagan menampilkan susunan pegawai bagian Anda.';
+                    : 'Bagan menampilkan susunan pegawai bagian Anda. Pilih "Kebutuhan karyawan karena" di atas untuk mulai menandai.';
+            segarkanAturan();
         }
 
         form.querySelectorAll('[data-zoom]').forEach((b) => b.addEventListener('click', () => {
@@ -639,6 +679,7 @@
         let jumlahSebelum = null;
         form.querySelectorAll('[name=jenis_kebutuhan]').forEach((r) => r.addEventListener('change', () => {
             form.querySelectorAll('[data-jenis]').forEach((s) => { s.hidden = s.dataset.jenis !== r.value; });
+            buangGalatServerBagan();
             if (r.value === 'replacement') {
                 jumlahSebelum = JK.map(([nama]) => form[nama].value);
                 // Pilihan lama masih diingat → jumlah mengikutinya; belum ada → isian jumlah dipertahankan (dibatasi isi bagian).
@@ -661,11 +702,12 @@
         }
         const hitung = () => {
             const n = total();
-            let teks = 'Total kebutuhan: ' + n + ' orang', salah = n < 1;
+            // Merah hanya bila melebihi batas; total 0 ditangani validasi saat kirim (tidak merah sebelum diisi).
+            let teks = 'Total kebutuhan: ' + n + ' orang', salah = false;
             if (jenis() === 'replacement') {
                 const b = batasGanti();
                 teks += ' (maks ' + b.n + ', sesuai jumlah pegawai di ' + b.di + ')';
-                salah = salah || n > b.n;
+                salah = n > b.n;
                 // Batas tiap kolom = isi bagian (bukan sisa kuota) agar tetap bisa dinaikkan; kelebihan diambil dari kolom lain.
                 JK.forEach(([nama]) => { form[nama].max = Math.min(50, b.n); });
             } else {
@@ -673,9 +715,12 @@
             }
             totalTeks.textContent = teks;
             totalTeks.classList.toggle('text-danger', salah);
+            segarkanAturan();
             return n;
         };
         ['jumlah_laki', 'jumlah_perempuan', 'jumlah_bebas'].forEach((k) => form[k].addEventListener('input', () => {
+            // Galat server "total jumlah" dibuang begitu pengguna mulai memperbaiki.
+            form.querySelectorAll('[data-galat-server="jumlah"]').forEach((g) => g.remove());
             // Replacement: total tidak boleh melebihi jumlah pegawai yang ada — kelebihan diambil dari kolom lain dulu;
             // jumlah diturunkan → pilihan di bagan yang paling lama dilepas.
             if (jenis() === 'replacement') {
@@ -684,18 +729,164 @@
             }
             hitung(); gambar();
         }));
-        // Kolom dikosongkan dianggap 0 (kolom wajib diisi, kosong akan ditolak browser saat kirim).
+        // Kolom dikosongkan dianggap 0 (kolom wajib diisi, kosong akan ditolak saat kirim).
         ['jumlah_laki', 'jumlah_perempuan', 'jumlah_bebas'].forEach((k) => form[k].addEventListener('change', () => {
             if (form[k].value === '') { form[k].value = 0; hitung(); gambar(); }
         }));
+
+        // ================= Validasi ringan di halaman =================
+        // Dicek sebelum dialog konfirmasi global (data-confirm). Galat tampil di bawah isiannya + fokus ke galat pertama.
+        let uid = 0;
+        const grupIsian = (x) => (x.type === 'radio' ? [...form.querySelectorAll('input[type=radio][name="' + x.name + '"]')] : [x]);
+        const wadahIsian = (x) => x.closest('.hr-field') || x.parentElement;
+        // Teks label isian (tanpa "(opsional)"): label[for], legend grup radio, atau aria-label.
+        function namaIsian(x) {
+            if (x.type === 'radio') return (x.closest('fieldset')?.querySelector('legend')?.firstChild?.textContent || 'Pilihan ini').trim();
+            const label = x.id && form.querySelector('label[for="' + x.id + '"]');
+            return ((label && label.firstChild && label.firstChild.textContent) || x.getAttribute('aria-label') || 'Isian ini').trim();
+        }
+        // Pesan Bahasa Indonesia yang memberi tahu cara memperbaikinya.
+        function pesanIsian(x) {
+            const v = x.validity, nama = namaIsian(x), satuan = x.dataset.satuan ? ' ' + x.dataset.satuan : '';
+            if (v.valueMissing) return x.dataset.pesanKosong || (x.tagName === 'SELECT' ? 'Pilih ' + nama.toLowerCase() + '.' : nama + ' wajib diisi.');
+            if (x.dataset.pesan) return x.dataset.pesan;
+            if (v.badInput || v.stepMismatch) return nama + ' harus berupa bilangan bulat, contoh: 1.';
+            if (v.rangeUnderflow) return nama + ' minimal ' + x.min + satuan + '.';
+            if (v.rangeOverflow) return nama + ' maksimal ' + x.max + satuan + (jenis() === 'replacement' && satuan ? ', sesuai jumlah pegawai yang bisa digantikan.' : '.');
+            if (v.tooLong) return nama + ' maksimal ' + x.maxLength + ' karakter.';
+            return x.validationMessage;
+        }
+        function tandai(daftar, idPesan) {
+            daftar.forEach((x) => {
+                x.classList.add('is-invalid');
+                x.setAttribute('aria-invalid', 'true');
+                if (idPesan && !(x.getAttribute('aria-describedby') || '').split(' ').includes(idPesan)) {
+                    x.setAttribute('aria-describedby', ((x.getAttribute('aria-describedby') || '') + ' ' + idPesan).trim());
+                }
+            });
+        }
+        function lepasTanda(daftar) {
+            daftar.forEach((x) => { x.classList.remove('is-invalid'); x.removeAttribute('aria-invalid'); });
+        }
+        // Pesan galat klien ber-kunci di dalam wadah; disisipkan setelah [data-tempat-galat] bila ada.
+        function tampilPesan(wadahPesan, kunci, teks) {
+            let umpan = wadahPesan.querySelector('[data-galat-klien="' + kunci + '"]');
+            if (!umpan) {
+                umpan = el('div', 'invalid-feedback d-block');
+                umpan.dataset.galatKlien = kunci;
+                umpan.id = 'galat-klien-' + kunci.replace(/[^\w-]+/g, '-');
+                const jangkar = wadahPesan.querySelector('[data-tempat-galat]');
+                jangkar ? jangkar.after(umpan) : wadahPesan.append(umpan);
+            }
+            const ikon = el('i', 'bi bi-exclamation-circle');
+            ikon.setAttribute('aria-hidden', 'true');
+            umpan.replaceChildren(ikon, document.createTextNode(' ' + teks));
+            return umpan.id;
+        }
+        const buangPesan = (wadahPesan, kunci) => wadahPesan.querySelector('[data-galat-klien="' + kunci + '"]')?.remove();
+        const kunciIsian = (x) => (x.type === 'radio' ? 'r-' + x.name : (x.id || (x.id = 'isian-' + (++uid))));
+
+        // Cek satu isian (bawaan browser): tandai merah + pesan di bawahnya. Galat server yang masih tampil tidak digandakan.
+        function periksaIsian(x) {
+            const grup = grupIsian(x), wadahPesan = wadahIsian(x), kunci = kunciIsian(x);
+            if (x.checkValidity()) {
+                if (wadahPesan.querySelector('[data-galat-klien="' + kunci + '"]')) { buangPesan(wadahPesan, kunci); lepasTanda(grup); }
+                return true;
+            }
+            if (wadahPesan.querySelector('.invalid-feedback:not([data-galat-klien])')) { tandai(grup); return false; }
+            tandai(grup, tampilPesan(wadahPesan, kunci, pesanIsian(x)));
+            return false;
+        }
+        // Isian diperbaiki dari luar (mis. jabatan terisi lewat bagan): lepas tanda & pesan galatnya.
+        function bersihkanIsian(x) {
+            if (!x.classList.contains('is-invalid')) return;
+            const wadahPesan = wadahIsian(x);
+            wadahPesan.querySelectorAll('.invalid-feedback').forEach((g) => g.remove());
+            lepasTanda(grupIsian(x));
+        }
+
+        // Aturan lintas isian yang tidak tercakup validasi bawaan browser.
+        const aturan = [
+            {
+                kunci: 'jumlah', wadah: wadahJumlah, isian: () => JK.map(([nama]) => form[nama]),
+                lolos: () => total() >= 1,
+                pesan: () => 'Isi jumlah kebutuhan minimal 1 orang: laki-laki, perempuan, atau bebas (L/P).',
+            },
+            {
+                kunci: 'bagan', wadah: wadahBagan, isian: () => [], kotak: kotakBagan, fokus: () => layar,
+                lolos: () => jenis() !== 'replacement' || (total() > 0 && dipilih.size === total()),
+                pesan: () => (total() > 0
+                    ? 'Klik ' + total() + ' pegawai yang digantikan di bagan (sekarang ' + dipilih.size + ' dipilih).'
+                    : 'Klik pegawai yang digantikan di bagan; jumlah kebutuhan terisi otomatis.'),
+            },
+            {
+                // Dropdown jabatan nonaktif (bagian tanpa jabatan) tidak ikut validasi browser.
+                kunci: 'jabatan', wadah: wadahIsian(jabatan), isian: () => [jabatan], fokus: () => (jabatan.disabled ? unit : jabatan),
+                lolos: () => !jabatan.disabled || !!jabatan.value,
+                pesan: () => 'Bagian ini belum punya jabatan terdaftar. Pilih bagian lain, atau minta Admin/SDM menambahkan jabatannya.',
+            },
+        ];
+        // Aturan yang sudah tampil diperbarui setiap ada perubahan: hilang bila sudah benar, teks ikut angka terbaru.
+        function terapkanAturan(a) {
+            const isian = a.isian();
+            if (a.tampil && !a.lolos()) {
+                tandai(isian, tampilPesan(a.wadah, 'aturan-' + a.kunci, a.pesan()));
+                if (a.kotak) a.kotak.classList.add('is-invalid');
+                return;
+            }
+            a.tampil = false;
+            buangPesan(a.wadah, 'aturan-' + a.kunci);
+            // Isian yang masih punya galat sendiri tetap merah.
+            lepasTanda(isian.filter((x) => !wadahIsian(x).querySelector('.invalid-feedback')));
+            if (a.kotak) a.kotak.classList.remove('is-invalid');
+        }
+        function segarkanAturan() {
+            if (typeof aturan === 'undefined') return;
+            aturan.forEach((a) => { if (a.tampil) terapkanAturan(a); });
+        }
+        function buangGalatServerBagan() {
+            form.querySelectorAll('[data-galat-server="bagan"]').forEach((g) => g.remove());
+        }
+
+        // Saat isian bertanda merah diubah: galat browser dicek ulang; pesan galat server dibuang (sedang diperbaiki).
+        ['input', 'change'].forEach((t) => form.addEventListener(t, (e) => {
+            const x = e.target;
+            if (x.name && x.classList && x.classList.contains('is-invalid')) {
+                const wadahPesan = wadahIsian(x);
+                if (wadahPesan.querySelector('[data-galat-klien="' + kunciIsian(x) + '"]')) {
+                    periksaIsian(x);
+                } else {
+                    wadahPesan.querySelectorAll('.invalid-feedback:not([data-galat-klien])').forEach((g) => g.remove());
+                    lepasTanda(grupIsian(x));
+                }
+            }
+            segarkanAturan();
+        }));
+
         form.addEventListener('submit', function (e) {
-            const tahan = (judul, teks) => { e.preventDefault(); e.stopImmediatePropagation(); Swal.fire({ icon: 'info', title: judul, text: teks, confirmButtonColor: '#8b1215' }); };
-            if (hitung() < 1) return tahan('Isi jumlah kebutuhan', 'Minimal 1 orang (laki-laki, perempuan, atau bebas).');
-            if (jenis() === 'replacement' && dipilih.size !== total()) return tahan('Pilih pegawai yang digantikan', 'Klik ' + total() + ' pegawai pada bagan (sekarang ' + dipilih.size + ').');
+            if (form.dataset.confirmed === '1') return;   // kiriman ulang setelah dialog konfirmasi disetujui
+            hitung();
+            const salah = [];
+            Array.from(form.elements).filter((x) => x.willValidate && x.name).forEach((x) => {
+                if (x.type === 'radio' && salah.some((s) => s.name === x.name)) return;   // satu grup radio cukup sekali
+                if (!periksaIsian(x)) salah.push(x);
+            });
+            aturan.forEach((a) => {
+                a.tampil = !a.lolos();
+                terapkanAturan(a);
+                if (a.tampil) salah.push(a.fokus ? a.fokus() : a.isian()[0]);
+            });
+            if (!salah.length) return;   // lanjut ke dialog konfirmasi global → tombol Ajukan berstatus memproses
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const pertama = salah.filter(Boolean).sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))[0];
+            pertama.focus({ preventScroll: true });
+            pertama.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }, true);
 
-        // ---- Tugas & tanggung jawab: tambah/hapus baris (minimal 1 baris) ----
+        // ---- Tugas & tanggung jawab: tambah/hapus baris (minimal 1, maksimal 30 baris) ----
         const daftarTugas = form.querySelector('[data-daftar-tugas]');
+        const tombolTambahTugas = form.querySelector('[data-tambah-tugas]');
         function rapikanTugas() {
             const semua = Array.from(daftarTugas.querySelectorAll('.tugas-baris'));
             semua.forEach((b, i) => {
@@ -703,24 +894,32 @@
                 const isian = b.querySelector('input');
                 isian.required = i === 0;
                 isian.setAttribute('aria-label', 'Tugas ' + (i + 1));
-                b.querySelector('[data-hapus-tugas]').disabled = semua.length === 1;
+                const hapus = b.querySelector('[data-hapus-tugas]');
+                hapus.disabled = semua.length === 1;
+                hapus.setAttribute('aria-label', 'Hapus tugas ' + (i + 1));
             });
+            tombolTambahTugas.disabled = semua.length >= MAKS_TUGAS;
         }
         function tambahTugas(setelah) {
+            if (daftarTugas.querySelectorAll('.tugas-baris').length >= MAKS_TUGAS) return;
             const baru = daftarTugas.querySelector('.tugas-baris').cloneNode(true);
             const isian = baru.querySelector('input');
             isian.value = '';
             isian.classList.remove('is-invalid');
+            ['id', 'aria-invalid', 'aria-describedby'].forEach((a) => isian.removeAttribute(a));
             setelah ? setelah.after(baru) : daftarTugas.append(baru);
             rapikanTugas();
             isian.focus();
         }
-        form.querySelector('[data-tambah-tugas]').addEventListener('click', () => tambahTugas());
+        tombolTambahTugas.addEventListener('click', () => tambahTugas());
         daftarTugas.addEventListener('click', (e) => {
             const tombol = e.target.closest('[data-hapus-tugas]');
             if (!tombol || daftarTugas.querySelectorAll('.tugas-baris').length === 1) return;
-            tombol.closest('.tugas-baris').remove();
+            const baris = tombol.closest('.tugas-baris');
+            const tujuan = baris.previousElementSibling || baris.nextElementSibling;
+            baris.remove();
             rapikanTugas();
+            tujuan?.querySelector('input')?.focus();   // fokus tidak hilang setelah baris dihapus
         });
         // Enter di sebuah baris: tambah baris baru di bawahnya (bukan mengirim formulir).
         daftarTugas.addEventListener('keydown', (e) => {

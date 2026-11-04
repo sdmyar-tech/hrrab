@@ -2,145 +2,175 @@
 
 @section('content')
 @php
-    $durasi = fn ($m) => \App\Support\Absensi\PenilaianAbsensi::durasi($m);
-    $angka = fn ($n, $kelas = '') => $n ? '<span class="' . $kelas . '">' . $n . '</span>' : '<span class="absensi-nol">–</span>';
-    $total = collect($baris)->pluck('r');
     $ik = \App\Support\Absensi\TampilanAbsensi::IKON;
+    $durasi = fn ($m) => \App\Support\Absensi\PenilaianAbsensi::durasi($m);
+    $total = collect($baris)->pluck('r');
+    $hariKerjaTotal = $total->sum('hari_kerja');
+    $hadirTotal = $total->sum('hadir_total');
+    $persen = fn ($hadir, $kerja) => $kerja ? (int) round($hadir / $kerja * 100) : null;
+    $persenTotal = $persen($hadirTotal, $hariKerjaTotal);
+    $rentangParam = ['dari' => $dari->toDateString(), 'sampai' => $sampai->toDateString()];
+    $adaFilter = request()->filled('q') || request()->filled('unit');
+    $reset = route('admin.absensi.rekap', $rentangParam);
+    $kelola = auth()->user()->can('kelola-absensi');
+    // Angka 0 diredupkan agar angka yang perlu perhatian menonjol.
+    $angka = fn ($n, $kelas = '') => $n ? '<span class="' . $kelas . '">' . $n . '</span>' : '<span class="abs-nol">0</span>';
+    // Judul kolom yang bisa diklik untuk mengurutkan (memakai pilihan urutan yang sudah ada: URUT_REKAP).
+    $urut = function (string $kunci, string $teks) use ($urutAktif, $urutOpsi, $rentangParam) {
+        $aktif = $urutAktif === $kunci;
+        $url = route('admin.absensi.rekap', ['urut' => $kunci] + $rentangParam + request()->only(['unit', 'q']));
+
+        return '<a href="' . e($url) . '" class="abs-urut' . ($aktif ? ' is-aktif' : '') . '" title="Urutkan: ' . e($urutOpsi[$kunci]) . '"'
+            . ($aktif ? ' aria-current="true"' : '') . '>' . e($teks) . '<i class="bi bi-sort-down" aria-hidden="true"></i></a>';
+    };
 @endphp
 <main class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi {{ $ik['rekap'] }}"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Absensi</p>
-                    <h1 class="h3 mb-1">Rekap Absensi</h1>
-                    <p class="text-muted mb-0">Ringkasan kehadiran per pegawai · {{ $dari->translatedFormat('d M Y') }} – {{ $sampai->translatedFormat('d M Y') }}</p>
-                </div>
-            </div>
-            <div class="heading-actions">
-                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.absensi.rekap.export', 'eksporParam' => request()->only(['unit', 'q', 'urut']) + ['dari' => $dari->toDateString(), 'sampai' => $sampai->toDateString()]])
-            </div>
-        </div>
+    <div class="container-fluid">
+        <x-page-header title="Rekap Absensi" eyebrow="Absensi" subtitle="Ringkasan kehadiran per pegawai pada periode yang dipilih.">
+            <x-slot:actions>
+                @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.absensi.rekap.export', 'eksporParam' => request()->only(['unit', 'q', 'urut']) + $rentangParam])
+            </x-slot:actions>
+        </x-page-header>
 
         @include('admin.absensi._nav')
 
         @foreach ($pesanRentang as $p)
-            <div class="alert alert-warning small py-2 d-flex gap-2 align-items-center"><i class="bi bi-exclamation-triangle-fill"></i><span>{{ $p }}</span></div>
+            <x-alert tone="warning" class="mb-4">{{ $p }}</x-alert>
         @endforeach
 
-        <div class="row g-2 g-md-3 mb-3">
-            @foreach ([
-                ['Hadir', $total->sum('hadir_total'), 'bi-person-check', 'success'],
-                ['Telat', $total->sum('telat'), 'bi-alarm', 'danger'],
-                ['Alpa', $total->sum('alpa'), 'bi-x-octagon', 'dark'],
-                ['Lembur terverifikasi', $durasi($total->sum('lembur_menit')), $ik['lembur'], 'purple'],
-            ] as [$label, $nilai, $ikon, $warna])
-                <div class="col-6 col-md-3">
-                    <div class="panel p-3 h-100 d-flex align-items-center gap-3">
-                        <span class="absensi-kartu-ikon {{ $warna }}"><i class="bi {{ $ikon }}"></i></span>
-                        <span><span class="h5 mb-0 d-block">{{ $nilai }}</span><small class="text-muted">{{ $label }}</small></span>
-                    </div>
-                </div>
-            @endforeach
-        </div>
+        @include('admin.absensi._periode', ['rute' => 'admin.absensi.rekap', 'dari' => $dari, 'sampai' => $sampai, 'preset' => $preset,
+            'tetap' => request()->only(['unit', 'q', 'urut'])])
 
-        <section class="panel">
-            <form method="GET" class="panel-filter px-3 pt-3 pb-2" id="filterRekap">
-                <div class="row g-2 align-items-end">
-                    <div class="col-6 col-md-2">
-                        <label class="form-label small mb-1" for="dari">Dari</label>
-                        <input type="date" name="dari" id="dari" class="form-control form-control-sm" value="{{ $dari->toDateString() }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <label class="form-label small mb-1" for="sampai">Sampai</label>
-                        <input type="date" name="sampai" id="sampai" class="form-control form-control-sm" value="{{ $sampai->toDateString() }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    @if (count($unitOpsi) > 1)
-                        <div class="col-6 col-md-2">
-                            <select name="unit" class="form-select form-select-sm" aria-label="Bagian" onchange="this.form.submit()">
-                                <option value="">Semua bagian</option>
-                                @foreach ($unitOpsi as $u)
-                                    <option value="{{ $u }}" @selected(request('unit') === $u)>{{ $u }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    @endif
-                    <div class="col-12 col-md-4 col-xl-3">
-                        @include('partials.daftar-cari', ['cariTeks' => 'Cari pegawai, contoh: Siti', 'cariLabel' => 'Cari rekap menurut nama, NIP, atau bagian'])
-                    </div>
-                    <div class="col-md-auto">@include('partials.urut', ['urutForm' => 'filterRekap'])</div>
-                    <div class="col-md-auto">
-                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Tampilkan</button>
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap gap-1 mt-2">
-                    <span class="small text-muted me-1 align-self-center">Periode cepat:</span>
-                    @foreach ($preset as $label => [$pDari, $pSampai])
-                        <a href="{{ route('admin.absensi.rekap', ['dari' => $pDari->toDateString(), 'sampai' => $pSampai->toDateString()] + request()->only(['unit', 'q', 'urut'])) }}"
-                            class="abs-chip text-decoration-none {{ $dari->isSameDay($pDari) && $sampai->isSameDay($pSampai) ? 'aktif' : '' }}">{{ $label }}</a>
-                    @endforeach
-                </div>
-                @include('partials.daftar-ringkas', [
-                    'ringkasJumlah' => count($baris), 'ringkasSatuan' => 'pegawai',
-                    'ringkasFilter' => request()->filled('q') || request()->filled('unit'),
-                    'ringkasReset' => route('admin.absensi.rekap', ['dari' => $dari->toDateString(), 'sampai' => $sampai->toDateString()]),
-                ])
-            </form>
-
-            <div class="table-responsive">
-                <table class="table table-sm align-middle mb-0 absensi-rekap">
-                    <thead>
-                        <tr>
-                            <th>Pegawai</th>
-                            <th class="text-end" title="Hari kerja sesuai jadwal">Hari Kerja</th>
-                            <th class="text-end">Hadir</th>
-                            <th class="text-end">On Time</th>
-                            <th class="text-end" title="Jumlah hari telat (total menit)">Telat</th>
-                            <th class="text-end">Telat Izin</th>
-                            <th class="text-end">Pulang Cepat</th>
-                            <th class="text-end" title="Tidak scan pulang">Tdk Scan Plg</th>
-                            <th class="text-end">Alpa</th>
-                            <th class="text-end" title="Cuti / Izin / Sakit / Dinas Luar">Cuti/Izin</th>
-                            <th class="text-end" title="Lembur terverifikasi / sesuai surat">Lembur</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($baris as ['pegawai' => $p, 'r' => $r])
-                            <tr>
-                                <td>
-                                    <a href="{{ route('admin.absensi.pegawai', ['pegawai' => $p, 'dari' => $dari->toDateString(), 'sampai' => $sampai->toDateString()]) }}" class="fw-semibold d-block">{{ $p->nama_lengkap }}</a>
-                                    <small class="text-muted">{{ $p->kepegawaian?->unit_kerja ?? '-' }}@unless ($p->jadwalKerja) &middot; <span class="text-warning-emphasis">jadwal belum diatur</span>@endunless</small>
-                                </td>
-                                <td class="text-end absensi-angka">{{ $r['hari_kerja'] }}</td>
-                                <td class="text-end absensi-angka fw-semibold">{!! $angka($r['hadir_total']) !!}</td>
-                                <td class="text-end absensi-angka">{!! $angka($r['on_time'], 'text-success') !!}</td>
-                                <td class="text-end absensi-angka">
-                                    {!! $angka($r['telat'], 'text-danger fw-semibold') !!}
-                                    @if ($r['telat'])<small class="text-muted d-block">{{ $durasi($r['telat_menit']) }}</small>@endif
-                                </td>
-                                <td class="text-end absensi-angka">{!! $angka($r['telat_izin']) !!}</td>
-                                <td class="text-end absensi-angka">{!! $angka($r['pulang_cepat'], 'text-warning-emphasis') !!}</td>
-                                <td class="text-end absensi-angka">{!! $angka($r['tanpa_scan_pulang']) !!}</td>
-                                <td class="text-end absensi-angka">{!! $angka($r['alpa'], 'fw-semibold') !!}</td>
-                                <td class="text-end absensi-angka">{!! $angka($r['cuti'] + $r['izin'] + $r['sakit'] + $r['dinas_luar']) !!}</td>
-                                <td class="text-end absensi-angka">
-                                    @if ($r['lembur_surat_menit'])
-                                        {{ $durasi($r['lembur_menit']) }}
-                                        <small class="text-muted d-block">surat {{ $durasi($r['lembur_surat_menit']) }}@if ($r['lembur_belum']) · <span class="text-warning-emphasis">{{ $r['lembur_belum'] }} belum</span>@endif</small>
-                                    @else
-                                        <span class="absensi-nol">–</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="11">@include('partials.kosong', ['teks' => 'Belum ada pegawai yang ikut absensi.', 'ikonKosong' => $ik['rekap']])</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+        <section class="row g-3 mb-4" aria-label="Ringkasan periode">
+            <div class="col-6 col-xl-3">
+                <x-stat-card label="Kehadiran" :value="$persenTotal !== null ? $persenTotal . '%' : '–'" icon="bi-graph-up" tone="primary"
+                    :meta="number_format($hadirTotal, 0, ',', '.') . ' dari ' . number_format($hariKerjaTotal, 0, ',', '.') . ' hari kerja pegawai'" />
+            </div>
+            <div class="col-6 col-xl-3">
+                <x-stat-card label="Hadir" :value="$hadirTotal" unit="hari" icon="bi-person-check" tone="success"
+                    :meta="number_format($total->sum('on_time'), 0, ',', '.') . ' hari tepat waktu'" />
+            </div>
+            <div class="col-6 col-xl-3">
+                <x-stat-card label="Telat" :value="$total->sum('telat')" unit="kali" icon="bi-alarm" tone="warning"
+                    :meta="'Total ' . $durasi($total->sum('telat_menit')) . ($total->sum('telat_izin') ? ' · +' . $total->sum('telat_izin') . ' berizin' : '')" />
+            </div>
+            <div class="col-6 col-xl-3">
+                <x-stat-card label="Alpa" :value="$total->sum('alpa')" unit="hari" icon="bi-x-octagon" tone="danger" meta="Hari kerja tanpa scan & keterangan" />
             </div>
         </section>
+
+        <x-card :padding="false" aria-label="Rekap per pegawai">
+            <x-filter-bar :action="route('admin.absensi.rekap')" id="filterRekap"
+                search="Cari pegawai, contoh: Siti atau Guru" search-label="Cari rekap menurut nama, NIP, bagian, atau jabatan"
+                :count="count($baris)" unit="pegawai" :filtered="$adaFilter" :reset="$reset">
+                <x-slot:hidden>
+                    <input type="hidden" name="dari" value="{{ $dari->toDateString() }}">
+                    <input type="hidden" name="sampai" value="{{ $sampai->toDateString() }}">
+                </x-slot:hidden>
+                @if (count($unitOpsi) > 1)
+                    <select name="unit" class="form-select form-select-sm" aria-label="Saring bagian" onchange="this.form.submit()">
+                        <option value="">Semua bagian</option>
+                        @foreach ($unitOpsi as $u)<option value="{{ $u }}" @selected(request('unit') === $u)>{{ $u }}</option>@endforeach
+                    </select>
+                @endif
+                @include('partials.urut', ['urutForm' => 'filterRekap'])
+                <x-slot:summary>
+                    <p class="hr-filter-bar-jumlah"><i class="bi {{ $ik['lembur'] }} me-1" aria-hidden="true"></i>Lembur terverifikasi <strong>{{ $durasi($total->sum('lembur_menit')) }}</strong></p>
+                </x-slot:summary>
+            </x-filter-bar>
+
+            <x-table caption="Rekap absensi per pegawai" class="abs-rekap" sticky striped scroll>
+                <x-slot:head>
+                    <tr>
+                        <th @if ($urutAktif === 'nama') aria-sort="ascending" @endif>{!! $urut('nama', 'Pegawai') !!}</th>
+                        <th @if ($urutAktif === 'hadir_sedikit') aria-sort="ascending" @endif>{!! $urut('hadir_sedikit', 'Kehadiran') !!}</th>
+                        <th class="hr-angka">Hadir</th>
+                        <th class="hr-angka" @if ($urutAktif === 'telat') aria-sort="descending" @endif>{!! $urut('telat', 'Telat') !!}</th>
+                        <th class="hr-angka" title="Izin, sakit, dinas luar">Izin</th>
+                        <th class="hr-angka">Cuti</th>
+                        <th class="hr-angka" @if ($urutAktif === 'alpa') aria-sort="descending" @endif>{!! $urut('alpa', 'Alpa') !!}</th>
+                        <th class="hr-angka" title="Pulang cepat tanpa izin & tidak scan pulang">Perlu Dicek</th>
+                        <th class="hr-angka" @if ($urutAktif === 'lembur') aria-sort="descending" @endif>{!! $urut('lembur', 'Lembur') !!}</th>
+                    </tr>
+                </x-slot:head>
+                @forelse ($baris as ['pegawai' => $p, 'r' => $r])
+                    @php
+                        $pr = $persen($r['hadir_total'], $r['hari_kerja']);
+                        $izin = $r['izin'] + $r['sakit'] + $r['dinas_luar'];
+                        $rincianIzin = collect(['izin' => $r['izin'], 'sakit' => $r['sakit'], 'dinas' => $r['dinas_luar']])->filter()->map(fn ($n, $k) => $n . ' ' . $k);
+                        $cek = $r['pulang_cepat'] + $r['tanpa_scan_pulang'];
+                    @endphp
+                    <tr>
+                        <td>
+                            <div class="hr-sel-utama">
+                                <x-avatar :name="$p->nama_lengkap" size="sm" />
+                                <div class="min-w-0">
+                                    <a href="{{ route('admin.absensi.pegawai', ['pegawai' => $p] + $rentangParam) }}" class="hr-sel-judul">{{ $p->nama_lengkap }}</a>
+                                    <span class="hr-sel-sub">{{ $p->kepegawaian?->unit_kerja ?? '-' }}@unless ($p->jadwalKerja) · <span class="abs-teks-peringatan">jam kerja belum diatur</span>@endunless</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            @if ($pr !== null)
+                                <div class="abs-persen">
+                                    <div class="progress" role="progressbar" aria-label="Kehadiran {{ $p->nama_lengkap }}" aria-valuenow="{{ min(100, $pr) }}" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="progress-bar {{ $pr >= 90 ? '' : ($pr >= 75 ? 'is-sedang' : 'is-buruk') }}" style="width: {{ min(100, $pr) }}%"></div>
+                                    </div>
+                                    <span class="abs-persen-angka">{{ $pr }}%</span>
+                                </div>
+                                <span class="hr-sel-sub">{{ $r['hadir_total'] }} / {{ $r['hari_kerja'] }} hari kerja</span>
+                            @else
+                                <span class="abs-nol">–</span><span class="hr-sel-sub">Belum ada hari kerja</span>
+                            @endif
+                        </td>
+                        <td class="hr-angka">
+                            {!! $angka($r['hadir_total'], 'fw-semibold') !!}
+                            @if ($r['on_time'])<span class="hr-sel-sub">{{ $r['on_time'] }} tepat waktu</span>@endif
+                        </td>
+                        <td class="hr-angka">
+                            {!! $angka($r['telat'], 'abs-angka-telat') !!}
+                            @if ($r['telat'])<span class="hr-sel-sub">{{ $durasi($r['telat_menit']) }}</span>@endif
+                            @if ($r['telat_izin'])<span class="hr-sel-sub">+{{ $r['telat_izin'] }} berizin</span>@endif
+                        </td>
+                        <td class="hr-angka">
+                            {!! $angka($izin) !!}
+                            @if ($rincianIzin->count() > 1 || ($izin && ! $r['izin']))
+                                @foreach ($rincianIzin as $teks)<span class="hr-sel-sub">{{ $teks }}</span>@endforeach
+                            @endif
+                        </td>
+                        <td class="hr-angka">{!! $angka($r['cuti']) !!}</td>
+                        <td class="hr-angka">{!! $angka($r['alpa'], 'abs-angka-alpa') !!}</td>
+                        <td class="hr-angka">
+                            {!! $angka($cek, 'abs-angka-telat') !!}
+                            @if ($r['pulang_cepat'])<span class="hr-sel-sub">{{ $r['pulang_cepat'] }} pulang cepat</span>@endif
+                            @if ($r['tanpa_scan_pulang'])<span class="hr-sel-sub">{{ $r['tanpa_scan_pulang'] }} tak scan pulang</span>@endif
+                        </td>
+                        <td class="hr-angka">
+                            @if ($r['lembur_surat_menit'])
+                                <span class="fw-semibold">{{ $durasi($r['lembur_menit']) }}</span>
+                                <span class="hr-sel-sub">surat {{ $durasi($r['lembur_surat_menit']) }}@if ($r['lembur_belum']) · <span class="abs-teks-peringatan">{{ $r['lembur_belum'] }} belum dicek</span>@endif</span>
+                            @else
+                                <span class="abs-nol">–</span>
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    @if ($adaFilter)
+                        <x-table-empty :colspan="9" icon="bi-search" title="Tidak ada pegawai yang cocok">
+                            Coba kata kunci atau bagian lain.
+                            <x-slot:action><x-button :href="$reset" variant="secondary" icon="bi-x-circle">Reset filter</x-button></x-slot:action>
+                        </x-table-empty>
+                    @else
+                        <x-table-empty :colspan="9" :icon="$ik['rekap']" title="Belum ada pegawai yang ikut absensi">
+                            Rekap muncul setelah pegawai dicentang ikut absensi dan data mesin diimport.
+                            @if ($kelola)
+                                <x-slot:action><x-button :href="route('admin.absensi.pengaturan', ['tempel' => 1])" icon="bi-person-plus">Pilih pegawai</x-button></x-slot:action>
+                            @endif
+                        </x-table-empty>
+                    @endif
+                @endforelse
+            </x-table>
+        </x-card>
     </div>
 </main>
-@include('admin.absensi._gaya')
 @endsection

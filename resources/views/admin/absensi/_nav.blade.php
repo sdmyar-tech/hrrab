@@ -1,4 +1,4 @@
-{{-- Tab navigasi antarhalaman modul Absensi (ikon dari satu sumber: TampilanAbsensi::IKON). --}}
+{{-- Tab navigasi antarhalaman modul Absensi (ikon dari satu sumber: TampilanAbsensi::IKON). Gaya: .hr-tabs (ui.css). --}}
 @php
     $ikAbs = \App\Support\Absensi\TampilanAbsensi::IKON;
     $kelolaAbs = auth()->user()->can('kelola-absensi');
@@ -10,16 +10,12 @@
         ['admin.absensi.pengaturan', 'admin.absensi.pengaturan*', $ikAbs['pengaturan'], 'Pengaturan', $kelolaAbs],
     ], fn ($t) => $t[4]);
 @endphp
-<nav aria-label="Menu absensi">
-    <ul class="nav absensi-nav mb-3 flex-nowrap overflow-auto">
-        @foreach ($tabAbsensi as [$rute, $pola, $ikon, $teks])
-            @php $aktifTab = request()->routeIs(...(array) $pola); @endphp
-            <li class="nav-item">
-                <a href="{{ route($rute) }}" class="nav-link text-nowrap {{ $aktifTab ? 'active' : '' }}" @if ($aktifTab) aria-current="page" @endif>
-                    <i class="bi {{ $ikon }} me-1" aria-hidden="true"></i>{{ $teks }}
-                </a>
-            </li>
-        @endforeach
-    </ul>
+{{-- Kelas absensi-nav tetap dipakai skrip geser-tab (tepi memudar bila tab bisa digeser di HP). --}}
+<nav class="hr-tabs absensi-nav" aria-label="Menu absensi">
+    @foreach ($tabAbsensi as [$rute, $pola, $ikon, $teks])
+        @php $aktifTab = request()->routeIs(...(array) $pola); @endphp
+        <a href="{{ route($rute) }}" class="hr-tab {{ $aktifTab ? 'active' : '' }}" @if ($aktifTab) aria-current="page" @endif>
+            <i class="bi {{ $ikon }}" aria-hidden="true"></i>{{ $teks }}
+        </a>
+    @endforeach
 </nav>
-@include('admin.absensi._gaya')

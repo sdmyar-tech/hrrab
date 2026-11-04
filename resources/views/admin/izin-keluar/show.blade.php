@@ -1,69 +1,64 @@
 @extends('layouts.admin.app')
 
+@section('title', 'Detail Izin Keluar')
+
 @section('content')
+@php
+    $p = $izinKeluar;
+    $r = \App\Support\RingkasanPengajuan::izinKeluar($p);
+    $nama = $p->dataPegawai?->nama_lengkap ?? '-';
+    $konteks = [
+        ['Pegawai', $nama . ($p->unit_kerja ? ' · ' . $p->unit_kerja : '')],
+        ['Waktu', $p->tanggal->translatedFormat('l, d M Y') . ' · ' . $p->jamLabel()],
+        ['Keperluan', $p->keperluanLabel()],
+        ['Alasan', $p->alasan],
+        ['Tahap', $p->currentLevelLabel()],
+    ];
+    // Parameter tindakan dipakai bersama bilah cepat (HP) & kartu Tindakan (desktop).
+    $aksi = [
+        'item' => $p,
+        'setujui' => route('admin.izin-keluar.approve', $p),
+        'tolak' => route('admin.izin-keluar.reject', $p),
+        'judul' => 'izin keluar',
+        'konteks' => $konteks,
+        'alur' => $r['alur'],
+    ];
+@endphp
 <main class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        @include('partials.kembali', ['ke' => route('admin.izin-keluar.index'), 'label' => 'Izin Keluar'])
-
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi bi-door-open"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Manajemen SDM</p>
-                    <h1 class="h3 mb-1">Detail Izin Keluar</h1>
-                    <p class="text-muted mb-0">{{ $izinKeluar->dataPegawai?->nama_lengkap }}</p>
-                </div>
-            </div>
-            <div class="heading-actions d-flex flex-wrap gap-2 align-items-center">
-                <span class="badge fs-6 {{ $izinKeluar->badgeClass() }}">{{ $izinKeluar->statusLabel() }}</span>
-                @if ($izinKeluar->isApproved())
-                    <a href="{{ route('pegawai.izin-keluar.tiket', $izinKeluar) }}" class="btn btn-success btn-sm"><i class="bi bi-ticket-perforated me-1"></i>Lihat Tiket</a>
+    <div class="container-fluid">
+        <x-page-header :title="'Izin Keluar · ' . $nama" eyebrow="Data Pengajuan"
+            :subtitle="$p->tanggal->translatedFormat('l, d M Y') . ' · ' . $p->jamLabel() . ' · ' . $p->keperluanLabel()"
+            :back="route('admin.izin-keluar.index')" back-label="Izin Keluar">
+            <x-status-badge :badge="$p->badgeClass()" size="lg" dot>{{ $p->statusLabel() }}</x-status-badge>
+            @if ($p->isPending())<x-badge tone="neutral" icon="bi-signpost-split">Tahap: {{ $p->currentLevelLabel() }}</x-badge>@endif
+            <x-slot:actions>
+                @if ($p->isApproved())
+                    <x-button :href="route('pegawai.izin-keluar.tiket', $p)" variant="secondary" icon="bi-ticket-perforated">Lihat Tiket</x-button>
                 @endif
-                @include('admin.editor-data._tombol', ['entitas' => 'izin_keluar', 'id' => $izinKeluar->id, 'teks' => 'Ubah semua kolom', 'kembaliKe' => route('admin.izin-keluar.index')])
-            </div>
-        </div>
+                @include('admin.editor-data._tombol', ['entitas' => 'izin_keluar', 'id' => $p->id, 'teks' => 'Ubah semua kolom', 'kembaliKe' => route('admin.izin-keluar.index')])
+            </x-slot:actions>
+        </x-page-header>
 
-        <div class="row g-3">
-            <div class="col-lg-7">
-                <div class="panel p-4">
-                    <h2 class="h6 fw-bold mb-3"><i class="bi bi-clipboard-data me-1"></i>Ringkasan Pengajuan</h2>
-                    @include('admin.pengajuan._ringkasan', ['r' => \App\Support\RingkasanPengajuan::izinKeluar($izinKeluar)])
+        <div class="row g-4">
+            <div class="col-xl-8 d-grid gap-4 align-content-start">
+                @include('admin.pengajuan._aksi-cepat', $aksi)
+                <x-card title="Detail Pengajuan" icon="bi-clipboard-data">
+                    @include('admin.pengajuan._ringkasan', ['r' => $r, 'tanpaAlur' => true])
+                </x-card>
+                @include('admin.pengajuan._riwayat-alur', ['alur' => $r['alur']])
+            </div>
+
+            <div class="col-xl-4">
+                <div class="hr-detail-samping d-grid gap-4">
+                    @include('admin.pengajuan._kartu-aksi', $aksi)
+                    @can('kelola-sistem')
+                        @include('admin.izin-keluar._ubah-admin')
+                    @endcan
                 </div>
-            </div>
-
-            <div class="col-lg-5">
-                @if ($izinKeluar->isPending())
-                    @if (\App\Support\PengajuanWorkflow::canAct(auth()->user(), $izinKeluar))
-                        <div class="panel p-4">
-                            <h2 class="h6 fw-bold mb-3">Aksi</h2>
-                            @include('admin.partials.gm-pengganti-badge', ['pengajuan' => $izinKeluar])
-                            <form action="{{ route('admin.izin-keluar.approve', $izinKeluar) }}" method="POST" class="mb-2">
-                                @csrf
-                                <button type="submit" class="btn btn-success w-100"
-                                    data-confirm="true" data-icon="question" data-title="Setujui Izin Keluar?"
-                                    data-text="Izin keluar {{ $izinKeluar->dataPegawai?->nama_lengkap }} pada {{ $izinKeluar->tanggal->translatedFormat('d M Y') }} ({{ $izinKeluar->jamLabel() }}) akan disetujui."
-                                    data-confirm-text="Ya, Setujui" data-confirm-color="#198754" data-cancel-text="Batal">
-                                    <i class="bi bi-check-lg"></i> Setujui
-                                </button>
-                            </form>
-                            <form action="{{ route('admin.izin-keluar.reject', $izinKeluar) }}" method="POST">
-                                @csrf
-                                <input type="hidden" name="catatan_admin" value="">
-                                <button type="button" class="btn btn-outline-danger w-100 btn-tolak-izin"><i class="bi bi-x-lg"></i> Tolak</button>
-                            </form>
-                        </div>
-                    @else
-                        <div class="alert alert-secondary small mb-0">Menunggu persetujuan: {{ $izinKeluar->currentLevelLabel() }}</div>
-                    @endif
-                @endif
-
-                @can('kelola-sistem')
-                    @include('admin.izin-keluar._ubah-admin')
-                @endcan
             </div>
         </div>
     </div>
 </main>
 
-@include('admin.izin-keluar._skrip-tolak')
+@include('admin.pengajuan._persetujuan')
 @endsection

@@ -8,6 +8,7 @@ use App\Models\PengajuanCuti;
 use App\Models\User;
 use App\Support\ExcelExporter;
 use App\Support\FilterTanggal;
+use App\Support\HitungStatus;
 use App\Support\Notifikasi;
 use App\Support\PengajuanWorkflow;
 use App\Support\Urutan;
@@ -30,8 +31,10 @@ class PengajuanCutiController extends Controller
         ]);
         $pengajuanCutis = $query->paginate(15)->withQueryString();
         $bidangTabs = PengajuanWorkflow::gmTabCounts(PengajuanCuti::class, Auth::user());
+        // Kartu angka: saringan yang sama tanpa status (baca-saja).
+        $hitungStatus = HitungStatus::dari($this->filteredQuery($request->duplicate($request->except('status'))));
 
-        return view('admin.pengajuan-cuti.index', compact('pengajuanCutis', 'bidangTabs') + $urut);
+        return view('admin.pengajuan-cuti.index', compact('pengajuanCutis', 'bidangTabs', 'hitungStatus') + $urut);
     }
 
     public function show(PengajuanCuti $pengajuanCuti): View

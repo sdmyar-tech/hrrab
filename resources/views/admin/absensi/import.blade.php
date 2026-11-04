@@ -5,140 +5,207 @@
     $ik = \App\Support\Absensi\TampilanAbsensi::IKON;
     $hasil = session('hasil_import');
     $tgl = fn ($t) => $t ? \Carbon\Carbon::parse($t)->translatedFormat('d M Y') : '–';
+    $admin = auth()->user()->isAdmin();
 @endphp
 <main class="dashboard-content">
-    <div class="container-fluid px-3 px-lg-4 py-4">
-        <div class="page-heading">
-            <div class="page-heading-copy">
-                <span class="page-icon"><i class="bi {{ $ik['import'] }}"></i></span>
-                <div>
-                    <p class="eyebrow mb-1">Absensi</p>
-                    <h1 class="h3 mb-1">Import Data Mesin</h1>
-                    <p class="text-muted mb-0">Masukkan file dari flashdisk mesin absen. Data dicek dulu sebelum disimpan.</p>
-                </div>
-            </div>
-            <div class="heading-actions">
+    <div class="container-fluid">
+        <x-page-header title="Import Data Mesin" eyebrow="Absensi"
+            subtitle="Unggah file dari flashdisk mesin absen. Data dicek dulu sebelum disimpan, dan aman diimport berulang.">
+            <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.absensi.import.export', 'eksporTeks' => 'Ekspor Riwayat'])
-            </div>
-        </div>
+            </x-slot:actions>
+        </x-page-header>
 
         @include('admin.absensi._nav')
 
-        <div class="row g-3 align-items-start">
-            <div class="col-12 col-xl-7">
-                <section class="panel p-3 p-md-4">
-                    @if ($hasil)
+        <div class="row g-4 align-items-start mb-4">
+            <div class="col-12 col-xl-8">
+                @if ($hasil)
+                    <x-card class="mb-4" aria-label="Hasil import">
                         @include('admin.absensi._tahap-import', ['tahap' => 3])
-                        <div class="text-center py-2">
-                            <span class="absensi-kartu-ikon success mx-auto mb-2" style="width:56px;height:56px;font-size:1.6rem;"><i class="bi bi-check-lg"></i></span>
-                            <h2 class="h5 fw-bold mb-1">Import berhasil</h2>
-                            <p class="text-muted mb-3">Periode {{ $tgl($hasil['dari']) }} – {{ $tgl($hasil['sampai']) }}:
+                        <div class="abs-hasil" role="status">
+                            <span class="abs-hasil-ikon hr-tone-success" aria-hidden="true"><i class="bi bi-check-lg"></i></span>
+                            <h2 class="abs-hasil-judul">Import berhasil</h2>
+                            <p class="abs-hasil-teks">Periode {{ $tgl($hasil['dari']) }} – {{ $tgl($hasil['sampai']) }}:
                                 <strong>{{ $hasil['baru'] }}</strong> hari baru, <strong>{{ $hasil['diperbarui'] }}</strong> diperbarui, {{ $hasil['dilewati'] }} dilewati.</p>
-                            <div class="d-flex flex-wrap justify-content-center gap-2">
+                            <div class="abs-hasil-aksi">
                                 @if ($hasil['belum_dipetakan'])
-                                    <a href="{{ route('admin.absensi.pengaturan', ['tab' => 'pemetaan']) }}" class="btn btn-warning">
-                                        <i class="bi bi-link-45deg me-1"></i> Hubungkan {{ $hasil['belum_dipetakan'] }} ID mesin baru
-                                    </a>
+                                    <x-button variant="outline" :href="route('admin.absensi.pengaturan', ['tab' => 'pemetaan'])" icon="bi-link-45deg">Hubungkan {{ $hasil['belum_dipetakan'] }} ID mesin baru</x-button>
                                 @endif
-                                <a href="{{ route('admin.absensi.harian', ['tanggal' => $hasil['sampai']]) }}" class="btn btn-primary"><i class="bi {{ $ik['harian'] }} me-1"></i> Lihat absensi</a>
-                                <a href="{{ route('admin.absensi.rekap', ['dari' => $hasil['dari'], 'sampai' => $hasil['sampai']]) }}" class="btn btn-outline-secondary"><i class="bi {{ $ik['rekap'] }} me-1"></i> Lihat rekap</a>
+                                <x-button variant="secondary" :href="route('admin.absensi.rekap', ['dari' => $hasil['dari'], 'sampai' => $hasil['sampai']])" :icon="$ik['rekap']">Lihat rekap</x-button>
+                                <x-button :href="route('admin.absensi.harian', ['tanggal' => $hasil['sampai']])" :icon="$ik['harian']">Lihat absensi</x-button>
                             </div>
                         </div>
-                        <hr class="my-4">
-                        <p class="small fw-semibold mb-2">Import file lain</p>
-                    @else
+                    </x-card>
+                @endif
+
+                <x-card :title="$hasil ? 'Import file lain' : 'Unggah file mesin'" icon="bi-cloud-arrow-up"
+                    subtitle="Laporan absensi dari mesin (.xls, .xlsx, .csv) atau log mentah (.dat, .txt), maksimal 20 MB.">
+                    @unless ($hasil)
                         @include('admin.absensi._tahap-import', ['tahap' => 1])
-                    @endif
+                    @endunless
 
                     <form action="{{ route('admin.absensi.import.pratinjau') }}" method="POST" enctype="multipart/form-data" id="formImport">
                         @csrf
-                        <label class="abs-dropzone mb-3 @error('file') border-danger @enderror" data-dropzone>
-                            <input type="file" name="file" accept=".xls,.xlsx,.csv,.dat,.txt" required data-input-file>
-                            <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
-                            <span class="fw-semibold" data-nama-file>Klik untuk pilih file, atau seret file ke sini</span>
-                            <small class="text-muted">File laporan dari mesin (.xls / .xlsx / .csv / .dat) · maks. 20 MB</small>
+                        {{-- Area unggah: input file asli menutupi seluruh area (klik, seret-lepas, & Tab/Spasi tetap berfungsi). --}}
+                        <label class="abs-dropzone @error('file') is-galat @enderror" data-dropzone>
+                            <input type="file" name="file" class="abs-dropzone-input" accept=".xls,.xlsx,.csv,.dat,.txt" required data-input-file
+                                aria-describedby="dropzoneBantuan @error('file') dropzoneGalat @enderror">
+                            <span class="abs-dropzone-ikon" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i></span>
+                            <span class="abs-dropzone-judul" data-dropzone-judul>Seret file ke sini, atau <span class="abs-tautan">klik untuk memilih</span></span>
+                            <span class="abs-dropzone-sub" id="dropzoneBantuan">File laporan mesin: .xls, .xlsx, .csv, .dat, atau .txt · maks. 20 MB</span>
                         </label>
-                        @error('file')<div class="text-danger small mb-2">{{ $message }}</div>@enderror
-                        <button type="submit" class="btn btn-primary w-100" disabled data-tombol-cek>
-                            <i class="bi bi-search me-1"></i> Cek Data
-                        </button>
-                    </form>
+                        @error('file')
+                            <div class="invalid-feedback d-block mt-2" id="dropzoneGalat"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
+                        @enderror
+                        <div class="invalid-feedback mt-2" data-galat-berkas role="alert"></div>
 
-                    <details class="mt-3 small">
-                        <summary class="fw-semibold" style="cursor:pointer;">Cara mengambil file dari mesin absen</summary>
-                        <ol class="text-muted ps-3 mt-2 mb-2">
-                            <li>Colok flashdisk ke mesin absen.</li>
-                            <li>Buka <strong>Menu → Flashdisk / USB</strong>, lalu unduh <strong>laporan absensi</strong> periode yang diinginkan.</li>
-                            <li>Colok flashdisk ke komputer, lalu pilih file tersebut di atas.</li>
-                        </ol>
-                        <p class="text-muted mb-0">Yang diambil hanya <strong>ID (AC-No.)</strong>, <strong>tanggal</strong>, dan <strong>jam finger</strong>. Telat/lembur dihitung otomatis oleh sistem sesuai jam kerja tiap pegawai. Aman diimport berulang — data tidak akan dobel, dan hasil koreksi SDM tidak tertimpa.</p>
-                    </details>
-                </section>
+                        <div class="abs-berkas" data-berkas hidden>
+                            <span class="abs-berkas-ikon hr-tone-success" aria-hidden="true"><i class="bi bi-file-earmark-spreadsheet"></i></span>
+                            <div class="min-w-0 flex-grow-1">
+                                <p class="abs-berkas-nama" data-nama-file></p>
+                                <p class="abs-berkas-ukuran" data-ukuran-file></p>
+                            </div>
+                            <x-button variant="ghost" size="sm" icon="bi-x-lg" data-hapus-berkas>Hapus pilihan</x-button>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <x-button type="submit" icon="bi-search" disabled data-tombol-cek>Cek Data</x-button>
+                        </div>
+                    </form>
+                </x-card>
             </div>
 
-            <div class="col-12 col-xl-5">
-                <section class="panel">
-                    <div class="panel-header">
-                        <h2 class="h6 fw-bold mb-0"><i class="bi bi-clock-history me-1"></i>Riwayat Import</h2>
-                    </div>
-                    <div class="list-group list-group-flush">
-                        @forelse ($riwayat as $r)
-                            <div class="list-group-item d-flex justify-content-between gap-2">
-                                <div class="min-w-0">
-                                    <div class="fw-semibold text-truncate" title="{{ $r->nama_file }}"><i class="bi bi-file-earmark-spreadsheet me-1 text-success"></i>{{ $r->nama_file }}</div>
-                                    <small class="text-muted d-block">{{ $r->created_at->translatedFormat('d M Y H:i') }} · {{ $r->diimportOleh?->name ?? '-' }}</small>
-                                    @if ($r->periode_dari)
-                                        <a href="{{ route('admin.absensi.rekap', ['dari' => $r->periode_dari->toDateString(), 'sampai' => $r->periode_sampai->toDateString()]) }}" class="small">
-                                            {{ $r->periode_dari->format('d/m/Y') }} – {{ $r->periode_sampai->format('d/m/Y') }}
-                                        </a>
-                                    @endif
-                                </div>
-                                <div class="text-end small text-nowrap">
-                                    <span class="badge text-bg-success">+{{ $r->jumlah_baru }}</span>
-                                    @if ($r->jumlah_diperbarui)<span class="badge text-bg-primary">{{ $r->jumlah_diperbarui }} diperbarui</span>@endif
-                                    @if (auth()->user()->isAdmin())
-                                        <form action="{{ route('admin.absensi.import.hapus', $r) }}" method="POST" class="mt-1">
-                                            @csrf @method('DELETE')
-                                            <button type="submit" class="btn btn-link btn-sm text-danger p-0"
-                                                data-confirm="true" data-icon="warning" data-title="Batalkan import?"
-                                                data-text="Baris absensi dari file {{ $r->nama_file }} akan dihapus (baris yang sudah dikoreksi tetap dipertahankan)."
-                                                data-confirm-text="Ya, Batalkan Import" data-confirm-color="#dc3545" data-cancel-text="Kembali"><i class="bi bi-arrow-counterclockwise me-1"></i>Batalkan import</button>
-                                        </form>
-                                    @endif
-                                </div>
-                            </div>
-                        @empty
-                            @include('partials.kosong', ['teks' => 'Belum ada file yang diimport.', 'ikonKosong' => $ik['import']])
-                        @endforelse
-                    </div>
-                    @if ($riwayat->hasPages())
-                        <div class="panel-footer px-3 py-2 border-top">{{ $riwayat->links('pagination::bootstrap-5') }}</div>
-                    @endif
-                </section>
+            <div class="col-12 col-xl-4">
+                <x-card title="Cara mengambil file" icon="bi-usb-drive" subtitle="Dari mesin absen ke komputer.">
+                    <ol class="hr-daftar-info mb-4">
+                        <li><i class="bi bi-1-circle" aria-hidden="true"></i>Colok flashdisk ke mesin absen.</li>
+                        <li><i class="bi bi-2-circle" aria-hidden="true"></i>Buka <strong>Menu → Flashdisk / USB</strong>, lalu unduh <strong>laporan absensi</strong> periode yang diinginkan.</li>
+                        <li><i class="bi bi-3-circle" aria-hidden="true"></i>Colok flashdisk ke komputer, lalu pilih atau seret file tersebut ke area unggah.</li>
+                    </ol>
+                    <ul class="hr-daftar-info">
+                        <li><i class="bi bi-info-circle" aria-hidden="true"></i>Yang diambil hanya <strong>ID (AC-No.)</strong>, <strong>tanggal</strong>, dan <strong>jam finger</strong>. Telat & lembur dihitung otomatis sesuai jam kerja tiap pegawai.</li>
+                        <li><i class="bi bi-shield-check" aria-hidden="true"></i>Aman diimport berulang: data tidak dobel, dan hasil koreksi SDM tidak tertimpa.</li>
+                    </ul>
+                </x-card>
             </div>
         </div>
+
+        <x-card :padding="false" title="Riwayat Import" icon="bi-clock-history" subtitle="File mesin yang sudah disimpan, terbaru di atas.">
+            <x-table caption="Riwayat import file mesin" sticky striped>
+                <x-slot:head>
+                    <tr>
+                        <th>Waktu Import</th>
+                        <th>Berkas</th>
+                        <th class="hr-angka">Jumlah Baris</th>
+                        <th>Status</th>
+                        <th>Diimport Oleh</th>
+                        <th class="hr-kolom-aksi">Aksi</th>
+                    </tr>
+                </x-slot:head>
+                @forelse ($riwayat as $r)
+                    @php $tersimpan = $r->jumlah_baru + $r->jumlah_diperbarui; @endphp
+                    <tr>
+                        <td class="text-nowrap">
+                            <span class="d-block">{{ $r->created_at->translatedFormat('d M Y') }}</span>
+                            <span class="hr-sel-sub">{{ $r->created_at->format('H:i') }}</span>
+                        </td>
+                        <td>
+                            <span class="hr-sel-judul"><i class="bi bi-file-earmark-spreadsheet me-1 text-muted" aria-hidden="true"></i>{{ $r->nama_file }}</span>
+                            @if ($r->periode_dari)
+                                <span class="hr-sel-sub">Periode {{ $r->periode_dari->translatedFormat('d M') }} – {{ $r->periode_sampai->translatedFormat('d M Y') }}</span>
+                            @endif
+                        </td>
+                        <td class="hr-angka">{{ number_format($r->jumlah_baris, 0, ',', '.') }}</td>
+                        <td>
+                            <x-badge :tone="$tersimpan ? 'success' : 'neutral'" dot>{{ $tersimpan ? 'Tersimpan' : 'Tanpa data baru' }}</x-badge>
+                            <span class="hr-sel-sub mt-1">{{ collect([$r->jumlah_baru . ' baru', $r->jumlah_diperbarui ? $r->jumlah_diperbarui . ' diperbarui' : null, $r->jumlah_dilewati ? $r->jumlah_dilewati . ' dilewati' : null])->filter()->implode(' · ') }}</span>
+                        </td>
+                        <td>{{ $r->diimportOleh?->name ?? '-' }}</td>
+                        <td class="text-end hr-kolom-aksi">
+                            <div class="hr-aksi-baris">
+                                @if ($r->periode_dari)
+                                    <x-icon-button :icon="$ik['rekap']" label="Lihat rekap periode ini"
+                                        :href="route('admin.absensi.rekap', ['dari' => $r->periode_dari->toDateString(), 'sampai' => $r->periode_sampai->toDateString()])" />
+                                @else
+                                    <span class="hr-ikon-btn invisible" aria-hidden="true"></span>
+                                @endif
+                                @if ($admin)
+                                    <form action="{{ route('admin.absensi.import.hapus', $r) }}" method="POST">
+                                        @csrf @method('DELETE')
+                                        <x-icon-button type="submit" icon="bi-arrow-counterclockwise" label="Batalkan import" tone="danger"
+                                            data-confirm="true" data-icon="warning" data-title="Batalkan import?"
+                                            data-text="Baris absensi dari file {{ $r->nama_file }} akan dihapus (baris yang sudah dikoreksi tetap dipertahankan)."
+                                            data-confirm-text="Ya, Batalkan Import" data-cancel-text="Kembali" />
+                                    </form>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <x-table-empty :colspan="6" :icon="$ik['import']" title="Belum ada file yang diimport">
+                        Riwayat muncul di sini setelah file mesin pertama disimpan.
+                    </x-table-empty>
+                @endforelse
+            </x-table>
+            @if ($riwayat->hasPages())
+                <x-slot:footer><x-pagination :paginator="$riwayat" /></x-slot:footer>
+            @endif
+        </x-card>
     </div>
 </main>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const zona = document.querySelector('[data-dropzone]');
-        const input = document.querySelector('[data-input-file]');
-        const label = document.querySelector('[data-nama-file]');
+        if (!zona) return;
+        const input = zona.querySelector('[data-input-file]');
+        const judul = zona.querySelector('[data-dropzone-judul]');
+        const berkas = document.querySelector('[data-berkas]');
+        const nama = document.querySelector('[data-nama-file]');
+        const ukuran = document.querySelector('[data-ukuran-file]');
+        const galat = document.querySelector('[data-galat-berkas]');
         const tombol = document.querySelector('[data-tombol-cek]');
+        const judulAwal = judul.innerHTML;
+        const JENIS = ['xls', 'xlsx', 'csv', 'dat', 'txt'];
+        const MAKS = 20 * 1024 * 1024; // sama dengan validasi server (max:20480 KB)
+        const ukuranTeks = (b) => b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+
+        // Perbarui tampilan sesuai berkas terpilih: nama & ukuran, cek format/ukuran di sisi klien, tombol Cek Data.
         const perbarui = function () {
             const f = input.files[0];
-            zona.classList.toggle('ada-file', !!f);
-            label.textContent = f ? f.name + ' (' + Math.max(1, Math.round(f.size / 1024)) + ' KB)' : 'Klik untuk pilih file, atau seret file ke sini';
-            tombol.disabled = !f;
+            const ext = f ? f.name.split('.').pop().toLowerCase() : '';
+            const pesan = !f ? '' : (!JENIS.includes(ext) ? 'Format file harus .xls, .xlsx, .csv, .dat, atau .txt (hasil unduhan mesin).'
+                : (f.size > MAKS ? 'Ukuran file maksimal 20 MB.' : ''));
+            zona.classList.toggle('is-ada', !!f && !pesan);
+            zona.classList.toggle('is-galat', !!pesan);
+            berkas.hidden = !f;
+            nama.textContent = f ? f.name : '';
+            ukuran.textContent = f ? ukuranTeks(f.size) + (pesan ? '' : ' · siap dicek') : '';
+            galat.textContent = pesan;
+            galat.classList.toggle('d-block', !!pesan);
+            input.setCustomValidity(pesan);
+            input.setAttribute('aria-invalid', pesan ? 'true' : 'false');
+            judul.innerHTML = f ? 'File terpilih. Seret file lain atau <span class="abs-tautan">klik untuk mengganti</span>' : judulAwal;
+            tombol.disabled = !f || !!pesan;
         };
         input.addEventListener('change', perbarui);
-        ['dragenter', 'dragover'].forEach((ev) => zona.addEventListener(ev, (e) => { e.preventDefault(); zona.classList.add('seret'); }));
-        ['dragleave', 'drop'].forEach((ev) => zona.addEventListener(ev, () => zona.classList.remove('seret')));
+
+        // Seret & lepas: area tersorot selama berkas di atasnya.
+        ['dragenter', 'dragover'].forEach((ev) => zona.addEventListener(ev, function (e) { e.preventDefault(); zona.classList.add('is-seret'); }));
+        zona.addEventListener('dragleave', function (e) { if (!zona.contains(e.relatedTarget)) zona.classList.remove('is-seret'); });
         zona.addEventListener('drop', function (e) {
             e.preventDefault();
+            zona.classList.remove('is-seret');
             if (e.dataTransfer.files.length) { input.files = e.dataTransfer.files; perbarui(); }
         });
+
+        document.querySelector('[data-hapus-berkas]').addEventListener('click', function () {
+            input.value = '';
+            perbarui();
+            input.focus();
+        });
+        perbarui(); // berkas bisa tetap terpilih saat kembali lewat tombol Back
     });
 </script>
 @endsection

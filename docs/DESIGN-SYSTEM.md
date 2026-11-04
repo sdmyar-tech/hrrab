@@ -171,6 +171,23 @@ Pola kelas (CSS di `ui.css`, tanpa komponen):
 
 **Form**: `x-page-header` (back) → `x-card` berisi beberapa `x-form-section` (2 kolom desktop) → `.hr-bilah-aksi` lengket (Batal | Simpan). Form panjang boleh `x-section-nav` di kolom kiri.
 
+### Pola seragam pengajuan (Batch 5) — cuti · lembur · izin keluar · formasi
+
+Partial bersama di `resources/views/admin/pengajuan/` (jangan menulis ulang per halaman):
+
+| Partial | Kegunaan |
+|---|---|
+| `_stat-status` | 4 kartu angka Total · Menunggu · Disetujui · Ditolak (`$hitung` dari `App\Support\HitungStatus::dari($queryTanpaStatus)`); klik kartu = saring status, kartu aktif `.hr-stat-aktif` |
+| `_aksi-ikon` | Kolom aksi baris: Setujui · Tolak (bila penyetuju tahap ini) · tambahan · Lihat detail, selalu sejajar (`slotTambahan`, pengganti `.hr-ikon-btn.invisible`) |
+| `_persetujuan` | Dialog konfirmasi Setujui/Tolak (`#modalSetujui`, `#modalTolak`), dipasang sekali per halaman. Pemicu: `[data-persetujuan="setujui\|tolak"] data-url data-judul data-konteks='[[label,nilai]]'` (+ `data-pengganti` untuk cuti tahap pertama, `data-catatan-sumber` untuk alasan dari kartu). Validasi pengganti/alasan + kunci tombol saat kirim |
+| `_kartu-aksi` | Kartu Tindakan/Keputusan lengket di kolom kanan detail |
+| `_aksi-cepat` | Bilah "Perlu keputusan Anda" di atas detail untuk layar < 1200px |
+| `_riwayat-alur` | Timeline riwayat persetujuan (`x-timeline`) dari `RingkasanPengajuan::…()['alur']` |
+| `_ringkasan` (`tanpaAlur`) | Ringkasan penyetuju; di detail alur tidak diulang karena tampil di timeline |
+
+Detail pengajuan: kiri `col-xl-8` (`_aksi-cepat`, kartu Detail Pengajuan, `_riwayat-alur`), kanan `col-xl-4 .hr-detail-samping` (`_kartu-aksi`, Ubah Langsung Admin). Parameter tindakan disusun sekali di `$aksi` dan dipakai kedua partial.
+Kelas pendukung: `.hr-konteks` (daftar label–nilai di dialog/kartu), `.hr-kartu-aksi-tombol`, `.hr-aksi-cepat`, `.hr-ikon-btn-success`.
+
 Partial lama yang tetap dipakai: `partials.tombol-ekspor`, `partials.daftar-cari`, `partials.filter-tanggal`, `partials.urut`,
 `partials.daftar-ringkas`, `partials.kosong(-tabel)`, `partials.tombol-aksi-lain`, `partials.pilih-pegawai`,
 `partials.preview-file(-modal)`, `partials.viz.*`, `partials.kembali`.
