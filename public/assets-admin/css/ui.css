@@ -1076,11 +1076,18 @@ html[data-theme="dark"] .btn-ghost { --bs-btn-color: var(--admin-text); --bs-btn
 .hr-input-group:focus-within > .form-control.is-invalid ~ .hr-lihat-sandi, .hr-input-group > .form-control.is-invalid ~ .hr-lihat-sandi { border-color: var(--hr-danger); }
 .hr-input-group > .form-control:focus { box-shadow: none; }
 .hr-input-group:focus-within { border-radius: var(--hr-radius-sm); box-shadow: var(--admin-ring); }
-/* Isi otomatis browser (Chrome/Edge) memberi latar biru yang tidak menyatu dengan ikon grup: tutup dengan warna permukaan. */
+/* Satu warna latar untuk ikon, isian, dan tombol lihat sandi di semua keadaan (Bootstrap mengganti latar isian saat fokus
+   menjadi --bs-body-bg yang abu, sehingga ikon tampak terpisah). Isian nonaktif/hanya-baca tetap abu. */
+:root { --hr-isian-latar: var(--admin-surface); }
+html[data-theme="dark"] { --hr-isian-latar: var(--admin-surface-soft); }
+.hr-input-group > :is(.input-group-text, .hr-lihat-sandi, .hr-lihat-sandi:hover, .form-control:not(:disabled, [readonly]), .form-control:not(:disabled, [readonly]):focus) {
+    background-color: var(--hr-isian-latar);
+}
+/* Isi otomatis browser (Chrome/Edge) memberi latar biru yang tidak menyatu dengan ikon grup: tutup dengan warna latar isian. */
 .form-control:-webkit-autofill,
 .form-control:-webkit-autofill:hover,
 .form-control:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0 1000px var(--admin-surface) inset !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--hr-isian-latar) inset !important;
     -webkit-text-fill-color: var(--admin-text);
     caret-color: var(--admin-text);
     transition: background-color 9999s ease-out 0s;
