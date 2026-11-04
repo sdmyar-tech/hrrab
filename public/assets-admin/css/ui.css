@@ -1076,6 +1076,15 @@ html[data-theme="dark"] .btn-ghost { --bs-btn-color: var(--admin-text); --bs-btn
 .hr-input-group:focus-within > .form-control.is-invalid ~ .hr-lihat-sandi, .hr-input-group > .form-control.is-invalid ~ .hr-lihat-sandi { border-color: var(--hr-danger); }
 .hr-input-group > .form-control:focus { box-shadow: none; }
 .hr-input-group:focus-within { border-radius: var(--hr-radius-sm); box-shadow: var(--admin-ring); }
+/* Isi otomatis browser (Chrome/Edge) memberi latar biru yang tidak menyatu dengan ikon grup: tutup dengan warna permukaan. */
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:hover,
+.form-control:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px var(--admin-surface) inset !important;
+    -webkit-text-fill-color: var(--admin-text);
+    caret-color: var(--admin-text);
+    transition: background-color 9999s ease-out 0s;
+}
 .hr-lihat-sandi {
     min-height: 0;
     border: 1px solid var(--admin-border-strong);
