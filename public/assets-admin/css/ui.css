@@ -1070,8 +1070,9 @@ html[data-theme="dark"] .btn-ghost { --bs-btn-color: var(--admin-text); --bs-btn
 .hr-field .form-text { margin-top: 6px; }
 .hr-hitung { margin-top: var(--hr-space-1); font-size: var(--hr-text-xs); color: var(--admin-muted); text-align: right; font-variant-numeric: tabular-nums; }
 /* Ikon di kiri isian menyatu dengan kolom (bukan kotak abu terpisah). */
-.hr-input-group > .input-group-text { background: var(--admin-surface); border-right: 0; color: var(--hr-gray-500); padding-right: 0; }
-.hr-input-group > .input-group-text + .form-control { border-left: 0; }
+/* padding-right memberi ruang agar isian (digeser -1px oleh Bootstrap) tidak menimpa sisi kanan ikon. */
+.hr-input-group > .input-group-text { background: var(--admin-surface); border-right: 0; color: var(--hr-gray-500); padding-right: var(--hr-space-1); }
+.hr-input-group > .input-group-text + .form-control { border-left: 0; padding-left: var(--hr-space-2); }
 .hr-input-group:focus-within > .input-group-text { border-color: var(--hr-primary); color: var(--hr-primary); }
 /* Saat fokus seluruh bingkai grup (ikon, isian, tombol lihat sandi) satu warna; tanpa ini garis isian tetap abu (gelap)
    atau sedikit berbeda (terang) sehingga kolom tampak terpotong di batas ikon. Galat tetap merah (aturan .is-invalid di bawah). */
