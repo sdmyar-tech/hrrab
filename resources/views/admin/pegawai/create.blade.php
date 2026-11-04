@@ -144,7 +144,7 @@
                         <x-form-section id="bagian-kepegawaian" class="hr-bagian" title="Kepegawaian" subtitle="Penempatan, jabatan, dan status kerja." icon="bi-briefcase">
                             <div class="col-md-6">
                                 <x-input name="nip" id="f-nip" label="NIP (No. Induk Pegawai)" :value="$p->nip ?? ''" maxlength="50"
-                                    placeholder="Nomor induk pegawai, contoh: 0101199001012020001" :required="$wajib('nip')" field-class="mb-0" />
+                                    placeholder="Nomor induk pegawai, contoh: 0101199001012020001" optional field-class="mb-0" />
                             </div>
                             <div class="col-md-6">
                                 <x-select name="unit_kerja" id="f-unit-kerja" label="Bagian" :options="$opsi(config('kepegawaian.unit_kerja'))"

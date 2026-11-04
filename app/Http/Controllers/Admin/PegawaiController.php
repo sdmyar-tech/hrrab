@@ -411,7 +411,7 @@ class PegawaiController extends Controller
                 Rule::unique('data_pegawais', 'email')->ignore($ignoreId),
             ],
             'nip' => [
-                'required', 'string', 'max:50',
+                'nullable', 'string', 'max:50',
                 Rule::unique('data_pegawais', 'nip')->ignore($ignoreId),
             ],
             'nama_lengkap' => ['required', 'string', 'max:255'],
