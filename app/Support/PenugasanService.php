@@ -226,6 +226,8 @@ class PenugasanService
 
     /**
      * Atur unit yang dipimpin pegawai (form Kelola User & import).
+     * Pegawai tanpa penugasan utama aktif: bagian utamanya dicatat sebagai penugasan UTAMA jenis AWAL (bukan rangkap),
+     * yaitu bagian di kepegawaian bila dipimpin, atau satu-satunya bagian yang dipilih. Bagian lain = rangkap kepala.
      *
      * @param  list<string>  $units
      */
@@ -233,11 +235,21 @@ class PenugasanService
     {
         $hariIni = now()->toDateString();
         $aktif = $pegawai->penugasans()->aktif()->get();
+        $kep = $pegawai->kepegawaian()->first();
+        $unitUtama = $aktif->contains('is_utama', true) ? null : self::unitUtamaKepala($units, $kep?->unit_kerja);
+        // Bagian utama yang dipilih menjadi bagian kepegawaian (role akun tidak disentuh: diatur di form akun).
+        if ($unitUtama && $kep && $kep->unit_kerja !== $unitUtama) {
+            $kep->update(['unit_kerja' => $unitUtama]);
+        }
 
         foreach ($aktif as $p) {
             $harusKepala = in_array($p->unit_kerja, $units, true);
 
-            if ($harusKepala && ! $p->isKepala()) {
+            if ($p->unit_kerja === $unitUtama && ! $p->is_utama) {
+                // Rangkap di bagian yang ternyata bagian utamanya → jadikan penempatan utama.
+                $p->update(['peran' => Penugasan::PERAN_KEPALA, 'is_utama' => true, 'jenis' => Penugasan::JENIS_AWAL]);
+                $unitUtama = null;
+            } elseif ($harusKepala && ! $p->isKepala()) {
                 $p->update(['peran' => Penugasan::PERAN_KEPALA]);
             } elseif (! $harusKepala && $p->isKepala()) {
                 match (true) {
@@ -249,6 +261,11 @@ class PenugasanService
         }
 
         foreach (array_diff($units, $aktif->pluck('unit_kerja')->all()) as $unit) {
+            if ($unit === $unitUtama) {
+                self::buatUtama($pegawai, $unit, $kep?->jabatan ?: 'KEPALA ' . $unit, $kep?->tanggal_masuk, Penugasan::PERAN_KEPALA, $oleh);
+
+                continue;
+            }
             $pegawai->penugasans()->create([
                 'unit_kerja' => $unit,
                 'jabatan' => 'KEPALA ' . $unit,
@@ -262,6 +279,24 @@ class PenugasanService
 
         $pegawai->unsetRelation('penugasanAktif');
         self::sinkronInterviewer();
+    }
+
+    /**
+     * Bagian utama kepala yang belum punya penugasan utama: bagian di kepegawaian bila ikut dipimpin,
+     * selain itu satu-satunya bagian yang dipilih; lebih dari satu bagian lain → tidak ada (semuanya rangkap).
+     *
+     * @param  list<string>  $units
+     */
+    private static function unitUtamaKepala(array $units, ?string $unitKepegawaian): ?string
+    {
+        $sama = fn (?string $a, ?string $b) => mb_strtoupper(trim((string) $a)) === mb_strtoupper(trim((string) $b));
+        foreach ($units as $u) {
+            if ($unitKepegawaian && $sama($u, $unitKepegawaian)) {
+                return $u;
+            }
+        }
+
+        return count($units) === 1 ? $units[0] : null;
     }
 
     /**
