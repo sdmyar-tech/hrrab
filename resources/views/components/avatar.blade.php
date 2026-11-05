@@ -19,7 +19,7 @@
 <span {{ $attributes->merge(['class' => "hr-avatar hr-avatar-{$size} hr-tone-{$rona}"]) }} @if (! $adaFoto) role="img" aria-label="{{ $bersih }}" @endif>
     @if ($adaFoto)
         <img src="{{ $src }}" alt="" loading="lazy" decoding="async"
-            onerror="this.remove(); this.parentElement.dataset.gagal = '1';">
+            onerror="this.parentElement && (this.parentElement.dataset.gagal = '1'); this.remove();">
     @endif
     <span class="hr-avatar-inisial" aria-hidden="true">{{ $inisial }}</span>
 </span>
