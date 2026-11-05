@@ -206,6 +206,12 @@ Partial lama yang tetap dipakai: `partials.tombol-ekspor`, `partials.daftar-cari
 `partials.daftar-ringkas`, `partials.kosong(-tabel)`, `partials.tombol-aksi-lain`, `partials.pilih-pegawai`,
 `partials.preview-file(-modal)`, `partials.viz.*`, `partials.kembali`.
 
+**Pilihan berantai bagian → jabatan → lokasi** — `@include('partials.jabatan-ikut-unit')` (atribut `data-jabatan-unit="[name=unit_kerja]"` pada
+select jabatan) dan `@include('partials.lokasi-ikut-jabatan')` (pada select lokasi: `data-lokasi-jabatan="[name=jabatan]"` + `data-lokasi-unit="[name=unit_kerja]"`
+atau `data-lokasi-unit-tetap="NAMA BAGIAN"`, opsional `data-lokasi-bebas` untuk Mode Admin). Sumber lokasi: Master Jabatan → Atur lokasi
+(`Jabatan::lokasiPerUnit()`); satu lokasi terisi otomatis, beberapa dipilih dari daftarnya, belum diatur = semua lokasi. Server memvalidasi
+dengan `Jabatan::lokasiSah()`.
+
 ## 5. Pola interaksi (otomatis, cukup pasang atribut)
 
 | Kebutuhan | Pasang | Ditangani di |

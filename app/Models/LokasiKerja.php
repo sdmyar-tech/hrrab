@@ -30,7 +30,11 @@ class LokasiKerja extends Model
 
     protected static function booted(): void
     {
-        $lupakan = fn () => Cache::forget(self::CACHE_KEY);
+        // Lokasi tertaut jabatan (Jabatan::lokasiPerUnit) memakai nama lokasi → ikut disegarkan.
+        $lupakan = function () {
+            Cache::forget(self::CACHE_KEY);
+            Cache::forget(Jabatan::CACHE_LOKASI);
+        };
         static::saved($lupakan);
         static::deleted($lupakan);
     }

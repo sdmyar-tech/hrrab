@@ -18,6 +18,8 @@ class Jabatan extends Model
 
     public const CACHE_PER_UNIT = 'master.jabatan-per-unit';
 
+    public const CACHE_LOKASI = 'master.jabatan-lokasi';
+
     protected $fillable = ['nama'];
 
     protected static function booted(): void
@@ -25,9 +27,58 @@ class Jabatan extends Model
         $lupakan = function () {
             Cache::forget(self::CACHE_KEY);
             Cache::forget(self::CACHE_PER_UNIT);
+            Cache::forget(self::CACHE_LOKASI);
         };
         static::saved($lupakan);
         static::deleted($lupakan);
+    }
+
+    /**
+     * Lokasi kerja tiap jabatan di tiap bagian (Master Jabatan → Atur lokasi). Satu jabatan boleh di beberapa lokasi
+     * (mis. CS di beberapa gedung); jabatan sama di bagian berbeda boleh berlainan lokasi.
+     *
+     * @return array<string, array<string, list<string>>> nama bagian => [NAMA JABATAN => nama lokasi (urut master lokasi)]
+     */
+    public static function lokasiPerUnit(): array
+    {
+        if (! Schema::hasTable('jabatan_unit_lokasi')) {
+            return [];
+        }
+
+        return Cache::rememberForever(self::CACHE_LOKASI, fn () => DB::table('jabatan_unit_lokasi')
+            ->join('jabatans', 'jabatans.id', '=', 'jabatan_unit_lokasi.jabatan_id')
+            ->join('units', 'units.id', '=', 'jabatan_unit_lokasi.unit_id')
+            ->join('lokasi_kerjas', 'lokasi_kerjas.id', '=', 'jabatan_unit_lokasi.lokasi_kerja_id')
+            ->orderBy('lokasi_kerjas.urutan')->orderBy('lokasi_kerjas.nama')
+            ->get(['units.nama as unit', 'jabatans.nama as jabatan', 'lokasi_kerjas.nama as lokasi'])
+            ->groupBy('unit')
+            ->map(fn ($g) => $g->groupBy(fn ($r) => mb_strtoupper($r->jabatan))->map(fn ($x) => $x->pluck('lokasi')->all())->all())
+            ->all());
+    }
+
+    /** @return list<string> lokasi tertaut untuk $jabatan di bagian $unit ([] = belum diatur: semua lokasi boleh) */
+    public static function lokasiUntuk(?string $unit, ?string $jabatan): array
+    {
+        return self::lokasiPerUnit()[(string) $unit][mb_strtoupper(trim((string) $jabatan))] ?? [];
+    }
+
+    /** Lokasi $lokasi boleh untuk $jabatan di $unit: belum diatur (semua boleh), lokasi kosong, atau termasuk lokasi tertaut. */
+    public static function lokasiSah(?string $unit, ?string $jabatan, ?string $lokasi): bool
+    {
+        $tertaut = self::lokasiUntuk($unit, $jabatan);
+
+        return ! $tertaut || blank($lokasi) || in_array($lokasi, $tertaut, true);
+    }
+
+    /** Simpan lokasi jabatan ini di satu bagian (id lokasi kerja). */
+    public function aturLokasi(int $unitId, array $lokasiIds): void
+    {
+        DB::transaction(function () use ($unitId, $lokasiIds) {
+            DB::table('jabatan_unit_lokasi')->where('jabatan_id', $this->id)->where('unit_id', $unitId)->delete();
+            DB::table('jabatan_unit_lokasi')->insert(collect($lokasiIds)->map('intval')->unique()
+                ->map(fn ($l) => ['jabatan_id' => $this->id, 'unit_id' => $unitId, 'lokasi_kerja_id' => $l])->values()->all());
+        });
+        Cache::forget(self::CACHE_LOKASI);
     }
 
     /**
@@ -39,11 +90,16 @@ class Jabatan extends Model
         return $this->belongsToMany(Unit::class)->orderBy('urutan')->orderBy('nama');
     }
 
-    /** Simpan daftar unit jabatan ini (id unit) dan segarkan cache jabatan per unit. */
+    /** Simpan daftar unit jabatan ini (id unit) dan segarkan cache jabatan per unit; lokasi di bagian yang dilepas ikut dihapus. */
     public function aturUnit(array $unitIds): void
     {
-        $this->units()->sync(array_values(array_unique(array_map('intval', $unitIds))));
+        $unitIds = array_values(array_unique(array_map('intval', $unitIds)));
+        $this->units()->sync($unitIds);
+        if (Schema::hasTable('jabatan_unit_lokasi')) {
+            DB::table('jabatan_unit_lokasi')->where('jabatan_id', $this->id)->whereNotIn('unit_id', $unitIds ?: [0])->delete();
+        }
         Cache::forget(self::CACHE_PER_UNIT);
+        Cache::forget(self::CACHE_LOKASI);
     }
 
     /**

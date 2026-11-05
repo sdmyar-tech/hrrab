@@ -2157,6 +2157,8 @@ button.jb-nama:hover { color: var(--hr-primary); text-decoration: underline; tex
 @keyframes jb-sorot { 0%, 40% { background: var(--hr-warning-soft); } 100% { background: transparent; } }
 .jb-unit { display: inline-flex; flex-wrap: wrap; gap: var(--hr-space-1); }
 .jb-unit-chip { padding: 2px var(--hr-space-2); border: 1px solid transparent; border-radius: var(--hr-radius-pill); background: var(--hr-info-soft); color: var(--hr-info); font-size: var(--hr-text-xs); font-weight: var(--hr-weight-semibold); white-space: nowrap; }
+.jb-unit-lokasi { margin-left: var(--hr-space-1); padding-left: var(--hr-space-1); border-left: 1px solid currentColor; font-weight: var(--hr-weight-medium); opacity: .85; }
+.jb-unit-lokasi .bi { margin-right: 2px; }
 .jb-unit-chip.kosong { background: transparent; border-style: dashed; border-color: var(--admin-border-strong); color: var(--admin-muted); font-weight: var(--hr-weight-medium); }
 .jb-pakai { display: inline-flex; align-items: center; gap: var(--hr-space-1); padding: 2px var(--hr-space-2); border-radius: var(--hr-radius-pill); background: var(--hr-primary-soft); color: var(--hr-primary-soft-text); font-size: var(--hr-text-xs); font-weight: var(--hr-weight-semibold); text-decoration: none; white-space: nowrap; }
 a.jb-pakai:hover { background: var(--hr-primary); color: #fff; }

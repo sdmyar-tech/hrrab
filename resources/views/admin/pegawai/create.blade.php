@@ -168,7 +168,8 @@
                             </div>
                             <div class="col-md-6">
                                 <x-select name="lokasi_kerja" id="f-lokasi-kerja" label="Lokasi Kerja" :options="$opsi(config('kepegawaian.lokasi_kerja'))"
-                                    :selected="$p->kepegawaian->lokasi_kerja ?? ''" placeholder="Pilih lokasi kerja" :required="$wajib('lokasi_kerja')" field-class="mb-0" />
+                                    :selected="$p->kepegawaian->lokasi_kerja ?? ''" placeholder="Pilih lokasi kerja" :required="$wajib('lokasi_kerja')" field-class="mb-0"
+                                    data-lokasi-jabatan="[name=jabatan]" data-lokasi-unit="[name=unit_kerja]" :data-lokasi-bebas="$longgar ? '' : null" />
                             </div>
                             <div class="col-md-6">
                                 <x-input name="tanggal_masuk" id="f-tanggal-masuk" type="date" label="Tanggal Masuk" :max="now()->format('Y-m-d')"
@@ -345,4 +346,5 @@
     });
 </script>
 @include('partials.jabatan-ikut-unit')
+@include('partials.lokasi-ikut-jabatan')
 @endsection

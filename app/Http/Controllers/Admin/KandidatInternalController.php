@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use App\Support\Izin;
 
@@ -108,6 +109,11 @@ class KandidatInternalController extends Controller
 
         if ($lowongan?->isKuotaPenuh() && ! $admin) {
             return back()->withInput()->with('error', 'Kuota lowongan ini sudah terpenuhi.');
+        }
+        // Posisi manual: lokasi harus lokasi jabatan di bagian tujuan (Master Jabatan → Atur lokasi).
+        if (! $lowongan && ! $admin && ! Jabatan::lokasiSah($validated['unit_kerja_tujuan'] ?? null, $validated['jabatan_tujuan'] ?? null, $validated['lokasi_kerja_tujuan'] ?? null)) {
+            throw ValidationException::withMessages(['lokasi_kerja_tujuan' => 'Lokasi kerja untuk ' . $validated['jabatan_tujuan'] . ' di bagian ' . $validated['unit_kerja_tujuan'] . ': '
+                . implode(', ', Jabatan::lokasiUntuk($validated['unit_kerja_tujuan'], $validated['jabatan_tujuan'])) . '.']);
         }
 
         $posisi = $lowongan

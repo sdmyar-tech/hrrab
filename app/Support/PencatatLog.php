@@ -130,6 +130,7 @@ class PencatatLog
         'admin.data.destroy' => ['hapus', 'Editor Data', 'Menghapus data langsung (Admin)'],
         'admin.jabatan.store' => ['tambah', 'Master Jabatan', 'Menambah jabatan'],
         'admin.jabatan.update' => ['ubah', 'Master Jabatan', 'Mengubah nama jabatan'],
+        'admin.jabatan.lokasi' => ['ubah', 'Master Jabatan', 'Mengatur lokasi kerja jabatan per bagian'],
         'admin.jabatan.destroy' => ['hapus', 'Master Jabatan', 'Menghapus jabatan'],
         'admin.jabatan.export' => ['ekspor', 'Master Jabatan', 'Mengekspor jabatan'],
         'admin.role.store' => ['tambah', 'Master Role', 'Membuat role kustom'],

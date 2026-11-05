@@ -8,6 +8,7 @@
     $terpakai = $jabatans->filter(fn ($j) => ($dipakai[$j->nama] ?? 0) > 0)->count();
     // Galat isian "tambah" (bag default) → buka lagi modal tambah; galat "ubah" punya bag sendiri.
     $galatTambah = $errors->getBag('default')->any();
+    $namaLokasi = $lokasiKerja->pluck('nama', 'id');
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid">
@@ -55,9 +56,13 @@
                     </tr>
                 </x-slot:head>
                 @forelse ($jabatans as $j)
-                    @php $n = $dipakai[$j->nama] ?? 0; @endphp
+                    @php
+                        $n = $dipakai[$j->nama] ?? 0;
+                        $lokasiJ = $lokasiTertaut[$j->id] ?? [];
+                    @endphp
                     <tr class="jb-baris {{ session('jabatan_disorot') === $j->id ? 'disorot' : '' }}" id="jabatan-{{ $j->id }}" data-nama="{{ $j->nama }}" data-dipakai="{{ $n }}"
                         data-id="{{ $j->id }}" data-url="{{ route('admin.jabatan.update', $j) }}" data-url-hapus="{{ route('admin.jabatan.destroy', $j) }}"
+                        data-url-lokasi="{{ route('admin.jabatan.lokasi', $j) }}" data-lokasi='@json((object) $lokasiJ)'
                         data-rincian='@json($rincian[$j->nama] ?? (object) [])'
                         data-units='@json($j->units->pluck('nama'))' data-unit-ids='@json($j->units->pluck('id'))'>
                         <td class="kolom-penuh">
@@ -66,7 +71,11 @@
                         <td>
                             <span class="jb-unit">
                                 @forelse ($j->units as $un)
-                                    <span class="jb-unit-chip">{{ $un->nama }}</span>
+                                    @php $lok = collect($lokasiJ[$un->id] ?? [])->map(fn ($id) => $namaLokasi[$id] ?? null)->filter(); @endphp
+                                    {{-- Lokasi kerja jabatan di bagian ini: satu → namanya; beberapa → jumlah (rincian di tooltip). --}}
+                                    <span class="jb-unit-chip" @if ($lok->count() > 1) title="Lokasi: {{ $lok->implode(', ') }}" @endif>
+                                        {{ $un->nama }}@if ($lok->isNotEmpty())<span class="jb-unit-lokasi"><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ $lok->count() === 1 ? $lok->first() : $lok->count() . ' lokasi' }}</span>@endif
+                                    </span>
                                 @empty
                                     <span class="jb-unit-chip kosong" title="Belum ditautkan ke bagian — tidak muncul di daftar jabatan bagian mana pun">tanpa bagian</span>
                                 @endforelse
@@ -84,6 +93,12 @@
                         <td class="text-end hr-kolom-aksi">
                             <div class="hr-aksi-baris">
                                 <x-icon-button icon="bi-pencil" label="Ubah nama / bagian" data-ubah-jabatan />
+                                @if ($j->units->isNotEmpty())
+                                    <x-icon-button icon="bi-geo-alt" label="Atur lokasi kerja per bagian" data-atur-lokasi />
+                                @else
+                                    {{-- Pengganti selebar tombol agar ikon antarbaris tetap sejajar. --}}
+                                    <span class="hr-ikon-btn invisible" aria-hidden="true"></span>
+                                @endif
                                 @if ($n)
                                     <x-icon-button icon="bi-trash" tone="danger" label="Hapus (pilih pengganti)"
                                         data-bs-toggle="modal" data-bs-target="#modalHapusJabatan"
@@ -163,6 +178,40 @@
     <x-slot:footer>
         <x-button variant="secondary" data-bs-dismiss="modal">Batal</x-button>
         <x-button type="submit" variant="danger" form="formHapusJabatan" icon="bi-trash">Pindahkan &amp; Hapus</x-button>
+    </x-slot:footer>
+</x-modal>
+
+{{-- Lokasi kerja jabatan di tiap bagian: mengisi / membatasi pilihan lokasi saat bagian & jabatan dipilih. --}}
+<x-modal id="modalLokasiJabatan" title="Atur Lokasi Kerja" icon="bi-geo-alt" size="lg" scrollable
+    subtitle="Centang lokasi tempat jabatan ini bekerja di tiap bagian. Satu lokasi → terisi otomatis di form; beberapa → dipilih dari daftarnya; tidak dicentang → semua lokasi boleh.">
+    <form method="POST" id="formLokasiJabatan">
+        @csrf
+        @method('PUT')
+        <input type="hidden" name="kembali_q">
+        <p class="mb-3"><span class="small text-muted d-block">Jabatan</span><strong data-nama-jabatan></strong></p>
+        <input type="search" class="form-control form-control-sm mb-3" placeholder="Saring lokasi, contoh: Gedung" aria-label="Saring daftar lokasi" data-cari-lokasi autocomplete="off">
+        <div data-lokasi-per-unit></div>
+    </form>
+    {{-- Cetakan satu bagian (disalin skrip per bagian yang ditautkan). --}}
+    <template id="tplLokasiUnit">
+        <fieldset class="hr-subbagian mb-3">
+            <legend class="d-flex justify-content-between align-items-center gap-2 w-100 fs-6 mb-2">
+                <span class="fw-semibold" data-judul-unit></span>
+                <span class="form-text m-0" data-jumlah-lokasi></span>
+            </legend>
+            <div class="hr-pilih-grid">
+                @foreach ($lokasiKerja as $lk)
+                    <label class="form-check" data-nama-lokasi="{{ mb_strtolower($lk->nama) }}">
+                        <input class="form-check-input" type="checkbox" value="{{ $lk->id }}">
+                        <span class="form-check-label">{{ $lk->nama }}</span>
+                    </label>
+                @endforeach
+            </div>
+        </fieldset>
+    </template>
+    <x-slot:footer>
+        <x-button variant="secondary" data-bs-dismiss="modal">Batal</x-button>
+        <x-button type="submit" form="formLokasiJabatan" icon="bi-check-lg">Simpan Lokasi</x-button>
     </x-slot:footer>
 </x-modal>
 
@@ -270,6 +319,46 @@
                 perbarui();
             });
         });
+
+        // ---- Atur lokasi kerja per bagian ----
+        const modalLokasi = document.getElementById('modalLokasiJabatan');
+        const formLokasi = document.getElementById('formLokasiJabatan');
+        const wadahLokasi = formLokasi.querySelector('[data-lokasi-per-unit]');
+        const cariLokasi = formLokasi.querySelector('[data-cari-lokasi]');
+        const cetakan = document.getElementById('tplLokasiUnit');
+        const hitungLokasi = (fs) => {
+            const n = fs.querySelectorAll('input:checked').length;
+            fs.querySelector('[data-jumlah-lokasi]').textContent = n ? n + ' lokasi dipilih' : 'semua lokasi boleh';
+        };
+        daftar.addEventListener('click', function (e) {
+            if (!e.target.closest('[data-atur-lokasi]')) return;
+            const tr = e.target.closest('.jb-baris');
+            const nama = JSON.parse(tr.dataset.units || '[]'), ids = JSON.parse(tr.dataset.unitIds || '[]');
+            const tertaut = JSON.parse(tr.dataset.lokasi || '{}');
+            formLokasi.action = tr.dataset.urlLokasi;
+            formLokasi.querySelector('[name=kembali_q]').value = cari.value;
+            formLokasi.querySelector('[data-nama-jabatan]').textContent = tr.dataset.nama;
+            wadahLokasi.innerHTML = '';
+            cariLokasi.value = '';
+            ids.forEach(function (id, i) {
+                const fs = cetakan.content.firstElementChild.cloneNode(true);
+                fs.querySelector('[data-judul-unit]').textContent = 'Bagian ' + nama[i];
+                const pilih = (tertaut[id] || []).map(String);
+                fs.querySelectorAll('input[type=checkbox]').forEach(function (c) {
+                    c.name = 'lokasi[' + id + '][]';
+                    c.checked = pilih.includes(c.value);
+                });
+                fs.addEventListener('change', () => hitungLokasi(fs));
+                hitungLokasi(fs);
+                wadahLokasi.append(fs);
+            });
+            bootstrap.Modal.getOrCreateInstance(modalLokasi).show();
+        });
+        cariLokasi.addEventListener('input', function () {
+            const kata = cariLokasi.value.trim().toLowerCase();
+            wadahLokasi.querySelectorAll('[data-nama-lokasi]').forEach((l) => { l.hidden = !!kata && !l.dataset.namaLokasi.includes(kata); });
+        });
+        cariLokasi.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
 
         const modalUbah = document.getElementById('modalUbahJabatan');
         const formUbah = document.getElementById('formUbahJabatan');

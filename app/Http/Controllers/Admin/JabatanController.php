@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Jabatan;
+use App\Models\LokasiKerja;
 use App\Models\Unit;
 use App\Support\ExcelExporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -24,6 +26,10 @@ class JabatanController extends Controller
             'jabatans' => Jabatan::with('units:id,nama')->orderBy('nama')->get(),
             'semuaJabatan' => Jabatan::orderBy('nama')->get(['id', 'nama']),
             'units' => Unit::orderBy('urutan')->orderBy('nama')->get(['id', 'nama']),
+            'lokasiKerja' => LokasiKerja::orderBy('urutan')->orderBy('nama')->get(['id', 'nama']),
+            // jabatan_id => [unit_id => [lokasi_kerja_id]] untuk ringkasan & modal Atur lokasi.
+            'lokasiTertaut' => ! Schema::hasTable('jabatan_unit_lokasi') ? [] : DB::table('jabatan_unit_lokasi')->get()->groupBy('jabatan_id')
+                ->map(fn ($g) => $g->groupBy('unit_id')->map(fn ($x) => $x->pluck('lokasi_kerja_id')->all())->all())->all(),
             'dipakai' => array_map('array_sum', $rincian),
             'rincian' => $rincian,
         ]);
@@ -33,9 +39,11 @@ class JabatanController extends Controller
     {
         $dipakai = $this->hitungPemakaian();
         $rows = Jabatan::with('units:id,nama')->orderBy('nama')->get()
-            ->map(fn (Jabatan $j, $i) => [$i + 1, $j->nama, $j->units->pluck('nama')->implode(', '), $dipakai[$j->nama] ?? 0]);
+            ->map(fn (Jabatan $j, $i) => [$i + 1, $j->nama, $j->units->pluck('nama')->implode(', '),
+                $j->units->map(fn ($u) => ($l = Jabatan::lokasiUntuk($u->nama, $j->nama)) ? $u->nama . ': ' . implode(', ', $l) : null)->filter()->implode('; '),
+                $dipakai[$j->nama] ?? 0]);
 
-        return ExcelExporter::download(ExcelExporter::namaFile('master-jabatan'), ['No', 'Nama Jabatan', 'Bagian', 'Dipakai'], $rows, 'Master Jabatan');
+        return ExcelExporter::download(ExcelExporter::namaFile('master-jabatan'), ['No', 'Nama Jabatan', 'Bagian', 'Lokasi per Bagian', 'Dipakai'], $rows, 'Master Jabatan');
     }
 
     public function store(Request $request): RedirectResponse
@@ -73,6 +81,25 @@ class JabatanController extends Controller
         }
 
         return $this->kembali($jabatan)->with($pesan ? 'success' : 'info', $pesan ? implode(' ', $pesan) : 'Tidak ada perubahan.');
+    }
+
+    /** Atur lokasi kerja jabatan ini di tiap bagian yang ditautkan (kosong = semua lokasi boleh). */
+    public function lokasi(Request $request, Jabatan $jabatan): RedirectResponse
+    {
+        $unitIds = $jabatan->units()->pluck('units.id')->all();
+        $data = $request->validate([
+            'lokasi' => ['nullable', 'array'],
+            'lokasi.*' => ['array'],
+            'lokasi.*.*' => ['integer', Rule::exists('lokasi_kerjas', 'id')],
+        ])['lokasi'] ?? [];
+
+        foreach ($unitIds as $unitId) {
+            $jabatan->aturLokasi($unitId, $data[$unitId] ?? []);
+        }
+        $ringkas = $jabatan->units()->get(['units.id', 'units.nama'])
+            ->map(fn ($u) => $u->nama . ': ' . (implode(', ', Jabatan::lokasiUntuk($u->nama, $jabatan->nama)) ?: 'semua lokasi'))->implode('; ');
+
+        return $this->kembali($jabatan)->with('success', "Lokasi jabatan {$jabatan->nama} disimpan. {$ringkas}.");
     }
 
     /** Kembali ke daftar, menyorot & menggulir ke jabatan yang baru diubah, dengan pencarian sebelumnya. */

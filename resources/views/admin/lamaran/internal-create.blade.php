@@ -178,7 +178,10 @@
                                         <x-select name="jabatan_tujuan" id="jabatan-tujuan" label="Jabatan tujuan" required help="Jabatan di bagian terpilih tampil paling atas." />
                                     </div>
                                     <div class="col-md-6">
-                                        <x-select name="lokasi_kerja_tujuan" id="f-lokasi-kerja-tujuan" label="Lokasi kerja" placeholder="Pilih lokasi kerja" optional>
+                                        {{-- Lokasi mengikuti bagian & jabatan tujuan (Master Jabatan → Atur lokasi). --}}
+                                        <x-select name="lokasi_kerja_tujuan" id="f-lokasi-kerja-tujuan" label="Lokasi kerja" placeholder="Pilih lokasi kerja" optional
+                                            data-lokasi-jabatan="[name=jabatan_tujuan]" data-lokasi-unit="[name=unit_kerja_tujuan]"
+                                            :data-lokasi-bebas="auth()->user()->can('sistem.override') ? '' : null">
                                             <option value="">Tidak ditentukan</option>
                                             @foreach (config('kepegawaian.lokasi_kerja') as $lk)
                                                 <option value="{{ $lk }}" @selected(old('lokasi_kerja_tujuan') === $lk)>{{ $lk }}</option>
@@ -410,5 +413,6 @@
         perbaruiPratinjau();
     });
 </script>
+@include('partials.lokasi-ikut-jabatan')
 @include('admin.pengajuan-formasi._bagan-statis-aset')
 @endsection

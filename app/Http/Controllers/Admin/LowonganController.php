@@ -9,6 +9,7 @@ use App\Models\Lowongan;
 use App\Models\User;
 use App\Support\ExcelExporter;
 use App\Support\FilterTanggal;
+use App\Support\Izin;
 use App\Support\RekrutmenAccess;
 use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
@@ -16,9 +17,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use App\Support\Izin;
 
 class LowonganController extends Controller
 {
@@ -251,7 +252,7 @@ class LowonganController extends Controller
             $tanggalTutupRules[] = 'after_or_equal:today';
         }
 
-        return $request->validate([
+        $validated = $request->validate([
             'judul' => ['required', 'string', 'max:150'],
             'unit_kerja' => ['required', 'string', Rule::in(config('kepegawaian.unit_kerja'))],
             'jabatan' => ['required', 'string', Rule::in(Jabatan::daftar())],
@@ -262,5 +263,15 @@ class LowonganController extends Controller
             'tipe_kerja' => ['nullable', 'string', 'max:50'],
             'tanggal_tutup' => $tanggalTutupRules,
         ]);
+
+        // Lokasi harus lokasi jabatan di bagian itu (Master Jabatan → Atur lokasi), dicek bila ada yang berubah. Mode Admin bebas.
+        $berubah = ! $lowongan || ($validated['lokasi_kerja'] ?? null) !== $lowongan->lokasi_kerja
+            || $validated['jabatan'] !== $lowongan->jabatan || $validated['unit_kerja'] !== $lowongan->unit_kerja;
+        if ($berubah && ! Auth::user()->can(Izin::OVERRIDE) && ! Jabatan::lokasiSah($validated['unit_kerja'], $validated['jabatan'], $validated['lokasi_kerja'] ?? null)) {
+            throw ValidationException::withMessages(['lokasi_kerja' => "Lokasi kerja untuk {$validated['jabatan']} di bagian {$validated['unit_kerja']}: "
+                . implode(', ', Jabatan::lokasiUntuk($validated['unit_kerja'], $validated['jabatan'])) . '.']);
+        }
+
+        return $validated;
     }
 }

@@ -64,7 +64,9 @@
                     </x-select>
                 </div>
                 <div class="col-md-6">
-                    <x-select name="lokasi_kerja" id="f-lokasi" label="Lokasi kerja" placeholder="Pilih lokasi kerja" optional>
+                    {{-- Lokasi mengikuti bagian & jabatan (Master Jabatan → Atur lokasi); satu lokasi terisi otomatis. --}}
+                    <x-select name="lokasi_kerja" id="f-lokasi" label="Lokasi kerja" placeholder="Pilih lokasi kerja" optional
+                        data-lokasi-jabatan="[name=jabatan]" data-lokasi-unit="[name=unit_kerja]" :data-lokasi-bebas="$isAdmin ? '' : null">
                         <option value="" @selected($ubah && $lokasi === '')>Tidak ditentukan</option>
                         @foreach (config('kepegawaian.lokasi_kerja') as $l)
                             <option value="{{ $l }}" @selected($lokasi === $l)>{{ $l }}</option>
@@ -201,6 +203,7 @@
 </div>
 
 @include('partials.jabatan-ikut-unit')
+@include('partials.lokasi-ikut-jabatan')
 
 @once
 <script>

@@ -503,6 +503,17 @@ class PegawaiController extends Controller
             'tanggal_keluar.before_or_equal' => 'Tanggal keluar tidak boleh di masa depan.',
         ]);
 
+        // Lokasi kerja harus lokasi yang ditautkan ke jabatan di bagiannya (Master Jabatan → Atur lokasi). Dicek bila
+        // lokasi/jabatan/bagian berubah, agar data lama yang belum sesuai tetap bisa disimpan. Mode Admin bebas.
+        $lama = $ignoreId ? DataPegawai::find($ignoreId)?->kepegawaian : null;
+        $unit = ($validated['unit_kerja'] ?? null) ?: $lama?->unit_kerja;
+        $berubah = ! $lama || ($validated['lokasi_kerja'] ?? null) !== $lama->lokasi_kerja
+            || ($validated['jabatan'] ?? null) !== $lama->jabatan || $unit !== $lama->unit_kerja;
+        if ($berubah && ! Auth::user()?->can(Izin::OVERRIDE) && ! Jabatan::lokasiSah($unit, $validated['jabatan'] ?? null, $validated['lokasi_kerja'] ?? null)) {
+            throw ValidationException::withMessages(['lokasi_kerja' => 'Lokasi kerja untuk ' . $validated['jabatan'] . ' di bagian ' . $unit . ': '
+                . implode(', ', Jabatan::lokasiUntuk($unit, $validated['jabatan'])) . '.']);
+        }
+
         return [
             'biodata' => collect($validated)->only([
                 'email', 'nip', 'nama_lengkap', 'nik', 'npwp', 'no_kk', 'no_hp',

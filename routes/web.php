@@ -210,6 +210,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::get('/export', [AdminJabatanController::class, 'export'])->name('export');
             Route::post('/', [AdminJabatanController::class, 'store'])->name('store');
             Route::put('/{jabatan}', [AdminJabatanController::class, 'update'])->name('update');
+            Route::put('/{jabatan}/lokasi', [AdminJabatanController::class, 'lokasi'])->name('lokasi');
             Route::delete('/{jabatan}', [AdminJabatanController::class, 'destroy'])->name('destroy');
         });
 
