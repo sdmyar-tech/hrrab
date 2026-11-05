@@ -7,9 +7,13 @@ use App\Models\Role;
 use App\Models\User;
 use App\Support\ExcelExporter;
 use App\Support\Izin;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -19,8 +23,23 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  * Master Role: sesuaikan role sistem (nama tampilan, keterangan, centang permission) dan buat role kustom berbasis jenis dasar.
  * Panel & alur persetujuan selalu mengikuti jenis dasar (users.role); permission mengikuti centang di role_permission.
  */
-class RoleController extends Controller
+class RoleController extends Controller implements HasMiddleware
 {
+    /**
+     * Centang permission disimpan di tabel RBAC (migrasi 2026_11_04_000000). Bila kode sudah diperbarui tetapi migrasinya
+     * belum dijalankan (mis. hosting setelah git pull), simpan role ditolak dengan pesan jelas — bukan error 500.
+     */
+    public static function middleware(): array
+    {
+        return [new Middleware(function (Request $request, Closure $next) {
+            if (! $request->isMethod('GET') && ! Schema::hasTable('role_permission')) {
+                return back()->with('error', 'Database belum diperbarui untuk hak akses baru. Jalankan "php artisan migrate --force" di server, lalu coba lagi.');
+            }
+
+            return $next($request);
+        })];
+    }
+
     public function index(): View
     {
         ['roles' => $roles, 'dihapus' => $dihapus] = $this->data();
