@@ -8,14 +8,7 @@
     $pengguna = auth()->user();
     $isAdmin = $pengguna->can('sistem.override');
     $unitAwal = old('unit_kerja', $unitOptions[0] ?? '');
-    $jenis = old('jenis_kebutuhan');
     $opsi = fn (array $daftar) => array_combine($daftar, $daftar);
-
-    // Pilihan "kebutuhan karyawan karena": ikon + keterangan alur persetujuan.
-    $jenisInfo = [
-        \App\Models\PengajuanFormasi::JENIS_REPLACEMENT => ['bi-arrow-repeat', 'Mengganti karyawan yang keluar/berhenti. Direview ' . ($pengguna->isKepalaSdm() ? 'GM' : 'Kepala SDM atau GM') . ' (bagian SMK oleh Pembina).'],
-        \App\Models\PengajuanFormasi::JENIS_PENAMBAHAN => ['bi-person-plus', 'Menambah posisi baru. Disetujui bertahap: GM bagian, lalu Owner.'],
-    ];
 
     // Tugas & tanggung jawab: satu baris per tugas (bawaan 1 baris). Disimpan server sebagai teks per baris.
     $tugasLama = old('tugas');
@@ -25,8 +18,8 @@
     // Navigasi bagian: bagian yang memuat galat server diberi tanda.
     $bagian = [
         ['id' => 'bagian-info', 'label' => 'Info Formasi', 'icon' => 'bi-clipboard-plus',
-            'kolom' => ['unit_kerja', 'jabatan', 'target_waktu', 'atasan_langsung', 'jenis_kebutuhan', 'jumlah_laki', 'jumlah_perempuan', 'jumlah_bebas']],
-        ['id' => 'bagian-alasan', 'label' => 'Alasan & Justifikasi', 'icon' => 'bi-diagram-3', 'kolom' => ['diganti', 'diganti.*', 'slot_tambahan', 'slot_tambahan.*']],
+            'kolom' => ['unit_kerja', 'jabatan', 'target_waktu', 'atasan_langsung', 'jumlah_laki', 'jumlah_perempuan', 'jumlah_bebas']],
+        ['id' => 'bagian-alasan', 'label' => 'Posisi Baru', 'icon' => 'bi-diagram-3', 'kolom' => ['slot_tambahan', 'slot_tambahan.*']],
         ['id' => 'bagian-persyaratan', 'label' => 'Persyaratan', 'icon' => 'bi-list-check', 'kolom' => ['min_pendidikan', 'min_usia', 'kualifikasi']],
         ['id' => 'bagian-tugas', 'label' => 'Tugas', 'icon' => 'bi-card-checklist', 'kolom' => ['tugas', 'tugas.*']],
     ];
@@ -35,7 +28,7 @@
 <main class="dashboard-content">
     <div class="container-fluid">
         <x-page-header title="Ajukan Formasi" eyebrow="Rekrutmen" :back="route('admin.pengajuan-formasi.index')" back-label="Pengajuan Formasi"
-            subtitle="Permintaan kekurangan pegawai untuk bagian Anda. Bila disetujui, lowongan otomatis terbit dan pelamar bisa mulai melamar. Kolom bertanda * wajib diisi." />
+            subtitle="Permintaan pegawai baru (penambahan posisi) untuk bagian Anda. Bila disetujui, lowongan otomatis terbit dan pelamar bisa mulai melamar. Kolom bertanda * wajib diisi." />
 
         @if ($errors->any())
             <x-alert tone="danger" title="Periksa kembali isian yang ditandai merah" class="mb-3">
@@ -57,7 +50,7 @@
                     <x-card>
                         {{-- ================= 1. Info formasi ================= --}}
                         <x-form-section id="bagian-info" class="hr-bagian" title="Info Formasi" icon="bi-clipboard-plus"
-                            subtitle="Bagian dan jabatan yang membutuhkan pegawai, waktu dibutuhkan, alasan, serta jumlahnya.">
+                            subtitle="Bagian dan jabatan yang membutuhkan pegawai baru, waktu dibutuhkan, serta jumlahnya.">
                             <div class="col-md-6">
                                 @if ($isAdmin || count($unitOptions) > 1)
                                     {{-- Admin: semua bagian. Kepala beberapa bagian: hanya bagian yang dipimpinnya. --}}
@@ -94,30 +87,13 @@
                                 @endif
                             </div>
 
+                            {{-- Pengajuan formasi hanya untuk pegawai baru tambahan (penambahan posisi). --}}
+                            <input type="hidden" name="jenis_kebutuhan" value="{{ \App\Models\PengajuanFormasi::JENIS_PENAMBAHAN }}">
                             <div class="col-12">
-                                <fieldset class="hr-field mb-0">
-                                    <legend class="form-label required">Kebutuhan karyawan karena</legend>
-                                    <div class="hr-opsi-grup">
-                                        @foreach (\App\Models\PengajuanFormasi::JENIS_LABEL as $kode => $label)
-                                            <label class="hr-opsi" for="jenis-{{ $kode }}">
-                                                <input type="radio" class="form-check-input @error('jenis_kebutuhan') is-invalid @enderror" name="jenis_kebutuhan"
-                                                    id="jenis-{{ $kode }}" value="{{ $kode }}" @checked($jenis === $kode) required
-                                                    data-pesan-kosong="Pilih alasan kebutuhan: replacement atau penambahan karyawan.">
-                                                <i class="bi {{ $jenisInfo[$kode][0] ?? 'bi-person' }} hr-opsi-ikon" aria-hidden="true"></i>
-                                                <span><strong>{{ \Illuminate\Support\Str::before($label, ' / ') }}</strong><small>{{ $jenisInfo[$kode][1] ?? $label }}</small></span>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                    @error('jenis_kebutuhan')
-                                        <div class="invalid-feedback d-block"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
-                                    @enderror
-                                    {{-- Langkah berikutnya sesuai pilihan (span[data-jenis] diatur skrip). --}}
-                                    <p class="form-text mb-0" data-info-jenis>
-                                        <span data-jenis="" @if ($jenis) hidden @endif>Pilih salah satu; bagan di bagian Alasan &amp; Justifikasi menyesuaikan pilihan Anda.</span>
-                                        <span data-jenis="replacement" @if ($jenis !== 'replacement') hidden @endif><i class="bi bi-person-check me-1" aria-hidden="true"></i>Lanjutkan dengan mengklik pegawai yang digantikan di bagan. Jumlah &amp; jenis kelamin terisi otomatis.</span>
-                                        <span data-jenis="penambahan" @if ($jenis !== 'penambahan') hidden @endif><i class="bi bi-people me-1" aria-hidden="true"></i>Lanjutkan dengan mengklik “Posisi kosong” pada jabatan yang dibutuhkan di bagan.</span>
-                                    </p>
-                                </fieldset>
+                                <x-alert tone="info" icon="bi-person-plus" class="mb-0">
+                                    Formasi untuk <strong>penambahan pegawai baru</strong>. Disetujui bertahap: GM bagian, lalu Owner.
+                                    Tandai posisinya dengan mengklik “Posisi kosong” pada jabatan yang dibutuhkan di bagan.
+                                </x-alert>
                             </div>
 
                             <div class="col-12">
@@ -147,17 +123,16 @@
                             </div>
                         </x-form-section>
 
-                        {{-- ================= 2. Alasan & justifikasi (bagan unit) ================= --}}
-                        <x-form-section id="bagian-alasan" class="hr-bagian" title="Alasan & Justifikasi" icon="bi-diagram-3"
-                            subtitle="Tandai di bagan pegawai yang digantikan atau posisi baru yang diajukan. Pilihan ini tercatat sebagai alasan pengajuan.">
+                        {{-- ================= 2. Posisi baru (bagan unit) ================= --}}
+                        <x-form-section id="bagian-alasan" class="hr-bagian" title="Posisi Baru" icon="bi-diagram-3"
+                            subtitle="Tandai di bagan posisi baru yang diajukan. Hanya jabatan di bagian ini yang bisa diajukan.">
                             <div class="col-12" data-wadah-bagan>
                                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                                    <x-badge tone="primary" data-bagan-judul>Pilih kebutuhan karyawan dulu</x-badge>
+                                    <x-badge tone="primary">Klik “Posisi kosong” (kotak merah)</x-badge>
                                     <div class="bagan-legenda mb-0" aria-label="Keterangan warna bagan">
                                         <span><i class="kotak aktif" aria-hidden="true"></i>Pegawai aktif</span>
                                         <span><i class="kotak nonaktif" aria-hidden="true"></i>Pegawai tidak aktif</span>
                                         <span><i class="kotak kosong" aria-hidden="true"></i>Posisi kosong (baru)</span>
-                                        <span><i class="bi bi-arrow-repeat" aria-hidden="true"></i>digantikan</span>
                                     </div>
                                 </div>
                                 <p class="small mb-2" data-bagan-petunjuk aria-live="polite"></p>
@@ -178,14 +153,8 @@
                                         <div class="bagan-pohon" id="baganUnit"></div>
                                     </div>
                                 </div>
-                                {{-- Nilai terkirim dari bagan: diganti[] (replacement) / slot_tambahan[] (penambahan), diisi skrip. --}}
+                                {{-- Nilai terkirim dari bagan: slot_tambahan[] (keterangan tiap posisi baru), diisi skrip. --}}
                                 <div data-bagan-input></div>
-                                @error('diganti')
-                                    <div class="invalid-feedback d-block" data-galat-server="bagan"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
-                                @enderror
-                                @error('diganti.*')
-                                    <div class="invalid-feedback d-block" data-galat-server="bagan"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ $message }}</div>
-                                @enderror
                             </div>
                         </x-form-section>
 
@@ -265,10 +234,8 @@
         const jabatan = document.getElementById('f-jabatan');
         const perUnit = @json($jabatanPerUnit);
         const baganPerUnit = @json($baganPerUnit);
-        const jabatanBagan = @json($jabatanBaganPerUnit);
         const ADMIN = @json($isAdmin);
         const lama = @json(old('jabatan'));
-        const digantiLama = ({{ \Illuminate\Support\Js::from(old('diganti', [])) }}).map(Number);
         const slotLama = {{ \Illuminate\Support\Js::from(old('slot_tambahan', [])) }};
         // Warna tombol dialog = warna merek dari token ui.css (tanpa hex di sini).
         const WARNA = getComputedStyle(document.documentElement).getPropertyValue('--hr-primary').trim() || undefined;
@@ -276,15 +243,10 @@
         const wadah = document.getElementById('baganUnit');
         const masukan = form.querySelector('[data-bagan-input]');
         const petunjuk = form.querySelector('[data-bagan-petunjuk]');
-        const judulBagan = form.querySelector('[data-bagan-judul]');
         const cari = form.querySelector('[data-bagan-cari]');
-        const kotakBagan = form.querySelector('[data-bagan]');
-        const wadahBagan = form.querySelector('[data-wadah-bagan]');
         const wadahJumlah = form.querySelector('[data-wadah-jumlah]');
-        const dipilih = new Set(digantiLama);   // id pegawai yang digantikan
         let slot = Array.isArray(slotLama) ? slotLama.slice() : [];  // keterangan posisi baru
 
-        const jenis = () => (form.querySelector('[name=jenis_kebutuhan]:checked') || {}).value || '';
         const total = () => ['jumlah_laki', 'jumlah_perempuan', 'jumlah_bebas'].reduce((n, k) => n + (+form[k].value || 0), 0);
         const el = (tag, kelas, teks) => { const e = document.createElement(tag); if (kelas) e.className = kelas; if (teks !== undefined) e.textContent = teks; return e; };
 
@@ -354,89 +316,15 @@
 
         // Jabatan cabang bagan (huruf besar) ↔ isian dropdown jabatan.
         const samaJabatan = (a, b) => !!a && !!b && a.toUpperCase() === b.toUpperCase();
-        const jabatanDari = (id) => Object.keys((baganPerUnit[unit.value] || { grup: {} }).grup)
-            .find((j) => baganPerUnit[unit.value].grup[j].some((o) => o.id === id));
+        // Jabatan yang boleh diajukan di bagian terpilih (Admin: semua jabatan).
+        const bolehDiajukan = (jab) => (perUnit[unit.value] || []).some((j) => samaJabatan(j, jab));
 
-        // Isi dropdown jabatan sesuai cabang bagan (nama mengikuti Master Jabatan).
-        function setJabatan(jab) {
-            const nama = (jabatanBagan[unit.value] || {})[jab];
-            if (!nama) return;
-            let opsi = [...jabatan.options].find((op) => samaJabatan(op.value, nama));
-            if (!opsi) { opsi = new Option(nama, nama); jabatan.add(opsi); }
-            jabatan.disabled = false;
-            jabatan.value = opsi.value;
-            bersihkanIsian(jabatan);
-        }
-
-        // Replacement: jumlah dibutuhkan = kuota pegawai yang bisa dipilih di bagan.
-        // Jumlah L/P/bebas mengikuti jenis kelamin pegawai yang dipilih (belum diisi → bebas), tetapi tetap bisa diubah pengguna.
-        const orangDari = (id) => { const j = jabatanDari(id); return j ? baganPerUnit[unit.value].grup[j].find((o) => o.id === id) : null; };
-        const jkIndeks = (o) => (o && o.jk === 'L' ? 0 : (o && o.jk === 'P' ? 1 : 2));
-        const komposisi = () => { const n = [0, 0, 0]; dipilih.forEach((id) => n[jkIndeks(orangDari(id))]++); return n; };
-        // true bila isian jumlah persis komposisi pilihan (belum diubah manual) → boleh ikut berubah otomatis.
-        const jumlahIkutPilihan = () => komposisi().every((v, i) => v === (+form[JK[i][0]].value || 0));
-        function jumlahDariPilihan() {
-            komposisi().forEach((v, i) => { form[JK[i][0]].value = v; });
-            hitung();
-        }
-        // Total kebutuhan tidak boleh melebihi isi bagian: kelebihan dikurangi dari bebas, perempuan, lalu laki-laki.
-        // `utama` (kolom yang sedang diubah pengguna) dikurangi paling akhir, mis. bebas 2 → isi laki-laki 1 = bebas 1, laki-laki 1.
-        function potongKeBatas(utama) {
-            let lebih = total() - batasGanti().n;
-            [2, 1, 0].map((i) => form[JK[i][0]]).sort((a, b) => (a === utama) - (b === utama)).forEach((f) => {
-                const k = Math.min(lebih, +f.value || 0);
-                if (k > 0) { f.value = (+f.value || 0) - k; lebih -= k; }
-            });
-            hitung();
-        }
-        // Pilihan melebihi jumlah dibutuhkan → pilihan paling lama dilepas (pilihan "pindah" ke yang terbaru).
-        function rapikanPilihan() {
-            while (dipilih.size > total()) dipilih.delete(dipilih.values().next().value);
-        }
-
-        // Replacement: klik pegawai → pilih/batal (jabatan terisi otomatis). Bila kuota penuh, pilihan pindah ke yang diklik.
-        // Satu pengajuan untuk satu jabatan.
-        function pilihGanti(o, jab) {
-            buangGalatServerBagan();
-            if (dipilih.has(o.id)) { dipilih.delete(o.id); gambar(); return; }   // batal: jumlah tetap, tinggal klik pegawai lain
-            const lain = [...dipilih].filter((id) => jabatanDari(id) !== jab);
-            const pilih = () => {
-                const kosong = total() === 0, ikut = jumlahIkutPilihan();
-                lain.forEach((id) => dipilih.delete(id));
-                dipilih.add(o.id);
-                setJabatan(jab);
-                potongKeBatas();
-                if (kosong) {
-                    jumlahDariPilihan();   // jumlah belum diisi: klik pertama = 1 orang sesuai jenis kelaminnya
-                } else {
-                    rapikanPilihan();
-                    if (ikut) jumlahDariPilihan();   // pindah pilihan: L/P ikut pegawai baru bila belum diubah manual
-                }
-                gambar();
-            };
-            if (!lain.length) return pilih();
-            Swal.fire({
-                icon: 'question', titleText: 'Ganti jabatan?',
-                text: 'Satu pengajuan untuk satu jabatan: ' + lain.length + ' pegawai yang dipilih di ' + jabatanDari(lain[0]) + ' akan dibatalkan dan diganti ' + o.nama + ' (' + jab + ').',
-                showCancelButton: true, reverseButtons: true, confirmButtonText: 'Ya, ganti', cancelButtonText: 'Batal', confirmButtonColor: WARNA,
-            }).then((r) => { if (r.isConfirmed) pilih(); });
-        }
-
-        function simpulPegawai(o, mode, kata, jab) {
-            // Tanda "digantikan" hanya di mode replacement (pilihan tetap diingat bila pengguna kembali).
-            const ganti = mode === 'replacement' && dipilih.has(o.id);
-            const b = node((o.aktif ? 'aktif' : 'nonaktif') + (ganti ? ' diganti' : '') + (kata && o.nama.toLowerCase().includes(kata) ? ' cocok' : ''),
-                o.aktif ? 'bi-person-fill' : 'bi-person-dash', o.nama,
-                o.nama + (o.aktif ? ' (aktif)' : ' (tidak aktif)') + (mode === 'replacement' ? ' — klik untuk '
-                    + (ganti ? 'batal' : (total() > 0 && dipilih.size >= total() ? 'memindahkan pilihan ke sini' : 'pilih sebagai yang digantikan')) : ''));
-            if (ganti) { const l = el('span', 'bagan-lencana'); l.append(el('i', 'bi bi-arrow-repeat')); b.append(l); }
-            if (mode === 'replacement') {
-                b.setAttribute('aria-pressed', String(ganti));
-                b.addEventListener('click', () => pilihGanti(o, jab));
-            } else {
-                b.disabled = true;
-            }
-            return { b, penting: ganti };
+        // Pegawai di bagan hanya informasi (tidak bisa diklik); posisi baru ditandai lewat "Posisi kosong".
+        function simpulPegawai(o, kata) {
+            const b = node((o.aktif ? 'aktif' : 'nonaktif') + (kata && o.nama.toLowerCase().includes(kata) ? ' cocok' : ''),
+                o.aktif ? 'bi-person-fill' : 'bi-person-dash', o.nama, o.nama + (o.aktif ? ' (aktif)' : ' (tidak aktif)'));
+            b.disabled = true;
+            return { b, penting: false };
         }
 
         // Jenis kelamin posisi baru = isian jumlah. Urutan slot: laki-laki, perempuan, lalu bebas.
@@ -496,8 +384,10 @@
             }).then((r) => {
                 if (!r.isConfirmed) return;
                 buangGalatServerBagan();
-                if (![...jabatan.options].some((o) => o.value === jab)) jabatan.add(new Option(jab, jab));
-                jabatan.value = jab;
+                // Hanya jabatan di bagian ini (dropdown tidak pernah ditambah jabatan dari luar bagian).
+                const opsi = [...jabatan.options].find((o) => o.value && samaJabatan(o.value, jab));
+                if (!opsi) return;
+                jabatan.value = opsi.value;
                 bersihkanIsian(jabatan);
                 // Sisipkan di akhir kelompok jenis kelaminnya agar urutan slot tetap L, P, bebas.
                 const l = +form.jumlah_laki.value || 0, p = +form.jumlah_perempuan.value || 0;
@@ -508,10 +398,10 @@
         }
 
         // Satu cabang jabatan: label → anggota berjajar (garis masing-masing) atau rak grid bila banyak.
-        function buatCabang(c, mode, kata, uk) {
+        function buatCabang(c, kata, uk) {
             const kotak = el('div', 'bagan-cabang' + (samaJabatan(c.jab, jabatan.value) ? ' terpilih' : ''));
             kotak.append(el('div', 'bagan-jabatan', c.jab + ' (' + c.total + ')'), el('div', 'bagan-turun'));
-            const simpul = c.isi.map((o) => simpulPegawai(o, mode, kata, c.jab));
+            const simpul = c.isi.map((o) => simpulPegawai(o, kata));
             for (let i = 0; i < c.baru; i++) simpul.push(simpulBaru(i));
             if (c.tambah) simpul.push(simpulTambah(c.jab));
 
@@ -540,10 +430,9 @@
             return kotak;
         }
 
-        // Gambar ulang bagan sesuai unit, jenis kebutuhan, jabatan, jumlah, dan pencarian.
+        // Gambar ulang bagan sesuai unit, jabatan, jumlah, dan pencarian.
         function gambar() {
             const data = baganPerUnit[unit.value] || { kepala: [], grup: {} };
-            const mode = jenis();
             const n = total();
             const kata = (cari.value || '').trim().toLowerCase();
             // Ukur sebelum dikosongkan agar posisi gulir tidak terlempar.
@@ -565,18 +454,17 @@
             akar.append(el('div', 'bagan-akar-label', 'Kepala · ' + (unit.value || '-')), deretKepala);
             wadah.append(akar);
 
-            // Cabang per jabatan: anggota (tersaring pencarian) + posisi baru (penambahan) di jabatan terpilih.
+            // Cabang per jabatan: anggota (tersaring pencarian) + posisi baru di jabatan terpilih.
             const grup = Object.assign({}, data.grup);
-            if (mode === 'penambahan' && jabatan.value && !grup[jabatan.value]) grup[jabatan.value] = [];
-            // Penambahan: tiap jabatan yang boleh diajukan mendapat simpul merah kosong "Posisi kosong"
-            // (jabatan unit yang belum berpegawai ikut tampil; Admin tidak, karena daftarnya semua jabatan).
-            const bolehJabatan = new Set(perUnit[unit.value] || []);
-            if (mode === 'penambahan' && !ADMIN) bolehJabatan.forEach((j) => { if (!grup[j]) grup[j] = []; });
+            if (jabatan.value && !Object.keys(grup).some((j) => samaJabatan(j, jabatan.value))) grup[jabatan.value] = [];
+            // Tiap jabatan yang boleh diajukan di bagian ini mendapat simpul merah "Posisi kosong"
+            // (jabatan bagian yang belum berpegawai ikut tampil; Admin tidak, karena daftarnya semua jabatan).
+            if (!ADMIN) (perUnit[unit.value] || []).forEach((j) => { if (!Object.keys(grup).some((g) => samaJabatan(g, j))) grup[j] = []; });
             const cabang = [];
             Object.keys(grup).forEach((jab) => {
-                const isi = grup[jab].filter((o) => !kata || o.nama.toLowerCase().includes(kata) || (mode === 'replacement' && dipilih.has(o.id)));
-                const baru = mode === 'penambahan' && jab === jabatan.value ? n : 0;
-                const tambah = mode === 'penambahan' && bolehJabatan.has(jab) && (!kata || isi.length > 0 || baru > 0);
+                const isi = grup[jab].filter((o) => !kata || o.nama.toLowerCase().includes(kata));
+                const baru = samaJabatan(jab, jabatan.value) ? n : 0;
+                const tambah = bolehDiajukan(jab) && (!kata || isi.length > 0 || baru > 0);
                 if (isi.length || baru || tambah) cabang.push({ jab, isi, baru, tambah, total: grup[jab].length, lebar: lebarCabang(isi.length + baru + (tambah ? 1 : 0), uk) });
             });
 
@@ -586,7 +474,7 @@
                 // Satu jabatan saja: pakai lebar penuh (bukan setengah) untuk berjajar/rak.
                 const lebarPenuh = Math.max(layar.clientWidth - 24, 200);
                 const sisi = el('div', 'bagan-sisi tunggal');
-                sisi.append(buatCabang(cabang[0], mode, kata, {
+                sisi.append(buatCabang(cabang[0], kata, {
                     sejajar: Math.max(1, Math.min(MAKS_SEJAJAR, Math.floor((lebarPenuh - 16) / (LEBAR_NODE + 8)))),
                     rak: Math.max(1, Math.min(4, Math.floor((lebarPenuh - 30) / (LEBAR_NODE + 8)))),
                 }));
@@ -610,32 +498,23 @@
                     if (lebarSisi(b.slice(0, k)) > setengah || lebarSisi(b.slice(k)) > setengah) k = r.kiri.length;
                     const kiri = el('div', 'bagan-sisi kiri');
                     const kanan = el('div', 'bagan-sisi kanan');
-                    b.slice(0, k).forEach((c) => kiri.append(buatCabang(c, mode, kata, uk)));
-                    b.slice(k).forEach((c) => kanan.append(buatCabang(c, mode, kata, uk)));
+                    b.slice(0, k).forEach((c) => kiri.append(buatCabang(c, kata, uk)));
+                    b.slice(k).forEach((c) => kanan.append(buatCabang(c, kata, uk)));
                     wadah.append(kiri, el('div', 'bagan-tulang' + (i === baris.length - 1 ? ' akhir' : '') + (k === b.length ? ' hanya-kiri' : '')), kanan);
                 });
             }
             [layar.scrollLeft, layar.scrollTop] = gulir;
-            perbaruiMasukan(mode, n);
+            perbaruiMasukan(n);
         }
 
-        // Nilai terkirim (id yang digantikan / keterangan posisi baru) + judul & petunjuk bagan.
-        function perbaruiMasukan(mode, n) {
+        // Nilai terkirim (keterangan tiap posisi baru) + petunjuk bagan.
+        function perbaruiMasukan(n) {
             masukan.innerHTML = '';
-            if (mode === 'replacement') {
-                dipilih.forEach((id) => { const i = el('input'); i.type = 'hidden'; i.name = 'diganti[]'; i.value = id; masukan.append(i); });
-            } else if (mode === 'penambahan') {
-                for (let i = 0; i < n; i++) { const x = el('input'); x.type = 'hidden'; x.name = 'slot_tambahan[]'; x.value = slot[i] || ''; masukan.append(x); }
-            }
+            for (let i = 0; i < n; i++) { const x = el('input'); x.type = 'hidden'; x.name = 'slot_tambahan[]'; x.value = slot[i] || ''; masukan.append(x); }
 
-            judulBagan.textContent = mode === 'replacement' ? 'Klik pegawai yang digantikan' : mode === 'penambahan' ? 'Klik “Posisi kosong” (kotak merah)' : 'Pilih kebutuhan karyawan dulu';
-            petunjuk.className = 'small mb-2 ' + (mode === 'replacement' && dipilih.size !== n ? 'text-danger fw-semibold' : 'text-muted');
-            petunjuk.textContent = mode === 'replacement'
-                ? 'Dipilih ' + dipilih.size + ' dari ' + n + ' orang yang dibutuhkan. Pegawai yang bisa diklik sebanyak jumlah dibutuhkan; bila sudah penuh, klik pegawai lain untuk memindahkan pilihan. Jabatan terisi otomatis; jenis kelamin pengganti boleh diubah asal totalnya sama. Hijau = masih aktif, abu = sudah tidak aktif.'
-                : mode === 'penambahan'
-                    ? 'Klik kotak merah "Posisi kosong" (+) pada jabatan yang dibutuhkan untuk mengajukan pegawai baru (jabatan & jumlah terisi otomatis).'
-                        + (n && jabatan.value ? ' Sekarang ' + n + ' posisi baru di ' + jabatan.value + '; klik kotaknya untuk ubah keterangan atau hapus.' : '')
-                    : 'Bagan menampilkan susunan pegawai bagian Anda. Pilih "Kebutuhan karyawan karena" di atas untuk mulai menandai.';
+            petunjuk.className = 'small mb-2 text-muted';
+            petunjuk.textContent = 'Klik kotak merah "Posisi kosong" (+) pada jabatan yang dibutuhkan untuk mengajukan pegawai baru (jabatan & jumlah terisi otomatis).'
+                + (n && jabatan.value ? ' Sekarang ' + n + ' posisi baru di ' + jabatan.value + '; klik kotaknya untuk ubah keterangan atau hapus.' : '');
             segarkanAturan();
         }
 
@@ -661,72 +540,23 @@
         cari.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });   // Enter tidak mengirim form
 
         unit.addEventListener('change', () => {
-            dipilih.clear(); slot = []; terbuka.clear(); isiJabatan();
-            if (jenis() === 'replacement') potongKeBatas();
+            slot = []; terbuka.clear(); isiJabatan();
             gambar(); pasLayar();
         });
         jabatan.addEventListener('change', () => {
-            // Replacement: pilihan di jabatan lain dilepas, jumlah disesuaikan dengan isi jabatan baru.
-            if (jenis() === 'replacement') {
-                dipilih.forEach((id) => { if (!samaJabatan(jabatanDari(id), jabatan.value)) dipilih.delete(id); });
-                potongKeBatas();
-            }
             hitung(); gambar();
         });
         cari.addEventListener('input', gambar);
-        // Pindah ke replacement: jumlah dihitung dari pegawai yang dipilih. Kembali: isian jumlah sebelumnya dipulihkan.
-        let modeLama = jenis();
-        let jumlahSebelum = null;
-        form.querySelectorAll('[name=jenis_kebutuhan]').forEach((r) => r.addEventListener('change', () => {
-            form.querySelectorAll('[data-jenis]').forEach((s) => { s.hidden = s.dataset.jenis !== r.value; });
-            buangGalatServerBagan();
-            if (r.value === 'replacement') {
-                jumlahSebelum = JK.map(([nama]) => form[nama].value);
-                // Pilihan lama masih diingat → jumlah mengikutinya; belum ada → isian jumlah dipertahankan (dibatasi isi bagian).
-                dipilih.size ? jumlahDariPilihan() : potongKeBatas();
-            } else if (modeLama === 'replacement') {
-                JK.forEach(([nama], i) => { form[nama].value = jumlahSebelum ? jumlahSebelum[i] : 0; });
-                hitung();
-            }
-            modeLama = r.value;
-            gambar();
-        }));
         const totalTeks = form.querySelector('[data-total-jumlah]');
-        // Replacement: total kebutuhan maksimal = jumlah pegawai di jabatan (bagian) yang diganti; belum ada jabatan → seluruh unit.
-        function batasGanti() {
-            const grup = (baganPerUnit[unit.value] || { grup: {} }).grup;
-            const jab = dipilih.size ? jabatanDari([...dipilih][0]) : Object.keys(grup).find((j) => samaJabatan(j, jabatan.value));
-            return jab
-                ? { n: grup[jab].length, di: jab }
-                : { n: Object.values(grup).reduce((s, g) => s + g.length, 0), di: 'bagian ' + (unit.value || '-') };
-        }
         const hitung = () => {
             const n = total();
-            // Merah hanya bila melebihi batas; total 0 ditangani validasi saat kirim (tidak merah sebelum diisi).
-            let teks = 'Total kebutuhan: ' + n + ' orang', salah = false;
-            if (jenis() === 'replacement') {
-                const b = batasGanti();
-                teks += ' (maks ' + b.n + ', sesuai jumlah pegawai di ' + b.di + ')';
-                salah = n > b.n;
-                // Batas tiap kolom = isi bagian (bukan sisa kuota) agar tetap bisa dinaikkan; kelebihan diambil dari kolom lain.
-                JK.forEach(([nama]) => { form[nama].max = Math.min(50, b.n); });
-            } else {
-                JK.forEach(([nama]) => { form[nama].max = 50; });
-            }
-            totalTeks.textContent = teks;
-            totalTeks.classList.toggle('text-danger', salah);
+            totalTeks.textContent = 'Total kebutuhan: ' + n + ' orang';
             segarkanAturan();
             return n;
         };
         ['jumlah_laki', 'jumlah_perempuan', 'jumlah_bebas'].forEach((k) => form[k].addEventListener('input', () => {
             // Galat server "total jumlah" dibuang begitu pengguna mulai memperbaiki.
             form.querySelectorAll('[data-galat-server="jumlah"]').forEach((g) => g.remove());
-            // Replacement: total tidak boleh melebihi jumlah pegawai yang ada — kelebihan diambil dari kolom lain dulu;
-            // jumlah diturunkan → pilihan di bagan yang paling lama dilepas.
-            if (jenis() === 'replacement') {
-                potongKeBatas(form[k]);
-                rapikanPilihan();
-            }
             hitung(); gambar();
         }));
         // Kolom dikosongkan dianggap 0 (kolom wajib diisi, kosong akan ditolak saat kirim).
@@ -752,7 +582,7 @@
             if (x.dataset.pesan) return x.dataset.pesan;
             if (v.badInput || v.stepMismatch) return nama + ' harus berupa bilangan bulat, contoh: 1.';
             if (v.rangeUnderflow) return nama + ' minimal ' + x.min + satuan + '.';
-            if (v.rangeOverflow) return nama + ' maksimal ' + x.max + satuan + (jenis() === 'replacement' && satuan ? ', sesuai jumlah pegawai yang bisa digantikan.' : '.');
+            if (v.rangeOverflow) return nama + ' maksimal ' + x.max + satuan + '.';
             if (v.tooLong) return nama + ' maksimal ' + x.maxLength + ' karakter.';
             return x.validationMessage;
         }
@@ -811,13 +641,6 @@
                 kunci: 'jumlah', wadah: wadahJumlah, isian: () => JK.map(([nama]) => form[nama]),
                 lolos: () => total() >= 1,
                 pesan: () => 'Isi jumlah kebutuhan minimal 1 orang: laki-laki, perempuan, atau bebas (L/P).',
-            },
-            {
-                kunci: 'bagan', wadah: wadahBagan, isian: () => [], kotak: kotakBagan, fokus: () => layar,
-                lolos: () => jenis() !== 'replacement' || (total() > 0 && dipilih.size === total()),
-                pesan: () => (total() > 0
-                    ? 'Klik ' + total() + ' pegawai yang digantikan di bagan (sekarang ' + dipilih.size + ' dipilih).'
-                    : 'Klik pegawai yang digantikan di bagan; jumlah kebutuhan terisi otomatis.'),
             },
             {
                 // Dropdown jabatan nonaktif (bagian tanpa jabatan) tidak ikut validasi browser.
@@ -930,8 +753,6 @@
         rapikanTugas();
 
         isiJabatan();
-        // Kembali dari validasi gagal: jabatan pegawai yang digantikan (mis. yang sudah tidak aktif) dipulihkan.
-        if (jenis() === 'replacement' && dipilih.size) setJabatan(jabatanDari([...dipilih][0]));
         hitung();
         gambar();
         pasLayar();

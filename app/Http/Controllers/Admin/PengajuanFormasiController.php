@@ -128,25 +128,9 @@ class PengajuanFormasiController extends Controller
             // Atasan langsung = pengaju (readonly); Admin memilih dari daftar kepala & GM.
             'atasanBawaan' => $this->namaAtasan($user),
             'pilihanAtasan' => $user->can(Izin::OVERRIDE) ? $this->pilihanAtasan() : [],
-            // Bagan unit (kepala + pegawai per jabatan) untuk memilih pegawai yang digantikan / posisi baru.
-            'baganPerUnit' => $bagan = collect($units)->mapWithKeys(fn ($u) => [$u => RekrutmenAccess::baganUnit($u)])->all(),
-            // Replacement: klik pegawai di bagan → jabatan terisi otomatis (nama jabatan bagan → nama di Master Jabatan).
-            'jabatanBaganPerUnit' => collect($bagan)->map(fn ($b) => $this->jabatanBagan($b))->all(),
+            // Bagan unit (kepala + pegawai per jabatan) untuk menandai posisi baru.
+            'baganPerUnit' => collect($units)->mapWithKeys(fn ($u) => [$u => RekrutmenAccess::baganUnit($u)])->all(),
         ]);
-    }
-
-    /**
-     * Jabatan cabang bagan (huruf besar) yang terdaftar di Master Jabatan.
-     *
-     * @param  array{grup: array<string, mixed>}  $bagan
-     * @return array<string, string> jabatan bagan => nama di Master Jabatan
-     */
-    private function jabatanBagan(array $bagan): array
-    {
-        $master = collect(Jabatan::daftar())->keyBy(fn ($j) => mb_strtoupper(trim($j)));
-
-        return collect(array_keys($bagan['grup']))->filter(fn ($j) => $master->has($j))
-            ->mapWithKeys(fn ($j) => [$j => $master[$j]])->all();
     }
 
     public function store(Request $request): RedirectResponse
@@ -168,23 +152,18 @@ class PengajuanFormasiController extends Controller
         if (! $user->can(Izin::OVERRIDE)) {
             $request->merge(['atasan_langsung' => $this->namaAtasan($user)]);
         }
-        $bagan = in_array($unit, $unitBoleh, true) ? RekrutmenAccess::baganUnit($unit) : ['grup' => []];
-        $idBagan = collect($bagan['grup'])->flatten(1)->pluck('id')->all();
+        // Pengajuan formasi hanya untuk pegawai baru tambahan (penambahan posisi); replacement tidak lagi diajukan di sini.
+        $request->merge(['jenis_kebutuhan' => PengajuanFormasi::JENIS_PENAMBAHAN]);
+        // Jabatan hanya yang tertaut ke bagian itu di Master Jabatan (Mode Admin: semua jabatan).
         $jabatanBoleh = $user->can(Izin::OVERRIDE) ? Jabatan::daftar() : (in_array($unit, $unitBoleh, true) ? RekrutmenAccess::jabatanUnit($unit) : []);
-        // Replacement: jabatan pegawai yang digantikan (termasuk yang sudah tidak aktif) juga sah.
-        if ($request->input('jenis_kebutuhan') === PengajuanFormasi::JENIS_REPLACEMENT) {
-            $jabatanBoleh = array_values(array_unique([...$jabatanBoleh, ...array_values($this->jabatanBagan($bagan))]));
-        }
 
         $validated = $request->validate([
             'unit_kerja' => ['required', 'string', Rule::in($unitBoleh)],
-            'jenis_kebutuhan' => ['required', Rule::in(array_keys(PengajuanFormasi::JENIS_LABEL))],
+            'jenis_kebutuhan' => ['required', Rule::in([PengajuanFormasi::JENIS_PENAMBAHAN])],
             'jumlah_laki' => ['required', 'integer', 'min:0', 'max:50'],
             'jumlah_perempuan' => ['required', 'integer', 'min:0', 'max:50'],
             'jumlah_bebas' => ['nullable', 'integer', 'min:0', 'max:50'],
-            // Replacement: pegawai lama yang digantikan (klik di bagan). Penambahan: keterangan tiap posisi baru.
-            'diganti' => ['required_if:jenis_kebutuhan,replacement', 'array'],
-            'diganti.*' => ['integer', Rule::in($idBagan)],
+            // Keterangan tiap posisi baru (diisi dari bagan).
             'slot_tambahan' => ['nullable', 'array', 'max:50'],
             'slot_tambahan.*' => ['nullable', 'string', 'max:150'],
             'target_waktu' => ['required', 'date', ...($user->can(Izin::OVERRIDE) ? [] : ['after_or_equal:today'])],
@@ -199,9 +178,6 @@ class PengajuanFormasiController extends Controller
         ], [
             'unit_kerja.required' => 'Pilih bagian yang membutuhkan pegawai.',
             'unit_kerja.in' => 'Bagian harus bagian yang Anda pimpin.',
-            'diganti.required_if' => 'Pilih pegawai yang digantikan pada bagan bagian.',
-            'diganti.*.in' => 'Pegawai yang digantikan harus dari bagian ini.',
-            'jenis_kebutuhan.required' => 'Pilih alasan kebutuhan: replacement atau penambahan karyawan.',
             'jabatan.in' => 'Jabatan harus jabatan yang ada di bagian ' . ($unit ?: 'Anda') . '.',
             'target_waktu.required' => 'Isi tanggal dibutuhkan.',
             'target_waktu.after_or_equal' => 'Tanggal dibutuhkan tidak boleh sebelum hari ini.',
@@ -225,43 +201,18 @@ class PengajuanFormasiController extends Controller
             throw ValidationException::withMessages(['jumlah_laki' => 'Jumlah kebutuhan (laki-laki + perempuan + bebas) harus 1–50 orang.']);
         }
 
-        // Isi keterangan dari bagan: siapa yang digantikan / keterangan posisi baru.
-        $diganti = [];
-        $slot = [];
-        if ($validated['jenis_kebutuhan'] === PengajuanFormasi::JENIS_REPLACEMENT) {
-            $peta = collect($bagan['grup'])->flatMap(fn ($g, $jab) => collect($g)->map(fn ($o) => $o + ['jabatan' => $jab]))->keyBy('id');
-            $diganti = collect($validated['diganti'] ?? [])->unique()->map(fn ($id) => $peta[$id])->values()->all();
-            if (count($diganti) !== $jumlah) {
-                throw ValidationException::withMessages(['diganti' => 'Jumlah pegawai yang digantikan (' . count($diganti) . ") harus sama dengan jumlah kebutuhan ({$jumlah} orang)."]);
-            }
-            // Satu pengajuan untuk satu jabatan: pegawai yang digantikan sejabatan, dan jabatan pengajuan = jabatan mereka
-            // (bila jabatannya terdaftar di Master Jabatan). Admin bebas menyesuaikan.
-            if (! $user->can(Izin::OVERRIDE)) {
-                $jabatanDiganti = collect($diganti)->pluck('jabatan')->unique();
-                if ($jabatanDiganti->count() > 1) {
-                    throw ValidationException::withMessages(['diganti' => 'Pegawai yang digantikan harus dari satu jabatan (sekarang: ' . $jabatanDiganti->implode(', ') . ').']);
-                }
-                $namaMaster = $this->jabatanBagan($bagan)[$jabatanDiganti->first()] ?? null;
-                if ($namaMaster && mb_strtoupper($validated['jabatan']) !== mb_strtoupper($namaMaster)) {
-                    throw ValidationException::withMessages(['jabatan' => "Jabatan harus sesuai jabatan pegawai yang digantikan ({$namaMaster})."]);
-                }
-            }
-        } else {
-            $slot = array_slice(array_pad(array_map(fn ($s) => trim((string) $s), $validated['slot_tambahan'] ?? []), $jumlah, ''), 0, $jumlah);
-        }
-        $ringkas = $diganti
-            ? 'Menggantikan: ' . collect($diganti)->map(fn ($o) => $o['nama'] . ' (' . ($o['aktif'] ? 'aktif' : 'tidak aktif') . ')')->implode(', ')
-            : "Penambahan {$jumlah} posisi baru" . (array_filter($slot) ? ': ' . implode('; ', array_filter($slot)) : '');
+        // Keterangan tiap posisi baru dari bagan (dipotong/diisi sesuai jumlah kebutuhan).
+        $slot = array_slice(array_pad(array_map(fn ($s) => trim((string) $s), $validated['slot_tambahan'] ?? []), $jumlah, ''), 0, $jumlah);
+        $ringkas = "Penambahan {$jumlah} posisi baru" . (array_filter($slot) ? ': ' . implode('; ', array_filter($slot)) : '');
 
         $formasi = $user->pengajuanFormasis()->create([
             'unit_kerja' => $unit,
             'jumlah_dibutuhkan' => $jumlah,
             'jumlah_bebas' => (int) ($validated['jumlah_bebas'] ?? 0),
-            'diganti' => $diganti ?: null,
             'slot_tambahan' => $slot ?: null,
             'alasan' => $ringkas,
             'status' => PengajuanFormasi::STATUS_PENDING,
-        ] + collect($validated)->except(['unit_kerja', 'diganti', 'slot_tambahan', 'alasan', 'jumlah_bebas'])->all());
+        ] + collect($validated)->except(['unit_kerja', 'slot_tambahan', 'alasan', 'jumlah_bebas'])->all());
         Notifikasi::formasiBaru($formasi);
 
         $penyetuju = $formasi->butuhDuaPersetujuan()
