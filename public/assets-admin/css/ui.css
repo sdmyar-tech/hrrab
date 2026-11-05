@@ -354,7 +354,7 @@ html[data-theme="dark"] .app-nav-badge.is-warning { color: #1f1400; }   /* kunin
 .app-nav-grup.punya-aktif > .app-nav-induk .app-nav-ikon { color: var(--hr-primary); }
 .app-nav-panah { flex: none; font-size: var(--hr-text-xs); opacity: .55; transition: transform var(--hr-durasi-lambat) var(--hr-easing); }
 .app-nav-grup.terbuka > .app-nav-induk .app-nav-panah { transform: rotate(180deg); }
-.app-nav-grup.terbuka > .app-nav-induk .app-nav-badge { display: none; }   /* badge sudah terlihat di submenu */
+/* Badge induk (total tugas) tetap tampil saat menu terbuka; submenu menunjukkan rinciannya per item. */
 /* Buka-tutup halus: tinggi 0 → isi. Tertutup = visibility hidden (tidak bisa di-Tab / dibaca pembaca layar). */
 .app-nav-sub { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--hr-durasi-lambat) var(--hr-easing); }
 .app-nav-grup.terbuka > .app-nav-sub { grid-template-rows: 1fr; }
