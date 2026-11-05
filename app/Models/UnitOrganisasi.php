@@ -3,13 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
  * Master Unit (tanpa koordinator). Berbeda dari Bagian (App\Models\Unit: koordinator & alur persetujuan);
- * Unit hanya pengelompokan yang dipilih di data pegawai (kepegawaians.unit_organisasi).
+ * Unit membawahi beberapa bagian (units.unit_organisasi_id) dan mengelompokkan pegawai (kepegawaians.unit_organisasi),
+ * yang terisi otomatis dari bagian pegawai.
  */
 class UnitOrganisasi extends Model
 {
@@ -28,9 +30,43 @@ class UnitOrganisasi extends Model
 
     protected static function booted(): void
     {
-        $lupakan = fn () => Cache::forget(self::CACHE_KEY);
+        $lupakan = function () {
+            Cache::forget(self::CACHE_KEY);
+            Cache::forget(Unit::CACHE_UNIT_ORG);
+        };
         static::saved($lupakan);
         static::deleted($lupakan);
+    }
+
+    /** Bagian yang dibawahi unit ini. */
+    public function bagians(): HasMany
+    {
+        return $this->hasMany(Unit::class)->orderBy('urutan')->orderBy('nama');
+    }
+
+    /**
+     * Tetapkan bagian yang dibawahi unit ini (bagian yang dipindah dari unit lain ikut pindah) lalu samakan unit
+     * pegawai: pegawai di bagian-bagian ini → unit ini; pegawai di bagian yang dilepas → tanpa unit.
+     *
+     * @param  list<int>  $bagianIds
+     * @return int jumlah data pegawai yang unitnya ikut diperbarui
+     */
+    public function aturBagian(array $bagianIds): int
+    {
+        $bagianIds = array_values(array_unique(array_map('intval', $bagianIds)));
+
+        return DB::transaction(function () use ($bagianIds) {
+            $dilepas = Unit::where('unit_organisasi_id', $this->id)->whereNotIn('id', $bagianIds ?: [0])->pluck('nama');
+            Unit::where('unit_organisasi_id', $this->id)->whereNotIn('id', $bagianIds ?: [0])->update(['unit_organisasi_id' => null]);
+            Unit::whereIn('id', $bagianIds)->update(['unit_organisasi_id' => $this->id]);
+            Cache::forget(Unit::CACHE_UNIT_ORG);
+
+            $nama = Unit::whereIn('id', $bagianIds)->pluck('nama');
+
+            return DB::table('kepegawaians')->whereIn('unit_kerja', $nama)->where(fn ($q) => $q->whereNull('unit_organisasi')->orWhere('unit_organisasi', '!=', $this->nama))
+                ->update(['unit_organisasi' => $this->nama])
+                + DB::table('kepegawaians')->whereIn('unit_kerja', $dilepas)->where('unit_organisasi', $this->nama)->update(['unit_organisasi' => null]);
+        });
     }
 
     /** @return list<string> nama unit, berurutan (kosong bila tabel belum dimigrasi) */

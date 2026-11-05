@@ -7,6 +7,7 @@ use App\Models\AlurPegawai;
 use App\Models\DataPegawai;
 use App\Models\DokumenPegawai;
 use App\Models\Jabatan;
+use App\Models\Unit;
 use App\Models\UnitOrganisasi;
 use App\Models\User;
 use App\Support\EksporPegawai;
@@ -512,6 +513,11 @@ class PegawaiController extends Controller
         if ($berubah && ! Auth::user()?->can(Izin::OVERRIDE) && ! Jabatan::lokasiSah($unit, $validated['jabatan'] ?? null, $validated['lokasi_kerja'] ?? null)) {
             throw ValidationException::withMessages(['lokasi_kerja' => 'Lokasi kerja untuk ' . $validated['jabatan'] . ' di bagian ' . $unit . ': '
                 . implode(', ', Jabatan::lokasiUntuk($unit, $validated['jabatan'])) . '.']);
+        }
+
+        // Unit (Master Unit) mengikuti bagian bila bagiannya sudah dimasukkan ke sebuah unit.
+        if ($unitOrg = Unit::unitOrganisasiDari($unit)) {
+            $validated['unit_organisasi'] = $unitOrg;
         }
 
         return [

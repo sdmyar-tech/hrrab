@@ -8,6 +8,7 @@ use App\Models\PengajuanCuti;
 use App\Models\PengajuanIzinKeluar;
 use App\Models\PengajuanLembur;
 use App\Models\Penugasan;
+use App\Models\Unit;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -392,7 +393,9 @@ class PenugasanService
 
         $kep = $pegawai->kepegawaian()->first();
         if ($utama && $kep && ($kep->unit_kerja !== $utama->unit_kerja || ($utama->jabatan && $kep->jabatan !== $utama->jabatan))) {
-            $kep->update(['unit_kerja' => $utama->unit_kerja, 'jabatan' => $utama->jabatan ?: $kep->jabatan]);
+            // Unit (Master Unit) ikut bagian baru bila bagiannya sudah dimasukkan ke sebuah unit.
+            $kep->update(['unit_kerja' => $utama->unit_kerja, 'jabatan' => $utama->jabatan ?: $kep->jabatan]
+                + (($unitOrg = Unit::unitOrganisasiDari($utama->unit_kerja)) ? ['unit_organisasi' => $unitOrg] : []));
         }
 
         $memimpin = $aktif->contains(fn (Penugasan $p) => $p->isKepala());

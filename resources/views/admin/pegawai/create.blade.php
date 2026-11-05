@@ -161,9 +161,10 @@
                             </div>
                             <div class="col-md-6">
                                 <x-select name="unit_organisasi" id="f-unit-organisasi" label="Unit" optional :options="$opsi(\App\Models\UnitOrganisasi::daftar())"
-                                    :selected="$p->kepegawaian->unit_organisasi ?? ''" placeholder="Tanpa unit" aria-describedby="f-unit-organisasi-info" field-class="mb-0" />
+                                    :selected="$p->kepegawaian->unit_organisasi ?? ''" placeholder="Tanpa unit" aria-describedby="f-unit-organisasi-info" field-class="mb-0"
+                                    data-unit-bagian="[name=unit_kerja]" />
                                 <div class="form-text" id="f-unit-organisasi-info">
-                                    Pengelompokan pegawai; persetujuan tetap mengikuti Bagian. Kelola daftarnya di <a href="{{ route('admin.master-unit.index') }}">Master Unit</a>.
+                                    Terisi otomatis dari Bagian bila bagiannya sudah dimasukkan ke sebuah unit. Kelola di <a href="{{ route('admin.master-unit.index') }}">Master Unit</a>.
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -347,4 +348,5 @@
 </script>
 @include('partials.jabatan-ikut-unit')
 @include('partials.lokasi-ikut-jabatan')
+@include('partials.unit-ikut-bagian')
 @endsection

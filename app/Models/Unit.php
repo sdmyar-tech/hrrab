@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -20,10 +21,12 @@ class Unit extends Model
 
     public const CACHE_KEY = 'master.unit';
 
+    public const CACHE_UNIT_ORG = 'master.bagian-unit-organisasi';
+
     /** Kolom nama unit di tabel lain yang ikut diperbarui saat unit diganti nama. */
     private const KOLOM_UNIT = ['unit_kerja', 'unit_kerja_tujuan'];
 
-    protected $fillable = ['nama', 'urutan', 'keterangan'];
+    protected $fillable = ['nama', 'urutan', 'keterangan', 'unit_organisasi_id'];
 
     protected $casts = ['urutan' => 'integer'];
 
@@ -31,7 +34,9 @@ class Unit extends Model
     {
         $lupakan = function () {
             Cache::forget(self::CACHE_KEY);
+            Cache::forget(self::CACHE_UNIT_ORG);
             Cache::forget(Jabatan::CACHE_PER_UNIT);
+            Cache::forget(Jabatan::CACHE_LOKASI);
         };
         static::saved($lupakan);
         static::deleted($lupakan);
@@ -40,6 +45,35 @@ class Unit extends Model
     public function jabatans(): BelongsToMany
     {
         return $this->belongsToMany(Jabatan::class)->orderBy('nama');
+    }
+
+    /** Unit (Master Unit) yang membawahi bagian ini. */
+    public function unitOrganisasi(): BelongsTo
+    {
+        return $this->belongsTo(UnitOrganisasi::class);
+    }
+
+    /**
+     * Unit tiap bagian (Master Unit → bagian yang dibawahi): dipakai mengisi otomatis unit pegawai dari bagiannya.
+     *
+     * @return array<string, string> nama bagian => nama unit
+     */
+    public static function unitOrganisasiPerBagian(): array
+    {
+        if (! Schema::hasColumn('units', 'unit_organisasi_id')) {
+            return [];
+        }
+
+        return Cache::rememberForever(self::CACHE_UNIT_ORG, fn () => DB::table('units')
+            ->join('unit_organisasis', 'unit_organisasis.id', '=', 'units.unit_organisasi_id')
+            // Alias wajib: kedua tabel punya kolom "nama".
+            ->get(['units.nama as bagian', 'unit_organisasis.nama as unit'])->pluck('unit', 'bagian')->all());
+    }
+
+    /** Nama unit yang membawahi $bagian, atau null bila bagian belum dimasukkan ke unit mana pun. */
+    public static function unitOrganisasiDari(?string $bagian): ?string
+    {
+        return self::unitOrganisasiPerBagian()[(string) $bagian] ?? null;
     }
 
     /** @return list<string> nama unit, berurutan (fallback ke config bila tabel belum ada) */

@@ -8,7 +8,7 @@
 <main class="dashboard-content">
     <div class="container-fluid">
         <x-page-header title="Master Unit" eyebrow="Kepegawaian"
-            subtitle="Daftar unit untuk mengelompokkan pegawai. Tanpa koordinator; persetujuan cuti, lembur, dan izin tetap mengikuti Bagian.">
+            subtitle="Unit membawahi beberapa bagian; unit pegawai terisi otomatis dari bagiannya. Tanpa koordinator; persetujuan tetap mengikuti Bagian.">
             <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.master-unit.export'])
                 <x-button :href="route('admin.unit.index')" variant="secondary" icon="bi-buildings">Bagian &amp; Koordinator</x-button>
@@ -29,16 +29,26 @@
                     <tr>
                         <th class="kolom-no">No</th>
                         <th>Unit</th>
+                        <th>Bagian</th>
                         <th class="text-end">Pegawai Aktif</th>
                         <th class="hr-kolom-aksi">Aksi</th>
                     </tr>
                 </x-slot:head>
                 @forelse ($unit as $u)
-                    <tr data-cari="{{ mb_strtolower($u->nama . ' ' . $u->keterangan) }}">
+                    <tr data-cari="{{ mb_strtolower($u->nama . ' ' . $u->keterangan . ' ' . $u->bagians->pluck('nama')->implode(' ')) }}">
                         <td class="kolom-no text-muted hr-angka">{{ $u->urutan }}</td>
                         <td class="kolom-penuh">
                             <span class="hr-sel-judul">{{ $u->nama }}</span>
                             @if ($u->keterangan)<span class="hr-sel-sub">{{ $u->keterangan }}</span>@endif
+                        </td>
+                        <td>
+                            <span class="jb-unit">
+                                @forelse ($u->bagians as $b)
+                                    <span class="jb-unit-chip">{{ $b->nama }}</span>
+                                @empty
+                                    <span class="jb-unit-chip kosong" title="Belum membawahi bagian — unit pegawai tidak terisi otomatis">belum ada bagian</span>
+                                @endforelse
+                            </span>
                         </td>
                         <td class="hr-angka">
                             @if ($n = $pegawai[$u->nama] ?? 0)
@@ -50,7 +60,8 @@
                         <td class="text-end hr-kolom-aksi">
                             <div class="hr-aksi-baris">
                                 <x-icon-button icon="bi-pencil" label="Ubah unit" data-bs-toggle="modal" data-bs-target="#modalUbahUnitOrg"
-                                    data-url="{{ route('admin.master-unit.update', $u) }}" data-nama="{{ $u->nama }}" data-urutan="{{ $u->urutan }}" data-keterangan="{{ $u->keterangan }}" />
+                                    data-url="{{ route('admin.master-unit.update', $u) }}" data-nama="{{ $u->nama }}" data-urutan="{{ $u->urutan }}" data-keterangan="{{ $u->keterangan }}"
+                                    data-bagian-ids="{{ $u->bagians->pluck('id')->toJson() }}" data-unit-id="{{ $u->id }}" />
                                 <form action="{{ route('admin.master-unit.destroy', $u) }}" method="POST">
                                     @csrf @method('DELETE')
                                     <x-icon-button type="submit" icon="bi-trash" label="Hapus unit" tone="danger" data-confirm="true" data-icon="warning"
@@ -61,12 +72,12 @@
                         </td>
                     </tr>
                 @empty
-                    <x-table-empty :colspan="4" icon="bi-grid-3x3-gap" title="Belum ada unit">
+                    <x-table-empty :colspan="5" icon="bi-grid-3x3-gap" title="Belum ada unit">
                         Unit dipakai untuk mengelompokkan pegawai, misalnya TK, SD, atau SMK.
                         <x-slot:action><x-button icon="bi-plus-lg" data-bs-toggle="modal" data-bs-target="#modalTambahUnitOrg">Tambah Unit</x-button></x-slot:action>
                     </x-table-empty>
                 @endforelse
-                <x-table-empty :colspan="4" icon="bi-search" title="Tidak ada unit yang cocok" data-saring-kosong="#uo-daftar" hidden>
+                <x-table-empty :colspan="5" icon="bi-search" title="Tidak ada unit yang cocok" data-saring-kosong="#uo-daftar" hidden>
                     Coba kata kunci lain, misalnya nama atau keterangan unit.
                 </x-table-empty>
             </x-table>
@@ -75,7 +86,7 @@
 </main>
 
 {{-- Tambah unit --}}
-<x-modal id="modalTambahUnitOrg" title="Tambah Unit" icon="bi-grid-3x3-gap" subtitle="Unit baru langsung muncul di pilihan unit data pegawai.">
+<x-modal id="modalTambahUnitOrg" title="Tambah Unit" icon="bi-grid-3x3-gap" size="lg" scrollable subtitle="Unit baru langsung muncul di pilihan unit data pegawai.">
     <form action="{{ route('admin.master-unit.store') }}" method="POST" id="formTambahUnitOrg">
         @csrf
         <input type="hidden" name="_form" value="tambah">
@@ -90,6 +101,7 @@
                 <input type="text" name="keterangan" id="uo-tambah-ket" class="form-control" maxlength="255"
                     placeholder="Tulis keterangan singkat, contoh: Taman kanak-kanak" value="{{ old('_form') === 'tambah' ? old('keterangan') : '' }}">
             </div>
+            <div class="col-12">@include('admin.unit-organisasi._pilih-bagian', ['dipilih' => old('_form') === 'tambah' ? array_map('intval', old('bagian_ids', [])) : []])</div>
         </div>
     </form>
     <x-slot:footer>
@@ -99,7 +111,7 @@
 </x-modal>
 
 {{-- Ubah unit --}}
-<x-modal id="modalUbahUnitOrg" title="Ubah Unit" icon="bi-pencil-square">
+<x-modal id="modalUbahUnitOrg" title="Ubah Unit" icon="bi-pencil-square" size="lg" scrollable>
     <form method="POST" id="formUbahUnitOrg" data-confirm="Simpan perubahan unit? Bila nama diganti, data pegawai yang memakai nama lama ikut diperbarui.">
         @csrf @method('PUT')
         <input type="hidden" name="_form" value="ubah">
@@ -117,6 +129,7 @@
                 <label class="form-label" for="uo-keterangan">Keterangan <span class="hr-field-opsional">(opsional)</span></label>
                 <input type="text" name="keterangan" id="uo-keterangan" class="form-control" maxlength="255" placeholder="Tulis keterangan singkat, contoh: Taman kanak-kanak">
             </div>
+            <div class="col-12">@include('admin.unit-organisasi._pilih-bagian', ['dipilih' => []])</div>
         </div>
         <p class="form-text mt-2 mb-0">Urutan menentukan posisi unit di semua daftar pilihan.</p>
     </form>
@@ -136,14 +149,26 @@
             formUbah.nama.value = d.nama;
             formUbah.urutan.value = d.urutan;
             formUbah.keterangan.value = d.keterangan || '';
+            // Centang bagian milik unit ini; keterangan "di unit lain" hanya untuk bagian unit lain.
+            const milik = JSON.parse(d.bagianIds || '[]').map(String);
+            formUbah.querySelectorAll('[name="bagian_ids[]"]').forEach((c) => {
+                c.checked = milik.includes(c.value);
+                const lain = c.closest('label').querySelector('[data-unit-lain]');
+                if (lain) lain.hidden = String(c.dataset.unitId || '') === String(d.unitId || '');
+            });
         };
+        // Saring daftar bagian di kedua modal.
+        document.querySelectorAll('[data-cari-bagian]').forEach((cari) => cari.addEventListener('input', () => {
+            const kata = cari.value.trim().toLowerCase();
+            cari.closest('[data-pilih-bagian]').querySelectorAll('[data-nama-bagian]').forEach((l) => { l.hidden = !!kata && !l.dataset.namaBagian.includes(kata); });
+        }));
         modalUbah.addEventListener('show.bs.modal', (e) => { if (e.relatedTarget) isiUbah(e.relatedTarget.dataset); });
 
         // Galat validasi dari server → buka lagi modal yang sama dengan isian terakhir.
         @if ($errors->any() && old('_form') === 'tambah')
             bootstrap.Modal.getOrCreateInstance(document.getElementById('modalTambahUnitOrg')).show();
         @elseif ($errors->any() && old('_form') === 'ubah' && old('_url'))
-            isiUbah({{ \Illuminate\Support\Js::from(['url' => old('_url'), 'nama' => old('nama'), 'urutan' => old('urutan'), 'keterangan' => old('keterangan')]) }});
+            isiUbah({{ \Illuminate\Support\Js::from(['url' => old('_url'), 'nama' => old('nama'), 'urutan' => old('urutan'), 'keterangan' => old('keterangan'), 'bagianIds' => json_encode(array_map('intval', old('bagian_ids', [])))]) }});
             bootstrap.Modal.getOrCreateInstance(modalUbah).show();
         @endif
     });
