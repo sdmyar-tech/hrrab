@@ -87,7 +87,9 @@ class DashboardData
     {
         return DataPegawai::with(['kepegawaian', 'penugasanAktif', 'dokumen'])
             ->whereHas('kepegawaian', fn ($q) => $q->where('status_rekrutmen', 'Aktif'))
-            ->when($lingkup, fn (Builder $q) => $q->whereHas('penugasanAktif', fn ($p) => $p->whereIn('unit_kerja', $lingkup)))
+            // Bertugas di unit itu (penugasan aktif) atau bagian di data kepegawaiannya unit itu.
+            ->when($lingkup, fn (Builder $q) => $q->where(fn ($w) => $w->whereHas('penugasanAktif', fn ($p) => $p->whereIn('unit_kerja', $lingkup))
+                ->orWhereHas('kepegawaian', fn ($k) => $k->whereIn('unit_kerja', $lingkup))))
             ->orderBy('nama_lengkap')
             ->get();
     }

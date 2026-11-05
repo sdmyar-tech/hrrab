@@ -125,7 +125,11 @@ class PegawaiController extends Controller
         $user = Auth::user();
 
         if ($user?->isKepalaBagian()) {
-            $query->whereHas('penugasanAktif', fn ($q) => $q->whereIn('unit_kerja', $user->unitsDipimpinUntukQuery()));
+            // Anggota bagian = bertugas di bagian yang dipimpin (penugasan aktif, termasuk rangkap) ATAU bagian di data
+            // kepegawaiannya (penempatan yang belum tercatat sebagai penugasan tetap terlihat oleh kepalanya).
+            $units = $user->unitsDipimpinUntukQuery();
+            $query->where(fn ($w) => $w->whereHas('penugasanAktif', fn ($q) => $q->whereIn('unit_kerja', $units))
+                ->orWhereHas('kepegawaian', fn ($q) => $q->whereIn('unit_kerja', $units)));
         }
 
         if ($search = $request->query('q')) {
@@ -319,10 +323,16 @@ class PegawaiController extends Controller
             DB::transaction(function () use ($request, $validated, $pegawai, $unitBaru) {
                 $pegawai->update($validated['biodata']);
 
-                $pegawai->penugasans()->aktif()->where('is_utama', true)->update(array_filter([
+                $diubah = $pegawai->penugasans()->aktif()->where('is_utama', true)->update(array_filter([
                     'jabatan' => $validated['kepegawaian']['jabatan'],
                     'unit_kerja' => $unitBaru,
                 ]));
+                // Belum punya penugasan utama aktif (data lama): bagian yang dipilih langsung dicatat sebagai penempatan utama,
+                // agar pegawai masuk ke daftar kepala bagian itu.
+                if ($unitBaru && ! $diubah && ! $pegawai->penugasans()->where('is_utama', true)->where('tanggal_mulai', '>', now()->toDateString())->exists()) {
+                    PenugasanService::buatUtama($pegawai, $unitBaru, $validated['kepegawaian']['jabatan'],
+                        min($validated['kepegawaian']['tanggal_masuk'] ?? now()->toDateString(), now()->toDateString()), oleh: Auth::user());
+                }
                 if ($unitBaru) {
                     $validated['kepegawaian']['unit_kerja'] = $unitBaru;
                 }

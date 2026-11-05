@@ -86,6 +86,13 @@ class RekrutmenAccess
                     $orang[$p->data_pegawai_id] = ['id' => $p->data_pegawai_id, 'nama' => $p->dataPegawai->nama_lengkap, 'aktif' => true, 'jk' => $jk($p->dataPegawai), 'jabatan' => mb_strtoupper((string) $p->jabatan) ?: 'LAINNYA'];
                 }
             });
+        // Aktif yang bagiannya di data kepegawaian = unit ini tapi belum punya penugasan di sini (data lama / diubah langsung).
+        Kepegawaian::where('unit_kerja', $unit)->where('status_rekrutmen', 'Aktif')->with('dataPegawai:id,nama_lengkap,jenis_kelamin')->get()
+            ->each(function ($k) use (&$orang, $kepalaIds, $jk) {
+                if ($k->dataPegawai && ! isset($orang[$k->data_pegawai_id]) && ! in_array($k->data_pegawai_id, $kepalaIds, true)) {
+                    $orang[$k->data_pegawai_id] = ['id' => $k->data_pegawai_id, 'nama' => $k->dataPegawai->nama_lengkap, 'aktif' => true, 'jk' => $jk($k->dataPegawai), 'jabatan' => mb_strtoupper((string) $k->jabatan) ?: 'LAINNYA'];
+                }
+            });
         // Tidak aktif: unit terakhirnya unit ini.
         Kepegawaian::where('unit_kerja', $unit)->where('status_rekrutmen', 'Tidak Aktif')->with('dataPegawai:id,nama_lengkap,jenis_kelamin')->get()
             ->each(function ($k) use (&$orang, $jk) {
