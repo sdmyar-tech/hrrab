@@ -6,7 +6,6 @@
 @php
     // Ada saringan aktif (pencarian, dropdown, atau klik grafik dashboard) → tampilkan "ditemukan" & Reset filter.
     $adaFilter = request()->hasAny(['q', 'unit_kerja', 'unit_organisasi', 'status_rekrutmen', 'tanggal_dari', 'tanggal_sampai']) || $saringanDashboard;
-    $daftarUnitOrg = \App\Models\UnitOrganisasi::daftar();
     $toneStatus = fn (string $status) => match (strtolower($status)) {
         'tetap', 'aktif' => 'success',
         'kontrak' => 'info',
@@ -35,22 +34,25 @@
             <x-filter-bar :action="route('admin.pegawai.index')" id="filterPegawaiForm" search-id="searchInput"
                 search="Cari pegawai, contoh: Siti atau 115010920001" search-label="Cari pegawai menurut nama, NIP, email, atau jabatan"
                 :count="$pegawais->total()" unit="pegawai" :filtered="$adaFilter" :reset="route('admin.pegawai.index')">
-                <select name="unit_kerja" class="form-select form-select-sm" aria-label="Saring bagian" onchange="this.form.submit()">
-                    <option value="">Semua bagian</option>
-                    @foreach ($unitKerjaOptions as $unit)
-                        <option value="{{ $unit }}" @selected(request('unit_kerja') == $unit)>{{ $unit }}</option>
-                    @endforeach
-                </select>
+                {{-- Pilihan bagian sesuai lingkup pengguna; satu bagian saja (mis. kepala satu bagian) tidak perlu disaring. --}}
+                @if (count($unitKerjaOptions) > 1)
+                    <select name="unit_kerja" class="form-select form-select-sm" aria-label="Saring bagian" onchange="this.form.submit()">
+                        <option value="">Semua bagian{{ count($unitKerjaOptions) < count(config('kepegawaian.unit_kerja')) ? ' saya' : '' }}</option>
+                        @foreach ($unitKerjaOptions as $unit)
+                            <option value="{{ $unit }}" @selected(request('unit_kerja') == $unit)>{{ $unit }}</option>
+                        @endforeach
+                    </select>
+                @endif
                 <select name="status_rekrutmen" class="form-select form-select-sm" aria-label="Saring status pegawai" onchange="this.form.submit()">
                     <option value="">Semua status</option>
                     <option value="Aktif" @selected(request('status_rekrutmen') == 'Aktif')>Aktif</option>
                     <option value="Tidak Aktif" @selected(request('status_rekrutmen') == 'Tidak Aktif')>Tidak aktif</option>
                 </select>
-                @if ($daftarUnitOrg)
+                @if ($unitOrgOptions)
                     <select name="unit_organisasi" class="form-select form-select-sm" aria-label="Saring unit" onchange="this.form.submit()">
                         <option value="">Semua unit</option>
                         <option value="-" @selected(request('unit_organisasi') === '-')>Belum ada unit</option>
-                        @foreach ($daftarUnitOrg as $unitOrg)
+                        @foreach ($unitOrgOptions as $unitOrg)
                             <option value="{{ $unitOrg }}" @selected(request('unit_organisasi') === $unitOrg)>{{ $unitOrg }}</option>
                         @endforeach
                     </select>

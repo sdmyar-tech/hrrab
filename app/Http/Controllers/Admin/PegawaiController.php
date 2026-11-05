@@ -54,9 +54,22 @@ class PegawaiController extends Controller
         ]);
         $pegawais = $query->paginate(15)->withQueryString();
 
-        $unitKerjaOptions = config('kepegawaian.unit_kerja');
+        // Pilihan saringan hanya bagian/unit yang memang terlihat oleh pengguna ini (kepala bagian: bagian yang dipimpin).
+        $lingkup = $this->lingkupUnit();
+        $unitKerjaOptions = $lingkup ?? config('kepegawaian.unit_kerja');
+        $unitOrgOptions = $lingkup === null ? UnitOrganisasi::daftar()
+            : DB::table('kepegawaians')->whereIn('data_pegawai_id', $this->filteredQuery(new Request)->select('data_pegawais.id'))
+                ->whereNotNull('unit_organisasi')->distinct()->orderBy('unit_organisasi')->pluck('unit_organisasi')->all();
 
-        return view('admin.pegawai.index', compact('pegawais', 'unitKerjaOptions', 'saringanDashboard') + $urut);
+        return view('admin.pegawai.index', compact('pegawais', 'unitKerjaOptions', 'unitOrgOptions', 'saringanDashboard') + $urut);
+    }
+
+    /** Bagian yang boleh dilihat di Data Pegawai: kepala bagian = bagian yang dipimpin; selain itu null (semua bagian). */
+    private function lingkupUnit(): ?array
+    {
+        $user = Auth::user();
+
+        return $user instanceof User && $user->isKepalaBagian() ? $user->unitsDipimpin() : null;
     }
 
     public function export(Request $request): BinaryFileResponse
@@ -144,8 +157,11 @@ class PegawaiController extends Controller
             });
         }
 
-        if ($unitKerja = $request->query('unit_kerja')) {
-            $query->whereHas('penugasanAktif', fn ($q) => $q->where('unit_kerja', $unitKerja));
+        // Saring bagian (bagian di luar lingkup pengguna diabaikan): bertugas di bagian itu atau bagian kepegawaiannya.
+        $unitKerja = $request->query('unit_kerja');
+        if ($unitKerja && (($lingkup = $this->lingkupUnit()) === null || in_array($unitKerja, $lingkup, true))) {
+            $query->where(fn ($w) => $w->whereHas('penugasanAktif', fn ($q) => $q->where('unit_kerja', $unitKerja))
+                ->orWhereHas('kepegawaian', fn ($q) => $q->where('unit_kerja', $unitKerja)));
         }
 
         if ($unitOrg = $request->query('unit_organisasi')) {
