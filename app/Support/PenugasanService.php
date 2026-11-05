@@ -469,6 +469,29 @@ class PenugasanService
         return Penugasan::aktif()->whereNotIn('unit_kerja', $berKepala)->distinct()->orderBy('unit_kerja')->pluck('unit_kerja')->all();
     }
 
+    /** Pegawai sudah punya penempatan utama yang masih/akan berlaku (berjalan atau terjadwal). */
+    public static function punyaPenempatanUtama(DataPegawai $pegawai): bool
+    {
+        return $pegawai->penugasans()->where('is_utama', true)
+            ->where(fn ($q) => $q->whereNull('tanggal_selesai')->orWhere('tanggal_selesai', '>=', now()->toDateString()))->exists();
+    }
+
+    /**
+     * Penempatan pertama dari data kepegawaian (form Ubah Pegawai): pegawai aktif yang belum punya penempatan utama
+     * langsung dicatat sebagai penugasan UTAMA jenis AWAL di bagiannya, agar terhitung sebagai anggota bagian itu
+     * tanpa perlu input ulang di Penugasan / Mutasi.
+     */
+    public static function pastikanPenempatanUtama(DataPegawai $pegawai, ?User $oleh = null): ?Penugasan
+    {
+        $kep = $pegawai->kepegawaian()->first();
+        if (! $kep?->unit_kerja || $kep->status_rekrutmen === 'Tidak Aktif' || self::punyaPenempatanUtama($pegawai)) {
+            return null;
+        }
+
+        return self::buatUtama($pegawai, $kep->unit_kerja, $kep->jabatan,
+            min(optional($kep->tanggal_masuk)->toDateString() ?? now()->toDateString(), now()->toDateString()), oleh: $oleh);
+    }
+
     /** Penugasan utama yang belum ditutup (yang akan diganti oleh mutasi). */
     private static function utamaTerbuka(DataPegawai $pegawai): ?Penugasan
     {

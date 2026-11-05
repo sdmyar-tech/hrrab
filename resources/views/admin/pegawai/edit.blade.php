@@ -145,10 +145,13 @@
                                     placeholder="Nomor induk pegawai, contoh: 0101199001012020001" optional field-class="mb-0" />
                             </div>
                             <div class="col-md-6">
-                                {{-- Selain Admin, bagian utama hanya berubah lewat Mutasi. Admin boleh koreksi langsung. --}}
-                                @if ($longgar)
+                                {{-- Penempatan pertama (belum punya penugasan utama) diisi di sini dan langsung menjadi penugasan utama.
+                                     Setelah itu pindah bagian lewat Mutasi; Mode Admin boleh koreksi langsung. --}}
+                                @php $penempatanPertama = ! \App\Support\PenugasanService::punyaPenempatanUtama($pegawai); @endphp
+                                @if ($longgar || $penempatanPertama)
                                     <x-select name="unit_kerja" id="f-unit-kerja" label="Bagian (Utama)" :options="$opsi(config('kepegawaian.unit_kerja'))"
-                                        :selected="$p->kepegawaian->unit_kerja ?? ''" aria-describedby="f-unit-kerja-info" field-class="mb-0" />
+                                        :selected="$p->kepegawaian->unit_kerja ?? ''" placeholder="Pilih bagian" :required="! $longgar"
+                                        aria-describedby="f-unit-kerja-info" field-class="mb-0" />
                                 @else
                                     <div class="hr-field mb-0">
                                         <label for="f-unit-kerja" class="form-label">Bagian (Utama)</label>
@@ -156,7 +159,9 @@
                                     </div>
                                 @endif
                                 <div class="form-text" id="f-unit-kerja-info">
-                                    @if ($longgar)
+                                    @if ($penempatanPertama)
+                                        <x-badge tone="info" icon="bi-geo-alt">Penempatan pertama</x-badge> Bagian & jabatan ini langsung tercatat sebagai penugasan utama.<br>
+                                    @elseif ($longgar)
                                         <x-badge tone="warning" icon="bi-shield-lock">Mode Admin</x-badge> Ubah langsung (koreksi) tanpa membuat riwayat mutasi.<br>
                                     @endif
                                     Pindah bagian lewat

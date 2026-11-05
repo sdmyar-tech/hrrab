@@ -194,9 +194,8 @@ class ProfilController extends Controller
                         $kepegawaianData
                     );
 
-                    if (! $unitLama && ! empty($kepegawaianData['unit_kerja']) && ! $pegawai->penugasans()->exists()) {
-                        PenugasanService::buatUtama($pegawai, $kepegawaianData['unit_kerja'], $kepegawaianData['jabatan'] ?? null,
-                            min($kepegawaianData['tanggal_masuk'] ?? now()->toDateString(), now()->toDateString()));
+                    if (! PenugasanService::punyaPenempatanUtama($pegawai)) {
+                        PenugasanService::pastikanPenempatanUtama($pegawai);
                     } elseif (! empty($kepegawaianData['jabatan'])) {
                         $pegawai->penugasans()->aktif()->where('is_utama', true)->update(['jabatan' => $kepegawaianData['jabatan']]);
                     }

@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Support\EksporPegawai;
 use App\Support\ExcelExporter;
 use App\Support\FilterTanggal;
+use App\Support\Izin;
 use App\Support\KelompokPegawai;
 use App\Support\PegawaiKeluar;
 use App\Support\PengajuanWorkflow;
@@ -23,9 +24,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use App\Support\Izin;
 
 class PegawaiController extends Controller
 {
@@ -315,24 +316,24 @@ class PegawaiController extends Controller
             unset($validated['kepegawaian']['status_rekrutmen'], $validated['kepegawaian']['tanggal_keluar']);
         }
 
-        // Selain Admin, unit utama hanya bisa diubah lewat Mutasi. Admin boleh koreksi langsung.
-        $unitBaru = Auth::user()->can(Izin::OVERRIDE) ? ($validated['kepegawaian']['unit_kerja'] ?? null) : null;
+        // Bagian utama: penempatan pertama (belum punya penempatan utama) boleh diisi siapa pun yang bisa mengubah pegawai;
+        // pindah bagian setelahnya lewat Mutasi. Mode Admin boleh koreksi langsung.
+        $penempatanPertama = ! PenugasanService::punyaPenempatanUtama($pegawai);
+        if ($penempatanPertama && ! Auth::user()->can(Izin::OVERRIDE) && empty($validated['kepegawaian']['unit_kerja']) && ! $pegawai->kepegawaian?->unit_kerja) {
+            throw ValidationException::withMessages(['unit_kerja' => 'Pilih bagian penempatan pegawai ini.']);
+        }
+        $unitBaru =(Auth::user()->can(Izin::OVERRIDE) || $penempatanPertama) ? ($validated['kepegawaian']['unit_kerja'] ?? null) : null;
         unset($validated['kepegawaian']['unit_kerja']);
 
         try {
-            DB::transaction(function () use ($request, $validated, $pegawai, $unitBaru) {
+            DB::transaction(function () use ($request, $validated, $pegawai, $unitBaru, $penempatanPertama) {
                 $pegawai->update($validated['biodata']);
 
-                $diubah = $pegawai->penugasans()->aktif()->where('is_utama', true)->update(array_filter([
+                // Penempatan yang sedang berjalan ikut diperbarui (jabatan; bagian hanya pada koreksi Mode Admin).
+                $pegawai->penugasans()->aktif()->where('is_utama', true)->update(array_filter([
                     'jabatan' => $validated['kepegawaian']['jabatan'],
-                    'unit_kerja' => $unitBaru,
+                    'unit_kerja' => $penempatanPertama ? null : $unitBaru,
                 ]));
-                // Belum punya penugasan utama aktif (data lama): bagian yang dipilih langsung dicatat sebagai penempatan utama,
-                // agar pegawai masuk ke daftar kepala bagian itu.
-                if ($unitBaru && ! $diubah && ! $pegawai->penugasans()->where('is_utama', true)->where('tanggal_mulai', '>', now()->toDateString())->exists()) {
-                    PenugasanService::buatUtama($pegawai, $unitBaru, $validated['kepegawaian']['jabatan'],
-                        min($validated['kepegawaian']['tanggal_masuk'] ?? now()->toDateString(), now()->toDateString()), oleh: Auth::user());
-                }
                 if ($unitBaru) {
                     $validated['kepegawaian']['unit_kerja'] = $unitBaru;
                 }
@@ -341,6 +342,8 @@ class PegawaiController extends Controller
                     ['data_pegawai_id' => $pegawai->id],
                     $validated['kepegawaian']
                 );
+                // Belum punya penempatan utama: bagian & jabatan di data kepegawaian langsung menjadi penugasan utama.
+                PenugasanService::pastikanPenempatanUtama($pegawai, Auth::user());
                 if ($unitBaru) {
                     PenugasanService::sinkron($pegawai);
                 }
