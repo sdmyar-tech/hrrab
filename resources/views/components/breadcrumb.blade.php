@@ -7,9 +7,9 @@
     <ol class="breadcrumb">
         @foreach ($items as $item)
             @if ($loop->last)
-                <li class="breadcrumb-item active" aria-current="page">{{ $item['label'] }}</li>
+                <li class="breadcrumb-item active" aria-current="page" title="{{ $item['label'] }}">{{ $item['label'] }}</li>
             @else
-                <li class="breadcrumb-item">
+                <li class="breadcrumb-item" title="{{ $item['label'] }}">
                     @if (! empty($item['url']))
                         <a href="{{ $item['url'] }}">@if (! empty($item['ikon']))<i class="bi {{ $item['ikon'] }} me-1" aria-hidden="true"></i>@endif{{ $item['label'] }}</a>
                     @else

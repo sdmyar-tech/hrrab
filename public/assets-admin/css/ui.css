@@ -458,13 +458,19 @@ html[data-theme="dark"] .app-icon-btn { color: var(--admin-muted); }
 html[data-theme="dark"] .app-icon-btn:hover { color: var(--admin-heading); }
 
 /* Breadcrumb: di HP hanya halaman aktif. */
-.app-remah { flex: 1 1 auto; min-width: 0; }
+.app-remah { flex: 1 1 auto; min-width: 0; container: remah / inline-size; }
 .app-remah .breadcrumb { margin: 0; flex-wrap: nowrap; font-size: var(--hr-text-sm); --bs-breadcrumb-divider-color: var(--hr-gray-400); --bs-breadcrumb-item-padding-x: var(--hr-space-2); }
-.app-remah .breadcrumb-item { white-space: nowrap; color: var(--admin-muted); min-width: 0; }
+/* Ruang sempit: item dipotong "…" (bukan saling menimpa); item induk menyusut lebih dulu daripada halaman aktif. */
+.app-remah .breadcrumb-item { white-space: nowrap; color: var(--admin-muted); min-width: 4.5rem; overflow: hidden; text-overflow: ellipsis; flex: 0 3 auto; }
+.app-remah .breadcrumb-item:first-child { flex-shrink: 0; min-width: 0; }
+/* Lebih sempit lagi: item tengah disembunyikan → "Beranda › Halaman aktif". */
+@container remah (max-width: 540px) {
+    .app-remah .breadcrumb-item:not(:first-child, .active) { display: none; }
+}
 .app-remah .breadcrumb-item + .breadcrumb-item::before { content: "\F285"; font-family: "bootstrap-icons"; font-size: .625rem; line-height: 1.6rem; vertical-align: top; }
 .app-remah .breadcrumb-item a { color: var(--admin-muted); text-decoration: none; }
 .app-remah .breadcrumb-item a:hover { color: var(--admin-heading); text-decoration: underline; }
-.app-remah .breadcrumb-item.active { color: var(--admin-heading); font-weight: var(--hr-weight-semibold); overflow: hidden; text-overflow: ellipsis; }
+.app-remah .breadcrumb-item.active { color: var(--admin-heading); font-weight: var(--hr-weight-semibold); flex: 0 1 auto; min-width: 6rem; }
 
 /* Pemicu "Cari menu" (palet perintah): tampil seperti kolom cari. */
 .app-cari {
