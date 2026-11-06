@@ -13,10 +13,18 @@
 
     <div class="hr-pilih-grid">
         @foreach ($divisiOptions as $divisi)
+            {{-- Satu divisi satu GM: divisi milik GM lain dikunci; yang terlanjur dicentang tetap bisa dilepas. --}}
+            @php
+                $dicentang = in_array($divisi, $selectedDivisi, true);
+                $gmLain = $divisiGmLain[$divisi] ?? null;
+            @endphp
             <div class="form-check">
                 <input class="form-check-input divisi-check" type="checkbox" name="divisi[]" value="{{ $divisi }}" id="divisi-{{ $loop->index }}"
-                    @checked(in_array($divisi, $selectedDivisi, true))>
-                <label class="form-check-label" for="divisi-{{ $loop->index }}">{{ $divisi }}</label>
+                    @checked($dicentang) @if ($gmLain && ! $dicentang) disabled data-terkunci @endif>
+                <label class="form-check-label" for="divisi-{{ $loop->index }}">
+                    {{ $divisi }}
+                    @if ($gmLain)<span @class(['hr-pilih-ket', 'text-danger' => $dicentang])>{{ $dicentang ? 'Bentrok: juga dipegang ' : 'Dipegang ' }}{{ $gmLain }}</span>@endif
+                </label>
             </div>
         @endforeach
     </div>
@@ -24,20 +32,27 @@
     @error('divisi.*')<div class="text-danger small mt-2">{{ $message }}</div>@enderror
 </div>
 
-<div class="hr-subbagian" data-untuk-role="gm kepala_bagian kepala_sdm staff">
+<div class="hr-subbagian" data-untuk-role="gm kepala_bagian kepala_sdm">
     <h3 class="hr-subbagian-judul"><i class="bi bi-person-badge" aria-hidden="true"></i>Kepala Bagian</h3>
     <p class="hr-subbagian-sub">
         Bagian yang dipimpin akun ini (menyetujui tahap Kepala Bagian & pewawancara tahap 2). Bisa lebih dari satu.
-        Akun <strong>Staff</strong> yang dicentang otomatis menjadi Kepala Bagian.
+        Bagian yang sudah punya kepala/koordinator dikunci; lepas dulu kepala lamanya di akunnya atau di Master Bagian.
         <span data-untuk-role="gm">Akun <strong>GM</strong> boleh memimpin bagian <strong>tanpa NIP / Data Pegawai</strong>.</span>
-        <span data-untuk-role="kepala_bagian kepala_sdm staff">Untuk role ini akun harus tertaut ke Data Pegawai (pilih pegawai atau isi NIP).</span>
+        <span data-untuk-role="kepala_bagian kepala_sdm">Untuk role ini akun harus tertaut ke Data Pegawai (pilih pegawai atau isi NIP).</span>
     </p>
     <div class="hr-pilih-grid">
         @foreach ($divisiOptions as $unit)
+            @php
+                $dicentang = in_array($unit, (array) ($selectedKepalaUnit ?? []), true);
+                $kepalaUnitLain = $kepalaLain[$unit] ?? null;
+            @endphp
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="kepala_unit[]" value="{{ $unit }}" id="kepala-unit-{{ $loop->index }}"
-                    @checked(in_array($unit, (array) ($selectedKepalaUnit ?? []), true))>
-                <label class="form-check-label" for="kepala-unit-{{ $loop->index }}">{{ $unit }}</label>
+                    @checked($dicentang) @if ($kepalaUnitLain && ! $dicentang) disabled data-terkunci @endif>
+                <label class="form-check-label" for="kepala-unit-{{ $loop->index }}">
+                    {{ $unit }}
+                    @if ($kepalaUnitLain)<span @class(['hr-pilih-ket', 'text-danger' => $dicentang])>{{ $dicentang ? 'Bentrok: juga dipimpin ' : 'Kepala: ' }}{{ $kepalaUnitLain }}</span>@endif
+                </label>
             </div>
         @endforeach
     </div>
@@ -61,7 +76,8 @@
             kartu.forEach(function (k) {
                 const cocok = k.dataset.untukRole.split(' ').includes(dasar);
                 k.hidden = ! cocok;
-                k.querySelectorAll('input, select').forEach(function (el) { el.disabled = ! cocok; });
+                // Centangan milik orang lain (data-terkunci) tetap nonaktif.
+                k.querySelectorAll('input, select').forEach(function (el) { el.disabled = ! cocok || el.hasAttribute('data-terkunci'); });
                 tampil += cocok ? 1 : 0;
             });
             kosong.hidden = tampil > 0;
@@ -76,7 +92,7 @@
         document.getElementById('gmBidangPreset').addEventListener('change', function () {
             if (! this.value) return;
             const units = this.value.split('|');
-            document.querySelectorAll('.divisi-check').forEach(function (cb) { cb.checked = units.includes(cb.value); });
+            document.querySelectorAll('.divisi-check:not([data-terkunci])').forEach(function (cb) { cb.checked = units.includes(cb.value); });
         });
     });
 </script>

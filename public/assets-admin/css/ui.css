@@ -2061,8 +2061,9 @@ html[data-theme="dark"] .notif-item.is-baru { background: rgba(240, 138, 140, .0
 .hr-filter-bar-jumlah { margin: 0; font-size: var(--hr-text-sm); color: var(--admin-muted); }
 .hr-filter-bar-jumlah strong { color: var(--admin-heading); font-weight: var(--hr-weight-semibold); font-variant-numeric: tabular-nums; }
 .hr-filter-reset { margin-left: auto; }
-.hr-filter-cari .input-group-text { background: var(--admin-surface); color: var(--admin-muted); border-right: 0; }
-.hr-filter-cari .form-control { border-left: 0; padding-left: 0; }
+.hr-filter-cari .input-group-text { background: var(--admin-surface); color: var(--admin-muted); border-right: 0; padding-right: var(--hr-space-1); }
+/* Jarak teks dari ikon cari (sebelumnya 0 sehingga huruf menempel ke ikon). */
+.hr-filter-cari .form-control { border-left: 0; padding-left: var(--hr-space-2); }
 .hr-filter-cari:focus-within .input-group-text { border-color: var(--hr-primary-300, var(--hr-primary)); }
 @media (max-width: 575.98px) {
     .hr-filter-bar { padding: var(--hr-space-3) var(--hr-space-4); }
@@ -2561,6 +2562,9 @@ html[data-theme="dark"] .abs-khusus > summary { color: var(--hr-link); }
 .hr-subbagian-preset { max-width: 360px; }
 .hr-pilih-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--hr-space-1) var(--hr-space-4); }
 .hr-pilih-grid .form-check { margin: 0; font-size: var(--hr-text-sm); }
+/* Keterangan kecil di bawah pilihan (mis. "Kepala: Siti"); pilihan terkunci tampil redup. */
+.hr-pilih-ket { display: block; font-size: var(--hr-text-xs); color: var(--admin-muted); line-height: 1.3; }
+.hr-pilih-grid .form-check-input:disabled ~ .form-check-label { opacity: .75; }
 
 /* Master Role: daftar & matriks hanya-baca */
 .rl-tampilan .btn.active { background: var(--hr-primary); border-color: var(--hr-primary); color: #fff; }

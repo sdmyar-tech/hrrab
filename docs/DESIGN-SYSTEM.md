@@ -191,7 +191,7 @@ Kelas pendukung: `.hr-konteks` (daftar label–nilai di dialog/kartu), `.hr-kart
 ### Pola Batch 6 — rekrutmen & sistem
 
 - **Form 2 kolom seragam** (lowongan, kandidat internal, akun, role): `row g-4` → `col-xl-8` satu `x-card` berisi `x-form-section` · `col-xl-4 .hr-detail-samping` kartu **pratinjau/ringkasan** yang ikut berubah saat diketik → `.hr-bilah-aksi`.
-- `.hr-subbagian` (+ `-judul`, `-sub`): blok pengaturan bersyarat di dalam satu bagian form; `.hr-pilih-grid`: grid kotak centang.
+- `.hr-subbagian` (+ `-judul`, `-sub`): blok pengaturan bersyarat di dalam satu bagian form; `.hr-pilih-grid`: grid kotak centang. Pilihan milik orang lain: `disabled data-terkunci` + `<span class="hr-pilih-ket">Kepala: Nama</span>` di label (yang terlanjur dicentang tetap aktif, keterangan `text-danger` "Bentrok: …"); skrip penampil blok harus mempertahankan `data-terkunci` tetap nonaktif.
 - **Matriks hak akses** (form role): modul = `fieldset.rl-modul` dengan centang induk (indeterminate), "Pilih semua" global, cari hak.
 - **Baris bisa dibuka** (log aktivitas): `tr[data-buka-rinci]` + `tr.log-rinci[hidden]`, tombol `x-icon-button` ber-`aria-expanded`; zebra pakai kelas `is-genap` (bukan `striped`, karena baris rincian).
 - Detail lamaran memakai pola detail Batch 5 (kartu Tindakan lengket + `x-timeline` + bilah cepat HP); dialog alasan Tolak/Batalkan satu `x-modal #modalAlasan`.

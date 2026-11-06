@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DataPegawai;
+use App\Models\Penugasan;
 use App\Models\Role;
+use App\Models\UnitOrganisasi;
 use App\Models\User;
 use App\Support\ExcelExporter;
 use App\Support\FilterTanggal;
@@ -42,6 +44,8 @@ class UserController extends Controller
             'users' => $query->paginate(15)->withQueryString(),
             'roles' => $this->roles(),
             'rolesKustom' => Role::kustom(),
+            'bagianOpsi' => config('kepegawaian.unit_kerja'),
+            'unitOpsi' => UnitOrganisasi::daftar(),
             // Kartu angka di atas daftar (baca-saja).
             'ringkas' => [
                 'semua' => User::count(),
@@ -74,7 +78,7 @@ class UserController extends Controller
 
     private function filteredQuery(Request $request)
     {
-        $query = User::with(['dataPegawai.penugasanAktif', 'dataPelamar']);
+        $query = User::with(['dataPegawai.penugasanAktif', 'dataPegawai.kepegawaian', 'dataPelamar']);
 
         if ($search = $request->query('q')) {
             $query->where(function ($q) use ($search) {
@@ -89,6 +93,17 @@ class UserController extends Controller
             str_starts_with($role, 'kustom:')
                 ? $query->where('role_id', (int) substr($role, 7))
                 : $query->where('role', $role)->whereNull('role_id');
+        }
+
+        // Bagian: bagian kepegawaian, penugasan aktif (termasuk rangkap), atau bagian yang dipimpin GM tanpa data pegawai.
+        if ($bagian = $request->query('bagian')) {
+            $query->where(fn ($w) => $w
+                ->whereHas('dataPegawai.kepegawaian', fn ($q) => $q->where('unit_kerja', $bagian))
+                ->orWhereHas('dataPegawai.penugasanAktif', fn ($q) => $q->where('unit_kerja', $bagian))
+                ->orWhereJsonContains('kepala_unit_gm', $bagian));
+        }
+        if ($unit = $request->query('unit')) {
+            $query->whereHas('dataPegawai.kepegawaian', fn ($q) => $q->where('unit_organisasi', $unit));
         }
 
         // Rentang tanggal akun dibuat.
@@ -123,6 +138,7 @@ class UserController extends Controller
         $validated['wajib_ganti_password'] = $request->boolean('wajib_ganti_password');
         $validated['role_id'] = $roleId;
         $validated = $this->normalizeDivisi($validated);
+        $this->cekBentrok($validated, null);
         [$validated, $kepalaUnit] = $this->pisahkanKepalaUnit($validated);
 
         DB::transaction(fn () => $this->simpanKepalaUnit(User::create($validated), $kepalaUnit));
@@ -132,7 +148,7 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
-        return view('admin.users.edit', ['user' => $user, ...$this->formOptions()]);
+        return view('admin.users.edit', ['user' => $user, ...$this->formOptions($user)]);
     }
 
     public function update(Request $request, User $user): RedirectResponse
@@ -169,6 +185,7 @@ class UserController extends Controller
             : $request->boolean('wajib_ganti_password');
         $validated['role_id'] = $roleId;
         $validated = $this->normalizeDivisi($validated);
+        $this->cekBentrok($validated, $user);
 
         if ($user->isAdmin() && $validated['role'] !== User::ROLE_ADMIN && User::where('role', User::ROLE_ADMIN)->count() <= 1) {
             return redirect()->back()->withInput()->with('error', 'Tidak bisa mengubah role — ini Admin terakhir di sistem.');
@@ -227,7 +244,7 @@ class UserController extends Controller
         return $kustom->id;
     }
 
-    private function formOptions(): array
+    private function formOptions(?User $user = null): array
     {
         return [
             'roles' => $this->roles(),
@@ -235,7 +252,63 @@ class UserController extends Controller
             'divisiOptions' => config('kepegawaian.unit_kerja'),
             'gmBidang' => config('kepegawaian.gm_bidang'),
             'pegawaiOpsi' => $this->pegawaiOpsi(),
+            'kepalaLain' => $this->kepalaLain($user),
+            'divisiGmLain' => $this->divisiGmLain($user),
         ];
+    }
+
+    /**
+     * Bagian yang sudah dipimpin orang lain (kepala/koordinator aktif atau GM tanpa data pegawai) → nama pemimpinnya.
+     * Dipakai untuk mengunci centangan "Kepala Bagian" agar satu bagian tidak punya dua kepala.
+     *
+     * @return array<string, string>
+     */
+    private function kepalaLain(?User $user): array
+    {
+        $daftar = Penugasan::aktif()->kepala()->with('dataPegawai:id,nama_lengkap')
+            ->when($user?->data_pegawai_id, fn ($q, $id) => $q->where('data_pegawai_id', '!=', $id))
+            ->get()
+            ->map(fn (Penugasan $p) => [$p->unit_kerja, $p->dataPegawai?->nama_lengkap]);
+        $gm = User::gmKepalaTanpaPegawai()->when($user, fn ($q) => $q->whereKeyNot($user->id))->get(['id', 'name', 'kepala_unit_gm'])
+            ->flatMap(fn (User $u) => collect((array) $u->kepala_unit_gm)->map(fn ($unit) => [$unit, $u->name]));
+
+        return $daftar->concat($gm)->filter(fn ($x) => $x[1])->groupBy(0)
+            ->map(fn ($x) => $x->pluck(1)->unique()->implode(', '))->all();
+    }
+
+    /**
+     * Divisi yang sudah dipegang GM lain → nama GM-nya (satu divisi satu GM).
+     *
+     * @return array<string, string>
+     */
+    private function divisiGmLain(?User $user): array
+    {
+        return User::where('role', User::ROLE_GM)->whereNotNull('divisi')->when($user, fn ($q) => $q->whereKeyNot($user->id))->get(['id', 'name', 'divisi'])
+            ->flatMap(fn (User $u) => collect((array) $u->divisi)->map(fn ($d) => [$d, $u->name]))
+            ->groupBy(0)->map(fn ($x) => $x->pluck(1)->implode(', '))->all();
+    }
+
+    /**
+     * Tolak bagian/divisi baru yang sudah dipegang orang lain (yang sudah tercatat di akun ini tetap boleh disimpan).
+     */
+    private function cekBentrok(array $validated, ?User $user): void
+    {
+        $lamaKepala = $user ? $user->unitsDipimpin() : [];
+        $bentrok = array_intersect_key($this->kepalaLain($user), array_flip(array_diff($validated['kepala_unit'] ?? [], $lamaKepala)));
+        $lamaDivisi = (array) ($user?->divisi ?? []);
+        $bentrokGm = array_intersect_key($this->divisiGmLain($user), array_flip(array_diff($validated['divisi'] ?? [], $lamaDivisi)));
+
+        $pesan = [];
+        if ($bentrok) {
+            $pesan['kepala_unit'] = 'Bagian sudah punya kepala: ' . collect($bentrok)->map(fn ($n, $u) => "{$u} ({$n})")->implode(', ')
+                . '. Lepas kepala lamanya dulu di akunnya atau di Master Bagian.';
+        }
+        if ($bentrokGm) {
+            $pesan['divisi'] = 'Divisi sudah dipegang GM lain: ' . collect($bentrokGm)->map(fn ($n, $u) => "{$u} ({$n})")->implode(', ') . '.';
+        }
+        if ($pesan) {
+            throw ValidationException::withMessages($pesan);
+        }
     }
 
     /**

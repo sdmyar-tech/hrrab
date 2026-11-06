@@ -4,7 +4,7 @@
 
 @section('content')
 @php
-    $adaFilter = request()->hasAny(['q', 'role', 'tanggal_dari', 'tanggal_sampai']);
+    $adaFilter = request()->hasAny(['q', 'role', 'bagian', 'unit', 'tanggal_dari', 'tanggal_sampai']);
     $param = request()->except(['role', 'page']);
     $kartu = [
         ['Total akun', $ringkas['semua'], 'bi-people', 'primary', route('admin.users.index', $param), ! request('role')],
@@ -43,6 +43,20 @@
                         <option value="kustom:{{ $rk->id }}" @selected(request('role') === 'kustom:' . $rk->id)>{{ $rk->nama }}</option>
                     @endforeach
                 </select>
+                <select name="bagian" class="form-select form-select-sm" aria-label="Saring bagian" onchange="this.form.submit()">
+                    <option value="">Semua bagian</option>
+                    @foreach ($bagianOpsi as $b)
+                        <option value="{{ $b }}" @selected(request('bagian') === $b)>{{ $b }}</option>
+                    @endforeach
+                </select>
+                @if ($unitOpsi)
+                    <select name="unit" class="form-select form-select-sm" aria-label="Saring unit" onchange="this.form.submit()">
+                        <option value="">Semua unit</option>
+                        @foreach ($unitOpsi as $u)
+                            <option value="{{ $u }}" @selected(request('unit') === $u)>{{ $u }}</option>
+                        @endforeach
+                    </select>
+                @endif
                 @include('partials.filter-tanggal', ['tanggalLabel' => 'Dibuat'])
                 @include('partials.urut', ['urutForm' => 'filterUserForm'])
             </x-filter-bar>
@@ -82,6 +96,9 @@
                             @if ($item->dataPegawai)
                                 <span class="d-block">Pegawai</span>
                                 @if ($item->dataPegawai->nama_lengkap !== $item->name)<span class="hr-sel-sub">{{ $item->dataPegawai->nama_lengkap }}</span>@endif
+                                @if ($bagianPegawai = $item->dataPegawai->kepegawaian?->unit_kerja)
+                                    <span class="hr-sel-sub">{{ $bagianPegawai }}{{ ($u = $item->dataPegawai->kepegawaian->unit_organisasi) ? ' · ' . $u : '' }}</span>
+                                @endif
                             @elseif ($item->dataPelamar)
                                 <span class="d-block">Pelamar</span>
                                 @if ($item->dataPelamar->nama_lengkap !== $item->name)<span class="hr-sel-sub">{{ $item->dataPelamar->nama_lengkap }}</span>@endif

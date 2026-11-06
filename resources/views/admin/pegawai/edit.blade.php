@@ -145,10 +145,13 @@
                                     placeholder="Nomor induk pegawai, contoh: 0101199001012020001" optional field-class="mb-0" />
                             </div>
                             <div class="col-md-6">
-                                {{-- Penempatan pertama (belum punya penugasan utama) diisi di sini dan langsung menjadi penugasan utama.
-                                     Setelah itu pindah bagian lewat Mutasi; Mode Admin boleh koreksi langsung. --}}
-                                @php $penempatanPertama = ! \App\Support\PenugasanService::punyaPenempatanUtama($pegawai); @endphp
-                                @if ($longgar || $penempatanPertama)
+                                {{-- Bagian = penugasan utama (satu tempat): penempatan pertama langsung jadi penugasan utama;
+                                     mengganti bagian setelahnya otomatis tercatat sebagai Mutasi hari ini. Mode Admin boleh koreksi tanpa riwayat. --}}
+                                @php
+                                    $penempatanPertama = ! \App\Support\PenugasanService::punyaPenempatanUtama($pegawai);
+                                    $bisaPindah = $longgar || $penempatanPertama || auth()->user()->can('penugasan.manage');
+                                @endphp
+                                @if ($bisaPindah)
                                     <x-select name="unit_kerja" id="f-unit-kerja" label="Bagian (Utama)" :options="$opsi(config('kepegawaian.unit_kerja'))"
                                         :selected="$p->kepegawaian->unit_kerja ?? ''" placeholder="Pilih bagian" :required="! $longgar"
                                         aria-describedby="f-unit-kerja-info" field-class="mb-0" />
@@ -160,28 +163,37 @@
                                 @endif
                                 <div class="form-text" id="f-unit-kerja-info">
                                     @if ($penempatanPertama)
-                                        <x-badge tone="info" icon="bi-geo-alt">Penempatan pertama</x-badge> Bagian & jabatan ini langsung tercatat sebagai penugasan utama.<br>
-                                    @elseif ($longgar)
-                                        <x-badge tone="warning" icon="bi-shield-lock">Mode Admin</x-badge> Ubah langsung (koreksi) tanpa membuat riwayat mutasi.<br>
+                                        <x-badge tone="info" icon="bi-geo-alt">Penempatan pertama</x-badge> Bagian & jabatan ini langsung tercatat sebagai penugasan utama.
+                                    @elseif ($bisaPindah)
+                                        Mengganti bagian di sini langsung tercatat sebagai <strong>Mutasi</strong> mulai hari ini.
+                                        Mutasi terjadwal lewat <a href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'mutasi']) }}">Mutasi</a>;
+                                        tugas di bagian lain lewat <a href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'rangkap']) }}">Rangkap Tugas</a>.
+                                    @else
+                                        Pindah bagian diatur oleh SDM lewat Mutasi.
                                     @endif
-                                    Pindah bagian lewat
-                                    <a href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'mutasi']) }}">Mutasi</a>
-                                    atau tambah <a href="{{ route('admin.penugasan.create', ['pegawai' => $pegawai, 'jenis' => 'rangkap']) }}">Rangkap Tugas</a>.
                                 </div>
+                                @if ($longgar && ! $penempatanPertama)
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" name="koreksi_bagian" value="1" id="f-koreksi-bagian" @checked(old('koreksi_bagian'))>
+                                        <label class="form-check-label small" for="f-koreksi-bagian">
+                                            <x-badge tone="warning" icon="bi-shield-lock">Mode Admin</x-badge> Koreksi salah input (tanpa riwayat mutasi)
+                                        </label>
+                                    </div>
+                                @endif
                             </div>
                             <div class="col-md-6">
-                                <x-select name="jabatan" id="f-jabatan" label="Jabatan Utama" :options="$opsi(\App\Models\Jabatan::daftar())" :data-jabatan-unit="($longgar || $penempatanPertama) ? '[name=unit_kerja]' : null" :data-jabatan-unit-tetap="($longgar || $penempatanPertama) ? null : ($p->kepegawaian->unit_kerja ?? '')" :data-jabatan-bebas="$longgar ? '' : null"
+                                <x-select name="jabatan" id="f-jabatan" label="Jabatan Utama" :options="$opsi(\App\Models\Jabatan::daftar())" :data-jabatan-unit="$bisaPindah ? '[name=unit_kerja]' : null" :data-jabatan-unit-tetap="$bisaPindah ? null : ($p->kepegawaian->unit_kerja ?? '')" :data-jabatan-bebas="$longgar ? '' : null"
                                     :selected="$p->kepegawaian->jabatan ?? ''" placeholder="Pilih jabatan utama" help="Hanya jabatan di bagian terpilih."
                                     :required="$wajib('jabatan')" field-class="mb-0" />
                             </div>
                             <div class="col-md-6">
-                                <x-select name="jabatan_tambahan" id="f-jabatan-tambahan" label="Jabatan Tambahan" optional :options="$opsi(\App\Models\Jabatan::daftar())" :data-jabatan-unit="($longgar || $penempatanPertama) ? '[name=unit_kerja]' : null" :data-jabatan-unit-tetap="($longgar || $penempatanPertama) ? null : ($p->kepegawaian->unit_kerja ?? '')" :data-jabatan-bebas="$longgar ? '' : null"
+                                <x-select name="jabatan_tambahan" id="f-jabatan-tambahan" label="Jabatan Tambahan" optional :options="$opsi(\App\Models\Jabatan::daftar())" :data-jabatan-unit="$bisaPindah ? '[name=unit_kerja]' : null" :data-jabatan-unit-tetap="$bisaPindah ? null : ($p->kepegawaian->unit_kerja ?? '')" :data-jabatan-bebas="$longgar ? '' : null"
                                     :selected="$p->kepegawaian->jabatan_tambahan ?? ''" placeholder="Tidak ada" help="Isi bila pegawai memegang lebih dari satu jabatan." field-class="mb-0" />
                             </div>
                             <div class="col-md-6">
                                 <x-select name="unit_organisasi" id="f-unit-organisasi" label="Unit" optional :options="$opsi(\App\Models\UnitOrganisasi::daftar())"
                                     :selected="$p->kepegawaian->unit_organisasi ?? ''" placeholder="Tanpa unit" aria-describedby="f-unit-organisasi-info" field-class="mb-0"
-                                    :data-unit-bagian="($longgar || $penempatanPertama) ? '[name=unit_kerja]' : null" :data-unit-bagian-tetap="($longgar || $penempatanPertama) ? null : ($p->kepegawaian->unit_kerja ?? '')" />
+                                    :data-unit-bagian="$bisaPindah ? '[name=unit_kerja]' : null" :data-unit-bagian-tetap="$bisaPindah ? null : ($p->kepegawaian->unit_kerja ?? '')" />
                                 <div class="form-text" id="f-unit-organisasi-info">
                                     Terisi otomatis dari Bagian bila bagiannya sudah dimasukkan ke sebuah unit. Kelola di <a href="{{ route('admin.master-unit.index') }}">Master Unit</a>.
                                 </div>
@@ -190,8 +202,8 @@
                                 {{-- Lokasi mengikuti bagian & jabatan (bagian terkunci → bagian kepegawaian sekarang). --}}
                                 <x-select name="lokasi_kerja" id="f-lokasi-kerja" label="Lokasi Kerja" :options="$opsi(config('kepegawaian.lokasi_kerja'))"
                                     :selected="$p->kepegawaian->lokasi_kerja ?? ''" placeholder="Pilih lokasi kerja" :required="$wajib('lokasi_kerja')" field-class="mb-0"
-                                    data-lokasi-jabatan="[name=jabatan]" :data-lokasi-unit="($longgar || $penempatanPertama) ? '[name=unit_kerja]' : null"
-                                    :data-lokasi-unit-tetap="($longgar || $penempatanPertama) ? null : ($p->kepegawaian->unit_kerja ?? '')" :data-lokasi-bebas="$longgar ? '' : null" />
+                                    data-lokasi-jabatan="[name=jabatan]" :data-lokasi-unit="$bisaPindah ? '[name=unit_kerja]' : null"
+                                    :data-lokasi-unit-tetap="$bisaPindah ? null : ($p->kepegawaian->unit_kerja ?? '')" :data-lokasi-bebas="$longgar ? '' : null" />
                             </div>
                             <div class="col-md-6">
                                 <x-input name="tanggal_masuk" id="f-tanggal-masuk" type="date" label="Tanggal Masuk" :max="now()->format('Y-m-d')"
