@@ -36,10 +36,10 @@ class SuratPeringatanAkses
             || EvaluasiKontrakAlur::penilai($pegawai)->contains(fn (User $a) => PengajuanWorkflow::orangSama($user, $a->id));
     }
 
-    /** SP boleh dihapus pemberinya atau pemegang sp.manage_all — hanya SP terakhir di bulannya (urutan tak bolong). */
+    /** SP boleh dihapus pemberinya atau pemegang sp.manage_all — hanya SP terbaru pegawai itu (urutan tak bolong). */
     public static function bisaHapus(User $user, SuratPeringatan $sp): bool
     {
-        return ($user->can(Izin::SP_MANAGE_ALL) || $sp->diberikan_oleh === $user->id) && $sp->terakhirDiBulannya();
+        return ($user->can(Izin::SP_MANAGE_ALL) || $sp->diberikan_oleh === $user->id) && $sp->terbaru();
     }
 
     /**

@@ -10,7 +10,7 @@
 <main class="dashboard-content">
     <div class="container-fluid">
         <x-page-header title="Surat Peringatan" eyebrow="Kepegawaian"
-            subtitle="SP bertahap dalam satu bulan: SP1 → SP2 → SP3 (maksimal 3). Bulan berikutnya mulai lagi dari SP1.">
+            subtitle="Tiap SP berlaku 6 bulan. Pelanggaran saat SP masih berlaku naik tingkat: SP1 → SP2 → SP3 (maksimal 3). Setelah masa berlaku habis, mulai lagi dari SP1.">
             <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.surat-peringatan.export', 'eksporParam' => ['bulan' => $bulan->format('Y-m')]])
                 @if ($pegawai->isNotEmpty())
@@ -53,7 +53,10 @@
                             <span class="hr-sel-judul">{{ $sp->dataPegawai?->nama_lengkap ?? '-' }}</span>
                             <span class="hr-sel-sub">{{ collect([$sp->dataPegawai?->kepegawaian?->jabatan, $sp->unit_kerja])->filter()->implode(' · ') }}</span>
                         </td>
-                        <td class="text-nowrap">{{ $sp->tanggal->translatedFormat('d M Y') }}</td>
+                        <td class="text-nowrap">
+                            {{ $sp->tanggal->translatedFormat('d M Y') }}
+                            <span class="hr-sel-sub">{{ $sp->berlakuPada(today()) ? 'Berlaku s.d.' : 'Kedaluwarsa' }} {{ $sp->berlakuSampai()->translatedFormat('d M Y') }}</span>
+                        </td>
                         <td><x-status-badge :badge="$sp->badgeClass()">{{ $sp->label() }}</x-status-badge></td>
                         <td>
                             {{ $sp->alasan }}
@@ -92,7 +95,7 @@
 
 @if ($pegawai->isNotEmpty())
     <x-modal id="modalBeriSp" title="Beri Surat Peringatan" icon="bi-exclamation-octagon" tone="danger"
-        subtitle="Tingkat SP dihitung otomatis per bulan. Pegawai menerima notifikasi.">
+        subtitle="Tingkat SP dihitung otomatis dari SP yang masih berlaku (6 bulan). Pegawai menerima notifikasi.">
         <form action="{{ route('admin.surat-peringatan.store') }}" method="POST" id="formSp" data-confirm="Berikan surat peringatan ini? Pegawai akan menerima notifikasi.">
             @csrf
             <div class="row g-3">
@@ -103,7 +106,9 @@
                     <select name="data_pegawai_id" id="sp-pegawai" class="form-select" required>
                         <option value="">Pilih pegawai</option>
                         @foreach ($pegawai as $p)
-                            <option value="{{ $p->id }}" data-tingkat="{{ (int) ($tingkatBulanIni[$p->id] ?? 0) }}" @selected((int) old('data_pegawai_id') === $p->id)>
+                            @php $akhir = $spTerakhir[$p->id] ?? null; @endphp
+                            <option value="{{ $p->id }}" @selected((int) old('data_pegawai_id') === $p->id)
+                                @if ($akhir) data-tingkat="{{ $akhir->tingkat }}" data-tanggal="{{ $akhir->tanggal->toDateString() }}" data-sampai="{{ $akhir->berlakuSampai()->toDateString() }}" @endif>
                                 {{ $p->nama_lengkap }} — {{ $p->kepegawaian?->unit_kerja }}
                             </option>
                         @endforeach
@@ -139,24 +144,35 @@
         const tanggal = form.querySelector('#sp-tanggal');
         const kotak = form.querySelector('[data-pratinjau]');
         const tombol = document.querySelector('[data-tombol-sp]');
-        const bulanIni = @json(now()->format('Y-m'));
+        // Tanggal "YYYY-MM-DD" → "6 Mei 2027" untuk teks pratinjau.
+        const tgl = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 
-        // Pratinjau tingkat: SP bulan ini sudah sampai mana → SP berikutnya; SP3 = penuh (tombol dikunci).
+        // Pratinjau tingkat (sama dengan SuratPeringatan::tingkatBerikut): SP terbaru masih berlaku pada tanggal
+        // terpilih → naik satu tingkat; SP3 masih berlaku = penuh (tombol dikunci); selain itu SP1.
         const pratinjau = () => {
             const opsi = pilih.selectedOptions[0];
             kotak.hidden = !opsi || !opsi.value;
             tombol.disabled = false;
             if (kotak.hidden) return;
-            if (tanggal.value.slice(0, 7) !== bulanIni) {
-                kotak.className = 'sp-pratinjau mt-2';
-                kotak.textContent = 'Tingkat SP dihitung menurut bulan tanggal yang dipilih.';
-                return;
+            const { tingkat, tanggal: tglAkhir, sampai } = opsi.dataset;
+            const dipilih = tanggal.value;
+            let teks, penuh = false;
+            if (!tingkat) {
+                teks = 'Akan menjadi SP1 (belum pernah menerima SP).';
+            } else if (dipilih && dipilih < tglAkhir) {
+                teks = 'Tanggal tidak boleh sebelum SP' + tingkat + ' terakhir (' + tgl(tglAkhir) + ').';
+                penuh = true;
+            } else if (dipilih > sampai) {
+                teks = 'Akan menjadi SP1 (SP' + tingkat + ' terakhir sudah kedaluwarsa ' + tgl(sampai) + ').';
+            } else if (+tingkat >= 3) {
+                teks = 'SP3 masih berlaku sampai ' + tgl(sampai) + ' — tidak bisa memberi SP lagi.';
+                penuh = true;
+            } else {
+                teks = 'Akan menjadi SP' + (+tingkat + 1) + ' (SP' + tingkat + ' masih berlaku sampai ' + tgl(sampai) + ').';
             }
-            const ada = +opsi.dataset.tingkat;
-            kotak.className = 'sp-pratinjau mt-2' + (ada >= 3 ? ' penuh' : '');
-            kotak.textContent = ada >= 3 ? 'Sudah SP3 bulan ini — tidak bisa memberi SP lagi sampai bulan depan.'
-                : 'Akan menjadi SP' + (ada + 1) + (ada ? ' (bulan ini sudah SP' + ada + ').' : ' (belum ada SP bulan ini).');
-            tombol.disabled = ada >= 3;
+            kotak.className = 'sp-pratinjau mt-2' + (penuh ? ' penuh' : '');
+            kotak.textContent = teks;
+            tombol.disabled = penuh;
         };
         pilih.addEventListener('change', pratinjau);
         tanggal.addEventListener('change', pratinjau);

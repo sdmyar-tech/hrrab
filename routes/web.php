@@ -309,7 +309,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::post('/{evaluasiKontrak}/jadwal-ttd', [AdminEvaluasiKontrakController::class, 'jadwalTtd'])->name('jadwal-ttd');
         });
 
-        // Surat peringatan bulanan (SP1–SP3 per bulan). Hak akses dicek di controller.
+        // Surat peringatan (tiap SP berlaku 6 bulan, naik SP1–SP3). Hak akses dicek di controller.
         Route::prefix('surat-peringatan')->name('surat-peringatan.')->group(function () {
             Route::get('/', [AdminSuratPeringatanController::class, 'index'])->name('index');
             Route::get('/export', [AdminSuratPeringatanController::class, 'export'])->name('export');

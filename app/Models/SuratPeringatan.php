@@ -4,16 +4,20 @@ namespace App\Models;
 
 use App\Models\Concerns\DicatatLog;
 use Carbon\CarbonInterface;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** Surat peringatan bulanan: tingkat 1–3 bertahap dalam satu bulan kalender; bulan berikutnya mulai lagi dari SP1. */
+/**
+ * Surat peringatan: setiap SP berlaku 6 bulan sejak tanggalnya. Pelanggaran saat SP terakhir masih berlaku menaikkan
+ * tingkat (SP1 → SP2 → SP3, maksimal 3); setelah SP terakhir kedaluwarsa, SP berikutnya mulai lagi dari SP1.
+ */
 class SuratPeringatan extends Model
 {
     use DicatatLog;
 
-    public const MAKS_PER_BULAN = 3;
+    public const MAKS_TINGKAT = 3;
+
+    public const MASA_BERLAKU_BULAN = 6;
 
     protected $fillable = ['data_pegawai_id', 'unit_kerja', 'tanggal', 'tingkat', 'alasan', 'keterangan', 'diberikan_oleh'];
 
@@ -29,25 +33,38 @@ class SuratPeringatan extends Model
         return $this->belongsTo(User::class, 'diberikan_oleh');
     }
 
-    /** SP pegawai di bulan kalender $tanggal. */
-    public function scopeBulanDari(Builder $q, int $pegawaiId, CarbonInterface $tanggal): Builder
+    /** SP terbaru pegawai (tanggal, lalu urutan input). */
+    public static function terakhirUntuk(int $pegawaiId): ?self
     {
-        return $q->where('data_pegawai_id', $pegawaiId)
-            ->whereBetween('tanggal', [$tanggal->copy()->startOfMonth()->toDateString(), $tanggal->copy()->endOfMonth()->toDateString()]);
+        return self::where('data_pegawai_id', $pegawaiId)->orderByDesc('tanggal')->orderByDesc('id')->first();
     }
 
-    /** Tingkat SP berikutnya untuk pegawai di bulan $tanggal (1–3), atau null bila sudah SP3 bulan itu. */
+    /** Hari terakhir SP ini berlaku (tanggal + 6 bulan − 1 hari). */
+    public function berlakuSampai(): CarbonInterface
+    {
+        return $this->tanggal->copy()->addMonthsNoOverflow(self::MASA_BERLAKU_BULAN)->subDay();
+    }
+
+    public function berlakuPada(CarbonInterface $tanggal): bool
+    {
+        return $tanggal->toDateString() <= $this->berlakuSampai()->toDateString();
+    }
+
+    /** Tingkat SP berikutnya bila diberikan pada $tanggal (1–3), atau null bila SP3 masih berlaku. */
     public static function tingkatBerikut(int $pegawaiId, CarbonInterface $tanggal): ?int
     {
-        $ada = (int) self::query()->bulanDari($pegawaiId, $tanggal)->max('tingkat');
+        $terakhir = self::terakhirUntuk($pegawaiId);
+        if (! $terakhir || ! $terakhir->berlakuPada($tanggal)) {
+            return 1;
+        }
 
-        return $ada >= self::MAKS_PER_BULAN ? null : $ada + 1;
+        return $terakhir->tingkat >= self::MAKS_TINGKAT ? null : $terakhir->tingkat + 1;
     }
 
-    /** Hanya SP terakhir di bulannya yang boleh dihapus (agar urutan SP1→SP3 tidak bolong). */
-    public function terakhirDiBulannya(): bool
+    /** Hanya SP terbaru pegawai yang boleh dihapus (agar urutan SP1→SP3 tidak bolong). */
+    public function terbaru(): bool
     {
-        return (int) self::query()->bulanDari($this->data_pegawai_id, $this->tanggal)->max('tingkat') === $this->tingkat;
+        return self::terakhirUntuk($this->data_pegawai_id)?->is($this) ?? false;
     }
 
     public function label(): string

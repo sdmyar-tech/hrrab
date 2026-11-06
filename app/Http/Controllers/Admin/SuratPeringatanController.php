@@ -18,7 +18,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
-/** Surat peringatan bulanan: SP1 → SP2 → SP3 bertahap dalam satu bulan; bulan berikutnya mulai lagi dari SP1. */
+/** Surat peringatan: tiap SP berlaku 6 bulan; SP baru saat SP terakhir masih berlaku naik tingkat (maks SP3), selain itu SP1. */
 class SuratPeringatanController extends Controller
 {
     public function index(Request $request): View
@@ -30,16 +30,15 @@ class SuratPeringatanController extends Controller
         $bolehDiberi = SuratPeringatanAkses::pegawaiBoleh($user);
         $daftar = $this->daftar($request, $user, $bulan, $bolehDiberi)->orderByDesc('tanggal')->orderByDesc('id')->get();
 
-        // Tingkat SP tertinggi bulan ini per pegawai → pratinjau "akan menjadi SP berapa" di form.
-        $tingkatBulanIni = SuratPeringatan::whereBetween('tanggal', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
-            ->whereIn('data_pegawai_id', $bolehDiberi->pluck('id'))
-            ->selectRaw('data_pegawai_id, max(tingkat) t')->groupBy('data_pegawai_id')->pluck('t', 'data_pegawai_id');
+        // SP terbaru per pegawai → pratinjau "akan menjadi SP berapa" di form (dihitung ulang di JS menurut tanggal).
+        $spTerakhir = SuratPeringatan::whereIn('data_pegawai_id', $bolehDiberi->pluck('id'))
+            ->orderByDesc('tanggal')->orderByDesc('id')->get()->unique('data_pegawai_id')->keyBy('data_pegawai_id');
 
         return view('admin.surat-peringatan.index', [
             'bulan' => $bulan,
             'daftar' => $daftar,
             'pegawai' => $bolehDiberi,
-            'tingkatBulanIni' => $tingkatBulanIni,
+            'spTerakhir' => $spTerakhir,
         ]);
     }
 
@@ -97,9 +96,14 @@ class SuratPeringatanController extends Controller
         abort_unless(SuratPeringatanAkses::bisaBeri($user, $pegawai), 403, 'Anda tidak berwenang memberi SP untuk pegawai ini.');
 
         $tanggal = Carbon::parse($data['tanggal']);
+        // Tingkat dihitung dari SP terbaru, jadi SP baru tidak boleh bertanggal sebelum SP terbaru.
+        $terakhir = SuratPeringatan::terakhirUntuk($pegawai->id);
+        if ($terakhir && $tanggal->lt($terakhir->tanggal)) {
+            throw ValidationException::withMessages(['tanggal' => "Tanggal tidak boleh sebelum {$terakhir->label()} terakhir ({$terakhir->tanggal->translatedFormat('d M Y')})."]);
+        }
         $tingkat = SuratPeringatan::tingkatBerikut($pegawai->id, $tanggal);
         if (! $tingkat) {
-            throw ValidationException::withMessages(['data_pegawai_id' => "{$pegawai->nama_lengkap} sudah menerima SP3 pada " . $tanggal->translatedFormat('F Y') . ' (maksimal 3 SP per bulan).']);
+            throw ValidationException::withMessages(['data_pegawai_id' => "{$pegawai->nama_lengkap} masih dalam masa SP3 sampai " . $terakhir->berlakuSampai()->translatedFormat('d M Y') . ' (maksimal SP3).']);
         }
 
         $sp = SuratPeringatan::create([
@@ -111,12 +115,12 @@ class SuratPeringatanController extends Controller
         Notifikasi::spDiberikan($sp);
 
         return redirect()->route('admin.surat-peringatan.index', ['bulan' => $tanggal->format('Y-m')])
-            ->with('success', "SP{$tingkat} untuk {$pegawai->nama_lengkap} tersimpan (" . $tanggal->translatedFormat('F Y') . ').');
+            ->with('success', "SP{$tingkat} untuk {$pegawai->nama_lengkap} tersimpan, berlaku sampai " . $sp->berlakuSampai()->translatedFormat('d M Y') . '.');
     }
 
     public function destroy(SuratPeringatan $suratPeringatan): RedirectResponse
     {
-        abort_unless(SuratPeringatanAkses::bisaHapus($this->pengguna(), $suratPeringatan), 403, 'Hanya SP terakhir di bulannya yang bisa dihapus (oleh pemberi, Kepala SDM, atau Admin).');
+        abort_unless(SuratPeringatanAkses::bisaHapus($this->pengguna(), $suratPeringatan), 403, 'Hanya SP terbaru pegawai yang bisa dihapus (oleh pemberi, Kepala SDM, atau Admin).');
         $bulan = $suratPeringatan->tanggal->format('Y-m');
         $suratPeringatan->delete();
 
