@@ -47,10 +47,10 @@
                         :selected="$lowongan->unit_kerja ?? ''" placeholder="Pilih bagian" required />
                 </div>
                 <div class="col-md-6">
-                    {{-- Opsi disusun ulang skrip partials.jabatan-ikut-unit: jabatan di bagian terpilih tampil paling atas. --}}
+                    {{-- Opsi disusun skrip partials.jabatan-ikut-unit: hanya jabatan di bagian terpilih (Admin: + jabatan lainnya). --}}
                     <x-select name="jabatan" id="f-jabatan" label="Jabatan" :options="$opsi(\App\Models\Jabatan::daftar())"
-                        :selected="$lowongan->jabatan ?? ''" placeholder="Pilih jabatan" required data-jabatan-unit="[name=unit_kerja]"
-                        help="Jabatan di bagian terpilih tampil paling atas." />
+                        :selected="$lowongan->jabatan ?? ''" placeholder="Pilih jabatan" required data-jabatan-unit="[name=unit_kerja]" :data-jabatan-bebas="$isAdmin ? '' : null"
+                        help="Hanya jabatan di bagian terpilih." />
                 </div>
                 <div class="col-md-6">
                     <x-select name="tipe_kerja" id="f-tipe" label="Tipe kerja" placeholder="Pilih tipe kerja" optional>

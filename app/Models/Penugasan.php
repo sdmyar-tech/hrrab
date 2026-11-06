@@ -27,6 +27,7 @@ class Penugasan extends Model
         'data_pegawai_id',
         'unit_kerja',
         'jabatan',
+        'lokasi_kerja',
         'peran',
         'is_utama',
         'jenis',

@@ -264,9 +264,13 @@ class LowonganController extends Controller
             'tanggal_tutup' => $tanggalTutupRules,
         ]);
 
-        // Lokasi harus lokasi jabatan di bagian itu (Master Jabatan → Atur lokasi), dicek bila ada yang berubah. Mode Admin bebas.
-        $berubah = ! $lowongan || ($validated['lokasi_kerja'] ?? null) !== $lowongan->lokasi_kerja
-            || $validated['jabatan'] !== $lowongan->jabatan || $validated['unit_kerja'] !== $lowongan->unit_kerja;
+        // Jabatan harus jabatan bagian itu & lokasi harus lokasi jabatannya (Master Jabatan), dicek bila ada yang berubah. Mode Admin bebas.
+        $jabatanBerubah = ! $lowongan || $validated['jabatan'] !== $lowongan->jabatan || $validated['unit_kerja'] !== $lowongan->unit_kerja;
+        if ($jabatanBerubah && ! Auth::user()->can(Izin::OVERRIDE) && ! Jabatan::jabatanSah($validated['unit_kerja'], $validated['jabatan'])) {
+            throw ValidationException::withMessages(['jabatan' => "Jabatan harus jabatan di bagian {$validated['unit_kerja']}: "
+                . implode(', ', Jabatan::perUnit()[$validated['unit_kerja']] ?? []) . '.']);
+        }
+        $berubah = $jabatanBerubah || ($validated['lokasi_kerja'] ?? null) !== $lowongan->lokasi_kerja;
         if ($berubah && ! Auth::user()->can(Izin::OVERRIDE) && ! Jabatan::lokasiSah($validated['unit_kerja'], $validated['jabatan'], $validated['lokasi_kerja'] ?? null)) {
             throw ValidationException::withMessages(['lokasi_kerja' => "Lokasi kerja untuk {$validated['jabatan']} di bagian {$validated['unit_kerja']}: "
                 . implode(', ', Jabatan::lokasiUntuk($validated['unit_kerja'], $validated['jabatan'])) . '.']);

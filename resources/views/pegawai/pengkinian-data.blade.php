@@ -37,7 +37,9 @@
         'kepegawaian' => ['judul' => 'Kepegawaian', 'langkah' => 'Kepegawaian', 'ikon' => 'bi-briefcase', 'sub' => 'Jabatan dan penempatan Anda saat ini.', 'fields' => [
             ['name' => 'jabatan', 'label' => 'Jabatan', 'type' => 'select', 'value' => $kepegawaian?->jabatan, 'options' => $jabatanOptions, 'required' => true, 'lainnya' => true, 'help' => 'Jabatan utama saat ini. Pilih "Lainnya" bila tidak ada di daftar.'],
             ['name' => 'unit_kerja', 'label' => 'Bagian', 'type' => 'select', 'value' => $kepegawaian?->unit_kerja, 'options' => config('kepegawaian.unit_kerja'), 'required' => true],
-            ['name' => 'lokasi_kerja', 'label' => 'Lokasi Kerja', 'type' => 'select', 'value' => $kepegawaian?->lokasi_kerja, 'options' => config('kepegawaian.lokasi_kerja'), 'required' => true],
+            ['name' => 'lokasi_kerja', 'label' => 'Lokasi Kerja', 'type' => 'select', 'value' => $kepegawaian?->lokasi_kerja, 'options' => config('kepegawaian.lokasi_kerja'), 'required' => true,
+                // Lokasi ikut bagian & jabatan (Master Jabatan → Atur lokasi): satu lokasi → terisi otomatis.
+                'attrs' => ['data-lokasi-jabatan' => '[name=jabatan]', 'data-lokasi-unit' => '[name=unit_kerja]']],
             ['name' => 'tanggal_masuk', 'label' => 'Tanggal Masuk', 'type' => 'date', 'value' => optional($kepegawaian?->tanggal_masuk)->format('Y-m-d'), 'required' => true, 'help' => 'Tanggal mulai aktif bekerja. Tanyakan pimpinan bila tidak tahu.'],
         ]],
         'kontak' => ['judul' => 'Kontak Darurat', 'langkah' => 'Kontak', 'ikon' => 'bi-telephone', 'sub' => 'Kerabat yang dihubungi bila terjadi keadaan darurat.', 'fields' => [
@@ -140,7 +142,8 @@
 
                                             @case('select')
                                                 <select name="{{ $nama }}" id="f-{{ $nama }}" class="form-select {{ $invalid }}" @required($field['required'])
-                                                    @if ($field['lainnya'] ?? false) data-lainnya="#f-{{ $nama }}-lainnya" @endif>
+                                                    @if ($field['lainnya'] ?? false) data-lainnya="#f-{{ $nama }}-lainnya" @endif
+                                                    @foreach ($field['attrs'] ?? [] as $atribut => $isi) {{ $atribut }}="{{ $isi }}" @endforeach>
                                                     <option value="">Pilih {{ mb_strtolower($field['label']) }}</option>
                                                     @foreach ($field['options'] as $option)
                                                         <option value="{{ $option }}" @selected($pakaiLainnya ? $option === 'Lainnya' : $nilai === $option)>{{ $option }}</option>
@@ -281,4 +284,5 @@
         tampil(kini);
     });
 </script>
+@include('partials.lokasi-ikut-jabatan')
 @endsection

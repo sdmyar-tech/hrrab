@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DataPegawai;
+use App\Models\Jabatan;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanLembur;
 use App\Models\Penugasan;
 use App\Support\ExcelExporter;
 use App\Support\FilterTanggal;
+use App\Support\Izin;
 use App\Support\Notifikasi;
 use App\Support\PenugasanService;
 use App\Support\Urutan;
@@ -20,7 +22,6 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use App\Support\Izin;
 
 class PenugasanController extends Controller
 {
@@ -135,7 +136,7 @@ class PenugasanController extends Controller
         $units = config('kepegawaian.unit_kerja');
         $umum = [
             'unit_kerja' => ['required', 'string', Rule::in($units)],
-            'jabatan' => [$jenis === 'mutasi' ? 'required' : 'nullable', 'string', 'max:255'],
+            'jabatan' => [$jenis === 'mutasi' ? 'required' : 'nullable', 'string', Rule::in(Jabatan::daftar())],
             'peran' => ['required', Rule::in([Penugasan::PERAN_ANGGOTA, Penugasan::PERAN_KEPALA])],
             'no_sk' => ['nullable', 'string', 'max:100'],
             'keterangan' => ['nullable', 'string', 'max:1000'],
@@ -144,6 +145,8 @@ class PenugasanController extends Controller
         $validated = $request->validate($jenis === 'mutasi'
             ? [...$umum,
                 'tanggal_efektif' => ['required', 'date'],
+                // Lokasi kerja baru (kosong = ikut tautan jabatan bila satu lokasi, atau tetap).
+                'lokasi_kerja' => ['nullable', 'string', Rule::in(config('kepegawaian.lokasi_kerja'))],
                 'pengajuan_pending' => ['required', Rule::in([PenugasanService::PENDING_LANJUT, PenugasanService::PENDING_TOLAK])]]
             : [...$umum,
                 'tanggal_mulai' => ['required', 'date'],
@@ -151,6 +154,17 @@ class PenugasanController extends Controller
             ['tanggal_selesai.after_or_equal' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.']);
 
         $validated['jabatan'] = isset($validated['jabatan']) ? mb_strtoupper(trim($validated['jabatan'])) : null;
+        // Jabatan harus jabatan bagian tujuan, lokasi harus lokasi jabatan itu (Master Jabatan). Mode Admin bebas.
+        if (! Auth::user()->can(Izin::OVERRIDE)) {
+            if (! Jabatan::jabatanSah($validated['unit_kerja'], $validated['jabatan'])) {
+                throw ValidationException::withMessages(['jabatan' => "Jabatan harus jabatan di bagian {$validated['unit_kerja']}: "
+                    . implode(', ', Jabatan::perUnit()[$validated['unit_kerja']] ?? []) . '.']);
+            }
+            if (! Jabatan::lokasiSah($validated['unit_kerja'], $validated['jabatan'], $validated['lokasi_kerja'] ?? null)) {
+                throw ValidationException::withMessages(['lokasi_kerja' => "Lokasi kerja untuk {$validated['jabatan']} di bagian {$validated['unit_kerja']}: "
+                    . implode(', ', Jabatan::lokasiUntuk($validated['unit_kerja'], $validated['jabatan'])) . '.']);
+            }
+        }
 
         $peringatan = $jenis === 'mutasi'
             ? PenugasanService::mutasi($pegawai, $validated, Auth::user())

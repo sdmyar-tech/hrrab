@@ -81,18 +81,25 @@
                                     <x-select name="unit_kerja" id="f-unit-kerja" :label="$mutasi ? 'Bagian Tujuan' : 'Bagian Rangkap'"
                                         :options="array_combine($units, $units)" placeholder="Pilih bagian" required field-class="mb-0" />
                                 </div>
+                                @php $bebasAdmin = auth()->user()->can('sistem.override') ? '' : null; @endphp
                                 <div class="col-md-6">
-                                    <x-input name="jabatan" id="f-jabatan" :label="$mutasi ? 'Jabatan Baru' : 'Jabatan di Bagian Rangkap'"
-                                        :value="$mutasi ? $utama?->jabatan : ''" :required="$mutasi" :optional="! $mutasi"
-                                        list="daftarJabatan" data-jabatan-unit="[name=unit_kerja]" autocomplete="off" maxlength="255"
-                                        placeholder="Pilih jabatan, contoh: STAFF KEUANGAN"
-                                        help="Jabatan di bagian terpilih tampil paling atas." field-class="mb-0" />
-                                    <datalist id="daftarJabatan">
-                                        @foreach (\App\Models\Jabatan::daftar() as $j)
-                                            <option value="{{ $j }}">
-                                        @endforeach
-                                    </datalist>
+                                    {{-- Hanya jabatan bagian terpilih (partials.jabatan-ikut-unit); satu jabatan → langsung terisi. --}}
+                                    <x-select name="jabatan" id="f-jabatan" :label="$mutasi ? 'Jabatan Baru' : 'Jabatan di Bagian Rangkap'"
+                                        :options="array_combine(\App\Models\Jabatan::daftar(), \App\Models\Jabatan::daftar())"
+                                        :selected="old('jabatan', $mutasi ? $utama?->jabatan : '')" :required="$mutasi" :optional="! $mutasi"
+                                        placeholder="Pilih jabatan" data-jabatan-unit="[name=unit_kerja]" :data-jabatan-bebas="$bebasAdmin"
+                                        help="Hanya jabatan di bagian terpilih." field-class="mb-0" />
                                 </div>
+                                @if ($mutasi)
+                                    <div class="col-md-6">
+                                        {{-- Lokasi baru ikut jabatan (satu lokasi → otomatis); diterapkan ke data pegawai saat mutasi berlaku. --}}
+                                        <x-select name="lokasi_kerja" id="f-lokasi-kerja" label="Lokasi Kerja Baru" optional
+                                            :options="array_combine(config('kepegawaian.lokasi_kerja'), config('kepegawaian.lokasi_kerja'))"
+                                            :selected="old('lokasi_kerja', $pegawai->kepegawaian?->lokasi_kerja)" placeholder="Tetap / ikut jabatan"
+                                            data-lokasi-jabatan="[name=jabatan]" data-lokasi-unit="[name=unit_kerja]" :data-lokasi-bebas="$bebasAdmin"
+                                            help="Ikut berlaku saat mutasi berlaku." field-class="mb-0" />
+                                    </div>
+                                @endif
                                 <div class="col-12">
                                     <fieldset class="hr-field mb-0">
                                         <legend class="form-label required">Peran di Bagian</legend>
@@ -225,4 +232,5 @@
     </script>
 @endif
 @include('partials.jabatan-ikut-unit')
+@include('partials.lokasi-ikut-jabatan')
 @endsection

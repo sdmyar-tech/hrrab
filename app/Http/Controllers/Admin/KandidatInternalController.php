@@ -110,7 +110,11 @@ class KandidatInternalController extends Controller
         if ($lowongan?->isKuotaPenuh() && ! $admin) {
             return back()->withInput()->with('error', 'Kuota lowongan ini sudah terpenuhi.');
         }
-        // Posisi manual: lokasi harus lokasi jabatan di bagian tujuan (Master Jabatan → Atur lokasi).
+        // Posisi manual: jabatan harus jabatan bagian tujuan, lokasi harus lokasi jabatan itu (Master Jabatan).
+        if (! $lowongan && ! $admin && ! Jabatan::jabatanSah($validated['unit_kerja_tujuan'] ?? null, $validated['jabatan_tujuan'] ?? null)) {
+            throw ValidationException::withMessages(['jabatan_tujuan' => 'Jabatan tujuan harus jabatan di bagian ' . $validated['unit_kerja_tujuan'] . ': '
+                . implode(', ', Jabatan::perUnit()[$validated['unit_kerja_tujuan']] ?? []) . '.']);
+        }
         if (! $lowongan && ! $admin && ! Jabatan::lokasiSah($validated['unit_kerja_tujuan'] ?? null, $validated['jabatan_tujuan'] ?? null, $validated['lokasi_kerja_tujuan'] ?? null)) {
             throw ValidationException::withMessages(['lokasi_kerja_tujuan' => 'Lokasi kerja untuk ' . $validated['jabatan_tujuan'] . ' di bagian ' . $validated['unit_kerja_tujuan'] . ': '
                 . implode(', ', Jabatan::lokasiUntuk($validated['unit_kerja_tujuan'], $validated['jabatan_tujuan'])) . '.']);

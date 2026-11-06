@@ -170,12 +170,12 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <x-select name="jabatan" id="f-jabatan" label="Jabatan Utama" :options="$opsi(\App\Models\Jabatan::daftar())" data-jabatan-unit="[name=unit_kerja]"
-                                    :selected="$p->kepegawaian->jabatan ?? ''" placeholder="Pilih jabatan utama" help="Jabatan di bagian terpilih tampil paling atas."
+                                <x-select name="jabatan" id="f-jabatan" label="Jabatan Utama" :options="$opsi(\App\Models\Jabatan::daftar())" :data-jabatan-unit="($longgar || $penempatanPertama) ? '[name=unit_kerja]' : null" :data-jabatan-unit-tetap="($longgar || $penempatanPertama) ? null : ($p->kepegawaian->unit_kerja ?? '')" :data-jabatan-bebas="$longgar ? '' : null"
+                                    :selected="$p->kepegawaian->jabatan ?? ''" placeholder="Pilih jabatan utama" help="Hanya jabatan di bagian terpilih."
                                     :required="$wajib('jabatan')" field-class="mb-0" />
                             </div>
                             <div class="col-md-6">
-                                <x-select name="jabatan_tambahan" id="f-jabatan-tambahan" label="Jabatan Tambahan" optional :options="$opsi(\App\Models\Jabatan::daftar())" data-jabatan-unit="[name=unit_kerja]"
+                                <x-select name="jabatan_tambahan" id="f-jabatan-tambahan" label="Jabatan Tambahan" optional :options="$opsi(\App\Models\Jabatan::daftar())" :data-jabatan-unit="($longgar || $penempatanPertama) ? '[name=unit_kerja]' : null" :data-jabatan-unit-tetap="($longgar || $penempatanPertama) ? null : ($p->kepegawaian->unit_kerja ?? '')" :data-jabatan-bebas="$longgar ? '' : null"
                                     :selected="$p->kepegawaian->jabatan_tambahan ?? ''" placeholder="Tidak ada" help="Isi bila pegawai memegang lebih dari satu jabatan." field-class="mb-0" />
                             </div>
                             <div class="col-md-6">

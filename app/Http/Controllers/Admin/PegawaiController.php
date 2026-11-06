@@ -350,6 +350,8 @@ class PegawaiController extends Controller
                 $pegawai->penugasans()->aktif()->where('is_utama', true)->update(array_filter([
                     'jabatan' => $validated['kepegawaian']['jabatan'],
                     'unit_kerja' => $penempatanPertama ? null : $unitBaru,
+                    // Lokasi penugasan disamakan agar sinkron mutasi tidak menimpa lokasi yang diubah di sini.
+                    'lokasi_kerja' => $validated['kepegawaian']['lokasi_kerja'] ?? null,
                 ]));
                 if ($unitBaru) {
                     $validated['kepegawaian']['unit_kerja'] = $unitBaru;
@@ -508,9 +510,17 @@ class PegawaiController extends Controller
         // lokasi/jabatan/bagian berubah, agar data lama yang belum sesuai tetap bisa disimpan. Mode Admin bebas.
         $lama = $ignoreId ? DataPegawai::find($ignoreId)?->kepegawaian : null;
         $unit = ($validated['unit_kerja'] ?? null) ?: $lama?->unit_kerja;
+        $bebas = (bool) Auth::user()?->can(Izin::OVERRIDE);
+        // Jabatan (utama & tambahan) harus jabatan bagiannya (Master Jabatan), dicek bila jabatan/bagian berubah.
+        foreach (['jabatan' => 'Jabatan utama', 'jabatan_tambahan' => 'Jabatan tambahan'] as $kolom => $label) {
+            $nilai = $validated[$kolom] ?? null;
+            if (! $bebas && (! $lama || $nilai !== $lama->{$kolom} || $unit !== $lama->unit_kerja) && ! Jabatan::jabatanSah($unit, $nilai)) {
+                throw ValidationException::withMessages([$kolom => "{$label} harus jabatan di bagian {$unit}: " . implode(', ', Jabatan::perUnit()[$unit] ?? []) . '.']);
+            }
+        }
         $berubah = ! $lama || ($validated['lokasi_kerja'] ?? null) !== $lama->lokasi_kerja
             || ($validated['jabatan'] ?? null) !== $lama->jabatan || $unit !== $lama->unit_kerja;
-        if ($berubah && ! Auth::user()?->can(Izin::OVERRIDE) && ! Jabatan::lokasiSah($unit, $validated['jabatan'] ?? null, $validated['lokasi_kerja'] ?? null)) {
+        if ($berubah && ! $bebas && ! Jabatan::lokasiSah($unit, $validated['jabatan'] ?? null, $validated['lokasi_kerja'] ?? null)) {
             throw ValidationException::withMessages(['lokasi_kerja' => 'Lokasi kerja untuk ' . $validated['jabatan'] . ' di bagian ' . $unit . ': '
                 . implode(', ', Jabatan::lokasiUntuk($unit, $validated['jabatan'])) . '.']);
         }

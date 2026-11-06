@@ -175,7 +175,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         {{-- Diisi skrip sesuai bagian: jabatan yang ada di bagian itu dulu, lalu jabatan lainnya. --}}
-                                        <x-select name="jabatan_tujuan" id="jabatan-tujuan" label="Jabatan tujuan" required help="Jabatan di bagian terpilih tampil paling atas." />
+                                        <x-select name="jabatan_tujuan" id="jabatan-tujuan" label="Jabatan tujuan" required help="Hanya jabatan di bagian terpilih." />
                                     </div>
                                     <div class="col-md-6">
                                         {{-- Lokasi mengikuti bagian & jabatan tujuan (Master Jabatan → Atur lokasi). --}}
@@ -273,12 +273,14 @@
             sinkron(pasangan[0], pasangan[1]);
         });
 
-        // Posisi tanpa lowongan: pilih unit dulu, lalu jabatan (yang ada di unit itu tampil paling atas).
+        // Posisi tanpa lowongan: pilih bagian dulu, lalu jabatan bagian itu (Mode Admin: + jabatan lainnya);
+        // bagian dengan satu jabatan → langsung terisi. Perubahan jabatan ikut mengisi lokasi (partials.lokasi-ikut-jabatan).
         const unit = document.getElementById('unit-tujuan');
         const jabatan = document.getElementById('jabatan-tujuan');
         const semuaJabatan = @json(\App\Models\Jabatan::daftar());
         const jabatanPerUnit = @json($jabatanPerUnit);
         const jabatanLama = @json(old('jabatan_tujuan'));
+        const BEBAS = @json(auth()->user()->can('sistem.override'));
 
         function isiJabatan() {
             const nilai = jabatan.value || jabatanLama;
@@ -297,7 +299,9 @@
                 jabatan.append(g);
             };
             grup('Jabatan di bagian ' + unit.value, diUnit);
-            grup(diUnit.length ? 'Jabatan lainnya' : 'Semua jabatan', semuaJabatan.filter((j) => !diUnit.includes(j)));
+            if (BEBAS || !diUnit.length) grup(diUnit.length ? 'Jabatan lainnya' : 'Semua jabatan', semuaJabatan.filter((j) => !diUnit.includes(j)));
+            if (diUnit.length === 1 && !BEBAS) jabatan.value = diUnit[0];
+            jabatan.dispatchEvent(new Event('change', { bubbles: true }));
         }
 
         unit.addEventListener('change', isiJabatan);

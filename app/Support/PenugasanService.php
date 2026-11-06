@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\DataPegawai;
 use App\Models\InterviewJadwal;
+use App\Models\Jabatan;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanIzinKeluar;
 use App\Models\PengajuanLembur;
@@ -67,6 +68,7 @@ class PenugasanService
             $pegawai->penugasans()->create([
                 'unit_kerja' => $data['unit_kerja'],
                 'jabatan' => $data['jabatan'] ?? $lama?->jabatan,
+                'lokasi_kerja' => $data['lokasi_kerja'] ?? null,
                 'peran' => $data['peran'],
                 'is_utama' => true,
                 'jenis' => Penugasan::JENIS_MUTASI,
@@ -392,10 +394,16 @@ class PenugasanService
         $peringatan = [];
 
         $kep = $pegawai->kepegawaian()->first();
-        if ($utama && $kep && ($kep->unit_kerja !== $utama->unit_kerja || ($utama->jabatan && $kep->jabatan !== $utama->jabatan))) {
+        $pindah = $utama && $kep && ($kep->unit_kerja !== $utama->unit_kerja || ($utama->jabatan && $kep->jabatan !== $utama->jabatan));
+        // Lokasi baru: lokasi yang dicatat di penugasan (mis. dipilih saat mutasi), atau — bila bagian/jabatan berubah —
+        // satu-satunya lokasi yang ditautkan ke jabatan itu di bagian barunya (Master Jabatan → Atur lokasi).
+        $tautan = $utama ? Jabatan::lokasiUntuk($utama->unit_kerja, $utama->jabatan ?: $kep?->jabatan) : [];
+        $lokasiBaru = $utama?->lokasi_kerja ?: ($pindah && count($tautan) === 1 ? $tautan[0] : null);
+        if ($pindah || ($kep && $lokasiBaru && $kep->lokasi_kerja !== $lokasiBaru)) {
             // Unit (Master Unit) ikut bagian baru bila bagiannya sudah dimasukkan ke sebuah unit.
             $kep->update(['unit_kerja' => $utama->unit_kerja, 'jabatan' => $utama->jabatan ?: $kep->jabatan]
-                + (($unitOrg = Unit::unitOrganisasiDari($utama->unit_kerja)) ? ['unit_organisasi' => $unitOrg] : []));
+                + (($unitOrg = Unit::unitOrganisasiDari($utama->unit_kerja)) ? ['unit_organisasi' => $unitOrg] : [])
+                + ($lokasiBaru ? ['lokasi_kerja' => $lokasiBaru] : []));
         }
 
         $memimpin = $aktif->contains(fn (Penugasan $p) => $p->isKepala());

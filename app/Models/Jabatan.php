@@ -62,6 +62,14 @@ class Jabatan extends Model
         return self::lokasiPerUnit()[(string) $unit][mb_strtoupper(trim((string) $jabatan))] ?? [];
     }
 
+    /** Jabatan boleh di bagian $unit: bagian belum punya jabatan tertaut (semua boleh), jabatan kosong, atau termasuk jabatan bagian itu. */
+    public static function jabatanSah(?string $unit, ?string $jabatan): bool
+    {
+        $daftar = self::perUnit()[(string) $unit] ?? [];
+
+        return ! $daftar || blank($jabatan) || in_array(mb_strtoupper(trim($jabatan)), array_map('mb_strtoupper', $daftar), true);
+    }
+
     /** Lokasi $lokasi boleh untuk $jabatan di $unit: belum diatur (semua boleh), lokasi kosong, atau termasuk lokasi tertaut. */
     public static function lokasiSah(?string $unit, ?string $jabatan, ?string $lokasi): bool
     {

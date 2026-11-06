@@ -44,7 +44,7 @@
                             </div>
                             <div class="col-md-6">
                                 <x-select name="jabatan" id="f-jabatan" label="Jabatan" optional :options="array_combine($daftarJabatan, $daftarJabatan)"
-                                    :selected="$penugasan->jabatan" placeholder="Tanpa jabatan" data-jabatan-unit="[name=unit_kerja]"
+                                    :selected="$penugasan->jabatan" placeholder="Tanpa jabatan" data-jabatan-unit="[name=unit_kerja]" data-jabatan-bebas
                                     help="Jabatan di bagian terpilih tampil paling atas." field-class="mb-0">
                                     {{-- Jabatan lama yang sudah tidak ada di Master Jabatan tetap bisa dipertahankan. --}}
                                     @if ($penugasan->jabatan && ! in_array($penugasan->jabatan, $daftarJabatan, true))
