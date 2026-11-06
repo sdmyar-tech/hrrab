@@ -38,8 +38,13 @@
                 </x-empty-state>
             @endif
             @foreach ($baris as $b)
-                @php $unit = $b['unit']; @endphp
-                <x-card :title="$unit->nama" icon="bi-buildings" data-cari="{{ mb_strtolower($unit->nama) }}">
+                @php
+                    $unit = $b['unit'];
+                    $koor = $b['tangga']->first()['koordinator'];
+                @endphp
+                {{-- Koordinator saat ini ikut dicari, mis. ketik nama koordinator untuk menemukan bagiannya. --}}
+                <x-card :title="$unit->nama" icon="bi-buildings" :subtitle="$koor ? 'Koordinator saat ini: ' . implode(', ', $koor) : 'Belum ada koordinator'"
+                    data-cari="{{ mb_strtolower($unit->nama . ' ' . implode(' ', $koor)) }}">
                     <div class="tangga-baris">
                         @foreach ($b['tangga'] as $sasaran => $t)
                             <section class="tangga-sel {{ $t['model'] ? '' : 'is-otomatis' }} {{ $t['peringatan'] ? 'is-peringatan' : '' }}" aria-labelledby="tangga-{{ $unit->id }}-{{ $sasaran }}">

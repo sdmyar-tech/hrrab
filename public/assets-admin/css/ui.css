@@ -1793,9 +1793,10 @@ html[data-theme="dark"] .hr-chip.is-active { border-color: #f08a8c; }
 .pelamar-berkas:focus-within { border-color: var(--hr-primary); }
 .pelamar-baris { margin: 0; padding: var(--hr-space-3) var(--hr-space-2) var(--hr-space-2); border: 1px solid var(--admin-border); border-radius: var(--hr-radius-md); background: var(--admin-surface-soft); }
 .pelamar-baris .form-label { font-size: var(--hr-text-xs); margin-bottom: var(--hr-space-1); }
+/* Bilah melayang: berjarak dari tepi bawah & bulat penuh, sehingga rapi baik saat lengket maupun di akhir halaman. */
 .hr-bilah-aksi {
     position: sticky;
-    bottom: 0;
+    bottom: var(--hr-space-3);
     z-index: var(--hr-z-sticky);
     display: flex;
     align-items: center;
@@ -1803,10 +1804,10 @@ html[data-theme="dark"] .hr-chip.is-active { border-color: #f08a8c; }
     gap: var(--hr-space-3);
     padding: var(--hr-space-3) var(--hr-space-4);
     border: 1px solid var(--admin-border);
-    border-radius: var(--hr-radius) var(--hr-radius) 0 0;
+    border-radius: var(--hr-radius-lg, var(--hr-radius));
     background: rgba(255, 255, 255, .94);
     backdrop-filter: saturate(180%) blur(12px);
-    box-shadow: 0 -8px 24px -12px rgba(16, 24, 40, .18);
+    box-shadow: 0 8px 28px -8px rgba(16, 24, 40, .22), 0 1px 3px rgba(16, 24, 40, .06);
 }
 .hr-bilah-aksi > .btn:last-child, .hr-bilah-aksi > [data-langkah-lanjut] { margin-left: auto; }
 html[data-theme="dark"] .hr-bilah-aksi { background: rgba(17, 24, 39, .94); }

@@ -157,11 +157,22 @@ class TanggaAlurController extends Controller
             ];
         }, $daftar, array_keys($daftar));
 
+        // Alur otomatis beserta nama penyetuju saat ini, mis. "Koordinator bagian (Dedi) → Kepala SDM (Mimi)".
+        $nama = fn (array $sumber) => TanggaAlurWorkflow::penyetuju(['penyetuju' => [$sumber]], $unit, $contohPengaju)->pluck('name');
+        $denganNama = fn (string $label, $orang) => $label . ($orang->isNotEmpty() ? ' (' . $orang->implode(', ') . ')' : '');
+        $otomatis = [
+            $sasaran === TanggaAlur::SASARAN_STAF && $koordinator->isNotEmpty()
+                ? $denganNama('Koordinator bagian', $koordinator->pluck('name'))
+                : $denganNama('GM', $nama(['tipe' => TanggaAlur::TIPE_GM, 'unit' => TanggaAlur::UNIT_PENGAJU])),
+            $denganNama('Kepala SDM', $nama(['tipe' => TanggaAlur::TIPE_KEPALA_SDM])),
+        ];
+
         return [
             'model' => $tangga,
             'tahap' => $tahap,
             'peringatan' => collect($tahap)->contains('kosong', true),
-            'otomatis' => $sasaran === TanggaAlur::SASARAN_STAF && $koordinator->isNotEmpty() ? 'Koordinator bagian → Kepala SDM' : 'GM → Kepala SDM',
+            'otomatis' => implode(' → ', $otomatis),
+            'koordinator' => $koordinator->pluck('name')->all(),
         ];
     }
 
