@@ -1,4 +1,4 @@
-@extends('layouts.pegawai.app')
+@extends(Auth::user()->panelLayout())
 
 @section('title', 'Data Pegawai')
 

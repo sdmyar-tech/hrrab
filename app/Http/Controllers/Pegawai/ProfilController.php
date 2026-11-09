@@ -45,8 +45,8 @@ class ProfilController extends Controller
         /** @var User|null $user */
         $user = Auth::user();
 
-        if (! $user || ! $user->isStaff()) {
-            return redirect()->route('admin.dashboard')->with('error', 'Anda tidak berhak mengakses halaman ini.');
+        if (! $user || ! $user->punyaDataSaya()) {
+            return redirect()->route('admin.dashboard')->with('error', 'Akun Anda belum tertaut ke data pegawai.');
         }
 
         $user->load([
@@ -64,8 +64,8 @@ class ProfilController extends Controller
         /** @var User|null $user */
         $user = Auth::user();
 
-        if (! $user || ! $user->isStaff()) {
-            return redirect()->route('admin.dashboard')->with('error', 'Anda tidak berhak mengakses halaman ini.');
+        if (! $user || ! $user->punyaDataSaya()) {
+            return redirect()->route('admin.dashboard')->with('error', 'Akun Anda belum tertaut ke data pegawai.');
         }
 
         $user->load([
@@ -89,8 +89,8 @@ class ProfilController extends Controller
         /** @var User|null $user */
         $user = Auth::user();
 
-        if (! $user || ! $user->isStaff()) {
-            return redirect()->route('admin.dashboard')->with('error', 'Anda tidak berhak mengakses halaman ini.');
+        if (! $user || ! $user->punyaDataSaya()) {
+            return redirect()->route('admin.dashboard')->with('error', 'Akun Anda belum tertaut ke data pegawai.');
         }
 
         if ($this->isDataLengkap($user)) {

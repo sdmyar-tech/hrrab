@@ -243,6 +243,16 @@ class User extends Authenticatable
         return $this->role === self::ROLE_PELAMAR;
     }
 
+    /**
+     * Menu "Data Saya" (Data Diri & Pengkinian Data): semua staf, plus akun internal lain (GM, kepala, dst.)
+     * yang tertaut ke data pegawai. Akun tanpa data pegawai (mis. akun Admin murni) tidak dibuatkan otomatis.
+     */
+    public function punyaDataSaya(): bool
+    {
+        return $this->isStaff()
+            || (in_array($this->role, self::INTERNAL_ROLES, true) && $this->data_pegawai_id !== null);
+    }
+
     /** Menu Jadwal Interview Saya. Penunjukan interviewer tetap mengikuti alur rekrutmen (InterviewFlow). */
     public function bisaMenginterview(): bool
     {

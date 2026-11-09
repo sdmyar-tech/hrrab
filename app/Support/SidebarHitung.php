@@ -59,7 +59,7 @@ class SidebarHitung
         if (EvaluasiKontrakAlur::bolehMembuka($user)) {
             $hitung['evaluasi_kontrak'] = EvaluasiKontrakAlur::jumlahTugas($user);
         }
-        if ($user->isStaff()) {
+        if ($user->punyaDataSaya()) {
             $hitung['data_kurang'] = count(KelengkapanData::kurang($user->dataPegawai?->loadMissing('kepegawaian', 'kontakDarurat', 'dokumen')));
         }
 

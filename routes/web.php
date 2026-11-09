@@ -381,6 +381,10 @@ Route::middleware(['auth', 'nocache'])->group(function () {
     Route::prefix('pegawai')->name('pegawai.')->middleware('pegawai')->group(function () {
         Route::get('/dashboard', [PegawaiDashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard/export', [PegawaiDashboardController::class, 'export'])->name('dashboard.export');
+    });
+
+    // Data Saya: terbuka untuk semua akun internal bertaut data pegawai (GM/kepala juga), dicek di controller.
+    Route::prefix('pegawai')->name('pegawai.')->middleware('internal')->group(function () {
         Route::get('/data-pegawai', [ProfilController::class, 'dataPegawai'])->name('data-pegawai');
         Route::get('/pengkinian-data', [ProfilController::class, 'pengkinianData'])->name('pengkinian-data');
         Route::post('/pengkinian-data', [ProfilController::class, 'storePengkinianData'])->name('pengkinian-data.store');

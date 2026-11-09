@@ -11,7 +11,7 @@
     $pelamar = $user->dataPelamar;
     $tautanUbah = match (true) {
         $user->isPelamar() => [route('pelamar.data-pelamar.edit'), 'Ubah Data Pelamar'],
-        $pegawai !== null && Route::has('pegawai.pengkinian-data') && $user->isStaff() => [route('pegawai.pengkinian-data'), 'Perbarui Data'],
+        $pegawai !== null && Route::has('pegawai.pengkinian-data') && $user->punyaDataSaya() => [route('pegawai.pengkinian-data'), 'Perbarui Data'],
         default => null,
     };
     $adaKepegawaian = ! $user->isPelamar() && ! ($user->isGm() && ! $pegawai);
@@ -55,7 +55,7 @@
                         @if ($kepegawaian?->jabatan)<x-badge tone="neutral" icon="bi-person-badge">{{ $kepegawaian->jabatan }}</x-badge>@endif
                         @if ($user->google_id)<x-badge tone="info" icon="bi-google">Masuk dengan Google aktif</x-badge>@endif
                     </div>
-                    @if (! $user->isPelamar() && ! $pegawai?->dokumen?->pas_foto && $user->isStaff())
+                    @if (! $user->isPelamar() && ! $pegawai?->dokumen?->pas_foto && $user->punyaDataSaya())
                         <a href="{{ route('pegawai.pengkinian-data') }}" class="small fw-semibold d-inline-flex align-items-center gap-1 mt-3">
                             <i class="bi bi-camera" aria-hidden="true"></i>Unggah pas foto lewat Pengkinian Data
                         </a>

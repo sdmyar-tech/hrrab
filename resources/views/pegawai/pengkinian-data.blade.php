@@ -1,4 +1,4 @@
-@extends('layouts.pegawai.app')
+@extends(Auth::user()->panelLayout())
 
 @section('title', 'Pengkinian Data')
 
@@ -186,7 +186,7 @@
 
                 <div class="hr-bilah-aksi">
                     <x-button variant="secondary" icon="bi-arrow-left" data-langkah-kembali hidden>Kembali</x-button>
-                    <x-button :href="route('pegawai.dashboard')" variant="ghost" data-langkah-batal>Batal</x-button>
+                    <x-button :href="route(Auth::user()->dashboardRoute())" variant="ghost" data-langkah-batal>Batal</x-button>
                     <x-button icon-right="bi-arrow-right" data-langkah-lanjut hidden>Lanjut</x-button>
                     <x-button type="submit" icon="bi-check-lg" data-langkah-simpan>Simpan Data</x-button>
                 </div>

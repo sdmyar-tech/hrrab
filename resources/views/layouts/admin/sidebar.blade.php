@@ -24,6 +24,12 @@
             ['Lembur', 'bi-stopwatch', 'pegawai.pengajuan-lembur', 'pegawai.pengajuan-lembur*', $u->can('ajukan-lembur'), null],
             ['Izin Keluar', 'bi-door-open', 'pegawai.izin-keluar', 'pegawai.izin-keluar*', $u->can('ajukan-izin-keluar'), null],
         ]],
+        // GM/kepala yang tertaut ke data pegawai punya Data Saya seperti pegawai lain.
+        ['bagian' => 'Data Saya', 'item' => [
+            ['Data Diri Saya', 'bi-person-vcard', 'pegawai.data-pegawai', 'pegawai.data-pegawai', $u->punyaDataSaya(), null],
+            ['Pengkinian Data', 'bi-pencil-square', 'pegawai.pengkinian-data', 'pegawai.pengkinian-data', $u->punyaDataSaya(), $hitung['data_kurang'] ?? null, true],
+            ['Absensi Saya', $ik['saya'], 'absensi.saya', 'absensi.saya', (bool) $u->dataPegawai?->ikut_absensi, null],
+        ]],
         ['bagian' => 'Kepegawaian', 'item' => [
             ['Data Pegawai', 'bi-people', 'admin.pegawai.index', 'admin.pegawai.*', $u->can('pegawai.view'), null],
             ['Mutasi & Rangkap', 'bi-arrow-left-right', 'admin.penugasan.index', 'admin.penugasan.*', $u->can('penugasan.manage'), null],
@@ -39,7 +45,6 @@
             ['Rekap Absensi', $ik['rekap'], 'admin.absensi.rekap', 'admin.absensi.rekap*', $u->can('absensi.view'), null],
             ['Import Data Mesin', $ik['import'], 'admin.absensi.import', 'admin.absensi.import*', $u->can('absensi.manage'), null],
             ['Pengaturan Absensi', $ik['pengaturan'], 'admin.absensi.pengaturan', 'admin.absensi.pengaturan*', $u->can('absensi.manage'), null],
-            ['Absensi Saya', $ik['saya'], 'absensi.saya', 'absensi.saya', (bool) $u->dataPegawai?->ikut_absensi, null],
         ]],
         ['bagian' => 'Rekrutmen', 'item' => [
             ['Pengajuan Formasi', 'bi-person-plus', 'admin.pengajuan-formasi.index', 'admin.pengajuan-formasi.*', $u->can('rekrutmen.view'), $hitung['formasi'] ?? null],
