@@ -69,8 +69,9 @@
                             <select name="kategori_cuti_besar" id="kategori_cuti_besar" class="form-select @error('kategori_cuti_besar') is-invalid @enderror" aria-describedby="durasiHint">
                                 <option value="">Pilih jenis cuti besar</option>
                                 @foreach ($kategoriBesarOptions as $value => $label)
-                                    {{-- Melahirkan/keguguran sendiri hanya untuk pegawai perempuan (jenis kelamin kosong: tampil). "Istri melahirkan" selalu tampil. --}}
+                                    {{-- Melahirkan/keguguran sendiri hanya untuk pegawai perempuan; "istri melahirkan" hanya untuk laki-laki (jenis kelamin kosong: tampil semua). --}}
                                     @continue($pegawai?->jenis_kelamin === 'Laki-laki' && in_array($value, \App\Models\PengajuanCuti::KATEGORI_KHUSUS_PEREMPUAN, true))
+                                    @continue($pegawai?->jenis_kelamin === 'Perempuan' && $value === 'istri_melahirkan')
                                     <option value="{{ $value }}" data-durasi="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_DURASI[$value] ?? '' }}" data-maks-kalender="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_MAKS_KALENDER[$value] ?? '' }}" data-dadakan="{{ in_array($value, \App\Models\PengajuanCuti::KATEGORI_DADAKAN, true) ? 1 : 0 }}" {{ old('kategori_cuti_besar') == $value ? 'selected' : '' }} @disabled(! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true))>{{ $label }}{{ ! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true) ? ' (setelah 1 tahun)' : '' }}</option>
                                 @endforeach
                             </select>
