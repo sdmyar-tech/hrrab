@@ -73,9 +73,9 @@ class Notifikasi
         $disetujui = $pengajuan->status === $pengajuan::STATUS_APPROVED;
         $pengaju = User::where('data_pegawai_id', $pengajuan->data_pegawai_id)->get();
         $izinKeluar = $pengajuan instanceof PengajuanIzinKeluar;
-        // Izin keluar disetujui: langsung ke tiket yang ditunjukkan ke security.
+        // Izin beberapa jam disetujui: langsung ke tiket yang ditunjukkan ke security (izin tidak masuk tanpa tiket).
         $url = match (true) {
-            $izinKeluar && $disetujui => route('pegawai.izin-keluar.tiket', $pengajuan),
+            $izinKeluar && $pengajuan->punyaTiket() => route('pegawai.izin-keluar.tiket', $pengajuan),
             $izinKeluar => route('pegawai.izin-keluar'),
             $pengajuan instanceof PengajuanCuti => route('pegawai.pengajuan-cuti'),
             default => route('pegawai.pengajuan-lembur'),
@@ -85,7 +85,7 @@ class Notifikasi
             $pengaju,
             "{$jenis} Anda " . ($disetujui ? 'disetujui' : 'ditolak'),
             $disetujui
-                ? ($izinKeluar ? 'Tiket keluar sudah terbit. Tunjukkan ke security di gerbang saat keluar.' : 'Pengajuan sudah disetujui sampai tahap akhir.')
+                ? ($izinKeluar && $pengajuan->punyaTiket() ? 'Tiket keluar sudah terbit. Tunjukkan ke security di gerbang saat keluar.' : 'Pengajuan sudah disetujui sampai tahap akhir.')
                 : 'Alasan: ' . ($pengajuan->catatan_admin ?: '-'),
             $url,
             Pemberitahuan::JENIS_INFO,
@@ -117,7 +117,7 @@ class Notifikasi
     {
         return match (true) {
             $pengajuan instanceof PengajuanCuti => ['Pengajuan cuti', 'admin.pengajuan-cuti.show', 'bi-calendar2-check', TugasNotifikasi::CUTI],
-            $pengajuan instanceof PengajuanIzinKeluar => ['Izin keluar', 'admin.izin-keluar.show', 'bi-door-open', TugasNotifikasi::IZIN_KELUAR],
+            $pengajuan instanceof PengajuanIzinKeluar => ['Izin', 'admin.izin-keluar.show', 'bi-door-open', TugasNotifikasi::IZIN_KELUAR],
             default => ['Pengajuan lembur', 'admin.pengajuan-lembur.show', 'bi-clock-history', TugasNotifikasi::LEMBUR],
         };
     }

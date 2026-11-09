@@ -15,14 +15,14 @@
         ['bagian' => $penyetuju ? 'Tugas Saya' : 'Data Pengajuan', 'item' => [
             [$penyetuju ? 'Persetujuan Cuti' : 'Cuti', 'bi-calendar2-check', 'admin.pengajuan-cuti.index', 'admin.pengajuan-cuti.*', $u->can('pengajuan.report'), $hitung['cuti'] ?? null],
             [$penyetuju ? 'Persetujuan Lembur' : 'Lembur', 'bi-clock-history', 'admin.pengajuan-lembur.index', 'admin.pengajuan-lembur.*', $u->can('pengajuan.report'), $hitung['lembur'] ?? null],
-            [$penyetuju ? 'Persetujuan Izin Keluar' : 'Izin Keluar', 'bi-door-open', 'admin.izin-keluar.index', 'admin.izin-keluar.*', $u->can('pengajuan.report'), $hitung['izin_keluar'] ?? null],
+            [$penyetuju ? 'Persetujuan Izin' : 'Izin', 'bi-door-open', 'admin.izin-keluar.index', 'admin.izin-keluar.*', $u->can('pengajuan.report'), $hitung['izin_keluar'] ?? null],
             ['Jadwal Interview Saya', 'bi-calendar2-week', 'interview.saya', 'interview.saya', $u->bisaMenginterview(), $hitung['interview'] ?? null],
             ['Evaluasi Kontrak', 'bi-clipboard-check', 'admin.evaluasi-kontrak.index', 'admin.evaluasi-kontrak.*', $penyetuju && $evaluasi, $hitung['evaluasi_kontrak'] ?? null],
         ]],
         ['bagian' => 'Pengajuan Saya', 'item' => [
             ['Cuti', 'bi-calendar-plus', 'pegawai.pengajuan-cuti', 'pegawai.pengajuan-cuti*', $u->can('ajukan-cuti'), null],
             ['Lembur', 'bi-stopwatch', 'pegawai.pengajuan-lembur', 'pegawai.pengajuan-lembur*', $u->can('ajukan-lembur'), null],
-            ['Izin Keluar', 'bi-door-open', 'pegawai.izin-keluar', 'pegawai.izin-keluar*', $u->can('ajukan-izin-keluar'), null],
+            ['Izin', 'bi-door-open', 'pegawai.izin-keluar', 'pegawai.izin-keluar*', $u->can('ajukan-izin-keluar'), null],
         ]],
         // GM/kepala yang tertaut ke data pegawai punya Data Saya seperti pegawai lain.
         ['bagian' => 'Data Saya', 'item' => [

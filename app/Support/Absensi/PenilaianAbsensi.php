@@ -6,6 +6,7 @@ use App\Models\Absensi;
 use App\Models\DataPegawai;
 use App\Models\IzinAbsensi;
 use App\Models\PengajuanCuti;
+use App\Models\PengajuanIzinKeluar;
 use App\Models\PengajuanLembur;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -65,6 +66,11 @@ class PenilaianAbsensi
             ->get()->groupBy(fn ($l) => $l->data_pegawai_id . '|' . $l->tanggal->toDateString());
         $izin = IzinAbsensi::whereBetween('tanggal', [$dari->toDateString(), $sampai->toDateString()])
             ->get()->groupBy(fn ($z) => $z->tanggal->toDateString());
+        // Izin tidak masuk (menu Izin) yang sudah disetujui akhir.
+        $izinHarian = PengajuanIzinKeluar::whereIn('data_pegawai_id', $ids)->where('jenis', PengajuanIzinKeluar::JENIS_HARIAN)
+            ->where('status', PengajuanIzinKeluar::STATUS_APPROVED)
+            ->whereDate('tanggal', '<=', $sampai)->whereDate('tanggal_selesai', '>=', $dari)
+            ->get()->groupBy('data_pegawai_id');
         // Rentang tanggal yang sudah ada data mesinnya: di luar ini hari tanpa scan BUKAN Alpa (data belum diimport).
         $cakupan = [Absensi::whereNotNull('finger_id')->min('tanggal'), Absensi::whereNotNull('finger_id')->max('tanggal')];
 
@@ -81,6 +87,7 @@ class PenilaianAbsensi
                     $lembur["{$p->id}|{$tgl}"] ?? collect(),
                     ($izin[$tgl] ?? collect())->filter(fn ($z) => $z->berlakuUntuk($p->id, $unit)),
                     $cakupan,
+                    ($izinHarian[$p->id] ?? collect())->first(fn ($z) => $z->tanggal->lte($t) && $z->tanggal_selesai->gte($t)),
                 );
             }
         }
@@ -88,8 +95,11 @@ class PenilaianAbsensi
         return $hasil;
     }
 
-    /** @param array{0: ?string, 1: ?string} $cakupan  tanggal data mesin paling awal & paling akhir */
-    public static function nilai(DataPegawai $p, CarbonInterface $tanggal, ?Absensi $a, ?PengajuanCuti $cuti, Collection $lembur, Collection $izin, array $cakupan = [null, null]): array
+    /**
+     * @param  array{0: ?string, 1: ?string}  $cakupan  tanggal data mesin paling awal & paling akhir
+     * @param  ?PengajuanIzinKeluar  $izinHarian  izin tidak masuk disetujui yang mencakup tanggal ini
+     */
+    public static function nilai(DataPegawai $p, CarbonInterface $tanggal, ?Absensi $a, ?PengajuanCuti $cuti, Collection $lembur, Collection $izin, array $cakupan = [null, null], ?PengajuanIzinKeluar $izinHarian = null): array
     {
         $jadwal = $p->jadwalKerja;
         $libur = in_array($tanggal->toDateString(), config('hrrab.hari_libur', []), true);
@@ -137,6 +147,9 @@ class PenilaianAbsensi
             $h['status'] = $manual;
         } elseif ($cuti) {
             $h['status'] = 'cuti';
+        } elseif ($izinHarian && $hariKerja) {
+            $h['status'] = $izinHarian->statusAbsensi();
+            $h['catatan'][] = 'Izin tidak masuk (' . $izinHarian->keperluanLabel() . '): ' . $izinHarian->alasan;
         } elseif (! $hariKerja) {
             $h['status'] = 'libur';
         } elseif ($masuk === null) {

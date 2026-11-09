@@ -1,33 +1,39 @@
 @extends('layouts.admin.app')
 
-@section('title', 'Izin Keluar Jam Kerja')
+@section('title', 'Izin')
 
 @section('content')
 @php
-    $adaFilter = request()->hasAny(['q', 'status', 'tanggal_dari', 'tanggal_sampai']);
+    $adaFilter = request()->hasAny(['q', 'status', 'jenis', 'tanggal_dari', 'tanggal_sampai']);
     $reset = route('admin.izin-keluar.index', $bidangTabs ? ['bidang' => request('bidang', 'saya')] : []);
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid">
-        <x-page-header title="Izin Keluar Jam Kerja" eyebrow="Data Pengajuan"
-            subtitle="Setujui atau tolak izin keluar. Setelah persetujuan akhir, pegawai mendapat tiket untuk ditunjukkan ke security.">
+        <x-page-header title="Izin" eyebrow="Data Pengajuan"
+            subtitle="Setujui atau tolak izin pegawai. Izin beberapa jam mendapat tiket untuk security; izin tidak masuk tercatat di absensi.">
             <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.izin-keluar.export'])
             </x-slot:actions>
         </x-page-header>
 
-        @include('admin.pengajuan._stat-status', ['hitung' => $hitungStatus, 'route' => 'admin.izin-keluar.index', 'satuan' => 'izin keluar'])
+        @include('admin.pengajuan._stat-status', ['hitung' => $hitungStatus, 'route' => 'admin.izin-keluar.index', 'satuan' => 'izin'])
         @include('admin.partials.gm-bidang-tabs', ['route' => 'admin.izin-keluar.index', 'bagian' => 'peringatan'])
 
-        <x-card :padding="false" aria-label="Daftar izin keluar">
+        <x-card :padding="false" aria-label="Daftar izin">
             <x-filter-bar :action="route('admin.izin-keluar.index')" id="filterIzinKeluarForm"
-                search="Cari pegawai atau tiket, contoh: Siti" search-label="Cari izin keluar menurut nama, NIP, atau kode tiket"
-                :count="$izinKeluars->total()" unit="izin keluar" :filtered="$adaFilter" :reset="$reset">
+                search="Cari pegawai atau tiket, contoh: Siti" search-label="Cari izin menurut nama, NIP, atau kode tiket"
+                :count="$izinKeluars->total()" unit="izin" :filtered="$adaFilter" :reset="$reset">
                 <select name="status" class="form-select form-select-sm" aria-label="Saring status" onchange="this.form.submit()">
                     <option value="">Semua status</option>
                     <option value="pending" @selected(request('status') == 'pending')>Menunggu</option>
                     <option value="approved" @selected(request('status') == 'approved')>Disetujui</option>
                     <option value="rejected" @selected(request('status') == 'rejected')>Ditolak</option>
+                </select>
+                <select name="jenis" class="form-select form-select-sm" aria-label="Saring jenis izin" onchange="this.form.submit()">
+                    <option value="">Semua jenis</option>
+                    @foreach (\App\Models\PengajuanIzinKeluar::JENIS as $kode => $label)
+                        <option value="{{ $kode }}" @selected(request('jenis') === $kode)>{{ $label }}</option>
+                    @endforeach
                 </select>
                 @include('partials.filter-tanggal', ['tanggalLabel' => 'Tanggal'])
                 @include('partials.urut', ['urutForm' => 'filterIzinKeluarForm'])
@@ -37,7 +43,7 @@
                 @endif
             </x-filter-bar>
 
-            <x-table caption="Daftar izin keluar" sticky striped scroll>
+            <x-table caption="Daftar izin" sticky striped scroll>
                 <x-slot:head>
                     <tr>
                         <th>Pegawai</th>
@@ -52,7 +58,7 @@
                         $nama = $item->dataPegawai?->nama_lengkap ?? '-';
                         $konteks = [
                             ['Pegawai', $nama . ($item->unit_kerja ? ' · ' . $item->unit_kerja : '')],
-                            ['Waktu', $item->tanggal->translatedFormat('l, d M Y') . ' · ' . $item->jamLabel()],
+                            ['Waktu', $item->tanggalLabel() . ' · ' . $item->jamLabel()],
                             ['Keperluan', $item->keperluanLabel()],
                             ['Alasan', $item->alasan],
                             ['Tahap', $item->currentLevelLabel()],
@@ -64,8 +70,8 @@
                             <span class="hr-sel-sub"><span class="angka-utuh">{{ $item->dataPegawai?->nip ?? '-' }}</span>@if ($item->unit_kerja) &middot; {{ $item->unit_kerja }}@endif</span>
                         </td>
                         <td>
-                            <span class="text-nowrap">{{ $item->tanggal->translatedFormat('d M Y') }}</span>
-                            <span class="hr-sel-sub">{{ $item->tanggal->translatedFormat('l') }} &middot; {{ $item->jamLabel() }}</span>
+                            <span class="text-nowrap">{{ $item->tanggalLabel('d M Y') }}</span>
+                            <span class="hr-sel-sub">@unless ($item->isHarian()){{ $item->tanggal->translatedFormat('l') }} &middot; @endunless{{ $item->jamLabel() }}</span>
                         </td>
                         <td>
                             <span class="d-block">{{ $item->keperluanLabel() }}</span>
@@ -86,9 +92,9 @@
                                 'detail' => route('admin.izin-keluar.show', $item),
                                 'setujui' => route('admin.izin-keluar.approve', $item),
                                 'tolak' => route('admin.izin-keluar.reject', $item),
-                                'judul' => 'izin keluar',
+                                'judul' => 'izin',
                                 'konteks' => $konteks,
-                                'tambahan' => $item->isApproved() ? [[route('pegawai.izin-keluar.tiket', $item), 'Lihat tiket', 'bi-ticket-perforated']] : [],
+                                'tambahan' => $item->punyaTiket() ? [[route('pegawai.izin-keluar.tiket', $item), 'Lihat tiket', 'bi-ticket-perforated']] : [],
                                 'slotTambahan' => 1,
                             ])
                         </td>
@@ -99,8 +105,8 @@
                     @endif
                 @empty
                     <x-table-empty :colspan="5" :icon="$adaFilter ? 'bi-search' : 'bi-door-open'"
-                        :title="$adaFilter ? 'Tidak ada izin keluar yang cocok' : 'Belum ada izin keluar'">
-                        {{ $adaFilter ? 'Coba kata kunci lain atau reset filter.' : 'Izin keluar jam kerja yang perlu ditinjau akan tampil di sini.' }}
+                        :title="$adaFilter ? 'Tidak ada izin yang cocok' : 'Belum ada izin'">
+                        {{ $adaFilter ? 'Coba kata kunci lain atau reset filter.' : 'Izin pegawai yang perlu ditinjau akan tampil di sini.' }}
                         @if ($adaFilter)
                             <x-slot:action><x-button :href="$reset" variant="secondary" icon="bi-x-circle">Reset filter</x-button></x-slot:action>
                         @endif

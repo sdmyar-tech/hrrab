@@ -68,7 +68,7 @@
                             <li class="text-warning-emphasis">Bagian {{ $unit }} kehilangan koordinatornya.</li>
                         @endforeach
                         @if ($d['pengajuan'])
-                            <li>{{ $d['pengajuan'] }} pengajuan (cuti/lembur/izin keluar) yang masih menunggu ditutup.</li>
+                            <li>{{ $d['pengajuan'] }} pengajuan (cuti/lembur/izin) yang masih menunggu ditutup.</li>
                         @endif
                         <li>Tidak lagi diabsen dari mesin.</li>
                     </ul>

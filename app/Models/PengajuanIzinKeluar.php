@@ -5,13 +5,16 @@ namespace App\Models;
 use App\Models\Concerns\SnapshotUnitKerja;
 use App\Support\PengajuanWorkflow;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
- * Izin keluar saat jam kerja. Disetujui berjenjang (PengajuanWorkflow, sama seperti cuti);
- * setelah disetujui akhir mendapat kode_tiket dan tiketnya ditunjukkan ke security gerbang.
+ * Izin pegawai (nama tabel/route lama "izin keluar" dipertahankan). Dua jenis:
+ *  - jam    : keluar beberapa jam saat jam kerja; setelah disetujui akhir mendapat kode_tiket untuk security gerbang.
+ *  - harian : tidak masuk 1 hari atau lebih (lama_hari = hari kerja); setelah disetujui tercatat Izin/Sakit/Dinas Luar di absensi.
+ * Disetujui berjenjang (PengajuanWorkflow, sama seperti cuti).
  */
 class PengajuanIzinKeluar extends Model
 {
@@ -25,12 +28,25 @@ class PengajuanIzinKeluar extends Model
 
     public const STATUS_REJECTED = 'rejected';
 
+    public const JENIS_JAM = 'jam';
+
+    public const JENIS_HARIAN = 'harian';
+
+    public const JENIS = [
+        self::JENIS_JAM => 'Izin beberapa jam',
+        self::JENIS_HARIAN => 'Izin tidak masuk',
+    ];
+
     public const KEPERLUAN = [
         'pribadi' => 'Keperluan pribadi',
+        'sakit' => 'Sakit',
         'dinas' => 'Tugas kantor / dinas luar',
         'berobat' => 'Berobat',
         'keluarga' => 'Urusan keluarga',
     ];
+
+    /** Status absensi (PenilaianAbsensi) untuk hari izin tidak masuk yang disetujui, menurut keperluan. */
+    public const STATUS_ABSENSI = ['sakit' => 'sakit', 'dinas' => 'dinas_luar'];
 
     /** Tiket sudah bisa ditunjukkan sejak sekian menit sebelum jam keluar. */
     public const TIKET_MULAI_SEBELUM_MENIT = 30;
@@ -38,7 +54,10 @@ class PengajuanIzinKeluar extends Model
     protected $fillable = [
         'data_pegawai_id',
         'unit_kerja',
+        'jenis',
         'tanggal',
+        'tanggal_selesai',
+        'lama_hari',
         'jam_keluar',
         'jam_kembali',
         'keperluan',
@@ -57,6 +76,8 @@ class PengajuanIzinKeluar extends Model
 
     protected $casts = [
         'tanggal' => 'date',
+        'tanggal_selesai' => 'date',
+        'lama_hari' => 'integer',
         'approved_at' => 'datetime',
         'kepala_approved_at' => 'datetime',
         'gm_approved_at' => 'datetime',
@@ -65,9 +86,9 @@ class PengajuanIzinKeluar extends Model
 
     protected static function booted(): void
     {
-        // Kode tiket dibuat saat disetujui akhir (lewat tahapan maupun ubah langsung Admin).
+        // Kode tiket (hanya izin beberapa jam) dibuat saat disetujui akhir (lewat tahapan maupun ubah langsung Admin).
         static::saving(function (self $izin) {
-            if ($izin->status === self::STATUS_APPROVED && ! $izin->kode_tiket) {
+            if ($izin->status === self::STATUS_APPROVED && ! $izin->kode_tiket && ! $izin->isHarian()) {
                 do {
                     $kode = 'IK-' . $izin->tanggal->format('ymd') . '-' . Str::upper(Str::random(4));
                 } while (self::where('kode_tiket', $kode)->exists());
@@ -134,15 +155,66 @@ class PengajuanIzinKeluar extends Model
         return self::KEPERLUAN[$this->keperluan] ?? (string) $this->keperluan;
     }
 
-    public function tidakKembali(): bool
+    public function isHarian(): bool
     {
-        return $this->jam_kembali === null;
+        return $this->jenis === self::JENIS_HARIAN;
     }
 
-    /** "08:30 – 10:00" atau "08:30 – tidak kembali". */
+    public function jenisLabel(): string
+    {
+        return self::JENIS[$this->jenis] ?? self::JENIS[self::JENIS_JAM];
+    }
+
+    /** Tanggal terakhir izin (izin beberapa jam: tanggal itu sendiri). */
+    public function tanggalAkhir(): Carbon
+    {
+        return ($this->isHarian() && $this->tanggal_selesai ? $this->tanggal_selesai : $this->tanggal)->copy();
+    }
+
+    /** Izin beberapa jam punya tiket gerbang; izin tidak masuk tidak. */
+    public function punyaTiket(): bool
+    {
+        return $this->isApproved() && ! $this->isHarian();
+    }
+
+    /** Status di absensi untuk hari izin tidak masuk: sakit | dinas_luar | izin. */
+    public function statusAbsensi(): string
+    {
+        return self::STATUS_ABSENSI[$this->keperluan] ?? 'izin';
+    }
+
+    /** Izin (selain yang ditolak) yang rentang tanggalnya beririsan dengan $dari–$sampai. */
+    public function scopeBertumpuk(Builder $q, string $dari, string $sampai): Builder
+    {
+        return $q->where('status', '!=', self::STATUS_REJECTED)
+            ->whereDate('tanggal', '<=', $sampai)
+            ->whereRaw('COALESCE(tanggal_selesai, tanggal) >= ?', [$dari]);
+    }
+
+    public function tidakKembali(): bool
+    {
+        return ! $this->isHarian() && $this->jam_kembali === null;
+    }
+
+    /** "08:30 – 10:00", "08:30 – tidak kembali", atau (izin tidak masuk) "Tidak masuk · 2 hari kerja". */
     public function jamLabel(): string
     {
+        if ($this->isHarian()) {
+            return 'Tidak masuk · ' . ($this->lama_hari ?? 1) . ' hari kerja';
+        }
+
         return substr((string) $this->jam_keluar, 0, 5) . ' – ' . ($this->tidakKembali() ? 'tidak kembali' : substr((string) $this->jam_kembali, 0, 5));
+    }
+
+    /** "Senin, 23 Nov 2026" atau (izin beberapa hari) "23 Nov – 25 Nov 2026". */
+    public function tanggalLabel(string $format = 'l, d M Y'): string
+    {
+        $akhir = $this->tanggalAkhir();
+        if ($akhir->isSameDay($this->tanggal)) {
+            return $this->tanggal->translatedFormat($format);
+        }
+
+        return $this->tanggal->translatedFormat($this->tanggal->isSameYear($akhir) ? 'd M' : 'd M Y') . ' – ' . $akhir->translatedFormat('d M Y');
     }
 
     /**
@@ -162,7 +234,7 @@ class PengajuanIzinKeluar extends Model
     /** Status tiket saat $kini: 'berlaku' | 'belum' | 'lewat' | 'tidak_sah' (belum/tidak disetujui). */
     public function statusTiket(?Carbon $kini = null): string
     {
-        if (! $this->isApproved()) {
+        if (! $this->punyaTiket()) {
             return 'tidak_sah';
         }
         $kini ??= now();

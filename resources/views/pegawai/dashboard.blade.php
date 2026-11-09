@@ -16,7 +16,7 @@
     $aksiCepat = array_values(array_filter([
         $bisaCuti ? ['Ajukan Cuti', 'Sisa ' . $sisaCuti . ' hari', 'bi-calendar-plus', 'success', route('pegawai.pengajuan-cuti')] : null,
         $bisaLembur ? ['Ajukan Lembur', 'Dengan surat tugas', 'bi-stopwatch', 'info', route('pegawai.pengajuan-lembur')] : null,
-        $bisaIzinKeluar ? ['Izin Keluar', 'Keluar saat jam kerja', 'bi-door-open', 'warning', route('pegawai.izin-keluar')] : null,
+        $bisaIzinKeluar ? ['Izin', 'Keluar beberapa jam / tidak masuk', 'bi-door-open', 'warning', route('pegawai.izin-keluar')] : null,
         $ikutAbsensi ? ['Absensi Saya', 'Riwayat kehadiran', 'bi-fingerprint', 'primary', route('absensi.saya')] : null,
         ['Data Diri', $isIncomplete ? "Baru {$kelengkapan}% lengkap" : 'Sudah lengkap', 'bi-person-vcard', $isIncomplete ? 'danger' : 'neutral', route($isIncomplete ? 'pegawai.pengkinian-data' : 'pegawai.data-pegawai')],
         ['Kalender', 'Libur & agenda', 'bi-calendar3', 'neutral', route('kalender.index')],

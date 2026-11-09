@@ -97,9 +97,12 @@ class EksporController extends Controller
 
         $rows = $pegawai->pengajuanIzinKeluars()->reorder()->orderBy('id')->get()->map(fn (PengajuanIzinKeluar $i) => [
             optional($i->created_at)->format('d-m-Y H:i'),
+            $i->jenisLabel(),
             optional($i->tanggal)->format('d-m-Y'),
-            substr((string) $i->jam_keluar, 0, 5),
-            $i->tidakKembali() ? 'Tidak kembali' : substr((string) $i->jam_kembali, 0, 5),
+            $i->tanggalAkhir()->format('d-m-Y'),
+            $i->isHarian() ? $i->lama_hari : null,
+            $i->isHarian() ? '-' : substr((string) $i->jam_keluar, 0, 5),
+            $i->isHarian() ? '-' : ($i->tidakKembali() ? 'Tidak kembali' : substr((string) $i->jam_kembali, 0, 5)),
             $i->keperluanLabel(),
             $i->alasan,
             $i->statusLabel(),
@@ -108,9 +111,9 @@ class EksporController extends Controller
             $i->catatan_admin,
         ]);
 
-        return ExcelExporter::download(ExcelExporter::namaFile('riwayat-izin-keluar-saya'), [
-            'Diajukan', 'Tanggal', 'Jam Keluar', 'Jam Kembali', 'Keperluan', 'Alasan', 'Status', 'Tahap', 'Kode Tiket', 'Catatan',
-        ], $rows, 'Riwayat Izin Keluar');
+        return ExcelExporter::download(ExcelExporter::namaFile('riwayat-izin-saya'), [
+            'Diajukan', 'Jenis Izin', 'Tanggal Mulai', 'Tanggal Selesai', 'Lama (hari kerja)', 'Jam Keluar', 'Jam Kembali', 'Keperluan', 'Alasan', 'Status', 'Tahap', 'Kode Tiket', 'Catatan',
+        ], $rows, 'Riwayat Izin');
     }
 
     public function notifikasi(Request $request): BinaryFileResponse

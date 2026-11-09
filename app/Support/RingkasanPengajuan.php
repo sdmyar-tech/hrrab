@@ -206,38 +206,41 @@ class RingkasanPengajuan
             ->whereBetween('tanggal', [$bulan->toDateString(), $bulan->copy()->endOfMonth()->toDateString()])->count();
         $namaBulan = $bulan->translatedFormat('F');
 
+        $dari = $i->tanggal->toDateString();
+        $sampai = $i->tanggalAkhir()->toDateString();
+
         $peringatan = [];
-        $hariSama = (clone $milikPegawai)->whereDate('tanggal', $i->tanggal)->where('status', '!=', PengajuanIzinKeluar::STATUS_REJECTED)->get();
+        $hariSama = (clone $milikPegawai)->bertumpuk($dari, $sampai)->get();
         if ($hariSama->isNotEmpty()) {
-            $peringatan[] = 'Ada izin keluar lain di tanggal yang sama: ' . $hariSama->map(fn ($h) => $h->jamLabel() . ' (' . $h->statusLabel() . ')')->implode(', ') . '.';
+            $peringatan[] = 'Ada izin lain di tanggal yang sama: ' . $hariSama->map(fn ($h) => $h->jamLabel() . ' (' . $h->statusLabel() . ')')->implode(', ') . '.';
         }
         if ($i->tidakKembali()) {
             $peringatan[] = 'Pegawai tidak kembali lagi ke tempat kerja setelah keluar hari itu.';
         }
-        // Rekan satu unit yang juga izin keluar di hari yang sama (menunggu/disetujui).
+        // Rekan satu unit yang juga izin di tanggal yang beririsan (menunggu/disetujui).
         $rekan = PengajuanIzinKeluar::with('dataPegawai:id,nama_lengkap')->where('unit_kerja', $unit)
-            ->where('data_pegawai_id', '!=', $i->data_pegawai_id)->whereDate('tanggal', $i->tanggal)
-            ->where('status', '!=', PengajuanIzinKeluar::STATUS_REJECTED)->get();
+            ->where('data_pegawai_id', '!=', $i->data_pegawai_id)->bertumpuk($dari, $sampai)->get();
 
         return [
-            'judul' => 'Izin keluar · ' . $i->jamLabel(),
+            'judul' => 'Izin · ' . $i->jamLabel(),
             'orang' => self::orang($i->dataPegawai, $unit),
             'detail' => array_filter([
-                ['Tanggal', $i->tanggal->translatedFormat('l, d M Y')],
-                ['Jam', $i->jamLabel()],
+                ['Jenis', $i->jenisLabel()],
+                ['Tanggal', $i->tanggalLabel()],
+                [$i->isHarian() ? 'Lama' : 'Jam', $i->isHarian() ? ($i->lama_hari ?? 1) . ' hari kerja' : $i->jamLabel()],
                 ['Keperluan', $i->keperluanLabel()],
                 ['Alasan', $i->alasan ?: '-'],
                 $i->kode_tiket ? ['Kode tiket', $i->kode_tiket] : null,
                 ['Diajukan', self::waktu($i->created_at)],
             ]),
             'angka' => [
-                ['label' => "Izin keluar {$namaBulan}", 'nilai' => $disetujuiBulanIni . ' kali', 'catatan' => 'disetujui, selain ini', 'nada' => $disetujuiBulanIni >= 4 ? 'waspada' : null],
-                ['label' => 'Rekan bagian keluar hari itu', 'nilai' => $rekan->count() . ' orang', 'catatan' => $rekan->pluck('dataPegawai.nama_lengkap')->take(2)->implode(', ') ?: null, 'nada' => $rekan->isNotEmpty() ? 'waspada' : null],
+                ['label' => "Izin {$namaBulan}", 'nilai' => $disetujuiBulanIni . ' kali', 'catatan' => 'disetujui, selain ini', 'nada' => $disetujuiBulanIni >= 4 ? 'waspada' : null],
+                ['label' => 'Rekan bagian izin di tanggal itu', 'nilai' => $rekan->count() . ' orang', 'catatan' => $rekan->pluck('dataPegawai.nama_lengkap')->take(2)->implode(', ') ?: null, 'nada' => $rekan->isNotEmpty() ? 'waspada' : null],
             ],
             'peringatan' => $peringatan,
-            'riwayatJudul' => 'Riwayat izin keluar terakhir',
+            'riwayatJudul' => 'Riwayat izin terakhir',
             'riwayat' => (clone $milikPegawai)->latest('tanggal')->limit(5)->get()->map(fn (PengajuanIzinKeluar $r) => [
-                'utama' => $r->tanggal->translatedFormat('d M Y') . ' · ' . $r->jamLabel(),
+                'utama' => $r->tanggalLabel('d M Y') . ' · ' . $r->jamLabel(),
                 'sub' => $r->keperluanLabel() . ($r->alasan ? ' · ' . str($r->alasan)->limit(40) : ''),
                 'status' => $r->statusLabel(), 'kelas' => $r->badgeClass(),
             ])->all(),

@@ -15,7 +15,7 @@
 <main class="dashboard-content">
     <div class="container-fluid">
         <x-page-header title="Kalender Pegawai" eyebrow="Kepegawaian"
-            subtitle="Tanggal merah, hari kerja, serta cuti & izin keluar Anda. Tanggal merah memengaruhi hitungan hari kerja, absensi, dan cuti.">
+            subtitle="Tanggal merah, hari kerja, serta cuti & izin Anda. Tanggal merah memengaruhi hitungan hari kerja, absensi, dan cuti.">
             <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'kalender.export', 'eksporParam' => ['tahun' => $tahun], 'eksporTeks' => "Ekspor {$tahun}"])
                 @if ($bisaKelola)
@@ -79,7 +79,7 @@
                     <div class="kl-legenda">
                         <span><i class="kotak merah"></i>Tanggal merah</span>
                         <span><i class="kotak cuti"></i>Cuti saya</span>
-                        <span><i class="kotak izin"></i>Izin keluar saya</span>
+                        <span><i class="kotak izin"></i>Izin saya</span>
                         <span><i class="kotak menunggu"></i>Menunggu persetujuan</span>
                         <span><i class="kotak akhir-pekan"></i>Bukan hari kerja</span>
                     </div>
@@ -92,7 +92,7 @@
                             <li class="hr-list-item">
                                 <span class="dash-tanggal {{ $a['jenis'] === 'libur' ? 'is-merah' : '' }}"><span>{{ $a['tanggal']->translatedFormat('D') }}</span><strong>{{ $a['tanggal']->format('d') }}</strong></span>
                                 <span class="hr-list-utama"><span class="hr-list-judul text-wrap">{{ $a['teks'] }}</span>
-                                    <span class="hr-list-sub">{{ ['libur' => 'Tanggal merah', 'libur-mati' => 'Tanggal merah (nonaktif)', 'cuti' => 'Cuti saya', 'izin' => 'Izin keluar saya'][$a['jenis']] ?? '' }}{{ $a['menunggu'] ? ' · menunggu persetujuan' : '' }}</span></span>
+                                    <span class="hr-list-sub">{{ ['libur' => 'Tanggal merah', 'libur-mati' => 'Tanggal merah (nonaktif)', 'cuti' => 'Cuti saya', 'izin' => 'Izin saya'][$a['jenis']] ?? '' }}{{ $a['menunggu'] ? ' · menunggu persetujuan' : '' }}</span></span>
                             </li>
                         @empty
                             <li><x-empty-state icon="bi-calendar-check" compact>Tidak ada tanggal merah atau agenda bulan ini.</x-empty-state></li>

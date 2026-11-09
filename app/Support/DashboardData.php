@@ -150,7 +150,7 @@ class DashboardData
         if ($user->adalahPenyetuju()) {
             $tugas[] = ['label' => 'Approve pengajuan cuti', 'jumlah' => $approvalCuti, 'url' => route('admin.pengajuan-cuti.index'), 'ikon' => 'bi-calendar2-check'];
             $tugas[] = ['label' => 'Approve pengajuan lembur', 'jumlah' => $approvalLembur, 'url' => route('admin.pengajuan-lembur.index'), 'ikon' => 'bi-clock-history'];
-            $tugas[] = ['label' => 'Approve izin keluar', 'jumlah' => self::menungguSaya(PengajuanIzinKeluar::class, $user), 'url' => route('admin.izin-keluar.index'), 'ikon' => 'bi-door-open'];
+            $tugas[] = ['label' => 'Approve izin', 'jumlah' => self::menungguSaya(PengajuanIzinKeluar::class, $user), 'url' => route('admin.izin-keluar.index'), 'ikon' => 'bi-door-open'];
         }
         if (RekrutmenAccess::canLihatSemua($user)) {
             $formasi = PengajuanFormasi::where('status', PengajuanFormasi::STATUS_PENDING)->get()->filter(fn ($f) => RekrutmenAccess::canReviewFormasi($user, $f))->count();

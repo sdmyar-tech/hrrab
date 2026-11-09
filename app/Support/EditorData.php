@@ -107,8 +107,8 @@ class EditorData
                 'with' => ['dataPegawai:id,nama_lengkap'], 'judul' => fn ($m) => $pegawai($m) . ' — lembur ' . $m->jumlah_jam . ' jam',
                 'kolom' => ['tanggal', 'jam_mulai', 'jam_selesai', 'status'], 'cari' => ['status', 'unit_kerja', 'uraian_tugas'], 'relasi' => ['dataPegawai' => 'nama_lengkap'],
                 'tautan' => fn ($m) => self::rute('admin.pengajuan-lembur.show', $m)],
-            'izin_keluar' => ['grup' => 'Cuti & Lembur', 'label' => 'Izin Keluar', 'ikon' => 'bi-door-open', 'model' => Models\PengajuanIzinKeluar::class,
-                'with' => ['dataPegawai:id,nama_lengkap'], 'judul' => fn ($m) => $pegawai($m) . ' — izin keluar ' . $m->tanggal?->format('d-m-Y'),
+            'izin_keluar' => ['grup' => 'Cuti & Lembur', 'label' => 'Izin', 'ikon' => 'bi-door-open', 'model' => Models\PengajuanIzinKeluar::class,
+                'with' => ['dataPegawai:id,nama_lengkap'], 'judul' => fn ($m) => $pegawai($m) . ' — izin ' . $m->tanggal?->format('d-m-Y'),
                 'kolom' => ['tanggal', 'jam_keluar', 'jam_kembali', 'status', 'kode_tiket'], 'cari' => ['status', 'unit_kerja', 'alasan', 'kode_tiket'], 'relasi' => ['dataPegawai' => 'nama_lengkap'],
                 'tautan' => fn ($m) => self::rute('admin.izin-keluar.show', $m)],
 

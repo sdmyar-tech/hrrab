@@ -39,7 +39,7 @@ class KalenderController extends Controller
         $libur = HariLibur::whereBetween('tanggal', [$awalGrid->toDateString(), $akhirGrid->toDateString()])->get()
             ->keyBy(fn (HariLibur $h) => $h->tanggal->toDateString());
 
-        // Agenda pribadi: cuti (menunggu/disetujui) & izin keluar milik pegawai yang login.
+        // Agenda pribadi: cuti & izin (menunggu/disetujui) milik pegawai yang login.
         $agenda = [];
         if ($pegawai = $user->dataPegawai) {
             PengajuanCuti::where('data_pegawai_id', $pegawai->id)->whereIn('status', [PengajuanCuti::STATUS_PENDING, PengajuanCuti::STATUS_APPROVED])
@@ -49,10 +49,15 @@ class KalenderController extends Controller
                         $agenda[$t->toDateString()][] = ['jenis' => 'cuti', 'teks' => $c->jenisLabel(), 'menunggu' => $c->isPending()];
                     }
                 });
-            PengajuanIzinKeluar::where('data_pegawai_id', $pegawai->id)->where('status', '!=', PengajuanIzinKeluar::STATUS_REJECTED)
-                ->whereBetween('tanggal', [$awalGrid->toDateString(), $akhirGrid->toDateString()])->get()
-                ->each(function (PengajuanIzinKeluar $i) use (&$agenda) {
-                    $agenda[$i->tanggal->toDateString()][] = ['jenis' => 'izin', 'teks' => 'Izin keluar ' . substr((string) $i->jam_keluar, 0, 5), 'menunggu' => $i->isPending()];
+            PengajuanIzinKeluar::where('data_pegawai_id', $pegawai->id)->bertumpuk($awalGrid->toDateString(), $akhirGrid->toDateString())->get()
+                ->each(function (PengajuanIzinKeluar $i) use (&$agenda, $awalGrid, $akhirGrid) {
+                    $teks = $i->isHarian() ? 'Izin ' . mb_strtolower($i->keperluanLabel()) : 'Izin keluar ' . substr((string) $i->jam_keluar, 0, 5);
+                    foreach (CarbonPeriod::create($i->tanggal->max($awalGrid), $i->tanggalAkhir()->min($akhirGrid)) as $t) {
+                        // Izin tidak masuk hanya ditandai di hari kerja (Sabtu–Minggu/tanggal merah tidak dihitung).
+                        if (! $i->isHarian() || Kalender::isHariKerja($t)) {
+                            $agenda[$t->toDateString()][] = ['jenis' => 'izin', 'teks' => $teks, 'menunggu' => $i->isPending()];
+                        }
+                    }
                 });
         }
 

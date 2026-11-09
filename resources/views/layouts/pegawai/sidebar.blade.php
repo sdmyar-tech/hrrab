@@ -14,7 +14,7 @@
         ['bagian' => 'Pengajuan Saya', 'item' => [
             ['Cuti', 'bi-calendar-plus', 'pegawai.pengajuan-cuti', 'pegawai.pengajuan-cuti*', $u?->can('ajukan-cuti'), null],
             ['Lembur', 'bi-stopwatch', 'pegawai.pengajuan-lembur', 'pegawai.pengajuan-lembur*', $u?->can('ajukan-lembur'), null],
-            ['Izin Keluar', 'bi-door-open', 'pegawai.izin-keluar', 'pegawai.izin-keluar*', $u?->can('ajukan-izin-keluar'), null],
+            ['Izin', 'bi-door-open', 'pegawai.izin-keluar', 'pegawai.izin-keluar*', $u?->can('ajukan-izin-keluar'), null],
         ]],
         ['bagian' => 'Data Saya', 'item' => [
             ['Data Diri Saya', 'bi-person-vcard', 'pegawai.data-pegawai', 'pegawai.data-pegawai', true, null],
@@ -24,7 +24,7 @@
         ['bagian' => 'Data Pengajuan', 'item' => [
             ['Cuti', 'bi-calendar2-check', 'admin.pengajuan-cuti.index', 'admin.pengajuan-cuti.*', $bisa('pengajuan.report'), null],
             ['Lembur', 'bi-clock-history', 'admin.pengajuan-lembur.index', 'admin.pengajuan-lembur.*', $bisa('pengajuan.report'), null],
-            ['Izin Keluar', 'bi-door-open', 'admin.izin-keluar.index', 'admin.izin-keluar.*', $bisa('pengajuan.report'), null],
+            ['Izin', 'bi-door-open', 'admin.izin-keluar.index', 'admin.izin-keluar.*', $bisa('pengajuan.report'), null],
         ]],
         ['bagian' => 'Kepegawaian', 'item' => [
             ['Data Pegawai', 'bi-people', 'admin.pegawai.index', 'admin.pegawai.*', $bisa('pegawai.view'), null],

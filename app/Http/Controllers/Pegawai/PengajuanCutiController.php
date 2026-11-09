@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Pegawai;
 
 use App\Http\Controllers\Controller;
 use App\Models\PengajuanCuti;
+use App\Models\PengajuanIzinKeluar;
 use App\Models\User;
 use App\Support\Kalender;
 use App\Support\Notifikasi;
@@ -128,6 +129,12 @@ class PengajuanCutiController extends Controller
                 'error',
                 'Tidak bisa mengajukan cuti berturut-turut/bentrok dengan cuti lain yang masih menunggu atau sudah disetujui. Beri jeda minimal 1 hari.'
             );
+        }
+
+        $izinBentrok = $pegawai->pengajuanIzinKeluars()->where('jenis', PengajuanIzinKeluar::JENIS_HARIAN)
+            ->bertumpuk($validated['tanggal_mulai'], $validated['tanggal_selesai'])->exists();
+        if ($izinBentrok) {
+            return redirect()->back()->withInput()->with('error', 'Rentang tanggal itu bertumpuk dengan izin tidak masuk Anda (menunggu/disetujui).');
         }
 
         if ($validated['jenis_cuti'] === PengajuanCuti::JENIS_TAHUNAN) {

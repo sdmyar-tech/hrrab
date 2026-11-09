@@ -1,6 +1,6 @@
 @extends('layouts.admin.app')
 
-@section('title', 'Detail Izin Keluar')
+@section('title', 'Detail Izin')
 
 @section('content')
 @php
@@ -9,7 +9,7 @@
     $nama = $p->dataPegawai?->nama_lengkap ?? '-';
     $konteks = [
         ['Pegawai', $nama . ($p->unit_kerja ? ' · ' . $p->unit_kerja : '')],
-        ['Waktu', $p->tanggal->translatedFormat('l, d M Y') . ' · ' . $p->jamLabel()],
+        ['Waktu', $p->tanggalLabel() . ' · ' . $p->jamLabel()],
         ['Keperluan', $p->keperluanLabel()],
         ['Alasan', $p->alasan],
         ['Tahap', $p->currentLevelLabel()],
@@ -19,20 +19,21 @@
         'item' => $p,
         'setujui' => route('admin.izin-keluar.approve', $p),
         'tolak' => route('admin.izin-keluar.reject', $p),
-        'judul' => 'izin keluar',
+        'judul' => 'izin',
         'konteks' => $konteks,
         'alur' => $r['alur'],
     ];
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid">
-        <x-page-header :title="'Izin Keluar · ' . $nama" eyebrow="Data Pengajuan"
-            :subtitle="$p->tanggal->translatedFormat('l, d M Y') . ' · ' . $p->jamLabel() . ' · ' . $p->keperluanLabel()"
-            :back="route('admin.izin-keluar.index')" back-label="Izin Keluar">
+        <x-page-header :title="'Izin · ' . $nama" eyebrow="Data Pengajuan"
+            :subtitle="$p->tanggalLabel() . ' · ' . $p->jamLabel() . ' · ' . $p->keperluanLabel()"
+            :back="route('admin.izin-keluar.index')" back-label="Izin">
             <x-status-badge :badge="$p->badgeClass()" size="lg" dot>{{ $p->statusLabel() }}</x-status-badge>
+            <x-badge tone="neutral" :icon="$p->isHarian() ? 'bi-calendar-x' : 'bi-clock'">{{ $p->jenisLabel() }}</x-badge>
             @if ($p->isPending())<x-badge tone="neutral" icon="bi-signpost-split">Tahap: {{ $p->currentLevelLabel() }}</x-badge>@endif
             <x-slot:actions>
-                @if ($p->isApproved())
+                @if ($p->punyaTiket())
                     <x-button :href="route('pegawai.izin-keluar.tiket', $p)" variant="secondary" icon="bi-ticket-perforated">Lihat Tiket</x-button>
                 @endif
                 @include('admin.editor-data._tombol', ['entitas' => 'izin_keluar', 'id' => $p->id, 'teks' => 'Ubah semua kolom', 'kembaliKe' => route('admin.izin-keluar.index')])

@@ -5,7 +5,7 @@
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
         <x-page-header title="Tangga Alur Pengajuan" eyebrow="Kepegawaian"
-            subtitle="Atur siapa yang menyetujui cuti, lembur, dan izin keluar di tiap bagian: urutan bebas, boleh lintas bagian, dan setiap tahap wajib dilalui." />
+            subtitle="Atur siapa yang menyetujui cuti, lembur, dan izin di tiap bagian: urutan bebas, boleh lintas bagian, dan setiap tahap wajib dilalui." />
 
         <x-alert tone="info">
             Bagian yang belum diatur memakai <strong>alur otomatis</strong>. Alur khusus per pegawai (di detail pegawai) tetap didahulukan.

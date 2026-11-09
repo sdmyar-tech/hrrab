@@ -9,7 +9,7 @@
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
         <x-page-header :title="'Tangga Alur · ' . $unit->nama" eyebrow="Tangga Alur Pengajuan"
-            :subtitle="'Pengaju: ' . $labelSasaran . ' bagian ' . $unit->nama . '. Berlaku untuk cuti, lembur, dan izin keluar.'"
+            :subtitle="'Pengaju: ' . $labelSasaran . ' bagian ' . $unit->nama . '. Berlaku untuk cuti, lembur, dan izin.'"
             :back="route('admin.tangga-alur.index')" back-label="Tangga Alur Pengajuan">
             @if ($tangga)
                 <x-badge tone="success" dot>Diatur</x-badge>

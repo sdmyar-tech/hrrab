@@ -96,10 +96,10 @@ class Izin
      */
     public const KATALOG = [
         'Pengajuan' => ['bi-send', [
-            self::PENGAJUAN_CREATE => ['Mengajukan cuti, lembur & izin keluar', 'Membuka menu Pengajuan Saya (tetap mengikuti aturan unit: unit sekolah tidak mengajukan).'],
+            self::PENGAJUAN_CREATE => ['Mengajukan cuti, lembur & izin', 'Membuka menu Pengajuan Saya (tetap mengikuti aturan unit: unit sekolah tidak mengajukan).'],
             self::PENGAJUAN_APPROVE => ['Menyetujui pengajuan', 'Membuka daftar persetujuan. Tahap yang bisa disetujui tetap mengikuti Tangga Alur / alur jabatan.'],
             self::PENGAJUAN_APPROVE_GM => ['Menyetujui tahap GM', 'Boleh menyetujui di tahap GM (dan tahap kepala bila bagian tanpa kepala). Hanya berlaku untuk akun ber-role GM.'],
-            self::PENGAJUAN_REPORT => ['Lihat data pengajuan', 'Melihat daftar & rekap cuti, lembur, izin keluar sesuai cakupan unit.'],
+            self::PENGAJUAN_REPORT => ['Lihat data pengajuan', 'Melihat daftar & rekap cuti, lembur, izin sesuai cakupan unit.'],
         ]],
         'Kepegawaian' => ['bi-people', [
             self::PEGAWAI_VIEW => ['Lihat data pegawai', 'Membuka daftar & detail pegawai.'],

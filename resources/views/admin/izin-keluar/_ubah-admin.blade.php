@@ -1,22 +1,36 @@
-<x-card title="Ubah Langsung (Admin)" icon="bi-shield-lock" subtitle="Mengubah data & status tanpa mengikuti tahapan persetujuan. Status Disetujui langsung menerbitkan tiket.">
-    <form action="{{ route('admin.izin-keluar.ubah-admin', $izinKeluar) }}" method="POST" data-confirm="Simpan perubahan langsung pada izin keluar ini?">
+<x-card title="Ubah Langsung (Admin)" icon="bi-shield-lock" subtitle="Mengubah data & status tanpa mengikuti tahapan persetujuan. Izin beberapa jam yang Disetujui langsung mendapat tiket; izin tidak masuk langsung tercatat di absensi.">
+    <form action="{{ route('admin.izin-keluar.ubah-admin', $izinKeluar) }}" method="POST" data-confirm="Simpan perubahan langsung pada izin ini?" id="formUbahIzin">
         @csrf
         @method('PUT')
+        @php $jenisUbah = old('jenis', $izinKeluar->jenis ?? 'jam'); @endphp
         <div class="row g-3">
             @include('admin.partials.status-admin', ['pengajuan' => $izinKeluar])
             <div class="col-12">
-                <label class="form-label" for="ubah-tanggal">Tanggal</label>
+                <label class="form-label" for="ubah-jenis">Jenis Izin</label>
+                <select name="jenis" id="ubah-jenis" class="form-select form-select-sm" required>
+                    @foreach (\App\Models\PengajuanIzinKeluar::JENIS as $kode => $label)
+                        <option value="{{ $kode }}" @selected($jenisUbah === $kode)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-sm-6">
+                <label class="form-label" for="ubah-tanggal">Tanggal <span data-ubah-izin="harian">Mulai</span></label>
                 <input type="date" name="tanggal" id="ubah-tanggal" class="form-control form-control-sm" value="{{ old('tanggal', $izinKeluar->tanggal->format('Y-m-d')) }}" required>
             </div>
-            <div class="col-sm-6">
-                <label class="form-label" for="ubah-jam-keluar">Jam Keluar</label>
-                <input type="time" name="jam_keluar" id="ubah-jam-keluar" class="form-control form-control-sm" value="{{ old('jam_keluar', substr((string) $izinKeluar->jam_keluar, 0, 5)) }}" required>
+            <div class="col-sm-6" data-ubah-izin="harian">
+                <label class="form-label" for="ubah-tanggal-selesai">Tanggal Selesai</label>
+                <input type="date" name="tanggal_selesai" id="ubah-tanggal-selesai" class="form-control form-control-sm" value="{{ old('tanggal_selesai', $izinKeluar->tanggal_selesai?->format('Y-m-d')) }}">
+                <div class="form-text">Lama dihitung ulang dalam hari kerja.</div>
             </div>
-            <div class="col-sm-6">
+            <div class="col-sm-6" data-ubah-izin="jam">
+                <label class="form-label" for="ubah-jam-keluar">Jam Keluar</label>
+                <input type="time" name="jam_keluar" id="ubah-jam-keluar" class="form-control form-control-sm" value="{{ old('jam_keluar', substr((string) $izinKeluar->jam_keluar, 0, 5)) }}">
+            </div>
+            <div class="col-sm-6" data-ubah-izin="jam">
                 <label class="form-label" for="ubah-jam-kembali">Jam Kembali</label>
                 <input type="time" name="jam_kembali" id="ubah-jam-kembali" class="form-control form-control-sm" value="{{ old('jam_kembali', substr((string) $izinKeluar->jam_kembali, 0, 5)) }}">
             </div>
-            <div class="col-12">
+            <div class="col-12" data-ubah-izin="jam">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" name="tidak_kembali" value="1" id="admin-tidak-kembali" @checked(old('tidak_kembali', $izinKeluar->tidakKembali()))>
                     <label class="form-check-label" for="admin-tidak-kembali">Tidak kembali lagi hari itu</label>
@@ -52,10 +66,27 @@
 
     <x-slot:footer>
         <form action="{{ route('admin.izin-keluar.destroy', $izinKeluar) }}" method="POST"
-            data-confirm="Hapus permanen izin keluar {{ $izinKeluar->dataPegawai?->nama_lengkap }}?">
+            data-confirm="Hapus permanen izin {{ $izinKeluar->dataPegawai?->nama_lengkap }}?">
             @csrf
             @method('DELETE')
             <x-button type="submit" variant="danger-outline" size="sm" icon="bi-trash" block>Hapus Pengajuan</x-button>
         </form>
     </x-slot:footer>
 </x-card>
+<script>
+    // Tampilkan isian sesuai jenis izin; isian jenis lain dinonaktifkan agar tidak terkirim.
+    document.addEventListener('DOMContentLoaded', function () {
+        const jenis = document.getElementById('ubah-jenis');
+        const atur = function () {
+            document.querySelectorAll('#formUbahIzin [data-ubah-izin]').forEach(function (el) {
+                const aktif = el.dataset.ubahIzin === jenis.value;
+                el.classList.toggle('d-none', ! aktif);
+                el.querySelectorAll('input').forEach((i) => { i.disabled = ! aktif; });
+            });
+            document.getElementById('ubah-tanggal-selesai').required = jenis.value === 'harian';
+            document.getElementById('ubah-jam-keluar').required = jenis.value === 'jam';
+        };
+        jenis.addEventListener('change', atur);
+        atur();
+    });
+</script>

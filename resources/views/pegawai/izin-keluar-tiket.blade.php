@@ -23,8 +23,8 @@
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid">
-        <x-page-header title="Tiket Izin Keluar" eyebrow="Izin Keluar" class="tiket-tak-cetak"
-            :back="$milikSendiri ? route('pegawai.izin-keluar') : route('admin.izin-keluar.show', $izin)" :back-label="$milikSendiri ? 'Izin Keluar' : 'Detail Izin'">
+        <x-page-header title="Tiket Izin Keluar" eyebrow="Izin" class="tiket-tak-cetak"
+            :back="$milikSendiri ? route('pegawai.izin-keluar') : route('admin.izin-keluar.show', $izin)" :back-label="$milikSendiri ? 'Izin' : 'Detail Izin'">
             <x-slot:actions>
                 <x-button variant="secondary" icon="bi-printer" data-cetak-tiket>Cetak Salinan</x-button>
                 <x-button icon="bi-arrows-fullscreen" data-layar-penuh>Layar Penuh</x-button>

@@ -8,9 +8,11 @@ use App\Models\User;
 use App\Support\ExcelExporter;
 use App\Support\FilterTanggal;
 use App\Support\HitungStatus;
+use App\Support\Kalender;
 use App\Support\Notifikasi;
 use App\Support\PengajuanWorkflow;
 use App\Support\Urutan;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,7 +20,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
-/** Persetujuan izin keluar saat jam kerja (alur sama dengan cuti: atasan langsung → Kepala SDM). */
+/** Persetujuan izin (beberapa jam / tidak masuk harian); alur sama dengan cuti: atasan langsung → Kepala SDM. */
 class IzinKeluarController extends Controller
 {
     public function index(Request $request): View
@@ -54,9 +56,12 @@ class IzinKeluarController extends Controller
             $i->dataPegawai?->nama_lengkap,
             $i->dataPegawai?->nip,
             $i->unit_kerja,
+            $i->jenisLabel(),
             optional($i->tanggal)->format('d-m-Y'),
-            substr((string) $i->jam_keluar, 0, 5),
-            $i->tidakKembali() ? 'Tidak kembali' : substr((string) $i->jam_kembali, 0, 5),
+            $i->tanggalAkhir()->format('d-m-Y'),
+            $i->isHarian() ? $i->lama_hari : null,
+            $i->isHarian() ? '-' : substr((string) $i->jam_keluar, 0, 5),
+            $i->isHarian() ? '-' : ($i->tidakKembali() ? 'Tidak kembali' : substr((string) $i->jam_kembali, 0, 5)),
             $i->keperluanLabel(),
             $i->alasan,
             $i->statusLabel(),
@@ -66,10 +71,10 @@ class IzinKeluarController extends Controller
             optional($i->created_at)->format('d-m-Y H:i'),
         ]);
 
-        return ExcelExporter::download(ExcelExporter::namaFile('izin-keluar'), [
-            'Nama Pegawai', 'NIP', 'Bagian', 'Tanggal', 'Jam Keluar', 'Jam Kembali', 'Keperluan', 'Alasan',
+        return ExcelExporter::download(ExcelExporter::namaFile('izin'), [
+            'Nama Pegawai', 'NIP', 'Bagian', 'Jenis Izin', 'Tanggal Mulai', 'Tanggal Selesai', 'Lama (hari kerja)', 'Jam Keluar', 'Jam Kembali', 'Keperluan', 'Alasan',
             'Status', 'Tahap Saat Ini', 'Kode Tiket', 'Catatan', 'Tanggal Pengajuan',
-        ], $rows, 'Izin Keluar');
+        ], $rows, 'Izin');
     }
 
     private function filteredQuery(Request $request)
@@ -84,6 +89,9 @@ class IzinKeluarController extends Controller
         }
         if ($request->filled('status')) {
             $query->where('status', $request->string('status'));
+        }
+        if (array_key_exists((string) $request->query('jenis'), PengajuanIzinKeluar::JENIS)) {
+            $query->where('jenis', $request->query('jenis'));
         }
         // Rentang tanggal (urutan terbalik ditukar, tanggal tidak sah diabaikan).
         FilterTanggal::terapkan($query, 'tanggal', $request);
@@ -100,9 +108,11 @@ class IzinKeluarController extends Controller
         $updates = PengajuanWorkflow::setujui($approver, $izinKeluar);
         Notifikasi::pengajuanDiproses($izinKeluar);
 
-        return redirect()->route('admin.izin-keluar.index')->with('success', $updates['current_level'] === null
-            ? 'Izin keluar disetujui. Tiket keluar sudah terbit untuk pegawai.'
-            : 'Izin keluar disetujui dan ' . PengajuanWorkflow::keteranganLanjut($izinKeluar) . '.');
+        return redirect()->route('admin.izin-keluar.index')->with('success', match (true) {
+            $updates['current_level'] !== null => 'Izin disetujui dan ' . PengajuanWorkflow::keteranganLanjut($izinKeluar) . '.',
+            $izinKeluar->isHarian() => 'Izin tidak masuk disetujui dan tercatat di absensi pegawai.',
+            default => 'Izin disetujui. Tiket keluar sudah terbit untuk pegawai.',
+        });
     }
 
     public function reject(Request $request, PengajuanIzinKeluar $izinKeluar): RedirectResponse
@@ -122,28 +132,37 @@ class IzinKeluarController extends Controller
         ]);
         Notifikasi::pengajuanDiproses($izinKeluar);
 
-        return redirect()->route('admin.izin-keluar.index')->with('success', 'Izin keluar ditolak.');
+        return redirect()->route('admin.izin-keluar.index')->with('success', 'Izin ditolak.');
     }
 
     /** Admin: ubah langsung data & status tanpa mengikuti tahapan persetujuan. */
     public function ubahAdmin(Request $request, PengajuanIzinKeluar $izinKeluar): RedirectResponse
     {
         $tidakKembali = $request->boolean('tidak_kembali');
+        $harian = $request->input('jenis') === PengajuanIzinKeluar::JENIS_HARIAN;
         $v = $request->validate([
             'status' => ['required', Rule::in([PengajuanIzinKeluar::STATUS_PENDING, PengajuanIzinKeluar::STATUS_APPROVED, PengajuanIzinKeluar::STATUS_REJECTED])],
             'current_level' => ['nullable', 'required_if:status,pending', Rule::in(array_keys(PengajuanWorkflow::pilihanTahapAdmin($izinKeluar)))],
+            'jenis' => ['required', Rule::in(array_keys(PengajuanIzinKeluar::JENIS))],
             'tanggal' => ['required', 'date'],
-            'jam_keluar' => ['required', 'date_format:H:i'],
-            'jam_kembali' => [$tidakKembali ? 'nullable' : 'required', 'date_format:H:i', 'after:jam_keluar'],
+            'tanggal_selesai' => [$harian ? 'required' : 'nullable', 'date', 'after_or_equal:tanggal'],
+            'jam_keluar' => [$harian ? 'nullable' : 'required', 'date_format:H:i'],
+            'jam_kembali' => [$harian || $tidakKembali ? 'nullable' : 'required', 'date_format:H:i', 'after:jam_keluar'],
             'keperluan' => ['required', Rule::in(array_keys(PengajuanIzinKeluar::KEPERLUAN))],
             'alasan' => ['required', 'string', 'max:500'],
             'catatan_admin' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        // Kolom milik jenis lain dikosongkan; lama izin tidak masuk dihitung ulang dalam hari kerja.
+        $kolomJenis = $harian
+            ? ['jam_keluar' => null, 'jam_kembali' => null, 'kode_tiket' => null,
+                'lama_hari' => Kalender::jumlahHariKerja(Carbon::parse($v['tanggal']), Carbon::parse($v['tanggal_selesai']))]
+            : ['tanggal_selesai' => null, 'lama_hari' => null, 'jam_kembali' => $tidakKembali ? null : $v['jam_kembali']];
+
         $statusLama = $izinKeluar->status;
         $izinKeluar->update([
             ...$v,
-            'jam_kembali' => $tidakKembali ? null : $v['jam_kembali'],
+            ...$kolomJenis,
             ...PengajuanWorkflow::statusAdmin($izinKeluar, $v['status'], $v['current_level'] ?? null, Auth::user()),
         ]);
 
@@ -151,7 +170,7 @@ class IzinKeluarController extends Controller
             Notifikasi::pengajuanDiproses($izinKeluar);
         }
 
-        return back()->with('success', 'Izin keluar diperbarui langsung oleh Admin.');
+        return back()->with('success', 'Izin diperbarui langsung oleh Admin.');
     }
 
     public function destroy(PengajuanIzinKeluar $izinKeluar): RedirectResponse
@@ -159,6 +178,6 @@ class IzinKeluarController extends Controller
         $nama = $izinKeluar->dataPegawai?->nama_lengkap;
         $izinKeluar->delete();
 
-        return redirect()->route('admin.izin-keluar.index')->with('success', "Izin keluar {$nama} dihapus.");
+        return redirect()->route('admin.izin-keluar.index')->with('success', "Izin {$nama} dihapus.");
     }
 }

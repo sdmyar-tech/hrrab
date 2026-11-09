@@ -15,7 +15,7 @@
         User::ROLE_GM => 'Menyetujui pengajuan pegawai di bidangnya.',
         User::ROLE_KEPALA_BAGIAN => 'Kepala bagian: menyetujui pengajuan anggota bagiannya.',
         User::ROLE_KEPALA_SDM => 'Mengelola kepegawaian & absensi, persetujuan tahap akhir.',
-        User::ROLE_STAFF => 'Pegawai: mengajukan cuti, lembur & izin keluar.',
+        User::ROLE_STAFF => 'Pegawai: mengajukan cuti, lembur & izin.',
         User::ROLE_ADMIN => 'Pengelola sistem dengan akses penuh.',
     ];
     $labelJenis = ['bawaan' => 'Bawaan', 'disesuaikan' => 'Disesuaikan', 'kustom' => 'Kustom'];
