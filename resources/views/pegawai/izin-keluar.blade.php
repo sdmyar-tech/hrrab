@@ -97,7 +97,7 @@
                         <div data-bagian-izin="jam">
                             <div class="row gx-3">
                                 <div class="col-6"><x-input name="jam_keluar" id="jam_keluar" label="Jam Keluar" required data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 10:00"
-                                    :help="'Paling awal jam saat ini.'" /></div>
+                                    :help="'Paling awal jam saat ini (format 24 jam).'" /></div>
                                 <div class="col-6"><x-input name="jam_kembali" id="jam_kembali" label="Perkiraan Kembali" data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 11:30" /></div>
                             </div>
                             <div class="mb-3">
@@ -258,6 +258,26 @@
             if (tidakKembali.checked) jamKembali.value = '';
         }
 
+        // Izin keluar hari ini: jam keluar paling awal = jam saat ini (selaras server, termasuk kelonggaran).
+        const jamKeluar = document.getElementById('jam_keluar');
+        const HARI_INI = tanggal.dataset.minNormal;
+        const KELONGGARAN = @json($kelonggaranMenit);
+        const keJam = (d) => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+
+        function aturMinKeluar() {
+            if (jenisAktif() !== 'jam' || tanggal.value !== HARI_INI) {
+                delete jamKeluar.dataset.jamMin;
+            } else {
+                const kini = new Date();
+                const batas = new Date(kini.getTime() - KELONGGARAN * 60000);
+                // Lewat tengah malam: batas tidak mundur ke kemarin.
+                jamKeluar.dataset.jamMin = batas.getDate() === kini.getDate() ? keJam(batas) : '00:00';
+                if (! jamKeluar.value) jamKeluar.value = keJam(kini);
+            }
+            // Validasi ulang via jam-24, hanya bila jam sudah lengkap (jangan ganggu yang sedang mengetik).
+            if (/^\d{2}:\d{2}$/.test(jamKeluar.value)) jamKeluar.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
         // Bagian yang tidak dipakai disembunyikan & dinonaktifkan (tidak ikut terkirim/divalidasi).
         function aturJenis() {
             const jenis = jenisAktif();
@@ -279,6 +299,7 @@
             if (tanggal.value < tanggal.min) tanggal.value = tanggal.min;
             tanggalSelesai.min = tanggal.value;
             aturKembali();
+            aturMinKeluar();
             if (harian) { isiSelesaiDariJumlah(); updateLama(); }
         }
 
@@ -290,7 +311,10 @@
             if (jumlahHari.value) isiSelesaiDariJumlah();
             else if (! tanggalSelesai.value || tanggalSelesai.value < tanggal.value) tanggalSelesai.value = tanggal.value;
             updateLama();
+            aturMinKeluar();
         });
+        // Jam terus berjalan: batas paling awal ikut diperbarui selama halaman terbuka.
+        setInterval(aturMinKeluar, 30000);
         jumlahHari.addEventListener('input', function () { isiSelesaiDariJumlah(); updateLama(); });
         tanggalSelesai.addEventListener('change', function () {
             if (tanggalSelesai.value < tanggal.value) tanggalSelesai.value = tanggal.value;

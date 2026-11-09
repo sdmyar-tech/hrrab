@@ -3,6 +3,7 @@
     perangkat (sering tampil AM/PM). Pakai: <input type="text" data-jam24 ...>.
     - Hanya angka; titik dua disisipkan otomatis (1730 → 17:30).
     - Saat selesai diisi: dilengkapi (7 → 07:00, 730 → 07:30, 17.30 → 17:30) lalu divalidasi.
+    - data-jam-min="HH:MM": tolak jam sebelum batas itu.
     Event delegation, jadi isian yang muncul belakangan ikut tertangani.
 --}}
 <script>
@@ -28,8 +29,12 @@
         return jam.padStart(2, '0') + ':' + menit;
     }
 
+    // data-jam-min="HH:MM" (opsional): batas jam paling awal; string HH:MM aman dibandingkan langsung.
     function periksa(el) {
-        el.setCustomValidity(el.value && !VALID.test(el.value) ? PESAN : '');
+        let pesan = '';
+        if (el.value && !VALID.test(el.value)) pesan = PESAN;
+        else if (el.value && el.dataset.jamMin && el.value < el.dataset.jamMin) pesan = 'Paling awal jam ' + el.dataset.jamMin + '.';
+        el.setCustomValidity(pesan);
     }
 
     // Saat mengetik: hanya angka & satu pemisah; tanpa pemisah, titik dua disisipkan setelah 2 digit.
