@@ -61,7 +61,7 @@
                         <x-select name="keperluan" id="keperluan" label="Keperluan" :options="$keperluanOptions" placeholder="Pilih keperluan" required />
 
                         <div class="row gx-3">
-                            <div class="col-sm-5">
+                            <div class="col-sm-4">
                                 <x-input name="tanggal" id="tanggal" type="date" :value="now()->toDateString()" required
                                     label="Tanggal" :min="now()->toDateString()" :max="now()->addDays($maksHari)->toDateString()"
                                     data-min-normal="{{ now()->toDateString() }}" data-min-sakit="{{ now()->subDays($maksMundurSakit)->toDateString() }}"
@@ -69,9 +69,9 @@
                                     :help="'Paling lambat ' . $maksHari . ' hari ke depan.'" />
                             </div>
                             {{-- Izin tidak masuk: jumlah hari (bantuan isi, tidak dikirim) ↔ tanggal selesai, hari kerja saja. --}}
-                            <div class="col-sm-2" data-bagian-izin="harian">
+                            <div class="col-sm-3" data-bagian-izin="harian">
                                 <div class="hr-field">
-                                    <label for="jumlah_hari" class="form-label">Jumlah Hari</label>
+                                    <label for="jumlah_hari" class="form-label text-nowrap">Jumlah Hari</label>
                                     <input type="number" id="jumlah_hari" class="form-control" min="1" max="14" step="1" placeholder="Contoh: 2" inputmode="numeric">
                                 </div>
                             </div>

@@ -82,7 +82,7 @@
                         </div>
 
                         <div class="row gx-3">
-                            <div class="col-sm-5">
+                            <div class="col-sm-4">
                                 <div class="hr-field">
                                     <label for="tanggal_mulai" class="form-label required">Tanggal Mulai</label>
                                     <input type="date" name="tanggal_mulai" id="tanggal_mulai"
@@ -98,9 +98,9 @@
                                 </div>
                             </div>
                             {{-- Bantuan isi saja (tidak dikirim): server menghitung ulang dari tanggal mulai–selesai. --}}
-                            <div class="col-sm-2">
+                            <div class="col-sm-3">
                                 <div class="hr-field">
-                                    <label for="jumlah_hari" class="form-label">Jumlah Hari</label>
+                                    <label for="jumlah_hari" class="form-label text-nowrap">Jumlah Hari</label>
                                     <input type="number" id="jumlah_hari" class="form-control" min="1" max="365" step="1"
                                         placeholder="Contoh: 2" inputmode="numeric">
                                 </div>
