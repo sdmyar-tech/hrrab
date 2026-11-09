@@ -19,6 +19,7 @@ use App\Support\KelompokPegawai;
 use App\Support\PegawaiKeluar;
 use App\Support\PengajuanWorkflow;
 use App\Support\PenugasanService;
+use App\Support\PesanGalat;
 use App\Support\Urutan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -217,9 +218,7 @@ class PegawaiController extends Controller
                 return $pegawai;
             });
         } catch (\Throwable $e) {
-            report($e);
-
-            return redirect()->back()->withInput()->with('error', 'Gagal menyimpan data pegawai. Silakan coba lagi. (' . $e->getMessage() . ')');
+            return redirect()->back()->withInput()->with('error', PesanGalat::untukPengguna($e, 'Gagal menyimpan data pegawai.'));
         }
 
         return redirect()->route('admin.pegawai.show', $pegawai->id)->with('success', 'Data pegawai berhasil ditambahkan.');
@@ -406,9 +405,7 @@ class PegawaiController extends Controller
         } catch (ValidationException $e) {
             throw $e; // mis. mutasi ditolak (masih ada mutasi terjadwal): tampil di isian, bukan galat umum
         } catch (\Throwable $e) {
-            report($e);
-
-            return redirect()->back()->withInput()->with('error', 'Gagal memperbarui data pegawai. Silakan coba lagi. (' . $e->getMessage() . ')');
+            return redirect()->back()->withInput()->with('error', PesanGalat::untukPengguna($e, 'Gagal memperbarui data pegawai.'));
         }
 
         if ($keluar || $batalKeluar) {
@@ -446,9 +443,7 @@ class PegawaiController extends Controller
                 $pegawai->delete();
             });
         } catch (\Throwable $e) {
-            report($e);
-
-            return redirect()->back()->with('error', 'Gagal menghapus data pegawai. Silakan coba lagi. (' . $e->getMessage() . ')');
+            return redirect()->back()->with('error', PesanGalat::untukPengguna($e, 'Gagal menghapus data pegawai.'));
         }
 
         return redirect()->route('admin.pegawai.index')->with('success', 'Data pegawai berhasil dihapus.');

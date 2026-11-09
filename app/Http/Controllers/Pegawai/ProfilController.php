@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DataPegawai;
 use App\Models\User;
 use App\Support\PenugasanService;
+use App\Support\PesanGalat;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -242,11 +243,9 @@ class ProfilController extends Controller
                 }
             });
         } catch (\Throwable $e) {
-            report($e);
-
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
+                ->with('error', PesanGalat::untukPengguna($e, 'Gagal menyimpan data.'));
         }
 
         $user->refresh()->load('dataPegawai.kepegawaian', 'dataPegawai.kontakDarurat', 'dataPegawai.dokumen');
