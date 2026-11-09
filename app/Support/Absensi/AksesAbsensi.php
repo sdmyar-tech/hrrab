@@ -30,8 +30,9 @@ class AksesAbsensi
             return [];
         }
 
-        // Kepala Bagian: unit yang dipimpin; pegawai lain yang dicentang hak lihat (role kustom / centang akun): unit tempatnya bertugas.
-        return $user->isKepalaBagian() ? $user->unitsDipimpin() : $user->unitsAktif();
+        // Kepala Bagian & GM yang merangkap kepala: unit yang dipimpin; pegawai lain yang dicentang hak lihat
+        // (role kustom / centang akun): unit tempatnya bertugas.
+        return $user->isKepalaBagian() || $user->gmRangkapKepala() ? $user->unitsDipimpin() : $user->unitsAktif();
     }
 
     /** Pegawai aktif yang ikut absensi & terlihat oleh user (pegawai keluar/Tidak Aktif tidak dinilai, agar tidak jadi Alpa). */

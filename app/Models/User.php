@@ -141,7 +141,17 @@ class User extends Authenticatable
         return $this->izinMemo = array_values(array_unique([
             ...($kustom ? $kustom->hakAksesEfektif() : Role::hakAksesBawaan((string) $this->role)),
             ...$this->izinTambahan(),
+            ...($this->gmRangkapKepala() ? Role::hakAksesBawaan(self::ROLE_KEPALA_BAGIAN) : []),
         ]));
+    }
+
+    /**
+     * Peran rangkap: GM yang juga memimpin bagian (penugasan Kepala/Koordinator di data pegawai) memegang juga hak
+     * role Kepala Bagian (centang Master Role) — bisa mengajukan & melihat data bagiannya seperti kepala bagian lain.
+     */
+    public function gmRangkapKepala(): bool
+    {
+        return $this->isGm() && $this->data_pegawai_id && $this->penugasanAktif()->contains(fn (Penugasan $p) => $p->isKepala());
     }
 
     /** @return list<string> permission yang dicentang langsung di akun ini (di luar role) */
