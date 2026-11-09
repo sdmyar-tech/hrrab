@@ -15,11 +15,11 @@
             </div>
             <div class="col-sm-6">
                 <label class="form-label" for="ubah-jam-mulai">Jam Mulai</label>
-                <input type="time" name="jam_mulai" id="ubah-jam-mulai" class="form-control form-control-sm" value="{{ old('jam_mulai', substr((string) $pengajuanLembur->jam_mulai, 0, 5)) }}" required>
+                <input type="text" data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 16:00" name="jam_mulai" id="ubah-jam-mulai" class="form-control form-control-sm" value="{{ old('jam_mulai', substr((string) $pengajuanLembur->jam_mulai, 0, 5)) }}" required>
             </div>
             <div class="col-sm-6">
                 <label class="form-label" for="ubah-jam-selesai">Jam Selesai</label>
-                <input type="time" name="jam_selesai" id="ubah-jam-selesai" class="form-control form-control-sm" value="{{ old('jam_selesai', substr((string) $pengajuanLembur->jam_selesai, 0, 5)) }}" required>
+                <input type="text" data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 20:30" name="jam_selesai" id="ubah-jam-selesai" class="form-control form-control-sm" value="{{ old('jam_selesai', substr((string) $pengajuanLembur->jam_selesai, 0, 5)) }}" required>
             </div>
             <div class="col-12">
                 <label class="form-label" for="ubah-uraian">Uraian Tugas</label>

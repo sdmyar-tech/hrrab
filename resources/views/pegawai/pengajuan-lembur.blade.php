@@ -60,8 +60,9 @@
                             placeholder="Contoh: rekap dokumen akreditasi untuk audit besok pagi" />
 
                         <div class="row gx-3">
-                            <div class="col-6"><x-input name="jam_mulai" id="jam_mulai" type="time" label="Jam Mulai" required /></div>
-                            <div class="col-6"><x-input name="jam_selesai" id="jam_selesai" type="time" label="Jam Selesai" required /></div>
+                            {{-- Teks + data-jam24, bukan type="time": native ikut locale perangkat (AM/PM). --}}
+                            <div class="col-6"><x-input name="jam_mulai" id="jam_mulai" label="Jam Mulai" required data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 16:00" /></div>
+                            <div class="col-6"><x-input name="jam_selesai" id="jam_selesai" label="Jam Selesai" required data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 20:30" /></div>
                         </div>
 
                         <div class="hr-hitungan mb-3" aria-live="polite">
@@ -149,7 +150,8 @@
         }
 
         function updateJumlahJam() {
-            if (!jamMulaiInput.value || !jamSelesaiInput.value) {
+            const lengkap = /^\d{2}:\d{2}$/;
+            if (!lengkap.test(jamMulaiInput.value) || !lengkap.test(jamSelesaiInput.value)) {
                 jumlahJamInput.value = '';
                 return;
             }
@@ -168,8 +170,10 @@
         }
 
         tanggalInput.addEventListener('change', updateHari);
-        jamMulaiInput.addEventListener('change', updateJumlahJam);
-        jamSelesaiInput.addEventListener('change', updateJumlahJam);
+        ['input', 'change'].forEach(function (ev) {
+            jamMulaiInput.addEventListener(ev, updateJumlahJam);
+            jamSelesaiInput.addEventListener(ev, updateJumlahJam);
+        });
         if (unitInput) unitInput.addEventListener('change', updateAlur);
 
         updateHari();

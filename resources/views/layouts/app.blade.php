@@ -55,6 +55,7 @@
     @include('layouts.partials.js')
     @include('layouts.partials.sweetalert', ['pakaiBanner' => true])
     @include('layouts.partials.tanpa-spasi')
+    @include('layouts.partials.jam-24')
     @include('layouts.partials.geser-tab')
 </body>
 
