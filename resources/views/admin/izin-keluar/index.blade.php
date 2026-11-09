@@ -10,7 +10,7 @@
 <main class="dashboard-content">
     <div class="container-fluid">
         <x-page-header title="Izin" eyebrow="Data Pengajuan"
-            subtitle="Setujui atau tolak izin pegawai. Izin beberapa jam mendapat tiket untuk security; izin tidak masuk tercatat di absensi.">
+            subtitle="Setujui atau tolak izin pegawai. Izin keluar mendapat tiket untuk security; izin telat masuk & tidak masuk tercatat di absensi.">
             <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'admin.izin-keluar.export'])
             </x-slot:actions>

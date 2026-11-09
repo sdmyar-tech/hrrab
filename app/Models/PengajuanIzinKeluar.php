@@ -11,9 +11,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
- * Izin pegawai (nama tabel/route lama "izin keluar" dipertahankan). Dua jenis:
- *  - jam    : keluar beberapa jam saat jam kerja; setelah disetujui akhir mendapat kode_tiket untuk security gerbang.
- *  - harian : tidak masuk 1 hari atau lebih (lama_hari = hari kerja); setelah disetujui tercatat Izin/Sakit/Dinas Luar di absensi.
+ * Izin pegawai (nama tabel/route lama "izin keluar" dipertahankan). Tiga jenis:
+ *  - jam    : Izin Keluar saat jam kerja (jam_keluar–jam_kembali); disetujui akhir → kode_tiket untuk security gerbang.
+ *  - telat  : Izin Telat Masuk; jam_kembali = perkiraan/jam tiba. Disetujui → telat sampai jam itu dinilai "Telat Izin".
+ *  - harian : Izin Tidak Masuk 1 hari atau lebih (lama_hari = hari kerja); disetujui → Izin/Sakit/Dinas Luar di absensi.
  * Disetujui berjenjang (PengajuanWorkflow, sama seperti cuti).
  */
 class PengajuanIzinKeluar extends Model
@@ -30,11 +31,14 @@ class PengajuanIzinKeluar extends Model
 
     public const JENIS_JAM = 'jam';
 
+    public const JENIS_TELAT = 'telat';
+
     public const JENIS_HARIAN = 'harian';
 
     public const JENIS = [
-        self::JENIS_JAM => 'Izin beberapa jam',
-        self::JENIS_HARIAN => 'Izin tidak masuk',
+        self::JENIS_JAM => 'Izin Keluar',
+        self::JENIS_TELAT => 'Izin Telat Masuk',
+        self::JENIS_HARIAN => 'Izin Tidak Masuk',
     ];
 
     public const KEPERLUAN = [
@@ -44,6 +48,9 @@ class PengajuanIzinKeluar extends Model
         'berobat' => 'Berobat',
         'keluarga' => 'Urusan keluarga',
     ];
+
+    /** Keperluan yang hanya boleh untuk jenis tertentu (lainnya: semua jenis). Sakit tidak untuk Izin Keluar. */
+    public const KEPERLUAN_KHUSUS = ['sakit' => [self::JENIS_TELAT, self::JENIS_HARIAN]];
 
     /** Status absensi (PenilaianAbsensi) untuk hari izin tidak masuk yang disetujui, menurut keperluan. */
     public const STATUS_ABSENSI = ['sakit' => 'sakit', 'dinas' => 'dinas_luar'];
@@ -86,9 +93,9 @@ class PengajuanIzinKeluar extends Model
 
     protected static function booted(): void
     {
-        // Kode tiket (hanya izin beberapa jam) dibuat saat disetujui akhir (lewat tahapan maupun ubah langsung Admin).
+        // Kode tiket (hanya Izin Keluar) dibuat saat disetujui akhir (lewat tahapan maupun ubah langsung Admin).
         static::saving(function (self $izin) {
-            if ($izin->status === self::STATUS_APPROVED && ! $izin->kode_tiket && ! $izin->isHarian()) {
+            if ($izin->status === self::STATUS_APPROVED && ! $izin->kode_tiket && $izin->isKeluar()) {
                 do {
                     $kode = 'IK-' . $izin->tanggal->format('ymd') . '-' . Str::upper(Str::random(4));
                 } while (self::where('kode_tiket', $kode)->exists());
@@ -160,21 +167,44 @@ class PengajuanIzinKeluar extends Model
         return $this->jenis === self::JENIS_HARIAN;
     }
 
+    public function isTelat(): bool
+    {
+        return $this->jenis === self::JENIS_TELAT;
+    }
+
+    /** Izin Keluar (jenis kosong = data lama, juga Izin Keluar). */
+    public function isKeluar(): bool
+    {
+        return ! $this->isHarian() && ! $this->isTelat();
+    }
+
+    /** @return array<string, string> pilihan keperluan yang sah untuk satu jenis izin */
+    public static function keperluanUntuk(string $jenis): array
+    {
+        return array_filter(self::KEPERLUAN, fn ($label, $kode) => in_array($jenis, self::KEPERLUAN_KHUSUS[$kode] ?? [$jenis], true), ARRAY_FILTER_USE_BOTH);
+    }
+
+    /** "09:30" — jam tiba untuk Izin Telat Masuk. */
+    public function jamTiba(): ?string
+    {
+        return $this->isTelat() && $this->jam_kembali ? substr((string) $this->jam_kembali, 0, 5) : null;
+    }
+
     public function jenisLabel(): string
     {
         return self::JENIS[$this->jenis] ?? self::JENIS[self::JENIS_JAM];
     }
 
-    /** Tanggal terakhir izin (izin beberapa jam: tanggal itu sendiri). */
+    /** Tanggal terakhir izin (izin keluar/telat: tanggal itu sendiri). */
     public function tanggalAkhir(): Carbon
     {
         return ($this->isHarian() && $this->tanggal_selesai ? $this->tanggal_selesai : $this->tanggal)->copy();
     }
 
-    /** Izin beberapa jam punya tiket gerbang; izin tidak masuk tidak. */
+    /** Hanya Izin Keluar yang punya tiket gerbang. */
     public function punyaTiket(): bool
     {
-        return $this->isApproved() && ! $this->isHarian();
+        return $this->isApproved() && $this->isKeluar();
     }
 
     /** Status di absensi untuk hari izin tidak masuk: sakit | dinas_luar | izin. */
@@ -193,14 +223,17 @@ class PengajuanIzinKeluar extends Model
 
     public function tidakKembali(): bool
     {
-        return ! $this->isHarian() && $this->jam_kembali === null;
+        return $this->isKeluar() && $this->jam_kembali === null;
     }
 
-    /** "08:30 – 10:00", "08:30 – tidak kembali", atau (izin tidak masuk) "Tidak masuk · 2 hari kerja". */
+    /** "08:30 – 10:00", "08:30 – tidak kembali", "Telat masuk · tiba 09:30", atau "Tidak masuk · 2 hari kerja". */
     public function jamLabel(): string
     {
         if ($this->isHarian()) {
             return 'Tidak masuk · ' . ($this->lama_hari ?? 1) . ' hari kerja';
+        }
+        if ($this->isTelat()) {
+            return 'Telat masuk · tiba ' . $this->jamTiba();
         }
 
         return substr((string) $this->jam_keluar, 0, 5) . ' – ' . ($this->tidakKembali() ? 'tidak kembali' : substr((string) $this->jam_kembali, 0, 5));

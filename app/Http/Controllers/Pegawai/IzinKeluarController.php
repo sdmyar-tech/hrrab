@@ -20,14 +20,17 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
-/** Izin pegawai: beberapa jam (bertiket untuk security gerbang) atau tidak masuk harian (tercatat di absensi). */
+/** Izin pegawai: Izin Keluar (bertiket untuk security gerbang), Izin Telat Masuk, dan Izin Tidak Masuk (tercatat di absensi). */
 class IzinKeluarController extends Controller
 {
     /** Izin bisa diajukan paling jauh sekian hari ke depan. */
     private const MAKS_HARI_KE_DEPAN = 14;
 
-    /** Izin beberapa jam boleh diajukan belakangan, paling lambat sekian jam setelah jam keluar. */
+    /** Izin telat boleh diajukan belakangan, paling lambat sekian jam setelah jam tiba. */
     private const MAKS_JAM_MUNDUR = 12;
+
+    /** Izin keluar: kelonggaran menit untuk waktu mengisi formulir (jam keluar paling awal = saat ini). */
+    private const KELONGGARAN_MENIT = 5;
 
     /** Izin sakit boleh diajukan paling lambat sekian hari setelah tanggal sakit. */
     private const MAKS_HARI_MUNDUR_SAKIT = 3;
@@ -59,6 +62,7 @@ class IzinKeluarController extends Controller
             'maksHari' => self::MAKS_HARI_KE_DEPAN,
             'maksMundurSakit' => self::MAKS_HARI_MUNDUR_SAKIT,
             'maksJamMundur' => self::MAKS_JAM_MUNDUR,
+            'kelonggaranMenit' => self::KELONGGARAN_MENIT,
             'rute' => PengajuanWorkflow::rute($user, $user->unitKerja()),
         ]);
     }
@@ -73,8 +77,12 @@ class IzinKeluarController extends Controller
             return redirect()->route('pegawai.izin-keluar')->with('error', 'Data pegawai Anda belum tersedia. Hubungi bagian SDM.');
         }
 
-        $harian = $request->input('jenis') === PengajuanIzinKeluar::JENIS_HARIAN;
-        $data = $harian ? $this->dataHarian($request, $pegawai) : $this->dataJam($request, $pegawai);
+        $jenis = $request->input('jenis');
+        $data = match ($jenis) {
+            PengajuanIzinKeluar::JENIS_HARIAN => $this->dataHarian($request, $pegawai),
+            PengajuanIzinKeluar::JENIS_TELAT => $this->dataTelat($request, $pegawai),
+            default => $this->dataJam($request, $pegawai),
+        };
         if (is_string($data)) {
             return back()->withInput()->with('error', $data);
         }
@@ -92,40 +100,52 @@ class IzinKeluarController extends Controller
         ]);
         Notifikasi::pengajuanMenunggu($izin);
 
-        return redirect()->route('pegawai.izin-keluar')->with('success', 'Izin dikirim. Menunggu persetujuan ' . $izin->currentLevelLabel() . '.'
-            . ($harian ? ' Setelah disetujui, hari izin tercatat di absensi.' : ' Tiket keluar muncul setelah disetujui.'));
+        return redirect()->route('pegawai.izin-keluar')->with('success', 'Izin dikirim. Menunggu persetujuan ' . $izin->currentLevelLabel() . '.' . match ($izin->jenis) {
+            PengajuanIzinKeluar::JENIS_HARIAN => ' Setelah disetujui, hari izin tercatat di absensi.',
+            PengajuanIzinKeluar::JENIS_TELAT => ' Setelah disetujui, keterlambatan sampai jam tiba tercatat "Telat Izin" di absensi.',
+            default => ' Tiket keluar muncul setelah disetujui.',
+        });
     }
 
+    /** Aturan keperluan menurut jenis (Sakit hanya untuk telat masuk & tidak masuk). */
+    private function aturanKeperluan(string $jenis): array
+    {
+        return ['required', Rule::in(array_keys(PengajuanIzinKeluar::keperluanUntuk($jenis)))];
+    }
+
+    private const PESAN_KEPERLUAN = [
+        'keperluan.required' => 'Pilih keperluan.',
+        'keperluan.in' => 'Keperluan ini tidak tersedia untuk jenis izin yang dipilih.',
+        'alasan.required' => 'Alasan wajib diisi.',
+    ];
+
     /**
-     * Izin beberapa jam (keluar saat jam kerja, bertiket).
+     * Izin Keluar saat jam kerja (bertiket). Diajukan sebelum keluar: jam keluar paling awal = saat ini.
      *
      * @return array<string, mixed>|string  kolom siap simpan, atau pesan galat
      */
     private function dataJam(Request $request, DataPegawai $pegawai): array|string
     {
         $tidakKembali = $request->boolean('tidak_kembali');
-        $batasMundur = now()->subHours(self::MAKS_JAM_MUNDUR);
         $validated = $request->validate([
-            'tanggal' => ['required', 'date', 'after_or_equal:' . $batasMundur->toDateString(), 'before_or_equal:' . now()->addDays(self::MAKS_HARI_KE_DEPAN)->toDateString()],
+            'tanggal' => ['required', 'date', 'after_or_equal:today', 'before_or_equal:' . now()->addDays(self::MAKS_HARI_KE_DEPAN)->toDateString()],
             'jam_keluar' => ['required', 'date_format:H:i'],
             'jam_kembali' => [$tidakKembali ? 'nullable' : 'required', 'date_format:H:i', 'after:jam_keluar'],
-            'keperluan' => ['required', Rule::in(array_keys(PengajuanIzinKeluar::KEPERLUAN))],
+            'keperluan' => $this->aturanKeperluan(PengajuanIzinKeluar::JENIS_JAM),
             'alasan' => ['required', 'string', 'max:500'],
         ], [
-            'tanggal.after_or_equal' => 'Izin beberapa jam paling lambat diajukan ' . self::MAKS_JAM_MUNDUR . ' jam setelah jam keluar.',
+            'tanggal.after_or_equal' => 'Izin keluar tidak bisa untuk tanggal yang sudah lewat.',
             'tanggal.before_or_equal' => 'Izin paling jauh diajukan ' . self::MAKS_HARI_KE_DEPAN . ' hari ke depan.',
             'jam_keluar.required' => 'Jam keluar wajib diisi.',
             'jam_kembali.required' => 'Isi perkiraan jam kembali, atau centang "Tidak kembali lagi hari ini".',
             'jam_kembali.after' => 'Jam kembali harus setelah jam keluar.',
-            'keperluan.required' => 'Pilih keperluan.',
-            'alasan.required' => 'Alasan wajib diisi.',
-        ]);
+        ] + self::PESAN_KEPERLUAN);
         $jamKembali = $tidakKembali ? null : $validated['jam_kembali'];
 
-        // Boleh dilaporkan belakangan (mis. ban pecah, baru sempat izin setelah kembali) paling lama 12 jam setelah jam keluar.
-        if (Carbon::parse("{$validated['tanggal']} {$validated['jam_keluar']}")->lt($batasMundur)) {
-            throw ValidationException::withMessages(['jam_keluar' => 'Izin beberapa jam paling lambat diajukan ' . self::MAKS_JAM_MUNDUR
-                . ' jam setelah jam keluar (paling awal ' . $batasMundur->translatedFormat('d M Y H:i') . ').']);
+        // Jam keluar paling awal = jam saat ini (kelonggaran beberapa menit untuk waktu mengisi formulir).
+        $palingAwal = now()->subMinutes(self::KELONGGARAN_MENIT)->startOfMinute();
+        if (Carbon::parse("{$validated['tanggal']} {$validated['jam_keluar']}")->lt($palingAwal)) {
+            throw ValidationException::withMessages(['jam_keluar' => 'Jam keluar paling awal jam saat ini (' . now()->format('H:i') . '). Izin keluar diajukan sebelum keluar.']);
         }
 
         // Tidak boleh tumpang tindih dengan izin lain (menunggu/disetujui): izin tidak masuk di tanggal itu, atau jam yang bertumpuk.
@@ -150,6 +170,46 @@ class IzinKeluarController extends Controller
     }
 
     /**
+     * Izin Telat Masuk: jam_kembali = (perkiraan) jam tiba. Boleh dilaporkan belakangan paling lambat 12 jam
+     * setelah jam tiba (mis. ban pecah di jalan, baru sempat izin setelah sampai kantor).
+     *
+     * @return array<string, mixed>|string  kolom siap simpan, atau pesan galat
+     */
+    private function dataTelat(Request $request, DataPegawai $pegawai): array|string
+    {
+        $batasMundur = now()->subHours(self::MAKS_JAM_MUNDUR);
+        $validated = $request->validate([
+            'tanggal' => ['required', 'date', 'after_or_equal:' . $batasMundur->toDateString(), 'before_or_equal:' . now()->addDays(self::MAKS_HARI_KE_DEPAN)->toDateString()],
+            'jam_tiba' => ['required', 'date_format:H:i'],
+            'keperluan' => $this->aturanKeperluan(PengajuanIzinKeluar::JENIS_TELAT),
+            'alasan' => ['required', 'string', 'max:500'],
+        ], [
+            'tanggal.after_or_equal' => 'Izin telat paling lambat diajukan ' . self::MAKS_JAM_MUNDUR . ' jam setelah jam tiba.',
+            'tanggal.before_or_equal' => 'Izin paling jauh diajukan ' . self::MAKS_HARI_KE_DEPAN . ' hari ke depan.',
+            'jam_tiba.required' => 'Isi jam tiba (atau perkiraan jam tiba) di tempat kerja.',
+        ] + self::PESAN_KEPERLUAN);
+
+        if (Carbon::parse("{$validated['tanggal']} {$validated['jam_tiba']}")->lt($batasMundur)) {
+            throw ValidationException::withMessages(['jam_tiba' => 'Izin telat paling lambat diajukan ' . self::MAKS_JAM_MUNDUR
+                . ' jam setelah jam tiba (paling awal ' . $batasMundur->translatedFormat('d M Y H:i') . ').']);
+        }
+        // Satu izin telat per hari, dan tidak di hari yang sudah izin tidak masuk.
+        $bentrok = $pegawai->pengajuanIzinKeluars()->bertumpuk($validated['tanggal'], $validated['tanggal'])
+            ->whereIn('jenis', [PengajuanIzinKeluar::JENIS_TELAT, PengajuanIzinKeluar::JENIS_HARIAN])->exists();
+        if ($bentrok) {
+            return 'Sudah ada izin telat atau izin tidak masuk pada tanggal itu.';
+        }
+
+        return [
+            'jenis' => PengajuanIzinKeluar::JENIS_TELAT,
+            'tanggal' => $validated['tanggal'],
+            'jam_kembali' => $validated['jam_tiba'],
+            'keperluan' => $validated['keperluan'],
+            'alasan' => $validated['alasan'],
+        ];
+    }
+
+    /**
      * Izin tidak masuk 1 hari atau lebih. Lama dihitung hari kerja (Sabtu–Minggu & tanggal merah dilewati, sama seperti cuti).
      *
      * @return array<string, mixed>|string  kolom siap simpan, atau pesan galat
@@ -161,7 +221,7 @@ class IzinKeluarController extends Controller
         $validated = $request->validate([
             'tanggal' => ['required', 'date', 'after_or_equal:' . $palingAwal->toDateString(), 'before_or_equal:' . now()->addDays(self::MAKS_HARI_KE_DEPAN)->toDateString()],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal', 'before_or_equal:' . Carbon::parse((string) $request->input('tanggal'))->addDays(self::MAKS_RENTANG_HARIAN)->toDateString()],
-            'keperluan' => ['required', Rule::in(array_keys(PengajuanIzinKeluar::KEPERLUAN))],
+            'keperluan' => $this->aturanKeperluan(PengajuanIzinKeluar::JENIS_HARIAN),
             'alasan' => ['required', 'string', 'max:500'],
         ], [
             'tanggal.after_or_equal' => $request->input('keperluan') === 'sakit'
@@ -171,9 +231,7 @@ class IzinKeluarController extends Controller
             'tanggal_selesai.required' => 'Tanggal selesai wajib diisi.',
             'tanggal_selesai.after_or_equal' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
             'tanggal_selesai.before_or_equal' => 'Rentang izin tidak masuk paling panjang ' . self::MAKS_RENTANG_HARIAN . ' hari. Untuk lebih lama, ajukan cuti.',
-            'keperluan.required' => 'Pilih keperluan.',
-            'alasan.required' => 'Alasan wajib diisi.',
-        ]);
+        ] + self::PESAN_KEPERLUAN);
 
         $lama = Kalender::jumlahHariKerja(Carbon::parse($validated['tanggal']), Carbon::parse($validated['tanggal_selesai']));
         if ($lama < 1) {
@@ -213,8 +271,8 @@ class IzinKeluarController extends Controller
 
         if (! $izin->punyaTiket()) {
             return redirect()->to($milikSendiri ? route('pegawai.izin-keluar') : route('admin.izin-keluar.show', $izin))
-                ->with('error', $izin->isHarian()
-                    ? 'Izin tidak masuk tidak memakai tiket keluar.'
+                ->with('error', ! $izin->isKeluar()
+                    ? $izin->jenisLabel() . ' tidak memakai tiket keluar.'
                     : 'Tiket baru tersedia setelah izin disetujui sampai tahap akhir.');
         }
 

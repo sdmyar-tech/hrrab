@@ -51,7 +51,11 @@ class KalenderController extends Controller
                 });
             PengajuanIzinKeluar::where('data_pegawai_id', $pegawai->id)->bertumpuk($awalGrid->toDateString(), $akhirGrid->toDateString())->get()
                 ->each(function (PengajuanIzinKeluar $i) use (&$agenda, $awalGrid, $akhirGrid) {
-                    $teks = $i->isHarian() ? 'Izin ' . mb_strtolower($i->keperluanLabel()) : 'Izin keluar ' . substr((string) $i->jam_keluar, 0, 5);
+                    $teks = match (true) {
+                        $i->isHarian() => 'Izin ' . mb_strtolower($i->keperluanLabel()),
+                        $i->isTelat() => 'Izin telat s/d ' . $i->jamTiba(),
+                        default => 'Izin keluar ' . substr((string) $i->jam_keluar, 0, 5),
+                    };
                     foreach (CarbonPeriod::create($i->tanggal->max($awalGrid), $i->tanggalAkhir()->min($akhirGrid)) as $t) {
                         // Izin tidak masuk hanya ditandai di hari kerja (Sabtu–Minggu/tanggal merah tidak dihitung).
                         if (! $i->isHarian() || Kalender::isHariKerja($t)) {

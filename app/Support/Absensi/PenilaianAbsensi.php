@@ -66,10 +66,11 @@ class PenilaianAbsensi
             ->get()->groupBy(fn ($l) => $l->data_pegawai_id . '|' . $l->tanggal->toDateString());
         $izin = IzinAbsensi::whereBetween('tanggal', [$dari->toDateString(), $sampai->toDateString()])
             ->get()->groupBy(fn ($z) => $z->tanggal->toDateString());
-        // Izin tidak masuk (menu Izin) yang sudah disetujui akhir.
-        $izinHarian = PengajuanIzinKeluar::whereIn('data_pegawai_id', $ids)->where('jenis', PengajuanIzinKeluar::JENIS_HARIAN)
+        // Izin tidak masuk & izin telat masuk (menu Izin) yang sudah disetujui akhir.
+        $izinPegawai = PengajuanIzinKeluar::whereIn('data_pegawai_id', $ids)
+            ->whereIn('jenis', [PengajuanIzinKeluar::JENIS_HARIAN, PengajuanIzinKeluar::JENIS_TELAT])
             ->where('status', PengajuanIzinKeluar::STATUS_APPROVED)
-            ->whereDate('tanggal', '<=', $sampai)->whereDate('tanggal_selesai', '>=', $dari)
+            ->whereDate('tanggal', '<=', $sampai)->whereRaw('COALESCE(tanggal_selesai, tanggal) >= ?', [$dari->toDateString()])
             ->get()->groupBy('data_pegawai_id');
         // Rentang tanggal yang sudah ada data mesinnya: di luar ini hari tanpa scan BUKAN Alpa (data belum diimport).
         $cakupan = [Absensi::whereNotNull('finger_id')->min('tanggal'), Absensi::whereNotNull('finger_id')->max('tanggal')];
@@ -87,7 +88,7 @@ class PenilaianAbsensi
                     $lembur["{$p->id}|{$tgl}"] ?? collect(),
                     ($izin[$tgl] ?? collect())->filter(fn ($z) => $z->berlakuUntuk($p->id, $unit)),
                     $cakupan,
-                    ($izinHarian[$p->id] ?? collect())->first(fn ($z) => $z->tanggal->lte($t) && $z->tanggal_selesai->gte($t)),
+                    ($izinPegawai[$p->id] ?? collect())->filter(fn ($z) => $z->tanggal->lte($t) && $z->tanggalAkhir()->gte($t)),
                 );
             }
         }
@@ -97,10 +98,12 @@ class PenilaianAbsensi
 
     /**
      * @param  array{0: ?string, 1: ?string}  $cakupan  tanggal data mesin paling awal & paling akhir
-     * @param  ?PengajuanIzinKeluar  $izinHarian  izin tidak masuk disetujui yang mencakup tanggal ini
+     * @param  ?Collection<int, PengajuanIzinKeluar>  $izinPegawai  izin tidak masuk / telat masuk disetujui yang mencakup tanggal ini
      */
-    public static function nilai(DataPegawai $p, CarbonInterface $tanggal, ?Absensi $a, ?PengajuanCuti $cuti, Collection $lembur, Collection $izin, array $cakupan = [null, null], ?PengajuanIzinKeluar $izinHarian = null): array
+    public static function nilai(DataPegawai $p, CarbonInterface $tanggal, ?Absensi $a, ?PengajuanCuti $cuti, Collection $lembur, Collection $izin, array $cakupan = [null, null], ?Collection $izinPegawai = null): array
     {
+        $izinHarian = $izinPegawai?->first(fn ($z) => $z->isHarian());
+        $izinTelatPegawai = $izinPegawai?->first(fn ($z) => $z->isTelat() && $z->jamTiba());
         $jadwal = $p->jadwalKerja;
         $libur = in_array($tanggal->toDateString(), config('hrrab.hari_libur', []), true);
         $jam = $jadwal?->jamPada($tanggal);
@@ -170,6 +173,10 @@ class PenilaianAbsensi
             $jamPulang = self::menit($jam['pulang']);
             $telat = max(0, $masuk - $jamMasuk);
             $izinTelat = $izin->where('jenis', IzinAbsensi::JENIS_TELAT)->max('menit');
+            // Izin Telat Masuk pegawai yang disetujui: telat sampai jam tiba yang diizinkan.
+            if ($izinTelatPegawai) {
+                $izinTelat = max($izinTelat ?? 0, self::menit($izinTelatPegawai->jamTiba()) - $jamMasuk);
+            }
 
             $h['telat_menit'] = $telat;
             $h['status'] = match (true) {
@@ -178,7 +185,13 @@ class PenilaianAbsensi
                 default => 'telat',
             };
             if ($h['status'] === 'telat_izin') {
-                $h['catatan'][] = 'Izin telat: ' . $izin->where('jenis', IzinAbsensi::JENIS_TELAT)->pluck('alasan')->unique()->implode(', ');
+                $alasan = $izin->where('jenis', IzinAbsensi::JENIS_TELAT)->pluck('alasan');
+                if ($izinTelatPegawai) {
+                    $alasan->push($izinTelatPegawai->keperluanLabel() . ' — ' . $izinTelatPegawai->alasan);
+                }
+                $h['catatan'][] = 'Izin telat: ' . $alasan->unique()->implode(', ');
+            } elseif ($h['status'] === 'telat' && $izinTelatPegawai) {
+                $h['catatan'][] = 'Ada izin telat sampai ' . $izinTelatPegawai->jamTiba() . ', tetapi scan masuk lebih lambat dari itu.';
             }
 
             if ($keluar !== null && $keluar < $jamPulang) {

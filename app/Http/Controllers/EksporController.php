@@ -101,7 +101,7 @@ class EksporController extends Controller
             optional($i->tanggal)->format('d-m-Y'),
             $i->tanggalAkhir()->format('d-m-Y'),
             $i->isHarian() ? $i->lama_hari : null,
-            $i->isHarian() ? '-' : substr((string) $i->jam_keluar, 0, 5),
+            $i->isKeluar() ? substr((string) $i->jam_keluar, 0, 5) : '-',
             $i->isHarian() ? '-' : ($i->tidakKembali() ? 'Tidak kembali' : substr((string) $i->jam_kembali, 0, 5)),
             $i->keperluanLabel(),
             $i->alasan,
@@ -112,7 +112,7 @@ class EksporController extends Controller
         ]);
 
         return ExcelExporter::download(ExcelExporter::namaFile('riwayat-izin-saya'), [
-            'Diajukan', 'Jenis Izin', 'Tanggal Mulai', 'Tanggal Selesai', 'Lama (hari kerja)', 'Jam Keluar', 'Jam Kembali', 'Keperluan', 'Alasan', 'Status', 'Tahap', 'Kode Tiket', 'Catatan',
+            'Diajukan', 'Jenis Izin', 'Tanggal Mulai', 'Tanggal Selesai', 'Lama (hari kerja)', 'Jam Keluar', 'Jam Kembali / Tiba', 'Keperluan', 'Alasan', 'Status', 'Tahap', 'Kode Tiket', 'Catatan',
         ], $rows, 'Riwayat Izin');
     }
 

@@ -11,7 +11,7 @@
 <main class="dashboard-content">
     <div class="container-fluid">
         <x-page-header title="Izin" eyebrow="Pengajuan Saya"
-            subtitle="Izin keluar beberapa jam (dengan tiket untuk security) atau izin tidak masuk sehari atau lebih.">
+            subtitle="Izin keluar (dengan tiket untuk security), izin telat masuk, atau izin tidak masuk sehari atau lebih.">
             <x-slot:actions>
                 @include('partials.tombol-ekspor', ['eksporRoute' => 'pegawai.izin-keluar.export', 'eksporTeks' => 'Ekspor Riwayat'])
             </x-slot:actions>
@@ -44,8 +44,12 @@
                             <legend class="form-label required">Jenis Izin</legend>
                             <div class="hr-opsi-grup">
                                 <label class="hr-opsi" for="jenisJam">
-                                    <input class="form-check-input" type="radio" name="jenis" id="jenisJam" value="jam" @checked($jenisLama !== 'harian')>
-                                    <span><strong>Izin Beberapa Jam</strong><small>Keluar saat jam kerja; dapat tiket untuk security.</small></span>
+                                    <input class="form-check-input" type="radio" name="jenis" id="jenisJam" value="jam" @checked(! in_array($jenisLama, ['harian', 'telat'], true))>
+                                    <span><strong>Izin Keluar</strong><small>Keluar saat jam kerja; dapat tiket untuk security.</small></span>
+                                </label>
+                                <label class="hr-opsi" for="jenisTelat">
+                                    <input class="form-check-input" type="radio" name="jenis" id="jenisTelat" value="telat" @checked($jenisLama === 'telat')>
+                                    <span><strong>Izin Telat Masuk</strong><small>Datang terlambat; boleh dilaporkan setelah tiba.</small></span>
                                 </label>
                                 <label class="hr-opsi" for="jenisHarian">
                                     <input class="form-check-input" type="radio" name="jenis" id="jenisHarian" value="harian" @checked($jenisLama === 'harian')>
@@ -59,9 +63,9 @@
                         <div class="row gx-3">
                             <div class="col-sm-5">
                                 <x-input name="tanggal" id="tanggal" type="date" :value="now()->toDateString()" required
-                                    label="Tanggal" :min="now()->subHours($maksJamMundur)->toDateString()" :max="now()->addDays($maksHari)->toDateString()"
+                                    label="Tanggal" :min="now()->toDateString()" :max="now()->addDays($maksHari)->toDateString()"
                                     data-min-normal="{{ now()->toDateString() }}" data-min-sakit="{{ now()->subDays($maksMundurSakit)->toDateString() }}"
-                                    data-min-jam="{{ now()->subHours($maksJamMundur)->toDateString() }}"
+                                    data-min-telat="{{ now()->subHours($maksJamMundur)->toDateString() }}"
                                     :help="'Paling lambat ' . $maksHari . ' hari ke depan.'" />
                             </div>
                             {{-- Izin tidak masuk: jumlah hari (bantuan isi, tidak dikirim) ↔ tanggal selesai, hari kerja saja. --}}
@@ -85,9 +89,15 @@
                             <p class="form-text mt-n2 mb-3" id="hintLewati">Sabtu–Minggu dan tanggal merah tidak dihitung.</p>
                         </div>
 
+                        <div data-bagian-izin="telat">
+                            <x-input name="jam_tiba" id="jam_tiba" type="time" label="Jam Tiba / Perkiraan Tiba" required
+                                :help="'Sudah sampai? Isi jam tiba. Boleh dilaporkan paling lambat ' . $maksJamMundur . ' jam setelah tiba.'" />
+                        </div>
+
                         <div data-bagian-izin="jam">
                             <div class="row gx-3">
-                                <div class="col-6"><x-input name="jam_keluar" id="jam_keluar" type="time" label="Jam Keluar" required /></div>
+                                <div class="col-6"><x-input name="jam_keluar" id="jam_keluar" type="time" label="Jam Keluar" required
+                                    :help="'Paling awal jam saat ini.'" /></div>
                                 <div class="col-6"><x-input name="jam_kembali" id="jam_kembali" type="time" label="Perkiraan Kembali" /></div>
                             </div>
                             <div class="mb-3">
@@ -112,9 +122,10 @@
                 @endif
                 <x-card title="Ketentuan" icon="bi-info-circle">
                     <ul class="hr-daftar-info">
-                        <li><i class="bi bi-phone" aria-hidden="true"></i><strong>Izin beberapa jam:</strong> buka tiket dari riwayat di bawah lalu tunjukkan layarnya ke security. Tiket sah bila jam berjalan dan pita bergerak — tangkapan layar tidak berlaku.</li>
-                        <li><i class="bi bi-calendar-x" aria-hidden="true"></i><strong>Izin tidak masuk:</strong> dihitung hari kerja (Sabtu–Minggu &amp; tanggal merah dilewati). Setelah disetujui tercatat Izin/Sakit/Dinas Luar di absensi.</li>
-                        <li><i class="bi bi-clock-history" aria-hidden="true"></i>Tidak sempat izin dulu (mis. ban pecah di jalan)? Izin beberapa jam boleh diajukan paling lambat <strong>{{ $maksJamMundur }} jam</strong> setelah jam keluar. Izin sakit paling lambat {{ $maksMundurSakit }} hari setelah tanggal sakit.</li>
+                        <li><i class="bi bi-phone" aria-hidden="true"></i><strong>Izin keluar:</strong> diajukan sebelum keluar (jam keluar paling awal jam saat ini). Setelah disetujui, buka tiket dari riwayat di bawah lalu tunjukkan layarnya ke security — tangkapan layar tidak berlaku.</li>
+                        <li><i class="bi bi-clock-history" aria-hidden="true"></i><strong>Izin telat masuk:</strong> tidak sempat izin dulu (mis. ban pecah di jalan)? Boleh diajukan paling lambat <strong>{{ $maksJamMundur }} jam</strong> setelah tiba. Setelah disetujui, telat sampai jam tiba tercatat "Telat Izin".</li>
+                        <li><i class="bi bi-calendar-x" aria-hidden="true"></i><strong>Izin tidak masuk:</strong> dihitung hari kerja (Sabtu–Minggu &amp; tanggal merah dilewati). Setelah disetujui tercatat Izin/Sakit/Dinas Luar di absensi. Izin sakit boleh diajukan paling lambat {{ $maksMundurSakit }} hari setelah tanggal sakit.</li>
+                        <li><i class="bi bi-thermometer-half" aria-hidden="true"></i>Keperluan <strong>Sakit</strong> hanya untuk izin telat masuk dan izin tidak masuk.</li>
                     </ul>
                 </x-card>
             </div>
@@ -134,7 +145,7 @@
                         <tr>
                             <td>
                                 <span class="fw-semibold text-nowrap">{{ $item->tanggalLabel('d M Y') }}</span>
-                                <span class="small text-muted d-block">{{ $item->isHarian() ? $item->jenisLabel() : $item->tanggal->translatedFormat('l') }}</span>
+                                <span class="small text-muted d-block">{{ $item->jenisLabel() }}</span>
                             </td>
                             <td class="text-nowrap">{{ $item->jamLabel() }}</td>
                             <td>
@@ -163,7 +174,7 @@
                     @empty
                         <tr>
                             <td colspan="5">
-                                <x-empty-state icon="bi-door-open" title="Belum ada izin" compact>Ajukan lewat formulir di atas; status dan tiket (izin beberapa jam) muncul di sini.</x-empty-state>
+                                <x-empty-state icon="bi-door-open" title="Belum ada izin" compact>Ajukan lewat formulir di atas; status dan tiket (izin keluar) muncul di sini.</x-empty-state>
                             </td>
                         </tr>
                     @endforelse
@@ -175,7 +186,6 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const jenisHarian = document.getElementById('jenisHarian');
         const keperluan = document.getElementById('keperluan');
         const tanggal = document.getElementById('tanggal');
         const tanggalSelesai = document.getElementById('tanggal_selesai');
@@ -238,25 +248,34 @@
         }
 
         // "Tidak kembali" → jam kembali tidak perlu diisi.
+        const jenisAktif = () => document.querySelector('input[name="jenis"]:checked')?.value || 'jam';
+
         function aturKembali() {
-            const wajib = ! jenisHarian.checked && ! tidakKembali.checked;
-            jamKembali.disabled = jenisHarian.checked || tidakKembali.checked;
-            jamKembali.required = wajib;
+            const keluar = jenisAktif() === 'jam';
+            jamKembali.disabled = ! keluar || tidakKembali.checked;
+            jamKembali.required = keluar && ! tidakKembali.checked;
             labelKembali.classList.toggle('required', ! tidakKembali.checked);
             if (tidakKembali.checked) jamKembali.value = '';
         }
 
         // Bagian yang tidak dipakai disembunyikan & dinonaktifkan (tidak ikut terkirim/divalidasi).
         function aturJenis() {
-            const harian = jenisHarian.checked;
+            const jenis = jenisAktif();
+            const harian = jenis === 'harian';
             document.querySelectorAll('[data-bagian-izin]').forEach(function (el) {
-                const aktif = el.dataset.bagianIzin === (harian ? 'harian' : 'jam');
+                const aktif = el.dataset.bagianIzin === jenis;
                 el.classList.toggle('d-none', ! aktif);
                 el.querySelectorAll('input').forEach((i) => { i.disabled = ! aktif; });
             });
-            // Izin beberapa jam boleh dilaporkan belakangan (12 jam); izin sakit (tidak masuk) boleh mundur beberapa hari.
+            // Keperluan Sakit hanya untuk telat masuk & tidak masuk.
+            const opsiSakit = keperluan.querySelector('option[value="sakit"]');
+            if (opsiSakit) {
+                opsiSakit.hidden = opsiSakit.disabled = jenis === 'jam';
+                if (jenis === 'jam' && keperluan.value === 'sakit') keperluan.value = '';
+            }
+            // Izin keluar mulai hari ini; izin telat boleh dilaporkan belakangan (12 jam); izin sakit (tidak masuk) boleh mundur beberapa hari.
             const sakit = harian && keperluan.value === 'sakit';
-            tanggal.min = ! harian ? tanggal.dataset.minJam : (sakit ? tanggal.dataset.minSakit : tanggal.dataset.minNormal);
+            tanggal.min = jenis === 'telat' ? tanggal.dataset.minTelat : (sakit ? tanggal.dataset.minSakit : tanggal.dataset.minNormal);
             if (tanggal.value < tanggal.min) tanggal.value = tanggal.min;
             tanggalSelesai.min = tanggal.value;
             aturKembali();

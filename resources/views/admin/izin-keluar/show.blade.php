@@ -30,7 +30,7 @@
             :subtitle="$p->tanggalLabel() . ' · ' . $p->jamLabel() . ' · ' . $p->keperluanLabel()"
             :back="route('admin.izin-keluar.index')" back-label="Izin">
             <x-status-badge :badge="$p->badgeClass()" size="lg" dot>{{ $p->statusLabel() }}</x-status-badge>
-            <x-badge tone="neutral" :icon="$p->isHarian() ? 'bi-calendar-x' : 'bi-clock'">{{ $p->jenisLabel() }}</x-badge>
+            <x-badge tone="neutral" :icon="$p->isHarian() ? 'bi-calendar-x' : ($p->isTelat() ? 'bi-alarm' : 'bi-door-open')">{{ $p->jenisLabel() }}</x-badge>
             @if ($p->isPending())<x-badge tone="neutral" icon="bi-signpost-split">Tahap: {{ $p->currentLevelLabel() }}</x-badge>@endif
             <x-slot:actions>
                 @if ($p->punyaTiket())

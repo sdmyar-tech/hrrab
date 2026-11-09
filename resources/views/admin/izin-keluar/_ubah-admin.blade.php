@@ -1,4 +1,4 @@
-<x-card title="Ubah Langsung (Admin)" icon="bi-shield-lock" subtitle="Mengubah data & status tanpa mengikuti tahapan persetujuan. Izin beberapa jam yang Disetujui langsung mendapat tiket; izin tidak masuk langsung tercatat di absensi.">
+<x-card title="Ubah Langsung (Admin)" icon="bi-shield-lock" subtitle="Mengubah data & status tanpa mengikuti tahapan persetujuan. Izin keluar yang Disetujui langsung mendapat tiket; izin telat masuk & tidak masuk langsung tercatat di absensi.">
     <form action="{{ route('admin.izin-keluar.ubah-admin', $izinKeluar) }}" method="POST" data-confirm="Simpan perubahan langsung pada izin ini?" id="formUbahIzin">
         @csrf
         @method('PUT')
@@ -21,6 +21,10 @@
                 <label class="form-label" for="ubah-tanggal-selesai">Tanggal Selesai</label>
                 <input type="date" name="tanggal_selesai" id="ubah-tanggal-selesai" class="form-control form-control-sm" value="{{ old('tanggal_selesai', $izinKeluar->tanggal_selesai?->format('Y-m-d')) }}">
                 <div class="form-text">Lama dihitung ulang dalam hari kerja.</div>
+            </div>
+            <div class="col-sm-6" data-ubah-izin="telat">
+                <label class="form-label" for="ubah-jam-tiba">Jam Tiba</label>
+                <input type="time" name="jam_kembali" id="ubah-jam-tiba" class="form-control form-control-sm" value="{{ old('jam_kembali', $izinKeluar->jamTiba()) }}">
             </div>
             <div class="col-sm-6" data-ubah-izin="jam">
                 <label class="form-label" for="ubah-jam-keluar">Jam Keluar</label>
@@ -85,6 +89,7 @@
             });
             document.getElementById('ubah-tanggal-selesai').required = jenis.value === 'harian';
             document.getElementById('ubah-jam-keluar').required = jenis.value === 'jam';
+            document.getElementById('ubah-jam-tiba').required = jenis.value === 'telat';
         };
         jenis.addEventListener('change', atur);
         atur();

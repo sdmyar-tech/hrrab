@@ -73,7 +73,7 @@ class Notifikasi
         $disetujui = $pengajuan->status === $pengajuan::STATUS_APPROVED;
         $pengaju = User::where('data_pegawai_id', $pengajuan->data_pegawai_id)->get();
         $izinKeluar = $pengajuan instanceof PengajuanIzinKeluar;
-        // Izin beberapa jam disetujui: langsung ke tiket yang ditunjukkan ke security (izin tidak masuk tanpa tiket).
+        // Izin keluar disetujui: langsung ke tiket yang ditunjukkan ke security (izin telat/tidak masuk tanpa tiket).
         $url = match (true) {
             $izinKeluar && $pengajuan->punyaTiket() => route('pegawai.izin-keluar.tiket', $pengajuan),
             $izinKeluar => route('pegawai.izin-keluar'),
