@@ -160,6 +160,16 @@ class PengajuanCutiController extends Controller
                     'Cuti besar untuk kategori ini harus ' . $durasiTetap . ' hari kerja.'
                 );
             }
+
+            $kategori = $validated['kategori_cuti_besar'];
+            if (in_array($kategori, PengajuanCuti::KATEGORI_KHUSUS_PEREMPUAN, true) && $pegawai->jenis_kelamin === 'Laki-laki') {
+                return redirect()->back()->withInput()->with('error', 'Kategori ini khusus pegawai perempuan. Untuk istri melahirkan, pilih "Istri Melahirkan/Keguguran Kandungan".');
+            }
+            // Melahirkan/keguguran: batas dalam hari kalender (UU 13/2003 Pasal 82), boleh lebih pendek.
+            $maksKalender = PengajuanCuti::KATEGORI_BESAR_MAKS_KALENDER[$kategori] ?? null;
+            if ($maksKalender && Carbon::parse($validated['tanggal_mulai'])->diffInDays(Carbon::parse($validated['tanggal_selesai'])) + 1 > $maksKalender) {
+                return redirect()->back()->withInput()->with('error', "Cuti kategori ini paling lama {$maksKalender} hari kalender.");
+            }
         }
 
         $unit = $user->unitKerja();

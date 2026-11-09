@@ -40,6 +40,8 @@ class PengajuanCuti extends Model
         'keluarga_inti_meninggal' => 'Istri/Suami/Anak Meninggal Dunia',
         'orang_tua_mertua_meninggal' => 'Orang Tua Kandung/Mertua Meninggal Dunia',
         'istri_melahirkan' => 'Istri Melahirkan/Keguguran Kandungan',
+        'melahirkan' => 'Melahirkan (Pegawai Perempuan)',
+        'keguguran' => 'Keguguran Kandungan (Pegawai Perempuan)',
         'saudara_kandung_meninggal' => 'Saudara Kandung Meninggal Dunia',
         'bencana' => 'Korban Kebakaran/Banjir/Penggusuran',
         'panggilan_pengadilan' => 'Panggilan Pengadilan/Pihak Berwajib',
@@ -53,11 +55,25 @@ class PengajuanCuti extends Model
         'keluarga_inti_meninggal' => 3,
         'orang_tua_mertua_meninggal' => 3,
         'istri_melahirkan' => 2,
+        'melahirkan' => null,
+        'keguguran' => null,
         'saudara_kandung_meninggal' => 1,
         'bencana' => 1,
         'panggilan_pengadilan' => null,
         'izin_studi' => null,
     ];
+
+    /**
+     * Batas rentang (hari KALENDER, bukan hari kerja) untuk cuti pegawai perempuan — UU 13/2003 Pasal 82:
+     * melahirkan 1,5 bulan sebelum + 1,5 bulan sesudah (±90 hari), keguguran 1,5 bulan (±45 hari).
+     */
+    public const KATEGORI_BESAR_MAKS_KALENDER = [
+        'melahirkan' => 90,
+        'keguguran' => 45,
+    ];
+
+    /** Kategori yang hanya bisa diajukan pegawai perempuan. */
+    public const KATEGORI_KHUSUS_PEREMPUAN = ['melahirkan', 'keguguran'];
 
     /**
      * Cuti besar = izin karena alasan penting (UU 13/2003 Pasal 93): TIDAK bergantung masa kerja.
@@ -71,6 +87,8 @@ class PengajuanCuti extends Model
         'orang_tua_mertua_meninggal',
         'saudara_kandung_meninggal',
         'istri_melahirkan',
+        'melahirkan',
+        'keguguran',
         'bencana',
         'panggilan_pengadilan',
     ];

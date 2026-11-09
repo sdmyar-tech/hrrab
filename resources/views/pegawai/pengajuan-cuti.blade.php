@@ -69,7 +69,10 @@
                             <select name="kategori_cuti_besar" id="kategori_cuti_besar" class="form-select @error('kategori_cuti_besar') is-invalid @enderror" aria-describedby="durasiHint">
                                 <option value="">Pilih jenis cuti besar</option>
                                 @foreach ($kategoriBesarOptions as $value => $label)
-                                    <option value="{{ $value }}" data-durasi="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_DURASI[$value] ?? '' }}" data-dadakan="{{ in_array($value, \App\Models\PengajuanCuti::KATEGORI_DADAKAN, true) ? 1 : 0 }}" {{ old('kategori_cuti_besar') == $value ? 'selected' : '' }} @disabled(! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true))>{{ $label }}{{ ! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true) ? ' (setelah 1 tahun)' : '' }}</option>
+                                    {{-- Melahirkan/keguguran sendiri hanya untuk pegawai perempuan; "istri melahirkan" hanya untuk laki-laki (jenis kelamin kosong: tampil semua). --}}
+                                    @continue($pegawai?->jenis_kelamin === 'Laki-laki' && in_array($value, \App\Models\PengajuanCuti::KATEGORI_KHUSUS_PEREMPUAN, true))
+                                    @continue($pegawai?->jenis_kelamin === 'Perempuan' && $value === 'istri_melahirkan')
+                                    <option value="{{ $value }}" data-durasi="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_DURASI[$value] ?? '' }}" data-maks-kalender="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_MAKS_KALENDER[$value] ?? '' }}" data-dadakan="{{ in_array($value, \App\Models\PengajuanCuti::KATEGORI_DADAKAN, true) ? 1 : 0 }}" {{ old('kategori_cuti_besar') == $value ? 'selected' : '' }} @disabled(! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true))>{{ $label }}{{ ! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true) ? ' (setelah 1 tahun)' : '' }}</option>
                                 @endforeach
                             </select>
                             @error('kategori_cuti_besar')
@@ -318,25 +321,52 @@
             if (tetap) jumlahHari.value = durasi;
 
             const opsi = kategoriSelect.options[kategoriSelect.selectedIndex];
+            const maks = maksKalender();
             durasiHint.textContent = ! jenisBesar.checked ? ''
                 : tetap ? 'Kategori ini wajib ' + durasi + ' hari kerja.'
+                : maks ? 'Paling lama ' + maks + ' hari kalender (UU Ketenagakerjaan Pasal 82). Tanggal selesai terisi batas maksimal; boleh dipersingkat.'
                 : opsi && opsi.value ? 'Lama cuti sesuai kebutuhan, isi jumlah hari atau tanggal selesai.' : '';
 
-            isiSelesaiDariJumlah();
+            if (maks) isiSelesaiMaksKalender();
+            else { tanggalSelesai.removeAttribute('max'); isiSelesaiDariJumlah(); }
             updateLamaCuti();
+        }
+
+        // Melahirkan/keguguran (pegawai perempuan): batas dalam hari kalender, bukan hari kerja.
+        function maksKalender() {
+            if (! jenisBesar.checked) return 0;
+            const opsi = kategoriSelect.options[kategoriSelect.selectedIndex];
+            return opsi ? parseInt(opsi.dataset.maksKalender, 10) || 0 : 0;
+        }
+        function batasKalender() {
+            const t = dariIso(tanggalMulai.value);
+            t.setDate(t.getDate() + maksKalender() - 1);
+            return keIso(t);
+        }
+        function isiSelesaiMaksKalender() {
+            if (! tanggalMulai.value) return;
+            tanggalSelesai.max = batasKalender();
+            tanggalSelesai.value = tanggalSelesai.max;
+            isiJumlahDariSelesai();
         }
 
         jenisRadios.forEach((radio) => radio.addEventListener('change', updateJenis));
         kategoriSelect.addEventListener('change', updateJenis);
         tanggalMulai.addEventListener('change', function () {
             tanggalSelesai.min = tanggalMulai.value;
-            if (jumlahHari.value) isiSelesaiDariJumlah();
+            if (maksKalender()) isiSelesaiMaksKalender();
+            else if (jumlahHari.value) isiSelesaiDariJumlah();
             else if (! tanggalSelesai.value || tanggalSelesai.value < tanggalMulai.value) tanggalSelesai.value = tanggalMulai.value;
             updateLamaCuti();
         });
-        jumlahHari.addEventListener('input', function () { isiSelesaiDariJumlah(); updateLamaCuti(); });
+        jumlahHari.addEventListener('input', function () {
+            isiSelesaiDariJumlah();
+            if (maksKalender() && tanggalSelesai.value > batasKalender()) { tanggalSelesai.value = batasKalender(); isiJumlahDariSelesai(); }
+            updateLamaCuti();
+        });
         tanggalSelesai.addEventListener('change', function () {
             if (tanggalSelesai.value < tanggalMulai.value) tanggalSelesai.value = tanggalMulai.value;
+            if (maksKalender() && tanggalSelesai.value > batasKalender()) tanggalSelesai.value = batasKalender();
             isiJumlahDariSelesai();
             updateLamaCuti();
         });
