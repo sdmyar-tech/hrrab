@@ -62,28 +62,55 @@
         ]],
     ];
 
-    $totalWajib = collect($bagian)->flatMap(fn ($b) => $b['fields'])->where('required', true)->count();
+    $semuaField = collect($bagian)->flatMap(fn ($b) => $b['fields']);
+    $totalWajib = $semuaField->where('required', true)->count();
+    $jumlahKosong = $semuaField->filter(fn ($f) => $kosong($f['value']))->count();
+    $wajibKosong = $semuaField->filter(fn ($f) => $f['required'] && $kosong($f['value']))->count();
+    $persen = $totalWajib ? (int) round(($totalWajib - $wajibKosong) / $totalWajib * 100) : 100;
+
+    // Mode lengkapi: hanya isian kosong. Mode ubah: data pribadi/kontak/BPJS/dokumen boleh diubah;
+    // kepegawaian yang sudah terisi tetap dikelola Admin SDM.
     foreach ($bagian as $key => $b) {
-        $bagian[$key]['fields'] = array_values(array_filter($b['fields'], fn ($f) => $kosong($f['value'])));
+        $bagian[$key]['fields'] = array_values(array_filter($b['fields'], fn ($f) => $kosong($f['value']) || ($modeUbah && $key !== 'kepegawaian')));
+        foreach ($bagian[$key]['fields'] as $i => $f) {
+            // Berkas yang sudah ada tidak wajib diunggah ulang.
+            if ($f['type'] === 'file' && ! $kosong($f['value'])) {
+                $bagian[$key]['fields'][$i] = ['required' => false, 'ada' => true, 'help' => 'Sudah diunggah. Pilih berkas baru hanya bila ingin mengganti. ' . $f['help']] + $f;
+            }
+        }
+    }
+    if ($modeUbah) {
+        $bagian['dokumen']['sub'] = 'Unggah berkas baru untuk mengganti yang lama.';
     }
     $bagian = array_filter($bagian, fn ($b) => $b['fields'] !== []);
-    $jumlahKosong = collect($bagian)->sum(fn ($b) => count($b['fields']));
-    $wajibKosong = collect($bagian)->flatMap(fn ($b) => $b['fields'])->where('required', true)->count();
-    $persen = $totalWajib ? (int) round(($totalWajib - $wajibKosong) / $totalWajib * 100) : 100;
     $langkah = collect($bagian)->map(fn ($b, $k) => ['key' => $k, 'label' => $b['langkah'], 'icon' => $b['ikon']])->values()
         ->push(['key' => 'tinjau', 'label' => 'Tinjau', 'icon' => 'bi-check2-square'])->all();
 @endphp
 
 <main class="dashboard-content">
     <div class="container-fluid">
-        <x-page-header title="Pengkinian Data" eyebrow="Data Saya" subtitle="Lengkapi data yang masih kosong. Data yang sudah terisi diubah lewat Admin SDM."
-            :back="route('pegawai.data-pegawai')" back-label="Data Pegawai" />
+        <x-page-header :title="$modeUbah ? 'Ubah Data Pribadi' : 'Pengkinian Data'" eyebrow="Data Saya"
+            :subtitle="$modeUbah
+                ? 'Perbarui data pribadi, kontak darurat, BPJS, dan dokumen Anda. Data kepegawaian (jabatan, bagian, lokasi) diubah lewat Admin SDM.'
+                : 'Lengkapi data yang masih kosong. Data yang sudah terisi bisa diubah lewat Ubah Data Pribadi.'"
+            :back="route('pegawai.data-pegawai')" back-label="Data Pegawai">
+            @unless ($modeUbah)
+                <x-slot:actions>
+                    <x-button :href="route('pegawai.pengkinian-data', ['mode' => 'ubah'])" variant="secondary" icon="bi-pencil">Ubah Data Pribadi</x-button>
+                </x-slot:actions>
+            @endunless
+        </x-page-header>
 
         @if ($bagian === [])
             <x-card>
                 <x-empty-state icon="bi-patch-check" title="Data Anda sudah lengkap">
-                    Tidak ada isian yang perlu dilengkapi lagi. Terima kasih!
-                    <x-slot:action><x-button :href="route('pegawai.data-pegawai')" variant="secondary" icon="bi-person-vcard">Lihat Data Pegawai</x-button></x-slot:action>
+                    Tidak ada isian yang perlu dilengkapi lagi. Terima kasih! Ingin memperbarui data yang sudah ada?
+                    <x-slot:action>
+                        <div class="d-flex flex-wrap gap-2 justify-content-center">
+                            <x-button :href="route('pegawai.pengkinian-data', ['mode' => 'ubah'])" icon="bi-pencil">Ubah Data Pribadi</x-button>
+                            <x-button :href="route('pegawai.data-pegawai')" variant="secondary" icon="bi-person-vcard">Lihat Data Pegawai</x-button>
+                        </div>
+                    </x-slot:action>
                 </x-empty-state>
             </x-card>
         @else
@@ -115,8 +142,9 @@
             <x-stepper id="langkahPengkinian" :steps="$langkah" class="mb-3" />
 
             <form action="{{ route('pegawai.pengkinian-data.store') }}" method="POST" enctype="multipart/form-data"
-                data-confirm="Simpan pengkinian data ini?" id="formPengkinian" class="d-grid gap-3">
+                data-confirm="{{ $modeUbah ? 'Simpan perubahan data pribadi ini?' : 'Simpan pengkinian data ini?' }}" id="formPengkinian" class="d-grid gap-3">
                 @csrf
+                @if ($modeUbah)<input type="hidden" name="mode" value="ubah">@endif
 
                 @foreach ($bagian as $kunci => $b)
                     <x-card :title="$b['judul']" :subtitle="$b['sub']" :icon="$b['ikon']" data-langkah="{{ $kunci }}">
@@ -158,7 +186,8 @@
                                                 @break
 
                                             @case('file')
-                                                <input type="file" name="{{ $nama }}" id="f-{{ $nama }}" class="form-control {{ $invalid }}" accept="{{ $field['accept'] }}" @required($field['required'])>
+                                                <input type="file" name="{{ $nama }}" id="f-{{ $nama }}" class="form-control {{ $invalid }}" accept="{{ $field['accept'] }}" @required($field['required'])
+                                                    @if ($field['ada'] ?? false) data-ada-berkas="1" @endif>
                                                 @break
 
                                             @default
@@ -223,7 +252,7 @@
         let kini = Math.max(0, langkah.findIndex((s) => s.querySelector('.is-invalid')));
 
         function nilaiTampil(el) {
-            if (el.type === 'file') return el.files.length ? el.files[0].name : '';
+            if (el.type === 'file') return el.files.length ? el.files[0].name : (el.dataset.adaBerkas ? 'Tetap (berkas lama)' : '');
             if (el.tagName === 'SELECT') return el.value ? el.options[el.selectedIndex].text : '';
             if (el.type === 'date' && el.value) return new Date(el.value + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
             return el.value.trim();

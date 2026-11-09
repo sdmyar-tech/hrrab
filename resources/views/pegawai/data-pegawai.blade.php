@@ -108,7 +108,7 @@
                         @endforeach
                     </div>
                 </x-card>
-                <p class="small text-muted mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Ada data yang salah? Data yang sudah terisi diubah lewat Admin SDM; data yang masih kosong bisa diisi di <a href="{{ route('pegawai.pengkinian-data') }}">Pengkinian Data</a>.</p>
+                <p class="small text-muted mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Ada data yang salah? Data pribadi, kontak darurat, BPJS, dan dokumen bisa Anda ubah sendiri di <a href="{{ route('pegawai.pengkinian-data', ['mode' => 'ubah']) }}">Ubah Data Pribadi</a>. Data kepegawaian (jabatan, bagian, lokasi) diubah lewat Admin SDM.</p>
             </div>
         </div>
     </div>

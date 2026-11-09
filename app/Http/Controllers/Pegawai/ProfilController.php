@@ -59,7 +59,8 @@ class ProfilController extends Controller
         return view('pegawai.data-pegawai', compact('user'));
     }
 
-    public function pengkinianData(): View|RedirectResponse
+    /** Lengkapi isian kosong; ?mode=ubah: ubah data pribadi/kontak/BPJS/dokumen yang sudah terisi (kepegawaian tetap lewat SDM). */
+    public function pengkinianData(Request $request): View|RedirectResponse
     {
         /** @var User|null $user */
         $user = Auth::user();
@@ -75,13 +76,13 @@ class ProfilController extends Controller
             'dataPegawai.dokumen',
         ]);
 
-        if ($this->isDataLengkap($user)) {
-            return redirect()
-                ->route('pegawai.data-pegawai')
-                ->with('info', 'Data Anda sudah lengkap. Untuk mengubah, silakan hubungi Admin HRD.');
+        $modeUbah = $request->query('mode') === 'ubah';
+        if (! $modeUbah && $this->isDataLengkap($user)) {
+            return redirect()->route('pegawai.pengkinian-data', ['mode' => 'ubah'])
+                ->with('info', 'Data Anda sudah lengkap. Anda tetap bisa memperbarui data pribadi di sini.');
         }
 
-        return view('pegawai.pengkinian-data', compact('user'));
+        return view('pegawai.pengkinian-data', compact('user', 'modeUbah'));
     }
 
     public function storePengkinianData(Request $request): RedirectResponse
@@ -93,11 +94,7 @@ class ProfilController extends Controller
             return redirect()->route('admin.dashboard')->with('error', 'Akun Anda belum tertaut ke data pegawai.');
         }
 
-        if ($this->isDataLengkap($user)) {
-            return redirect()
-                ->route('pegawai.data-pegawai')
-                ->with('warning', 'Data Anda sudah lengkap. Hubungi Admin HRD untuk perubahan.');
-        }
+        $modeUbah = $request->input('mode') === 'ubah';
 
         foreach (['jabatan', 'hubungan_kerabat'] as $field) {
             if ($request->input($field) === 'Lainnya' && $request->filled("{$field}_lainnya")) {
@@ -184,10 +181,9 @@ class ProfilController extends Controller
                     'lokasi_kerja', 'tanggal_masuk',
                 ])->toArray();
 
-                $unitLama = $pegawai->kepegawaian()->value('unit_kerja');
-                if ($unitLama) {
-                    unset($kepegawaianData['unit_kerja']);
-                }
+                // Kepegawaian yang sudah terisi dikelola Admin SDM: pegawai hanya boleh mengisi yang masih kosong.
+                $kepLama = $pegawai->kepegawaian()->first();
+                $kepegawaianData = array_filter($kepegawaianData, fn ($nilai, $kolom) => blank($kepLama?->{$kolom}), ARRAY_FILTER_USE_BOTH);
 
                 if (! empty($kepegawaianData)) {
                     $pegawai->kepegawaian()->updateOrCreate(
@@ -249,6 +245,10 @@ class ProfilController extends Controller
         }
 
         $user->refresh()->load('dataPegawai.kepegawaian', 'dataPegawai.kontakDarurat', 'dataPegawai.dokumen');
+
+        if ($modeUbah) {
+            return redirect()->route('pegawai.data-pegawai')->with('success', 'Data pribadi Anda berhasil diperbarui.');
+        }
 
         if ($this->isDataLengkap($user)) {
             return redirect()
