@@ -79,7 +79,7 @@
                         </div>
 
                         <div class="row gx-3">
-                            <div class="col-sm-6">
+                            <div class="col-sm-5">
                                 <div class="hr-field">
                                     <label for="tanggal_mulai" class="form-label required">Tanggal Mulai</label>
                                     <input type="date" name="tanggal_mulai" id="tanggal_mulai"
@@ -94,7 +94,15 @@
                                     <div class="form-text" id="hintTanggalMulai">Tanggal mulai minimal 7 hari setelah tanggal pengajuan.</div>
                                 </div>
                             </div>
-                            <div class="col-sm-6">
+                            {{-- Bantuan isi saja (tidak dikirim): server menghitung ulang dari tanggal mulai–selesai. --}}
+                            <div class="col-sm-2">
+                                <div class="hr-field">
+                                    <label for="jumlah_hari" class="form-label">Jumlah Hari</label>
+                                    <input type="number" id="jumlah_hari" class="form-control" min="1" max="365" step="1"
+                                        placeholder="Contoh: 2" inputmode="numeric">
+                                </div>
+                            </div>
+                            <div class="col-sm-5">
                                 <div class="hr-field">
                                     <label for="tanggal_selesai" class="form-label required">Tanggal Selesai</label>
                                     <input type="date" name="tanggal_selesai" id="tanggal_selesai"
@@ -112,6 +120,7 @@
                             <label for="lama_cuti_display" class="mb-0">Lama cuti</label>
                             <input type="text" id="lama_cuti_display" readonly placeholder="Terisi otomatis">
                         </div>
+                        <p class="form-text mt-n2 mb-3" id="hintLewati">Sabtu–Minggu dan tanggal merah tidak dihitung sebagai hari cuti.</p>
 
                         <x-textarea name="keterangan" id="keterangan" label="Keterangan" optional rows="2"
                             placeholder="Contoh: menghadiri pernikahan saudara di Padang" maxlength="1000" />
@@ -141,6 +150,7 @@
                 <x-card title="Ketentuan" icon="bi-info-circle">
                     <ul class="hr-daftar-info">
                         <li><i class="bi bi-calendar-week" aria-hidden="true"></i>Cuti biasa diajukan paling lambat <strong>7 hari</strong> sebelum tanggal mulai. Cuti mendadak (duka, melahirkan, bencana) boleh mulai hari ini.</li>
+                        <li><i class="bi bi-calendar-x" aria-hidden="true"></i>Lama cuti dihitung <strong>hari kerja</strong>: Sabtu–Minggu dan tanggal merah dilewati. Contoh: cuti 2 hari mulai Jumat = Jumat &amp; Senin.</li>
                         <li><i class="bi bi-arrow-repeat" aria-hidden="true"></i>Maksimal <strong>{{ $maxPengajuanTahunan }} kali</strong> per tahun dan tidak boleh bentrok dengan cuti lain (minimal jeda 1 hari).</li>
                         <li><i class="bi bi-person-check" aria-hidden="true"></i>Pengganti tugas ditentukan penyetuju tahap pertama saat menyetujui pengajuan.</li>
                     </ul>
@@ -194,64 +204,97 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const jenisRadios = document.querySelectorAll('input[name="jenis_cuti"]');
+        const jenisBesar = document.getElementById('jenisBesar');
         const sectionBesar = document.getElementById('sectionBesar');
         const kategoriSelect = document.getElementById('kategori_cuti_besar');
         const durasiHint = document.getElementById('durasiHint');
         const tanggalMulai = document.getElementById('tanggal_mulai');
         const tanggalSelesai = document.getElementById('tanggal_selesai');
+        const jumlahHari = document.getElementById('jumlah_hari');
         const lamaCutiDisplay = document.getElementById('lama_cuti_display');
-
-        function toggleJenis() {
-            const isBesar = document.getElementById('jenisBesar').checked;
-            sectionBesar.classList.toggle('d-none', !isBesar);
-            kategoriSelect.required = isBesar;
-            if (!isBesar) {
-                tanggalSelesai.readOnly = false;
-                durasiHint.textContent = '';
-            }
-            updateKategori();
-        }
-
-        // Hari kerja & libur sama dengan App\Support\Kalender di server.
-        const HARI_KERJA = @json(config('hrrab.hari_kerja'));
-        const LIBUR = @json(config('hrrab.hari_libur'));
-        function isHariKerja(d) {
-            const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-            return HARI_KERJA.includes(d.getDay() || 7) && ! LIBUR.includes(iso);
-        }
-
-        function addWorkingDays(startDate, totalHariKerja) {
-            const result = new Date(startDate.getTime());
-            while (! isHariKerja(result)) result.setDate(result.getDate() + 1);
-            let count = 1;
-            while (count < totalHariKerja) {
-                result.setDate(result.getDate() + 1);
-                if (isHariKerja(result)) {
-                    count++;
-                }
-            }
-            return result;
-        }
-
-        function toDateInputValue(date) {
-            const tzOffset = date.getTimezoneOffset() * 60000;
-            return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
-        }
-
+        const hintLewati = document.getElementById('hintLewati');
         const hintMulai = document.getElementById('hintTanggalMulai');
         const keterangan = document.getElementById('keterangan');
+        const MAKS_TAHUNAN = @json($maxPerRequest);
+        const TEKS_LEWATI = hintLewati.textContent;
+
+        // Hari kerja & libur sama dengan App\Support\Kalender di server (tanggal merah dari menu Kalender).
+        const HARI_KERJA = @json(config('hrrab.hari_kerja'));
+        const LIBUR = @json(config('hrrab.hari_libur'));
+        const keIso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const dariIso = (s) => new Date(s + 'T00:00:00');
+        const isHariKerja = (d) => HARI_KERJA.includes(d.getDay() || 7) && ! LIBUR.includes(keIso(d));
+        const fmtPendek = new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
+
+        /** Hari kerja ke-n dari tanggal mulai (mulai ikut dihitung bila hari kerja). 2 hari mulai Jumat = Senin. */
+        function hariKerjaKe(mulai, n) {
+            const hasil = new Date(mulai.getTime());
+            while (! isHariKerja(hasil)) hasil.setDate(hasil.getDate() + 1);
+            for (let i = 1; i < n; i++) {
+                do { hasil.setDate(hasil.getDate() + 1); } while (! isHariKerja(hasil));
+            }
+            return hasil;
+        }
+
+        /** Rincian rentang: jumlah hari kerja + tanggal yang dilewati (Sabtu–Minggu / tanggal merah). */
+        function rincian(mulai, selesai) {
+            let kerja = 0;
+            const lewati = [];
+            for (const t = new Date(mulai.getTime()); t <= selesai; t.setDate(t.getDate() + 1)) {
+                if (isHariKerja(t)) kerja++;
+                else lewati.push(fmtPendek.format(t) + (LIBUR.includes(keIso(t)) ? ' (tanggal merah)' : ''));
+            }
+            return { kerja, lewati };
+        }
+
+        const durasiTetap = function () {
+            if (! jenisBesar.checked) return NaN;
+            const opsi = kategoriSelect.options[kategoriSelect.selectedIndex];
+            return opsi ? parseInt(opsi.dataset.durasi, 10) : NaN;
+        };
+
+        // Jumlah hari → tanggal selesai (melewati Sabtu–Minggu & tanggal merah).
+        function isiSelesaiDariJumlah() {
+            const n = parseInt(jumlahHari.value, 10);
+            if (! tanggalMulai.value || ! (n >= 1)) return;
+            tanggalSelesai.value = keIso(hariKerjaKe(dariIso(tanggalMulai.value), n));
+        }
+
+        // Tanggal selesai → jumlah hari (bila diubah manual).
+        function isiJumlahDariSelesai() {
+            if (! tanggalMulai.value || ! tanggalSelesai.value) return;
+            const { kerja } = rincian(dariIso(tanggalMulai.value), dariIso(tanggalSelesai.value));
+            jumlahHari.value = kerja > 0 ? kerja : '';
+        }
+
+        function updateLamaCuti() {
+            hintLewati.textContent = TEKS_LEWATI;
+            hintLewati.classList.remove('text-danger');
+            if (! tanggalMulai.value || ! tanggalSelesai.value || tanggalSelesai.value < tanggalMulai.value) {
+                lamaCutiDisplay.value = '';
+                return;
+            }
+            const { kerja, lewati } = rincian(dariIso(tanggalMulai.value), dariIso(tanggalSelesai.value));
+            lamaCutiDisplay.value = kerja > 0 ? kerja + ' hari kerja' : '';
+            if (kerja === 0) {
+                hintLewati.textContent = 'Rentang ini tidak berisi hari kerja. Pilih tanggal lain.';
+                hintLewati.classList.add('text-danger');
+            } else if (lewati.length) {
+                hintLewati.textContent = 'Tidak dihitung: ' + lewati.join(', ') + '.';
+            }
+        }
 
         // Cuti besar mendadak (duka, melahirkan, bencana, panggilan) boleh mulai hari ini, tanpa aturan H-7.
         function updateAturanTanggal() {
             const opsi = kategoriSelect.options[kategoriSelect.selectedIndex];
-            const dadakan = document.getElementById('jenisBesar').checked && opsi && opsi.dataset.dadakan === '1';
+            const dadakan = jenisBesar.checked && opsi && opsi.dataset.dadakan === '1';
             const minBaru = dadakan ? tanggalMulai.dataset.minDadakan : tanggalMulai.dataset.minNormal;
             const minLama = tanggalMulai.min;
 
             tanggalMulai.min = minBaru;
             if (dadakan && tanggalMulai.value === minLama) {
-                tanggalMulai.value = toDateInputValue(new Date());
-            } else if (!dadakan && tanggalMulai.value < minBaru) {
+                tanggalMulai.value = keIso(new Date());
+            } else if (! dadakan && tanggalMulai.value < minBaru) {
                 tanggalMulai.value = minBaru;
             }
             hintMulai.textContent = dadakan
@@ -261,83 +304,48 @@
             keterangan.closest('.hr-field')?.querySelector('.form-label')?.classList.toggle('required', dadakan);
         }
 
-        function updateKategori() {
+        // Jenis/kategori menentukan apakah jumlah hari bebas diisi atau tetap (durasi kategori cuti besar).
+        function updateJenis() {
+            sectionBesar.classList.toggle('d-none', ! jenisBesar.checked);
+            kategoriSelect.required = jenisBesar.checked;
             updateAturanTanggal();
-            if (!document.getElementById('jenisBesar').checked) {
-                return;
-            }
-            const selectedOption = kategoriSelect.options[kategoriSelect.selectedIndex];
-            const durasi = selectedOption ? parseInt(selectedOption.getAttribute('data-durasi'), 10) : NaN;
 
-            if (!isNaN(durasi)) {
-                durasiHint.textContent = 'Kategori ini wajib ' + durasi + ' hari kerja.';
-                tanggalSelesai.readOnly = true;
-                if (tanggalMulai.value) {
-                    const mulai = new Date(tanggalMulai.value + 'T00:00:00');
-                    tanggalSelesai.value = toDateInputValue(addWorkingDays(mulai, durasi));
-                }
-            } else {
-                tanggalSelesai.readOnly = false;
-                durasiHint.textContent = selectedOption && selectedOption.value
-                    ? 'Lama cuti sesuai kebutuhan, isi tanggal selesai secara manual.'
-                    : '';
-            }
-            updateLamaCuti();
-        }
+            const durasi = durasiTetap();
+            const tetap = ! isNaN(durasi);
+            jumlahHari.readOnly = tetap;
+            tanggalSelesai.readOnly = tetap;
+            jumlahHari.max = jenisBesar.checked ? 365 : MAKS_TAHUNAN;
+            if (tetap) jumlahHari.value = durasi;
 
-        function updateLamaCuti() {
-            if (!tanggalMulai.value || !tanggalSelesai.value) {
-                lamaCutiDisplay.value = '';
-                return;
-            }
-            const mulai = new Date(tanggalMulai.value + 'T00:00:00');
-            const selesai = new Date(tanggalSelesai.value + 'T00:00:00');
-
-            if (document.getElementById('jenisBesar').checked) {
-                let hariKerja = 0;
-                const cursor = new Date(mulai.getTime());
-                while (cursor <= selesai) {
-                    if (isHariKerja(cursor)) {
-                        hariKerja++;
-                    }
-                    cursor.setDate(cursor.getDate() + 1);
-                }
-                lamaCutiDisplay.value = hariKerja > 0 ? hariKerja + ' hari kerja' : '';
-            } else {
-                const diffDays = Math.round((selesai - mulai) / (1000 * 60 * 60 * 24)) + 1;
-                lamaCutiDisplay.value = diffDays > 0 ? diffDays + ' hari' : '';
-            }
-        }
-
-        jenisRadios.forEach(function (radio) {
-            radio.addEventListener('change', toggleJenis);
-        });
-        // Tanggal selesai mengikuti tanggal mulai: tidak boleh lebih awal, dan langsung terisi (cuti minimal 1 hari).
-        function sinkronSelesai() {
-            if (!tanggalMulai.value) return;
-            tanggalSelesai.min = tanggalMulai.value;
-            if (!tanggalSelesai.value || tanggalSelesai.value < tanggalMulai.value) {
-                tanggalSelesai.value = tanggalMulai.value;
-            }
-        }
-
-        kategoriSelect.addEventListener('change', function () { updateKategori(); sinkronSelesai(); updateLamaCuti(); });
-        tanggalMulai.addEventListener('change', function () {
-            sinkronSelesai();
-            if (!document.getElementById('jenisBesar').checked) { updateLamaCuti(); return; }
             const opsi = kategoriSelect.options[kategoriSelect.selectedIndex];
-            const durasi = opsi ? parseInt(opsi.getAttribute('data-durasi'), 10) : NaN;
-            if (!isNaN(durasi) && tanggalMulai.value) {
-                tanggalSelesai.value = toDateInputValue(addWorkingDays(new Date(tanggalMulai.value + 'T00:00:00'), durasi));
-            }
+            durasiHint.textContent = ! jenisBesar.checked ? ''
+                : tetap ? 'Kategori ini wajib ' + durasi + ' hari kerja.'
+                : opsi && opsi.value ? 'Lama cuti sesuai kebutuhan, isi jumlah hari atau tanggal selesai.' : '';
+
+            isiSelesaiDariJumlah();
+            updateLamaCuti();
+        }
+
+        jenisRadios.forEach((radio) => radio.addEventListener('change', updateJenis));
+        kategoriSelect.addEventListener('change', updateJenis);
+        tanggalMulai.addEventListener('change', function () {
+            tanggalSelesai.min = tanggalMulai.value;
+            if (jumlahHari.value) isiSelesaiDariJumlah();
+            else if (! tanggalSelesai.value || tanggalSelesai.value < tanggalMulai.value) tanggalSelesai.value = tanggalMulai.value;
             updateLamaCuti();
         });
-        tanggalSelesai.addEventListener('change', function () { sinkronSelesai(); updateLamaCuti(); });
-        jenisRadios.forEach(function (radio) { radio.addEventListener('change', function () { sinkronSelesai(); updateLamaCuti(); }); });
+        jumlahHari.addEventListener('input', function () { isiSelesaiDariJumlah(); updateLamaCuti(); });
+        tanggalSelesai.addEventListener('change', function () {
+            if (tanggalSelesai.value < tanggalMulai.value) tanggalSelesai.value = tanggalMulai.value;
+            isiJumlahDariSelesai();
+            updateLamaCuti();
+        });
 
-        toggleJenis();
-        sinkronSelesai();
-        updateLamaCuti();
+        // Awal: pertahankan tanggal lama (gagal validasi), selain itu mulai dari 1 hari kerja.
+        tanggalSelesai.min = tanggalMulai.value;
+        if (tanggalSelesai.value) isiJumlahDariSelesai();
+        else jumlahHari.value = 1;
+        updateJenis();
     });
 </script>
 @endsection

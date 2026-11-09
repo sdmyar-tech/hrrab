@@ -107,7 +107,14 @@ class PengajuanCutiController extends Controller
             'tanggal_selesai.after_or_equal' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
         ]);
 
-        $lamaCuti = Carbon::parse($validated['tanggal_mulai'])->diffInDays(Carbon::parse($validated['tanggal_selesai'])) + 1;
+        // Semua jenis cuti dihitung hari kerja: Sabtu–Minggu & tanggal merah (menu Kalender) tidak memotong jatah.
+        $lamaCuti = Kalender::jumlahHariKerja(Carbon::parse($validated['tanggal_mulai']), Carbon::parse($validated['tanggal_selesai']));
+        if ($lamaCuti < 1) {
+            return redirect()->back()->withInput()->with(
+                'error',
+                'Rentang tanggal yang dipilih tidak berisi hari kerja (semuanya Sabtu–Minggu atau tanggal merah).'
+            );
+        }
 
         if (PengajuanCuti::jumlahPengajuanTahunIni($pegawai, Carbon::parse($validated['tanggal_mulai'])->year) >= PengajuanCuti::MAX_PENGAJUAN_PER_TAHUN) {
             return redirect()->back()->withInput()->with(
@@ -127,7 +134,7 @@ class PengajuanCutiController extends Controller
             if ($lamaCuti > PengajuanCuti::MAX_PER_REQUEST) {
                 return redirect()->back()->withInput()->with(
                     'error',
-                    'Cuti tahunan maksimal ' . PengajuanCuti::MAX_PER_REQUEST . ' hari per pengajuan.'
+                    'Cuti tahunan maksimal ' . PengajuanCuti::MAX_PER_REQUEST . ' hari kerja per pengajuan.'
                 );
             }
 
@@ -139,11 +146,6 @@ class PengajuanCutiController extends Controller
                 );
             }
         } else {
-            $lamaCuti = $this->hitungHariKerja(
-                Carbon::parse($validated['tanggal_mulai']),
-                Carbon::parse($validated['tanggal_selesai'])
-            );
-
             $durasiTetap = PengajuanCuti::durasiKategoriBesar($validated['kategori_cuti_besar']);
             if ($durasiTetap !== null && $lamaCuti !== $durasiTetap) {
                 return redirect()->back()->withInput()->with(
@@ -177,10 +179,5 @@ class PengajuanCutiController extends Controller
         return redirect()
             ->route('pegawai.pengajuan-cuti')
             ->with('success', 'Pengajuan cuti berhasil dikirim. Menunggu persetujuan ' . $pengajuan->currentLevelLabel() . '.');
-    }
-
-    private function hitungHariKerja(Carbon $mulai, Carbon $selesai): int
-    {
-        return Kalender::jumlahHariKerja($mulai, $selesai);
     }
 }
