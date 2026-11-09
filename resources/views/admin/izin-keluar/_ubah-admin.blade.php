@@ -24,15 +24,15 @@
             </div>
             <div class="col-sm-6" data-ubah-izin="telat">
                 <label class="form-label" for="ubah-jam-tiba">Jam Tiba</label>
-                <input type="time" name="jam_kembali" id="ubah-jam-tiba" class="form-control form-control-sm" value="{{ old('jam_kembali', $izinKeluar->jamTiba()) }}">
+                <input type="text" data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 08:15" name="jam_kembali" id="ubah-jam-tiba" class="form-control form-control-sm" value="{{ old('jam_kembali', $izinKeluar->jamTiba()) }}">
             </div>
             <div class="col-sm-6" data-ubah-izin="jam">
                 <label class="form-label" for="ubah-jam-keluar">Jam Keluar</label>
-                <input type="time" name="jam_keluar" id="ubah-jam-keluar" class="form-control form-control-sm" value="{{ old('jam_keluar', substr((string) $izinKeluar->jam_keluar, 0, 5)) }}">
+                <input type="text" data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 10:00" name="jam_keluar" id="ubah-jam-keluar" class="form-control form-control-sm" value="{{ old('jam_keluar', substr((string) $izinKeluar->jam_keluar, 0, 5)) }}">
             </div>
             <div class="col-sm-6" data-ubah-izin="jam">
                 <label class="form-label" for="ubah-jam-kembali">Jam Kembali</label>
-                <input type="time" name="jam_kembali" id="ubah-jam-kembali" class="form-control form-control-sm" value="{{ old('jam_kembali', substr((string) $izinKeluar->jam_kembali, 0, 5)) }}">
+                <input type="text" data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 11:30" name="jam_kembali" id="ubah-jam-kembali" class="form-control form-control-sm" value="{{ old('jam_kembali', substr((string) $izinKeluar->jam_kembali, 0, 5)) }}">
             </div>
             <div class="col-12" data-ubah-izin="jam">
                 <div class="form-check">

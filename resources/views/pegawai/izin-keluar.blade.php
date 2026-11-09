@@ -90,15 +90,15 @@
                         </div>
 
                         <div data-bagian-izin="telat">
-                            <x-input name="jam_tiba" id="jam_tiba" type="time" label="Jam Tiba / Perkiraan Tiba" required
+                            <x-input name="jam_tiba" id="jam_tiba" label="Jam Tiba / Perkiraan Tiba" required data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 08:15"
                                 :help="'Sudah sampai? Isi jam tiba. Boleh dilaporkan paling lambat ' . $maksJamMundur . ' jam setelah tiba.'" />
                         </div>
 
                         <div data-bagian-izin="jam">
                             <div class="row gx-3">
-                                <div class="col-6"><x-input name="jam_keluar" id="jam_keluar" type="time" label="Jam Keluar" required
+                                <div class="col-6"><x-input name="jam_keluar" id="jam_keluar" label="Jam Keluar" required data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 10:00"
                                     :help="'Paling awal jam saat ini.'" /></div>
-                                <div class="col-6"><x-input name="jam_kembali" id="jam_kembali" type="time" label="Perkiraan Kembali" /></div>
+                                <div class="col-6"><x-input name="jam_kembali" id="jam_kembali" label="Perkiraan Kembali" data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 11:30" /></div>
                             </div>
                             <div class="mb-3">
                                 <x-checkbox name="tidak_kembali" id="tidak_kembali" value="1" label="Tidak kembali lagi hari ini" />
