@@ -36,7 +36,7 @@ class PengajuanCuti extends Model
     public const KATEGORI_BESAR_OPTIONS = [
         'nikah_sendiri' => 'Pernikahan Pegawai Sendiri',
         'anak_menikah' => 'Perkawinan Anak Kandung',
-        'khitan_baptis_anak' => 'Mengkhitankan/Membaptiskan Anak',
+        'khitan_baptis_anak' => 'Mengkhitankan Anak',   // kode lama dipertahankan agar data lama tetap terbaca
         'keluarga_inti_meninggal' => 'Istri/Suami/Anak Meninggal Dunia',
         'orang_tua_mertua_meninggal' => 'Orang Tua Kandung/Mertua Meninggal Dunia',
         'istri_melahirkan' => 'Istri Melahirkan/Keguguran Kandungan',
