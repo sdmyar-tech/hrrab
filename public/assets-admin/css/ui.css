@@ -329,18 +329,26 @@ code, kbd, pre, samp, .font-monospace { font-family: var(--hr-font-mono); }
 .app-nav-item.is-active .app-nav-ikon { color: var(--hr-primary); }
 .app-nav-teks { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .app-nav-ext { flex: none; font-size: var(--hr-text-xs); opacity: .6; }
+/* Kolom grid dikunci minmax(0,1fr): tanpa ini item grid ber-min-width:auto melebar sesuai teks nowrap
+   sehingga badge di ujung kanan terpotong overflow:hidden (layar sempit / zoom / skala font tinggi). */
+.app-nav, .app-nav-grup, .app-nav-sub, .app-nav-sub-isi { grid-template-columns: minmax(0, 1fr); }
+.app-nav-item { min-width: 0; }
 .app-nav-badge {
     flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-width: 20px;
     height: 20px;
     padding: 0 6px;
+    margin-right: 2px;               /* ruang aman dari tepi kanan item */
     border-radius: var(--hr-radius-pill);
     background: var(--hr-primary);
     color: #fff;
     font-size: var(--hr-text-xs);
     font-weight: var(--hr-weight-bold);
-    line-height: 20px;
-    text-align: center;
+    line-height: 1;                  /* tinggi tak bergantung metrik font tiap OS */
+    white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
 .app-nav-badge.is-warning { background: var(--hr-warning); }
