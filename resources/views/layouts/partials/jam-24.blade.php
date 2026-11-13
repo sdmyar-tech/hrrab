@@ -64,6 +64,123 @@
         periksa(el);
     }, true);
 
+    // ---- Pemilih jam (tombol ikon jam di kanan isian): kolom jam 00–23 & menit 00–59 yang bisa digulir/diputar. ----
+    const gaya = document.createElement('style');
+    gaya.textContent = `
+        .jam24-tombol { position: absolute; z-index: 5; display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; padding: 0;
+            border: 0; background: transparent; color: var(--admin-muted, #6c757d); cursor: pointer; border-radius: 0 .375rem .375rem 0; }
+        .jam24-tombol:hover:not(:disabled), .jam24-tombol:focus-visible { color: var(--bs-primary, #880f12); }
+        .jam24-tombol:disabled { opacity: .45; cursor: not-allowed; }
+        .jam24-pop { position: absolute; z-index: 2000; display: flex; gap: .25rem; padding: .5rem; background: var(--bs-body-bg, #fff); color: var(--bs-body-color, #212529);
+            border: 1px solid var(--bs-border-color, #dee2e6); border-radius: .5rem; box-shadow: 0 .5rem 1.25rem rgba(0, 0, 0, .18); }
+        .jam24-kolom { width: 3.5rem; max-height: 12.5rem; overflow-y: auto; scroll-snap-type: y proximity; overscroll-behavior: contain; }
+        .jam24-kolom-judul { position: sticky; top: 0; background: inherit; font-size: .7rem; text-align: center; color: var(--admin-muted, #6c757d); padding-bottom: .15rem; }
+        .jam24-opsi { display: block; width: 100%; border: 0; background: transparent; color: inherit; padding: .3rem 0; text-align: center; border-radius: .35rem; scroll-snap-align: center; font-variant-numeric: tabular-nums; }
+        .jam24-opsi:hover { background: rgba(136, 15, 18, .08); }
+        .jam24-opsi.aktif { background: var(--bs-primary, #880f12); color: #fff; }
+        .jam24-pisah { align-self: center; font-weight: 700; }
+    `;
+    document.head.appendChild(gaya);
+
+    let pop = null;
+    const tutup = () => { if (pop) { pop.remove(); pop = null; } };
+
+    function pasangTombol(el) {
+        if (el.dataset.jam24Siap) return;
+        el.dataset.jam24Siap = '1';
+        const induk = el.parentElement;
+        if (getComputedStyle(induk).position === 'static') induk.style.position = 'relative';
+        const tombol = document.createElement('button');
+        tombol.type = 'button';
+        tombol.className = 'jam24-tombol';
+        tombol.setAttribute('aria-label', 'Pilih jam');
+        tombol.tabIndex = -1;
+        tombol.innerHTML = '<i class="bi bi-clock" aria-hidden="true"></i>';
+        el.after(tombol);
+        el.style.paddingRight = '2.5rem';
+
+        const letak = () => {
+            tombol.hidden = el.offsetWidth === 0;
+            tombol.style.top = el.offsetTop + 'px';
+            tombol.style.height = el.offsetHeight + 'px';
+            tombol.style.left = (el.offsetLeft + el.offsetWidth - tombol.offsetWidth) + 'px';
+            tombol.disabled = el.disabled || el.readOnly;
+        };
+        letak();
+        if ('ResizeObserver' in window) new ResizeObserver(letak).observe(el);
+        window.addEventListener('resize', letak);
+        new MutationObserver(letak).observe(el, { attributes: true, attributeFilter: ['disabled', 'readonly', 'hidden', 'class'] });
+
+        tombol.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (pop && pop.dataset.untuk === el.id) { tutup(); return; }
+            tutup();
+            buka(el, tombol);
+        });
+    }
+
+    function buka(el, tombol) {
+        const [jamNow, menitNow] = VALID.test(el.value) ? el.value.split(':') : [null, null];
+        pop = document.createElement('div');
+        pop.className = 'jam24-pop';
+        pop.dataset.untuk = el.id;
+        pop.setAttribute('role', 'dialog');
+        pop.setAttribute('aria-label', 'Pilih jam');
+
+        const kolom = (judul, jumlah, terpilih, pilih) => {
+            const k = document.createElement('div');
+            k.className = 'jam24-kolom';
+            k.innerHTML = '<div class="jam24-kolom-judul">' + judul + '</div>';
+            for (let i = 0; i < jumlah; i++) {
+                const t = String(i).padStart(2, '0');
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'jam24-opsi' + (t === terpilih ? ' aktif' : '');
+                b.textContent = t;
+                b.addEventListener('click', function () {
+                    k.querySelectorAll('.aktif').forEach((a) => a.classList.remove('aktif'));
+                    b.classList.add('aktif');
+                    pilih(t);
+                });
+                k.appendChild(b);
+            }
+            return k;
+        };
+
+        let jam = jamNow, menit = menitNow;
+        const terapkan = () => {
+            if (jam === null || menit === null) return;
+            el.value = jam + ':' + menit;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+        const kJam = kolom('Jam', 24, jamNow, (t) => { jam = t; if (menit === null) menit = '00'; terapkan(); });
+        const kMenit = kolom('Menit', 60, menitNow, (t) => { menit = t; if (jam === null) jam = '00'; terapkan(); tutup(); });
+        const pisah = document.createElement('span');
+        pisah.className = 'jam24-pisah';
+        pisah.textContent = ':';
+        pop.append(kJam, pisah, kMenit);
+        document.body.appendChild(pop);
+
+        // Letakkan di bawah isian (di atasnya bila tak muat), lalu gulir ke nilai terpilih.
+        const r = el.getBoundingClientRect();
+        const tinggi = pop.offsetHeight;
+        const bawah = r.bottom + tinggi + 8 < window.innerHeight;
+        pop.style.top = (window.scrollY + (bawah ? r.bottom + 4 : Math.max(8, r.top - tinggi - 4))) + 'px';
+        pop.style.left = Math.max(8, Math.min(window.scrollX + r.right - pop.offsetWidth, window.scrollX + document.documentElement.clientWidth - pop.offsetWidth - 8)) + 'px';
+        // Gulir kolom saja (bukan scrollIntoView, agar halaman tidak ikut bergeser).
+        [kJam, kMenit].forEach((k) => { const a = k.querySelector('.aktif'); if (a) k.scrollTop = a.offsetTop - k.clientHeight / 2 + a.offsetHeight / 2; });
+        (kJam.querySelector('.aktif') || kJam.querySelector('.jam24-opsi')).focus({ preventScroll: true });
+    }
+
+    document.addEventListener('click', (e) => { if (pop && !pop.contains(e.target)) tutup(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') tutup(); });
+
+    function pasangSemua() { document.querySelectorAll('input[data-jam24]').forEach(pasangTombol); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pasangSemua); else pasangSemua();
+    // Isian yang muncul belakangan (dialog, bagian yang dibuka) ikut dipasangi.
+    new MutationObserver(pasangSemua).observe(document.documentElement, { childList: true, subtree: true });
+
     // Tolak kirim formulir bila ada jam tak valid (mis. 25:00).
     document.addEventListener('submit', function (e) {
         const salah = Array.from(e.target.querySelectorAll('[data-jam24]')).filter(function (el) {
