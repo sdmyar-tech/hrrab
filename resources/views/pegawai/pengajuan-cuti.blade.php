@@ -72,7 +72,7 @@
                                     {{-- Melahirkan/keguguran sendiri hanya untuk pegawai perempuan; "istri melahirkan" hanya untuk laki-laki (jenis kelamin kosong: tampil semua). --}}
                                     @continue($pegawai?->jenis_kelamin === 'Laki-laki' && in_array($value, \App\Models\PengajuanCuti::KATEGORI_KHUSUS_PEREMPUAN, true))
                                     @continue($pegawai?->jenis_kelamin === 'Perempuan' && $value === 'istri_melahirkan')
-                                    <option value="{{ $value }}" data-durasi="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_DURASI[$value] ?? '' }}" data-maks-kalender="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_MAKS_KALENDER[$value] ?? '' }}" data-dadakan="{{ in_array($value, \App\Models\PengajuanCuti::KATEGORI_DADAKAN, true) ? 1 : 0 }}" {{ old('kategori_cuti_besar') == $value ? 'selected' : '' }} @disabled(! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true))>{{ $label }}{{ ! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true) ? ' (setelah 1 tahun)' : '' }}</option>
+                                    <option value="{{ $value }}" data-durasi="{{ in_array($value, \App\Models\PengajuanCuti::KATEGORI_HABISKAN_TAHUNAN, true) ? $sisaCuti : (\App\Models\PengajuanCuti::KATEGORI_BESAR_DURASI[$value] ?? '') }}" data-maks-kalender="{{ \App\Models\PengajuanCuti::KATEGORI_BESAR_MAKS_KALENDER[$value] ?? '' }}" data-dadakan="{{ in_array($value, \App\Models\PengajuanCuti::KATEGORI_DADAKAN, true) ? 1 : 0 }}" {{ old('kategori_cuti_besar') == $value ? 'selected' : '' }} @disabled((! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true)) || ($eligible && $sisaCuti < 1 && in_array($value, \App\Models\PengajuanCuti::KATEGORI_HABISKAN_TAHUNAN, true)))>{{ $label }}{{ ! $eligible && in_array($value, \App\Models\PengajuanCuti::KATEGORI_PERLU_MASA_KERJA, true) ? ' (setelah 1 tahun)' : '' }}{{ $eligible && $sisaCuti < 1 && in_array($value, \App\Models\PengajuanCuti::KATEGORI_HABISKAN_TAHUNAN, true) ? ' (sisa cuti habis)' : '' }}{{ $eligible && $sisaCuti >= 1 && in_array($value, \App\Models\PengajuanCuti::KATEGORI_HABISKAN_TAHUNAN, true) ? ' — ' . $sisaCuti . ' hari' : '' }}</option>
                                 @endforeach
                             </select>
                             @error('kategori_cuti_besar')
@@ -316,8 +316,8 @@
             const opsi = kategoriSelect.options[kategoriSelect.selectedIndex];
             const maks = maksKalender();
             durasiHint.textContent = ! jenisBesar.checked ? ''
-                : tetap ? 'Kategori ini wajib ' + durasi + ' hari kerja.'
-                : maks ? 'Paling lama ' + maks + ' hari kalender (UU Ketenagakerjaan Pasal 82). Tanggal selesai terisi batas maksimal; boleh dipersingkat.'
+                : tetap ? (opsi && opsi.value === 'umrah' ? 'Umrah mengambil seluruh sisa cuti tahunan: ' + durasi + ' hari kerja (jatah tahunan ikut terpotong).' : 'Kategori ini wajib ' + durasi + ' hari kerja.')
+                : maks ? 'Paling lama ' + maks + ' hari kalender' + (opsi && opsi.value === 'haji' ? ' (jatah haji).' : ' (UU Ketenagakerjaan Pasal 82).') + ' Tanggal selesai terisi batas maksimal; boleh dipersingkat.'
                 : opsi && opsi.value ? 'Lama cuti sesuai kebutuhan, pilih tanggal selesai (lama cuti terhitung otomatis).' : '';
 
             if (maks) isiSelesaiMaksKalender();

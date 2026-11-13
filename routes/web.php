@@ -47,6 +47,7 @@ use App\Http\Controllers\Pelamar\DataPelamarController;
 use App\Http\Controllers\Pelamar\LamaranController as PelamarLamaranController;
 use App\Http\Controllers\PengumumanController;
 use App\Http\Controllers\Public\LowonganController as PublicLowonganController;
+use App\Http\Controllers\PermintaanPasswordController;
 use App\Http\Controllers\WajibPasswordController;
 use App\Support\PortalStaf;
 use Illuminate\Support\Facades\Route;
@@ -464,8 +465,15 @@ Route::middleware(['auth', 'nocache'])->group(function () {
     Route::get('/akun/ganti-password', [WajibPasswordController::class, 'halaman'])->name('akun.ganti-password');
     Route::post('/akun/ganti-password', [WajibPasswordController::class, 'simpan'])->middleware('throttle:10,1')->name('akun.ganti-password.simpan');
 
+    // Ganti kata sandi atas persetujuan SDM/Admin: ajukan → disetujui → dialog ganti kata sandi (sekali pakai).
+    Route::post('/akun/permintaan-password', [PermintaanPasswordController::class, 'ajukan'])->middleware('throttle:5,1')->name('akun.permintaan-password.ajukan');
+    Route::post('/akun/ubah-password', [PermintaanPasswordController::class, 'ubah'])->middleware('throttle:10,1')->name('akun.permintaan-password.ubah');
+
     // Kepala SDM & Admin: alur persetujuan/atasan pegawai + paksa ganti password akun.
     Route::prefix('admin')->name('admin.')->middleware(['internal', 'can:pegawai.alur.manage'])->group(function () {
+        Route::get('/permintaan-password', [PermintaanPasswordController::class, 'index'])->name('permintaan-password.index');
+        Route::post('/permintaan-password/{permintaan}/setujui', [PermintaanPasswordController::class, 'setujui'])->name('permintaan-password.setujui');
+        Route::post('/permintaan-password/{permintaan}/tolak', [PermintaanPasswordController::class, 'tolak'])->name('permintaan-password.tolak');
         Route::put('/pegawai/{pegawai}/alur', [AlurPegawaiController::class, 'update'])->name('pegawai.alur.update');
         Route::delete('/pegawai/{pegawai}/alur', [AlurPegawaiController::class, 'destroy'])->name('pegawai.alur.destroy');
         Route::post('/akun/{user}/wajib-password', [WajibPasswordController::class, 'atur'])->name('akun.wajib-password');

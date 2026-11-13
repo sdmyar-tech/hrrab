@@ -133,16 +133,22 @@ class PengajuanCutiController extends Controller
         $tambahan = [];
         if ($pengajuanCuti->perluPengganti()) {
             $validated = $request->validate([
-                'pengganti_nama' => ['required', 'string', 'max:150'],
+                'pengganti_nama' => ['required', 'array', 'min:1', 'max:5'],
+                'pengganti_nama.*' => ['required', 'string', 'max:150', 'distinct'],
             ], [
                 'pengganti_nama.required' => 'Nama pengganti tugas wajib dipilih sebelum pengajuan diteruskan.',
+                'pengganti_nama.*.required' => 'Pilih pegawai pada setiap kolom pengganti, atau hapus kolom yang kosong.',
+                'pengganti_nama.*.distinct' => 'Pengganti yang sama dipilih lebih dari sekali.',
             ]);
 
-            if (! $pengajuanCuti->substituteOptions()->contains($validated['pengganti_nama']) && ! $approver->can(Izin::OVERRIDE)) {
-                return redirect()->back()->with('error', 'Nama pengganti harus berasal dari divisi yang sama dengan pemohon.');
+            $opsi = $pengajuanCuti->substituteOptions();
+            foreach ($validated['pengganti_nama'] as $nama) {
+                if (! $opsi->contains($nama) && ! $approver->can(Izin::OVERRIDE)) {
+                    return redirect()->back()->with('error', "Pengganti {$nama} harus berasal dari divisi yang sama dengan pemohon.");
+                }
             }
 
-            $tambahan['pengganti_nama'] = $validated['pengganti_nama'];
+            $tambahan['pengganti_nama'] = PengajuanCuti::gabungPengganti($validated['pengganti_nama']);
         }
 
         $updates = PengajuanWorkflow::setujui($approver, $pengajuanCuti, $tambahan);
@@ -191,12 +197,13 @@ class PengajuanCutiController extends Controller
             'status' => ['required', Rule::in([PengajuanCuti::STATUS_PENDING, PengajuanCuti::STATUS_APPROVED, PengajuanCuti::STATUS_REJECTED])],
             'current_level' => ['nullable', 'required_if:status,pending', Rule::in(array_keys(PengajuanWorkflow::pilihanTahapAdmin($pengajuanCuti)))],
             'jenis_cuti' => ['required', Rule::in([PengajuanCuti::JENIS_TAHUNAN, PengajuanCuti::JENIS_BESAR])],
-            'kategori_cuti_besar' => ['nullable', 'required_if:jenis_cuti,besar', Rule::in(array_keys(PengajuanCuti::KATEGORI_BESAR_OPTIONS))],
+            'kategori_cuti_besar' => ['nullable', 'required_if:jenis_cuti,besar', Rule::in([...array_keys(PengajuanCuti::KATEGORI_BESAR_OPTIONS), $pengajuanCuti->kategori_cuti_besar])],
             'tanggal_mulai' => ['required', 'date'],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
             // Pengganti tugas: dipilih dari daftar pegawai aktif (nilai lama tetap boleh dipertahankan).
-            'pengganti_nama' => ['nullable', 'string', 'max:150',
-                Rule::in([...DataPegawai::opsiPilihan()->pluck('nama'), $pengajuanCuti->pengganti_nama])],
+            'pengganti_nama' => ['nullable', 'array', 'max:5'],
+            'pengganti_nama.*' => ['nullable', 'string', 'max:150', 'distinct:ignore_case',
+                Rule::in([...DataPegawai::opsiPilihan()->pluck('nama'), ...$pengajuanCuti->penggantiDaftar()])],
             'keterangan' => ['nullable', 'string', 'max:1000'],
             'catatan_admin' => ['nullable', 'string', 'max:1000'],
         ], ['pengganti_nama.in' => 'Pilih pengganti tugas dari daftar pegawai.']);
@@ -205,6 +212,7 @@ class PengajuanCutiController extends Controller
         $pengajuanCuti->update([
             ...$v,
             'kategori_cuti_besar' => $v['jenis_cuti'] === PengajuanCuti::JENIS_BESAR ? $v['kategori_cuti_besar'] : null,
+            'pengganti_nama' => PengajuanCuti::gabungPengganti($v['pengganti_nama'] ?? []),
             // Lama cuti selalu otomatis (hari kerja, sama dengan pengajuan pegawai), tidak diisi manual.
             'lama_cuti' => max(1, Kalender::jumlahHariKerja(Carbon::parse($v['tanggal_mulai']), Carbon::parse($v['tanggal_selesai']))),
             ...PengajuanWorkflow::statusAdmin($pengajuanCuti, $v['status'], $v['current_level'] ?? null, Auth::user()),

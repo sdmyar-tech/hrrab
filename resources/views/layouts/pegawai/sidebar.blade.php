@@ -48,6 +48,7 @@
         ]],
         ['bagian' => 'Sistem', 'item' => [
             ['Kelola Akun', 'bi-person-lock', 'admin.users.index', 'admin.users.*', $bisa('sistem.akun.manage'), null],
+            ['Permintaan Ganti Sandi', 'bi-key', 'admin.permintaan-password.index', 'admin.permintaan-password.*', $bisa('pegawai.alur.manage'), null],
             ['Master Role', 'bi-shield-check', 'admin.role.index', 'admin.role.*', $bisa('sistem.role.manage'), null],
             ['Master Jabatan', 'bi-diagram-3', 'admin.jabatan.index', ['admin.jabatan.index', 'admin.jabatan.export'], $bisa('sistem.master.manage'), null],
             ['Master Lokasi Kerja', 'bi-geo-alt', 'admin.lokasi-kerja.index', 'admin.lokasi-kerja.*', $bisa('sistem.master.manage'), null],

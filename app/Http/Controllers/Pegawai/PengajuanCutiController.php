@@ -162,13 +162,23 @@ class PengajuanCutiController extends Controller
             }
 
             $kategori = $validated['kategori_cuti_besar'];
+            // Umrah: wajib mengambil seluruh sisa cuti tahunan (jatah tahunan ikut terpotong saat disetujui).
+            if (in_array($kategori, PengajuanCuti::KATEGORI_HABISKAN_TAHUNAN, true)) {
+                $sisaCuti = PengajuanCuti::sisaCutiTahunan($pegawai);
+                if ($sisaCuti < 1) {
+                    return redirect()->back()->withInput()->with('error', 'Sisa cuti tahunan Anda sudah habis, cuti Umrah tidak bisa diajukan.');
+                }
+                if ($lamaCuti !== $sisaCuti) {
+                    return redirect()->back()->withInput()->with('error', "Cuti Umrah mengambil seluruh sisa cuti tahunan: harus tepat {$sisaCuti} hari kerja (Anda memilih {$lamaCuti}).");
+                }
+            }
             if (in_array($kategori, PengajuanCuti::KATEGORI_KHUSUS_PEREMPUAN, true) && $pegawai->jenis_kelamin === 'Laki-laki') {
                 return redirect()->back()->withInput()->with('error', 'Kategori ini khusus pegawai perempuan. Untuk istri melahirkan, pilih "Istri Melahirkan/Keguguran Kandungan".');
             }
             // Melahirkan/keguguran: batas dalam hari kalender (UU 13/2003 Pasal 82), boleh lebih pendek.
             $maksKalender = PengajuanCuti::KATEGORI_BESAR_MAKS_KALENDER[$kategori] ?? null;
             if ($maksKalender && Carbon::parse($validated['tanggal_mulai'])->diffInDays(Carbon::parse($validated['tanggal_selesai'])) + 1 > $maksKalender) {
-                return redirect()->back()->withInput()->with('error', "Cuti kategori ini paling lama {$maksKalender} hari kalender.");
+                return redirect()->back()->withInput()->with('error', "Cuti kategori ini paling lama {$maksKalender} hari kalender" . ($kategori === 'haji' ? ' (jatah haji).' : '.'));
             }
         }
 

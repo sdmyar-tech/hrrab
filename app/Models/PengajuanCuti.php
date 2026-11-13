@@ -46,7 +46,8 @@ class PengajuanCuti extends Model
         'bencana' => 'Korban Kebakaran/Banjir/Penggusuran',
         'panggilan_pengadilan' => 'Panggilan Pengadilan/Pihak Berwajib',
         'izin_studi' => 'Izin Studi/Kuliah (sesuai SOP Izin Studi)',
-        'lainnya' => 'lainnya'
+        'umrah' => 'Umrah (menghabiskan sisa cuti tahunan)',
+        'haji' => 'Ibadah Haji (jatah maksimal 40 hari)',
     ];
 
     public const KATEGORI_BESAR_DURASI = [
@@ -62,8 +63,12 @@ class PengajuanCuti extends Model
         'bencana' => 1,
         'panggilan_pengadilan' => null,
         'izin_studi' => null,
-        'lainnya' => null
+        'umrah' => null, // = seluruh sisa cuti tahunan (dinamis, lihat KATEGORI_HABISKAN_TAHUNAN)
+        'haji' => null,
     ];
+
+    /** Cuti besar yang wajib mengambil SELURUH sisa cuti tahunan dan memotong jatah tahunan (Umrah). */
+    public const KATEGORI_HABISKAN_TAHUNAN = ['umrah'];
 
     /**
      * Batas rentang (hari KALENDER, bukan hari kerja) untuk cuti pegawai perempuan — UU 13/2003 Pasal 82:
@@ -72,6 +77,7 @@ class PengajuanCuti extends Model
     public const KATEGORI_BESAR_MAKS_KALENDER = [
         'melahirkan' => 90,
         'keguguran' => 45,
+        'haji' => 40, // jatah maksimal haji: 40 hari kalender
     ];
 
     /** Kategori yang hanya bisa diajukan pegawai perempuan. */
@@ -81,7 +87,7 @@ class PengajuanCuti extends Model
      * Cuti besar = izin karena alasan penting (UU 13/2003 Pasal 93): TIDAK bergantung masa kerja.
      * Pengecualian yang tetap butuh masa kerja minimal 1 tahun (sama seperti cuti tahunan, Pasal 79):
      */
-    public const KATEGORI_PERLU_MASA_KERJA = ['izin_studi'];
+    public const KATEGORI_PERLU_MASA_KERJA = ['izin_studi', 'umrah'];
 
     /** Cuti besar mendadak: bebas aturan H-7, boleh mulai di hari yang sama dengan pengajuan (tidak boleh tanggal lampau). */
     public const KATEGORI_DADAKAN = [
@@ -179,9 +185,24 @@ class PengajuanCuti extends Model
         return $this->jenis_cuti === self::JENIS_BESAR ? 'Cuti Besar' : 'Cuti Tahunan';
     }
 
+    /** Pengganti tugas bisa lebih dari satu: disimpan di kolom pengganti_nama dipisah titik koma ("Siti; Budi"). */
+    public function penggantiDaftar(): array
+    {
+        return array_values(array_filter(array_map('trim', explode(';', (string) $this->pengganti_nama)), fn ($n) => $n !== ''));
+    }
+
+    /** @param  array<int, string|null>  $nama */
+    public static function gabungPengganti(array $nama): ?string
+    {
+        $bersih = array_values(array_unique(array_filter(array_map(fn ($n) => trim((string) $n), $nama), fn ($n) => $n !== '')));
+
+        return $bersih ? implode('; ', $bersih) : null;
+    }
+
     public function kategoriBesarLabel(): ?string
     {
-        return self::KATEGORI_BESAR_OPTIONS[$this->kategori_cuti_besar] ?? null;
+        // Kategori lama yang sudah dihapus dari pilihan (mis. "lainnya") tetap terbaca di data lama.
+        return self::KATEGORI_BESAR_OPTIONS[$this->kategori_cuti_besar] ?? ($this->kategori_cuti_besar ? ucfirst($this->kategori_cuti_besar) : null);
     }
 
     public static function durasiKategoriBesar(?string $kategori): ?int
@@ -195,8 +216,10 @@ class PengajuanCuti extends Model
             return self::ANNUAL_QUOTA;
         }
 
+        // Cuti besar Umrah juga memotong jatah tahunan.
         $terpakai = (int) $pegawai->pengajuanCutis()
-            ->where('jenis_cuti', self::JENIS_TAHUNAN)
+            ->where(fn ($q) => $q->where('jenis_cuti', self::JENIS_TAHUNAN)
+                ->orWhereIn('kategori_cuti_besar', self::KATEGORI_HABISKAN_TAHUNAN))
             ->where('status', self::STATUS_APPROVED)
             ->whereYear('tanggal_mulai', $tahun ?? now()->year)
             ->sum('lama_cuti');

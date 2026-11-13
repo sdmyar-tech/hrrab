@@ -44,7 +44,9 @@
                                 help="Anda bertugas di beberapa bagian. Pengajuan diproses kepala bagian yang dipilih." />
                         @endif
 
-                        <x-input name="tanggal" id="tanggal" type="date" label="Tanggal" :value="now()->format('Y-m-d')" required />
+                        <x-input name="tanggal" id="tanggal" type="date" label="Tanggal" :value="old('tanggal', now()->format('Y-m-d'))" required
+                            :min="now()->subDays($maksMundur)->toDateString()" :max="now()->addDays($maksKeDepan)->toDateString()"
+                            :help="'Lupa mengajukan? Masih bisa sampai ' . $maksMundur . ' hari setelah hari lembur.'" />
 
                         <x-textarea name="uraian_tugas" id="uraian_tugas" label="Uraian Tugas" rows="3" required
                             placeholder="Contoh: rekap dokumen akreditasi untuk audit besok pagi" />
@@ -54,6 +56,7 @@
                             <div class="col-6"><x-input name="jam_mulai" id="jam_mulai" label="Jam Mulai" required data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 16:00" /></div>
                             <div class="col-6"><x-input name="jam_selesai" id="jam_selesai" label="Jam Selesai" required data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 20:30" /></div>
                         </div>
+                        <p class="form-text mt-n2 mb-3" id="hintJadwal" aria-live="polite"></p>
 
                         {{-- Hasil kalkulasi otomatis: read-only, selalu di akhir isian. --}}
                         <div class="hr-hitungan mb-2" aria-live="polite">
@@ -83,7 +86,8 @@
                 <x-card title="Ketentuan" icon="bi-info-circle">
                     <ul class="hr-daftar-info">
                         <li><i class="bi bi-file-earmark-text" aria-hidden="true"></i>Lembur dihitung dari <strong>surat tugas</strong> atasan, bukan dari jam pulang mesin absen.</li>
-                        <li><i class="bi bi-clock" aria-hidden="true"></i>Isi jam mulai & selesai yang sebenarnya; jumlah jam dihitung otomatis.</li>
+                        <li><i class="bi bi-clock" aria-hidden="true"></i>Jam mulai terisi dari <strong>jam pulang</strong> pada jadwal kerja Anda (Atur Jam Kerja di Absensi). Lembur tidak boleh bertumpuk dengan jam kerja; jumlah jam dihitung otomatis.</li>
+                        <li><i class="bi bi-calendar-check" aria-hidden="true"></i>Lupa mengajukan? Pengajuan masih bisa dibuat sampai <strong>{{ $maksMundur }} hari</strong> setelah hari lembur.</li>
                         <li><i class="bi bi-person-check" aria-hidden="true"></i>Pengajuan diproses berjenjang sesuai alur persetujuan bagian Anda; statusnya tampil di riwayat.</li>
                     </ul>
                 </x-card>
@@ -136,13 +140,35 @@
         const jamSelesaiInput = document.getElementById('jam_selesai');
         const jumlahJamInput = document.getElementById('jumlah_jam');
 
+        // Jam kerja menurut Atur Jam Kerja (Absensi): hari ISO 1–7 → {masuk, pulang} atau null (bukan hari kerja).
+        const JADWAL = @json($jadwalHari);
+        const LIBUR = @json(config('hrrab.hari_libur'));
+        const JADWAL_ADA = Object.values(JADWAL).some(Boolean);
+        const hintJadwal = document.getElementById('hintJadwal');
+        let jamMulaiOtomatis = null; // nilai yang diisi sistem; tidak menimpa jam yang diketik sendiri
+
         function updateHari() {
             if (!tanggalInput.value) {
                 hariInput.value = '';
+                hintJadwal.textContent = '';
                 return;
             }
             const date = new Date(tanggalInput.value + 'T00:00:00');
             hariInput.value = hariNames[date.getDay()];
+
+            const jam = LIBUR.includes(tanggalInput.value) ? null : (JADWAL[date.getDay() || 7] || null);
+            if (jam) {
+                hintJadwal.textContent = 'Jam kerja Anda hari itu ' + jam.masuk + '–' + jam.pulang + '. Lembur dimulai paling cepat jam ' + jam.pulang + ' (atau selesai sebelum ' + jam.masuk + ').';
+                if (!jamMulaiInput.value || jamMulaiInput.value === jamMulaiOtomatis) {
+                    jamMulaiInput.value = jam.pulang;
+                    jamMulaiOtomatis = jam.pulang;
+                    jamMulaiInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            } else {
+                hintJadwal.textContent = JADWAL_ADA ? 'Hari itu bukan hari kerja Anda (libur/tanggal merah): jam lembur bebas.' : 'Jadwal kerja Anda belum diatur di Absensi: isi jam sebenarnya.';
+                if (jamMulaiInput.value === jamMulaiOtomatis) { jamMulaiInput.value = ''; jamMulaiInput.dispatchEvent(new Event('input', { bubbles: true })); }
+                jamMulaiOtomatis = null;
+            }
         }
 
         function updateJumlahJam() {

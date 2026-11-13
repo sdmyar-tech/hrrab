@@ -251,7 +251,9 @@
             jamKembali.disabled = ! keluar || tidakKembali.checked;
             jamKembali.required = keluar && ! tidakKembali.checked;
             labelKembali.classList.toggle('required', ! tidakKembali.checked);
-            if (tidakKembali.checked) jamKembali.value = '';
+            // Tidak kembali hari ini → perkiraan kembali dikosongkan & dikunci.
+            jamKembali.placeholder = tidakKembali.checked && keluar ? 'Kosong (tidak kembali)' : 'Contoh: 11:30';
+            if (tidakKembali.checked) { jamKembali.value = ''; jamKembali.setCustomValidity(''); }
         }
 
         // Izin keluar hari ini: jam keluar paling awal = jam saat ini (selaras server, termasuk kelonggaran).

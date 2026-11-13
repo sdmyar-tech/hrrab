@@ -73,10 +73,13 @@ class PenilaianAbsensi
             ->whereDate('tanggal', '<=', $sampai)->whereRaw('COALESCE(tanggal_selesai, tanggal) >= ?', [$dari->toDateString()])
             ->get()->groupBy('data_pegawai_id');
         // Cuti disetujui yang menunjuk pegawai ini sebagai pengganti tugas (dasar lembur pengganti).
+        // Satu cuti boleh punya beberapa pengganti (nama dipisah ";"): dikelompokkan per nama pengganti.
         $pengganti = PengajuanCuti::with('dataPegawai.jadwalKerja')->where('status', PengajuanCuti::STATUS_APPROVED)
-            ->whereIn('pengganti_nama', $pegawais->pluck('nama_lengkap')->filter()->all())
+            ->whereNotNull('pengganti_nama')
             ->whereDate('tanggal_mulai', '<=', $sampai)->whereDate('tanggal_selesai', '>=', $dari)
-            ->get()->groupBy('pengganti_nama');
+            ->get()
+            ->flatMap(fn ($c) => collect($c->penggantiDaftar())->map(fn ($nama) => [$nama, $c]))
+            ->groupBy(0)->map(fn ($g) => $g->pluck(1));
         // Rentang tanggal yang sudah ada data mesinnya: di luar ini hari tanpa scan BUKAN Alpa (data belum diimport).
         $cakupan = [Absensi::whereNotNull('finger_id')->min('tanggal'), Absensi::whereNotNull('finger_id')->max('tanggal')];
 
@@ -250,7 +253,8 @@ class PenilaianAbsensi
             if ($c->tanggal_mulai->gt($tanggal) || $c->tanggal_selesai->lt($tanggal)) {
                 continue;
             }
-            $total += self::totalMenitKerja($c->dataPegawai?->jadwalKerja?->jamPada($tanggal));
+            // Beberapa pengganti membagi rata jam kerja yang digantikan.
+            $total += intdiv(self::totalMenitKerja($c->dataPegawai?->jadwalKerja?->jamPada($tanggal)), max(1, count($c->penggantiDaftar())));
         }
 
         return max(0, $total - self::totalMenitKerja($pengganti->jadwalKerja?->jamPada($tanggal)));

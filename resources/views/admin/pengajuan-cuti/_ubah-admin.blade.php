@@ -29,13 +29,24 @@
                 <label class="form-label" for="ubah-selesai">Tanggal Selesai</label>
                 <input type="date" name="tanggal_selesai" id="ubah-selesai" class="form-control form-control-sm" value="{{ old('tanggal_selesai', $pengajuanCuti->tanggal_selesai->format('Y-m-d')) }}" required>
             </div>
-            <div class="col-sm-6">
-                <label class="form-label" for="ubah-pengganti">Pengganti Tugas</label>
-                @include('partials.pilih-pegawai', [
-                    'name' => 'pengganti_nama', 'id' => 'ubah-pengganti', 'nilai' => 'nama', 'kelas' => 'form-select-sm',
-                    'terpilih' => old('pengganti_nama', $pengajuanCuti->pengganti_nama), 'kosong' => 'Belum ditentukan',
-                    'utama' => $pengajuanCuti->substituteOptions()->all(), 'labelUtama' => 'Satu bagian', 'kecuali' => [$pengajuanCuti->data_pegawai_id],
-                ])
+            <div class="col-12">
+                {{-- Pengganti boleh lebih dari satu: satu kolom per pengganti, kosongkan yang tidak dipakai (maks. 5). --}}
+                @php
+                    $penggantiLama = array_values((array) old('pengganti_nama', $pengajuanCuti->penggantiDaftar()));
+                    $slotPengganti = min(5, max(2, count(array_filter($penggantiLama)) + 1));
+                @endphp
+                <label class="form-label" for="ubah-pengganti-0">Pengganti Tugas <span class="hr-field-opsional">(bisa lebih dari satu)</span></label>
+                <div class="row g-2">
+                    @for ($i = 0; $i < $slotPengganti; $i++)
+                        <div class="col-sm-6">
+                            @include('partials.pilih-pegawai', [
+                                'name' => 'pengganti_nama[]', 'id' => 'ubah-pengganti-' . $i, 'nilai' => 'nama', 'kelas' => 'form-select-sm',
+                                'terpilih' => $penggantiLama[$i] ?? '', 'kosong' => $i === 0 ? 'Belum ditentukan' : '— Tidak ada pengganti ke-' . ($i + 1) . ' —',
+                                'utama' => $pengajuanCuti->substituteOptions()->all(), 'labelUtama' => 'Satu bagian', 'kecuali' => [$pengajuanCuti->data_pegawai_id],
+                            ])
+                        </div>
+                    @endfor
+                </div>
             </div>
             <div class="col-12">
                 <label class="form-label" for="ubah-catatan">Catatan / Alasan <span class="hr-field-opsional">(opsional)</span></label>

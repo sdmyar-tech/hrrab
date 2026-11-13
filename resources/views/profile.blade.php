@@ -143,8 +143,24 @@
                                     <p class="profil-baris-judul">Kata sandi</p>
                                     <p class="profil-baris-teks">
                                         {{ $user->password_diganti_pada ? 'Terakhir diganti ' . $user->password_diganti_pada->translatedFormat('d F Y') . '.' : 'Belum pernah diganti lewat sistem.' }}
-                                        Lupa atau ingin mengganti kata sandi? Hubungi SDM/Admin.
+                                        Ingin mengganti kata sandi? Ajukan dulu; SDM/Admin yang menyetujui.
                                     </p>
+                                    @php $permintaanSandi = \App\Models\PermintaanGantiPassword::terakhir($user); @endphp
+                                    @if ($permintaanSandi && $permintaanSandi->status === \App\Models\PermintaanGantiPassword::STATUS_APPROVED)
+                                        <x-button size="sm" icon="bi-key" data-bs-toggle="modal" data-bs-target="#modalGantiPassword">Ganti kata sandi sekarang</x-button>
+                                    @elseif ($permintaanSandi && $permintaanSandi->status === \App\Models\PermintaanGantiPassword::STATUS_PENDING)
+                                        <x-badge tone="warning" icon="bi-hourglass-split">Permintaan menunggu persetujuan SDM/Admin</x-badge>
+                                    @else
+                                        @if ($permintaanSandi && $permintaanSandi->status === \App\Models\PermintaanGantiPassword::STATUS_REJECTED)
+                                            <p class="small text-danger mb-2">Permintaan terakhir ditolak{{ $permintaanSandi->catatan ? ': ' . $permintaanSandi->catatan : '.' }}</p>
+                                        @endif
+                                        <form action="{{ route('akun.permintaan-password.ajukan') }}" method="POST" class="d-flex flex-wrap gap-2 m-0">
+                                            @csrf
+                                            <input type="text" name="alasan" class="form-control form-control-sm w-auto flex-grow-1" maxlength="500"
+                                                placeholder="Alasan (opsional), contoh: lupa kata sandi" aria-label="Alasan ganti kata sandi">
+                                            <x-button type="submit" size="sm" variant="secondary" icon="bi-send">Ajukan ganti kata sandi</x-button>
+                                        </form>
+                                    @endif
                                 </div>
                                 <x-badge tone="success" icon="bi-check2">Aktif</x-badge>
                             </div>

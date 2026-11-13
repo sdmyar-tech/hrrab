@@ -232,6 +232,9 @@ body {
     text-rendering: optimizeLegibility;
 }
 html[data-theme="dark"] body { background: var(--admin-bg); }
+/* HP: elemen yang melebihi lebar layar tidak boleh membuat halaman bisa digeser ke kanan (kosong).
+   `clip` (bukan `hidden`) agar position: sticky tetap bekerja. */
+html, body { max-width: 100%; overflow-x: clip; }
 button, input, select, textarea, .btn, .form-control, .form-select, .swal2-popup, .tooltip, .popover, .dropdown-menu { font-family: var(--hr-font); }
 h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 { font-weight: var(--hr-weight-bold); letter-spacing: -.01em; line-height: var(--hr-leading-tight); color: inherit; }
 /* Skala judul tanpa kelas: h1 32 · h2 24 · h3 20 (kelas .h1–.h6 Bootstrap tetap berlaku bila dipasang). */

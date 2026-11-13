@@ -148,6 +148,20 @@ class IzinKeluarController extends Controller
             throw ValidationException::withMessages(['jam_keluar' => 'Jam keluar paling awal jam saat ini (' . now()->format('H:i') . '). Izin keluar diajukan sebelum keluar.']);
         }
 
+        // Harus hari kerja pegawai dan jam keluar–kembali di dalam jam kerjanya (Atur Jam Kerja di Absensi).
+        $jam = $this->jamKerjaAtauGalat($pegawai, $validated['tanggal']);
+        if (is_string($jam)) {
+            return $jam;
+        }
+        if ($jam) {
+            if ($validated['jam_keluar'] < $jam['masuk'] || $validated['jam_keluar'] >= $jam['pulang']) {
+                return "Jam keluar harus di dalam jam kerja Anda ({$jam['masuk']}–{$jam['pulang']}).";
+            }
+            if ($jamKembali && $jamKembali > $jam['pulang']) {
+                return "Perkiraan kembali melewati jam pulang ({$jam['pulang']}). Bila tidak kembali lagi, centang \"Tidak kembali lagi hari ini\".";
+            }
+        }
+
         // Tidak boleh tumpang tindih dengan izin lain (menunggu/disetujui): izin tidak masuk di tanggal itu, atau jam yang bertumpuk.
         $selesai = $jamKembali ?? '23:59';
         $bentrok = $pegawai->pengajuanIzinKeluars()->bertumpuk($validated['tanggal'], $validated['tanggal'])
@@ -203,6 +217,19 @@ class IzinKeluarController extends Controller
         if (Carbon::parse("{$validated['tanggal']} {$validated['jam_tiba']}")->lt($batasMundur)) {
             throw ValidationException::withMessages(['jam_tiba' => 'Izin telat paling lambat diajukan ' . self::MAKS_JAM_MUNDUR
                 . ' jam setelah jam tiba (paling awal ' . $batasMundur->translatedFormat('d M Y H:i') . ').']);
+        }
+        // Harus hari kerja pegawai; jam tiba setelah jam masuk (kalau tidak, bukan telat) dan sebelum jam pulang.
+        $jam = $this->jamKerjaAtauGalat($pegawai, $validated['tanggal']);
+        if (is_string($jam)) {
+            return $jam;
+        }
+        if ($jam) {
+            if ($validated['jam_tiba'] <= $jam['masuk']) {
+                return "Jam tiba harus setelah jam masuk Anda ({$jam['masuk']}). Izin telat hanya untuk datang terlambat.";
+            }
+            if ($validated['jam_tiba'] >= $jam['pulang']) {
+                return "Jam tiba tidak boleh sesudah jam pulang ({$jam['pulang']}). Bila tidak masuk seharian, ajukan Izin Tidak Masuk.";
+            }
         }
         // Satu izin telat per hari, dan tidak di hari yang sudah izin tidak masuk.
         $bentrok = $pegawai->pengajuanIzinKeluars()->bertumpuk($validated['tanggal'], $validated['tanggal'])
@@ -274,6 +301,25 @@ class IzinKeluarController extends Controller
             'keperluan' => $validated['keperluan'],
             'alasan' => $validated['alasan'],
         ];
+    }
+
+    /**
+     * Jam kerja pegawai pada tanggal itu menurut Atur Jam Kerja di Absensi.
+     *
+     * @return array{masuk: string, pulang: string}|string|null  jam kerja; pesan galat bila bukan hari kerjanya; null bila jadwal belum diatur
+     */
+    private function jamKerjaAtauGalat(DataPegawai $pegawai, string $tanggal): array|string|null
+    {
+        $t = Carbon::parse($tanggal);
+        $pesan = 'Tanggal itu bukan hari kerja Anda (libur, tanggal merah, atau di luar jadwal kerja), jadi izin jam tidak diperlukan.';
+        if (in_array($t->toDateString(), config('hrrab.hari_libur', []), true)) {
+            return $pesan;
+        }
+        if ($pegawai->jadwalKerja) {
+            return $pegawai->jadwalKerja->jamPada($t) ?? $pesan;
+        }
+
+        return Kalender::isHariKerja($t) ? null : $pesan;
     }
 
     /** Ada cuti (menunggu/disetujui) yang bertumpuk dengan rentang tanggal. */

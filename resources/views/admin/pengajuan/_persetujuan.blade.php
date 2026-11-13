@@ -15,11 +15,15 @@
         <dl class="hr-konteks" data-konteks></dl>
         <div class="mt-3" data-blok-pengganti hidden>
             <label class="form-label required" for="setujui-pengganti">Pengganti tugas</label>
-            <select name="pengganti_nama" id="setujui-pengganti" class="form-select" required disabled>
-                <option value="">Pilih pengganti tugas</option>
-            </select>
+            {{-- Satu kolom per pengganti (bisa lebih dari satu); kolom tambahan diisi skrip di bawah. --}}
+            <div class="d-grid gap-2" data-daftar-pengganti>
+                <select name="pengganti_nama[]" id="setujui-pengganti" class="form-select" required disabled>
+                    <option value="">Pilih pengganti tugas</option>
+                </select>
+            </div>
             <div class="invalid-feedback">Pilih pengganti tugas sebelum menyetujui.</div>
-            <div class="form-text">Pengganti yang dipilih langsung final, tidak perlu persetujuan lagi.</div>
+            <x-button variant="link" size="sm" type="button" icon="bi-plus-circle" class="px-0 mt-1" data-tambah-pengganti>Tambah pengganti</x-button>
+            <div class="form-text">Boleh lebih dari satu pengganti. Pengganti yang dipilih langsung final, tidak perlu persetujuan lagi.</div>
         </div>
     </form>
     <x-slot:footer>
@@ -53,6 +57,39 @@
         const pengganti = document.getElementById('setujui-pengganti');
         const blokPengganti = modal.setujui.querySelector('[data-blok-pengganti]');
         const alasan = document.getElementById('tolak-catatan');
+        const wadahPengganti = modal.setujui.querySelector('[data-daftar-pengganti]');
+        const tombolTambah = modal.setujui.querySelector('[data-tambah-pengganti]');
+        const MAKS_PENGGANTI = 5;
+        let daftarPengganti = [];
+
+        function isiPilihan(select) {
+            select.replaceChildren(new Option('Pilih pengganti tugas', ''));
+            daftarPengganti.forEach(function (nama) { select.append(new Option(nama, nama)); });
+        }
+
+        // Kolom pengganti tambahan (opsional, bisa dihapus).
+        tombolTambah.addEventListener('click', function () {
+            if (wadahPengganti.querySelectorAll('select').length >= MAKS_PENGGANTI) return;
+            const baris = document.createElement('div');
+            baris.className = 'input-group';
+            baris.dataset.barisTambahan = '1';
+            const select = document.createElement('select');
+            select.name = 'pengganti_nama[]';
+            select.className = 'form-select';
+            select.required = true;
+            select.setAttribute('aria-label', 'Pengganti tugas tambahan');
+            isiPilihan(select);
+            const hapus = document.createElement('button');
+            hapus.type = 'button';
+            hapus.className = 'btn btn-outline-secondary';
+            hapus.innerHTML = '<i class="bi bi-x-lg" aria-hidden="true"></i>';
+            hapus.setAttribute('aria-label', 'Hapus kolom pengganti ini');
+            hapus.addEventListener('click', function () { baris.remove(); tombolTambah.disabled = false; });
+            baris.append(select, hapus);
+            wadahPengganti.append(baris);
+            select.focus();
+            tombolTambah.disabled = wadahPengganti.querySelectorAll('select').length >= MAKS_PENGGANTI;
+        });
 
         function isiKonteks(dl, data) {
             dl.replaceChildren();
@@ -84,9 +121,13 @@
                 let daftar = null;
                 try { daftar = tombol.dataset.pengganti ? JSON.parse(tombol.dataset.pengganti) : null; } catch (err) { daftar = null; }
                 blokPengganti.hidden = !daftar;
+                daftarPengganti = daftar || [];
+                // Kembalikan ke satu kolom (buang kolom tambahan dari pembukaan sebelumnya).
+                wadahPengganti.querySelectorAll('[data-baris-tambahan]').forEach((b) => b.remove());
                 pengganti.disabled = !daftar;
-                pengganti.replaceChildren(new Option('Pilih pengganti tugas', ''));
-                (daftar || []).forEach(function (nama) { pengganti.append(new Option(nama, nama)); });
+                isiPilihan(pengganti);
+                tombolTambah.hidden = !daftar;
+                tombolTambah.disabled = false;
             } else {
                 const sumber = tombol.dataset.catatanSumber ? document.querySelector(tombol.dataset.catatanSumber) : null;
                 alasan.value = sumber ? sumber.value.trim() : '';

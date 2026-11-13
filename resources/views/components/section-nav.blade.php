@@ -36,7 +36,11 @@
                             const aktif = a.getAttribute('href') === '#' + e.target.id;
                             a.classList.toggle('active', aktif);
                             aktif ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current');
-                            if (aktif && nav.scrollWidth > nav.clientWidth) a.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                            // Geser baris tab saja (scrollIntoView ikut menggulir halaman → di HP halaman terlempar ke atas).
+                            if (aktif && nav.scrollWidth > nav.clientWidth) {
+                                const kiri = a.offsetLeft - nav.offsetLeft - (nav.clientWidth - a.offsetWidth) / 2;
+                                nav.scrollTo({ left: Math.max(0, kiri), behavior: 'auto' });
+                            }
                         });
                     });
                 }, { rootMargin: '-30% 0px -60% 0px' });

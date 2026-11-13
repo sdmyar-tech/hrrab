@@ -35,6 +35,7 @@
             ['Mutasi & Rangkap', 'bi-arrow-left-right', 'admin.penugasan.index', 'admin.penugasan.*', $u->can('penugasan.manage'), null],
             ['Bagian & Koordinator', 'bi-buildings', 'admin.unit.index', 'admin.unit.*', $u->can('penugasan.manage'), null],
             ['Tangga Alur Pengajuan', 'bi-signpost-split', 'admin.tangga-alur.index', 'admin.tangga-alur.*', $u->can('pegawai.alur.manage'), null],
+            ['Permintaan Ganti Sandi', 'bi-key', 'admin.permintaan-password.index', 'admin.permintaan-password.*', $u->can('pegawai.alur.manage'), null],
             ['Unit', 'bi-grid-3x3-gap', 'admin.master-unit.index', 'admin.master-unit.*', $u->can('penugasan.manage'), null],
             ['Evaluasi Kontrak', 'bi-clipboard-check', 'admin.evaluasi-kontrak.index', 'admin.evaluasi-kontrak.*', ! $penyetuju && $evaluasi, $hitung['evaluasi_kontrak'] ?? null],
             ['Surat Peringatan', 'bi-exclamation-octagon', 'admin.surat-peringatan.index', 'admin.surat-peringatan.*', \App\Support\SuratPeringatanAkses::bolehMembuka($u), null],
