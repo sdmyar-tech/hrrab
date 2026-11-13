@@ -36,7 +36,7 @@ class PengajuanCuti extends Model
     public const KATEGORI_BESAR_OPTIONS = [
         'nikah_sendiri' => 'Pernikahan Pegawai Sendiri',
         'anak_menikah' => 'Perkawinan Anak Kandung',
-        'khitan_baptis_anak' => 'Mengkhitankan Anak',   // kode lama dipertahankan agar data lama tetap terbaca
+        'khitan_baptis_anak' => 'Mengkhitankan Anak',
         'keluarga_inti_meninggal' => 'Istri/Suami/Anak Meninggal Dunia',
         'orang_tua_mertua_meninggal' => 'Orang Tua Kandung/Mertua Meninggal Dunia',
         'istri_melahirkan' => 'Istri Melahirkan/Keguguran Kandungan',
@@ -46,6 +46,7 @@ class PengajuanCuti extends Model
         'bencana' => 'Korban Kebakaran/Banjir/Penggusuran',
         'panggilan_pengadilan' => 'Panggilan Pengadilan/Pihak Berwajib',
         'izin_studi' => 'Izin Studi/Kuliah (sesuai SOP Izin Studi)',
+        'lainnya' => 'lainnya'
     ];
 
     public const KATEGORI_BESAR_DURASI = [
@@ -61,6 +62,7 @@ class PengajuanCuti extends Model
         'bencana' => 1,
         'panggilan_pengadilan' => null,
         'izin_studi' => null,
+        'lainnya' => null
     ];
 
     /**
