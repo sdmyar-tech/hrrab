@@ -4,7 +4,7 @@
     $pegawaiOpsi, $divisiOptions, $gmBidang.
 --}}
 @php
-    $pegawaiDipilih = (int) old('data_pegawai_id', $akun?->data_pegawai_id);
+    $pegawaiDipilih = (int) old('data_pegawai_id', $akun?->data_pegawai_id); // 'lepas' → 0
     $roleTerpilih = old('role', $akun ? ($akun->role_id ? 'kustom:' . $akun->role_id : $akun->role) : null);
 @endphp
 
@@ -23,9 +23,11 @@
             <select name="data_pegawai_id" id="data_pegawai_id" class="form-select @error('data_pegawai_id') is-invalid @enderror">
                 <option value="">Pilih pegawai</option>
                 {{-- Opsi tersendiri (bukan placeholder): akun sengaja tidak ditautkan, mis. GM dari luar data pegawai. --}}
-                <option value="" @selected($akun && ! $akun->data_pegawai_id && ! old('data_pegawai_id'))>Tidak ditautkan ke pegawai</option>
+                {{-- Akun yang sudah tertaut: nilainya "lepas" (nilai kosong = tidak diubah di server), sehingga tautan benar-benar terlepas saat disimpan. --}}
                 @if ($akun?->data_pegawai_id)
-                    <option value="lepas" @selected(old('data_pegawai_id') === 'lepas')>✕ Lepaskan tautan dari Data Pegawai</option>
+                    <option value="lepas" @selected(old('data_pegawai_id') === 'lepas')>✕ Tidak ditautkan ke pegawai (lepaskan tautan)</option>
+                @else
+                    <option value="" @selected($akun && ! old('data_pegawai_id'))>Tidak ditautkan ke pegawai</option>
                 @endif
                 @foreach ($pegawaiOpsi as $p)
                     <option value="{{ $p['id'] }}" @selected($pegawaiDipilih === $p['id'])

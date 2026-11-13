@@ -13,9 +13,9 @@
     @if ($h['tanpa_scan_pulang'])
         <x-badge tone="neutral" icon="bi-fingerprint">Tidak scan pulang</x-badge>
     @endif
-    @if (in_array($h['lembur_status'], ['terverifikasi', 'manual'], true))
+    @if (in_array($h['lembur_status'], ['terverifikasi', 'manual', 'pengganti'], true))
         <x-badge tone="info" :icon="\App\Support\Absensi\TampilanAbsensi::IKON['lembur']"
-            title="Surat lembur {{ $durasiS($h['lembur_surat_menit']) }}{{ $h['lembur_status'] === 'manual' ? ' · diisi manual SDM' : '' }}">
+            title="{{ $h['lembur_surat_menit'] ? 'Surat lembur ' . $durasiS($h['lembur_surat_menit']) : '' }}{{ $h['lembur_status'] === 'manual' ? ' · diisi manual SDM' : '' }}{{ $h['lembur_ganti_menit'] ? ' · pengganti cuti ' . $durasiS($h['lembur_ganti_menit']) : '' }}">
             Lembur {{ $durasiS($h['lembur_menit']) }}
         </x-badge>
     @elseif ($h['lembur_status'] === 'belum')

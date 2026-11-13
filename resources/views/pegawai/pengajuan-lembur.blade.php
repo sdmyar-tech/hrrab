@@ -44,17 +44,7 @@
                                 help="Anda bertugas di beberapa bagian. Pengajuan diproses kepala bagian yang dipilih." />
                         @endif
 
-                        <div class="row gx-3">
-                            <div class="col-sm-7">
-                                <x-input name="tanggal" id="tanggal" type="date" label="Tanggal" :value="now()->format('Y-m-d')" required />
-                            </div>
-                            <div class="col-sm-5">
-                                <div class="hr-field">
-                                    <label for="hari" class="form-label">Hari</label>
-                                    <input type="text" id="hari" class="form-control" readonly placeholder="Terisi otomatis">
-                                </div>
-                            </div>
-                        </div>
+                        <x-input name="tanggal" id="tanggal" type="date" label="Tanggal" :value="now()->format('Y-m-d')" required />
 
                         <x-textarea name="uraian_tugas" id="uraian_tugas" label="Uraian Tugas" rows="3" required
                             placeholder="Contoh: rekap dokumen akreditasi untuk audit besok pagi" />
@@ -65,10 +55,16 @@
                             <div class="col-6"><x-input name="jam_selesai" id="jam_selesai" label="Jam Selesai" required data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 20:30" /></div>
                         </div>
 
+                        {{-- Hasil kalkulasi otomatis: read-only, selalu di akhir isian. --}}
+                        <div class="hr-hitungan mb-2" aria-live="polite">
+                            <i class="bi bi-calendar-day" aria-hidden="true"></i>
+                            <label for="hari" class="mb-0">Hari</label>
+                            <input type="text" id="hari" readonly tabindex="-1" placeholder="Terisi otomatis">
+                        </div>
                         <div class="hr-hitungan mb-3" aria-live="polite">
                             <i class="bi bi-calculator" aria-hidden="true"></i>
                             <label for="jumlah_jam" class="mb-0">Jumlah jam</label>
-                            <input type="text" id="jumlah_jam" readonly placeholder="Terisi otomatis">
+                            <input type="text" id="jumlah_jam" readonly tabindex="-1" placeholder="Terisi otomatis">
                         </div>
 
                         <x-button type="submit" size="lg" block icon="bi-send">Ajukan Lembur</x-button>

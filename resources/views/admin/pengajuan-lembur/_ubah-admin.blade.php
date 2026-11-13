@@ -10,10 +10,6 @@
                 <input type="date" name="tanggal" id="ubah-tanggal" class="form-control form-control-sm" value="{{ old('tanggal', $pengajuanLembur->tanggal->format('Y-m-d')) }}" required>
             </div>
             <div class="col-sm-6">
-                <label class="form-label" for="ubah-jumlah-jam">Jumlah Jam</label>
-                <input type="number" name="jumlah_jam" id="ubah-jumlah-jam" step="0.25" min="0" max="24" class="form-control form-control-sm" value="{{ old('jumlah_jam', $pengajuanLembur->jumlah_jam) }}" required>
-            </div>
-            <div class="col-sm-6">
                 <label class="form-label" for="ubah-jam-mulai">Jam Mulai</label>
                 <input type="text" data-jam24 inputmode="numeric" maxlength="5" autocomplete="off" placeholder="Contoh: 16:00" name="jam_mulai" id="ubah-jam-mulai" class="form-control form-control-sm" value="{{ old('jam_mulai', substr((string) $pengajuanLembur->jam_mulai, 0, 5)) }}" required>
             </div>
@@ -30,6 +26,11 @@
                 <input type="text" name="catatan_admin" id="ubah-catatan" class="form-control form-control-sm" maxlength="1000"
                     placeholder="Tulis catatan koreksi, contoh: jam disesuaikan dengan surat tugas" value="{{ old('catatan_admin', $pengajuanLembur->catatan_admin) }}">
             </div>
+            {{-- Hasil kalkulasi otomatis dari jam mulai–selesai: read-only, di akhir isian. --}}
+            <div class="col-12">
+                <label class="form-label" for="ubah-jumlah-jam">Jumlah jam <span class="hr-field-opsional">(otomatis)</span></label>
+                <input type="text" id="ubah-jumlah-jam" class="form-control form-control-sm" readonly tabindex="-1" value="{{ rtrim(rtrim(number_format((float) $pengajuanLembur->jumlah_jam, 2, ',', ''), '0'), ',') }} jam">
+            </div>
         </div>
         {{-- Galat isian ditampilkan di halaman ini; banner global tidak perlu. --}}
         @section('galat-di-halaman', '1')
@@ -40,6 +41,19 @@
             <x-button type="submit" size="sm" icon="bi-check-lg">Simpan Langsung</x-button>
         </div>
     </form>
+
+    <script>
+        (function () {
+            const mulai = document.getElementById('ubah-jam-mulai'), selesai = document.getElementById('ubah-jam-selesai'), hasil = document.getElementById('ubah-jumlah-jam');
+            const menit = (s) => /^\d{2}:\d{2}$/.test(s) ? parseInt(s.slice(0, 2), 10) * 60 + parseInt(s.slice(3), 10) : null;
+            function hitung() {
+                const a = menit(mulai.value), b = menit(selesai.value);
+                if (a === null || b === null || b <= a) { hasil.value = ''; return; }
+                hasil.value = (Math.round((b - a) / 60 * 100) / 100).toString().replace('.', ',') + ' jam';
+            }
+            ['input', 'change'].forEach((e) => { mulai.addEventListener(e, hitung); selesai.addEventListener(e, hitung); });
+        })();
+    </script>
 
     <x-slot:footer>
         <form action="{{ route('admin.pengajuan-lembur.destroy', $pengajuanLembur) }}" method="POST"

@@ -72,6 +72,11 @@ class PenilaianAbsensi
             ->where('status', PengajuanIzinKeluar::STATUS_APPROVED)
             ->whereDate('tanggal', '<=', $sampai)->whereRaw('COALESCE(tanggal_selesai, tanggal) >= ?', [$dari->toDateString()])
             ->get()->groupBy('data_pegawai_id');
+        // Cuti disetujui yang menunjuk pegawai ini sebagai pengganti tugas (dasar lembur pengganti).
+        $pengganti = PengajuanCuti::with('dataPegawai.jadwalKerja')->where('status', PengajuanCuti::STATUS_APPROVED)
+            ->whereIn('pengganti_nama', $pegawais->pluck('nama_lengkap')->filter()->all())
+            ->whereDate('tanggal_mulai', '<=', $sampai)->whereDate('tanggal_selesai', '>=', $dari)
+            ->get()->groupBy('pengganti_nama');
         // Rentang tanggal yang sudah ada data mesinnya: di luar ini hari tanpa scan BUKAN Alpa (data belum diimport).
         $cakupan = [Absensi::whereNotNull('finger_id')->min('tanggal'), Absensi::whereNotNull('finger_id')->max('tanggal')];
 
@@ -89,6 +94,7 @@ class PenilaianAbsensi
                     ($izin[$tgl] ?? collect())->filter(fn ($z) => $z->berlakuUntuk($p->id, $unit)),
                     $cakupan,
                     ($izinPegawai[$p->id] ?? collect())->filter(fn ($z) => $z->tanggal->lte($t) && $z->tanggalAkhir()->gte($t)),
+                    self::menitPengganti($p, $t, $pengganti[$p->nama_lengkap] ?? collect()),
                 );
             }
         }
@@ -100,7 +106,7 @@ class PenilaianAbsensi
      * @param  array{0: ?string, 1: ?string}  $cakupan  tanggal data mesin paling awal & paling akhir
      * @param  ?Collection<int, PengajuanIzinKeluar>  $izinPegawai  izin tidak masuk / telat masuk disetujui yang mencakup tanggal ini
      */
-    public static function nilai(DataPegawai $p, CarbonInterface $tanggal, ?Absensi $a, ?PengajuanCuti $cuti, Collection $lembur, Collection $izin, array $cakupan = [null, null], ?Collection $izinPegawai = null): array
+    public static function nilai(DataPegawai $p, CarbonInterface $tanggal, ?Absensi $a, ?PengajuanCuti $cuti, Collection $lembur, Collection $izin, array $cakupan = [null, null], ?Collection $izinPegawai = null, int $gantiMenit = 0): array
     {
         $izinHarian = $izinPegawai?->first(fn ($z) => $z->isHarian());
         $izinTelatPegawai = $izinPegawai?->first(fn ($z) => $z->isTelat() && $z->jamTiba());
@@ -138,6 +144,7 @@ class PenilaianAbsensi
             'lembur_menit' => 0,
             'lembur_surat_menit' => 0,
             'lembur_status' => null,
+            'lembur_ganti_menit' => 0,
             'dikoreksi' => (bool) $a?->dikoreksi,
             'absensi' => $a,
             'catatan' => $catatan,
@@ -209,9 +216,50 @@ class PenilaianAbsensi
         }
 
         self::lembur($h, $lembur, $masuk, $keluar, $jam, $a);
+
+        // Lembur pengganti cuti: dihitung dari TOTAL jam kerja, bukan dari jadwal — jam kerja orang yang diganti
+        // dikurangi jam kerja jadwal sendiri (mis. 9 jam − 4 jam = 5 jam lembur). Dihitung bila pengganti hadir.
+        if ($gantiMenit > 0 && $h['status'] !== 'cuti') {
+            if ($masuk !== null) {
+                $h['lembur_ganti_menit'] = $gantiMenit;
+                $h['lembur_menit'] += $gantiMenit;
+                $h['lembur_status'] ??= 'pengganti';
+                $h['catatan'][] = 'Pengganti tugas cuti: lembur ' . self::durasi($gantiMenit) . ' (jam kerja yang digantikan dikurangi jam kerja jadwal sendiri).';
+            } elseif ($tanggal->lte($hariIni)) {
+                $h['catatan'][] = 'Ditunjuk sebagai pengganti tugas cuti (lembur ' . self::durasi($gantiMenit) . ') — dihitung setelah hadir.';
+            }
+        }
+
         [$h['label'], $h['badge']] = self::STATUS[$h['status']];
 
         return $h;
+    }
+
+    /**
+     * Menit lembur pengganti pada satu tanggal: total jam kerja jadwal orang yang digantikan − total jam kerja jadwal sendiri.
+     *
+     * @param  Collection<int, PengajuanCuti>  $cutiDigantikan  cuti disetujui yang menunjuk pegawai ini sebagai pengganti
+     */
+    private static function menitPengganti(DataPegawai $pengganti, CarbonInterface $tanggal, Collection $cutiDigantikan): int
+    {
+        if ($cutiDigantikan->isEmpty() || in_array($tanggal->toDateString(), config('hrrab.hari_libur', []), true)) {
+            return 0;
+        }
+        $total = 0;
+        foreach ($cutiDigantikan as $c) {
+            if ($c->tanggal_mulai->gt($tanggal) || $c->tanggal_selesai->lt($tanggal)) {
+                continue;
+            }
+            $total += self::totalMenitKerja($c->dataPegawai?->jadwalKerja?->jamPada($tanggal));
+        }
+
+        return max(0, $total - self::totalMenitKerja($pengganti->jadwalKerja?->jamPada($tanggal)));
+    }
+
+    /** @param  array{masuk: string, pulang: string}|null  $jam */
+    private static function totalMenitKerja(?array $jam): int
+    {
+        return $jam ? max(0, (self::menit($jam['pulang']) ?? 0) - (self::menit($jam['masuk']) ?? 0)) : 0;
     }
 
     /**

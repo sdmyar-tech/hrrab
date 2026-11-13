@@ -82,7 +82,7 @@
                         </div>
 
                         <div class="row gx-3">
-                            <div class="col-sm-4">
+                            <div class="col-sm-6">
                                 <div class="hr-field">
                                     <label for="tanggal_mulai" class="form-label required">Tanggal Mulai</label>
                                     <input type="date" name="tanggal_mulai" id="tanggal_mulai"
@@ -97,15 +97,9 @@
                                     <div class="form-text" id="hintTanggalMulai">Tanggal mulai minimal 7 hari setelah tanggal pengajuan.</div>
                                 </div>
                             </div>
-                            {{-- Bantuan isi saja (tidak dikirim): server menghitung ulang dari tanggal mulai–selesai. --}}
-                            <div class="col-sm-3">
-                                <div class="hr-field">
-                                    <label for="jumlah_hari" class="form-label text-nowrap">Jumlah Hari</label>
-                                    <input type="number" id="jumlah_hari" class="form-control" min="1" max="365" step="1"
-                                        placeholder="Contoh: 2" inputmode="numeric">
-                                </div>
-                            </div>
-                            <div class="col-sm-5">
+                            {{-- Hitungan internal skrip saja (tidak dikirim, tidak diisi pengguna): lama cuti tampil read-only di bawah, server menghitung ulang. --}}
+                            <input type="hidden" id="jumlah_hari">
+                            <div class="col-sm-6">
                                 <div class="hr-field">
                                     <label for="tanggal_selesai" class="form-label required">Tanggal Selesai</label>
                                     <input type="date" name="tanggal_selesai" id="tanggal_selesai"
@@ -118,15 +112,16 @@
                             </div>
                         </div>
 
+                        <x-textarea name="keterangan" id="keterangan" label="Keterangan" optional rows="2"
+                            placeholder="Contoh: menghadiri pernikahan saudara di Padang" maxlength="1000" />
+
+                        {{-- Hasil kalkulasi otomatis: read-only, selalu di akhir isian. --}}
                         <div class="hr-hitungan mb-3" aria-live="polite">
                             <i class="bi bi-calculator" aria-hidden="true"></i>
                             <label for="lama_cuti_display" class="mb-0">Lama cuti</label>
-                            <input type="text" id="lama_cuti_display" readonly placeholder="Terisi otomatis">
+                            <input type="text" id="lama_cuti_display" readonly tabindex="-1" placeholder="Terisi otomatis">
                         </div>
                         <p class="form-text mt-n2 mb-3" id="hintLewati">Sabtu–Minggu dan tanggal merah tidak dihitung sebagai hari cuti.</p>
-
-                        <x-textarea name="keterangan" id="keterangan" label="Keterangan" optional rows="2"
-                            placeholder="Contoh: menghadiri pernikahan saudara di Padang" maxlength="1000" />
 
                         <x-button type="submit" size="lg" block icon="bi-send">Ajukan Cuti</x-button>
                         <p class="small text-muted text-center mt-2 mb-0">Diajukan hari ini, {{ now()->translatedFormat('d F Y') }}.</p>
@@ -315,9 +310,7 @@
 
             const durasi = durasiTetap();
             const tetap = ! isNaN(durasi);
-            jumlahHari.readOnly = tetap;
             tanggalSelesai.readOnly = tetap;
-            jumlahHari.max = jenisBesar.checked ? 365 : MAKS_TAHUNAN;
             if (tetap) jumlahHari.value = durasi;
 
             const opsi = kategoriSelect.options[kategoriSelect.selectedIndex];
@@ -325,7 +318,7 @@
             durasiHint.textContent = ! jenisBesar.checked ? ''
                 : tetap ? 'Kategori ini wajib ' + durasi + ' hari kerja.'
                 : maks ? 'Paling lama ' + maks + ' hari kalender (UU Ketenagakerjaan Pasal 82). Tanggal selesai terisi batas maksimal; boleh dipersingkat.'
-                : opsi && opsi.value ? 'Lama cuti sesuai kebutuhan, isi jumlah hari atau tanggal selesai.' : '';
+                : opsi && opsi.value ? 'Lama cuti sesuai kebutuhan, pilih tanggal selesai (lama cuti terhitung otomatis).' : '';
 
             if (maks) isiSelesaiMaksKalender();
             else { tanggalSelesai.removeAttribute('max'); isiSelesaiDariJumlah(); }
@@ -357,11 +350,6 @@
             if (maksKalender()) isiSelesaiMaksKalender();
             else if (jumlahHari.value) isiSelesaiDariJumlah();
             else if (! tanggalSelesai.value || tanggalSelesai.value < tanggalMulai.value) tanggalSelesai.value = tanggalMulai.value;
-            updateLamaCuti();
-        });
-        jumlahHari.addEventListener('input', function () {
-            isiSelesaiDariJumlah();
-            if (maksKalender() && tanggalSelesai.value > batasKalender()) { tanggalSelesai.value = batasKalender(); isiJumlahDariSelesai(); }
             updateLamaCuti();
         });
         tanggalSelesai.addEventListener('change', function () {

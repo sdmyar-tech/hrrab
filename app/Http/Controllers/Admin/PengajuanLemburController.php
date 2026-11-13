@@ -164,10 +164,11 @@ class PengajuanLemburController extends Controller
             'tanggal' => ['required', 'date'],
             'uraian_tugas' => ['required', 'string', 'max:2000'],
             'jam_mulai' => ['required', 'date_format:H:i'],
-            'jam_selesai' => ['required', 'date_format:H:i'],
-            'jumlah_jam' => ['required', 'numeric', 'min:0', 'max:24'],
+            'jam_selesai' => ['required', 'date_format:H:i', 'after:jam_mulai'],
             'catatan_admin' => ['nullable', 'string', 'max:1000'],
-        ]);
+        ], ['jam_selesai.after' => 'Jam selesai harus setelah jam mulai.']);
+        // Jumlah jam selalu otomatis dari jam mulai–selesai (sama dengan pengajuan pegawai), tidak diisi manual.
+        $v['jumlah_jam'] = round(Carbon::createFromFormat('H:i', $v['jam_mulai'])->diffInMinutes(Carbon::createFromFormat('H:i', $v['jam_selesai'])) / 60, 2);
 
         $statusLama = $pengajuanLembur->status;
         $pengajuanLembur->update([

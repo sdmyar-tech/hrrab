@@ -158,6 +158,17 @@ class IzinKeluarController extends Controller
         if ($bentrok) {
             return 'Sudah ada izin lain (izin tidak masuk, atau jam yang bertumpuk) pada tanggal itu.';
         }
+        // Sinkron dengan izin telat: selama masih telat (belum tiba) tidak bisa izin keluar.
+        $telat = $pegawai->pengajuanIzinKeluars()->bertumpuk($validated['tanggal'], $validated['tanggal'])
+            ->where('jenis', PengajuanIzinKeluar::JENIS_TELAT)->whereNotNull('jam_kembali')->get()
+            ->first(fn ($t) => substr((string) $t->jam_kembali, 0, 5) > $validated['jam_keluar']);
+        if ($telat) {
+            return 'Anda mengajukan izin telat masuk sampai jam ' . substr((string) $telat->jam_kembali, 0, 5)
+                . ' pada tanggal itu. Izin keluar paling awal setelah jam tiba tersebut.';
+        }
+        if ($this->adaCuti($pegawai, $validated['tanggal'], $validated['tanggal'])) {
+            return 'Tanggal itu bertumpuk dengan cuti Anda (menunggu/disetujui).';
+        }
 
         return [
             'jenis' => PengajuanIzinKeluar::JENIS_JAM,
@@ -198,6 +209,17 @@ class IzinKeluarController extends Controller
             ->whereIn('jenis', [PengajuanIzinKeluar::JENIS_TELAT, PengajuanIzinKeluar::JENIS_HARIAN])->exists();
         if ($bentrok) {
             return 'Sudah ada izin telat atau izin tidak masuk pada tanggal itu.';
+        }
+        // Sinkron dengan izin keluar: jam tiba tidak boleh lewat dari jam keluar yang sudah diajukan di hari itu.
+        $keluar = $pegawai->pengajuanIzinKeluars()->bertumpuk($validated['tanggal'], $validated['tanggal'])
+            ->where('jenis', PengajuanIzinKeluar::JENIS_JAM)->whereNotNull('jam_keluar')->get()
+            ->first(fn ($k) => substr((string) $k->jam_keluar, 0, 5) < $validated['jam_tiba']);
+        if ($keluar) {
+            return 'Anda sudah mengajukan izin keluar jam ' . substr((string) $keluar->jam_keluar, 0, 5)
+                . ' pada tanggal itu, lebih awal dari jam tiba ' . $validated['jam_tiba'] . '. Sesuaikan jam tiba atau batalkan izin keluar.';
+        }
+        if ($this->adaCuti($pegawai, $validated['tanggal'], $validated['tanggal'])) {
+            return 'Tanggal itu bertumpuk dengan cuti Anda (menunggu/disetujui).';
         }
 
         return [
@@ -240,10 +262,7 @@ class IzinKeluarController extends Controller
         if ($pegawai->pengajuanIzinKeluars()->bertumpuk($validated['tanggal'], $validated['tanggal_selesai'])->exists()) {
             return 'Sudah ada izin lain (menunggu/disetujui) pada rentang tanggal itu.';
         }
-        $cutiBentrok = $pegawai->pengajuanCutis()->where('status', '!=', PengajuanCuti::STATUS_REJECTED)
-            ->whereDate('tanggal_mulai', '<=', $validated['tanggal_selesai'])->whereDate('tanggal_selesai', '>=', $validated['tanggal'])
-            ->exists();
-        if ($cutiBentrok) {
+        if ($this->adaCuti($pegawai, $validated['tanggal'], $validated['tanggal_selesai'])) {
             return 'Rentang tanggal itu bertumpuk dengan cuti Anda (menunggu/disetujui).';
         }
 
@@ -255,6 +274,14 @@ class IzinKeluarController extends Controller
             'keperluan' => $validated['keperluan'],
             'alasan' => $validated['alasan'],
         ];
+    }
+
+    /** Ada cuti (menunggu/disetujui) yang bertumpuk dengan rentang tanggal. */
+    private function adaCuti(DataPegawai $pegawai, string $dari, string $sampai): bool
+    {
+        return $pegawai->pengajuanCutis()->where('status', '!=', PengajuanCuti::STATUS_REJECTED)
+            ->whereDate('tanggal_mulai', '<=', $sampai)->whereDate('tanggal_selesai', '>=', $dari)
+            ->exists();
     }
 
     /** Tiket keluar (hanya izin yang sudah disetujui akhir): dibuka pemilik, atau penyetuju/Admin yang berhak melihatnya. */

@@ -61,32 +61,18 @@
                         <x-select name="keperluan" id="keperluan" label="Keperluan" :options="$keperluanOptions" placeholder="Pilih keperluan" required />
 
                         <div class="row gx-3">
-                            <div class="col-sm-4">
+                            <div class="col-sm-6">
                                 <x-input name="tanggal" id="tanggal" type="date" :value="now()->toDateString()" required
                                     label="Tanggal" :min="now()->toDateString()" :max="now()->addDays($maksHari)->toDateString()"
                                     data-min-normal="{{ now()->toDateString() }}" data-min-sakit="{{ now()->subDays($maksMundurSakit)->toDateString() }}"
                                     data-min-telat="{{ now()->subHours($maksJamMundur)->toDateString() }}"
                                     :help="'Paling lambat ' . $maksHari . ' hari ke depan.'" />
                             </div>
-                            {{-- Izin tidak masuk: jumlah hari (bantuan isi, tidak dikirim) ↔ tanggal selesai, hari kerja saja. --}}
-                            <div class="col-sm-3" data-bagian-izin="harian">
-                                <div class="hr-field">
-                                    <label for="jumlah_hari" class="form-label text-nowrap">Jumlah Hari</label>
-                                    <input type="number" id="jumlah_hari" class="form-control" min="1" max="14" step="1" placeholder="Contoh: 2" inputmode="numeric">
-                                </div>
-                            </div>
-                            <div class="col-sm-5" data-bagian-izin="harian">
+                            {{-- Hitungan internal skrip saja (tidak dikirim, tidak diisi pengguna). --}}
+                            <input type="hidden" id="jumlah_hari">
+                            <div class="col-sm-6" data-bagian-izin="harian">
                                 <x-input name="tanggal_selesai" id="tanggal_selesai" type="date" label="Tanggal Selesai" required />
                             </div>
-                        </div>
-
-                        <div data-bagian-izin="harian">
-                            <div class="hr-hitungan mb-3" aria-live="polite">
-                                <i class="bi bi-calculator" aria-hidden="true"></i>
-                                <label for="lama_izin_display" class="mb-0">Lama izin</label>
-                                <input type="text" id="lama_izin_display" readonly placeholder="Terisi otomatis">
-                            </div>
-                            <p class="form-text mt-n2 mb-3" id="hintLewati">Sabtu–Minggu dan tanggal merah tidak dihitung.</p>
                         </div>
 
                         <div data-bagian-izin="telat">
@@ -107,6 +93,16 @@
 
                         <x-textarea name="alasan" id="alasan" label="Alasan / Tujuan" rows="3" maxlength="500" required
                             placeholder="Contoh: ke bank untuk urusan gaji" />
+
+                        {{-- Hasil kalkulasi otomatis: read-only, selalu di akhir isian. --}}
+                        <div data-bagian-izin="harian">
+                            <div class="hr-hitungan mb-3" aria-live="polite">
+                                <i class="bi bi-calculator" aria-hidden="true"></i>
+                                <label for="lama_izin_display" class="mb-0">Lama izin</label>
+                                <input type="text" id="lama_izin_display" readonly tabindex="-1" placeholder="Terisi otomatis">
+                            </div>
+                            <p class="form-text mt-n2 mb-3" id="hintLewati">Sabtu–Minggu dan tanggal merah tidak dihitung.</p>
+                        </div>
 
                         <x-button type="submit" size="lg" block icon="bi-send">Ajukan Izin</x-button>
                     </form>
@@ -315,7 +311,6 @@
         });
         // Jam terus berjalan: batas paling awal ikut diperbarui selama halaman terbuka.
         setInterval(aturMinKeluar, 30000);
-        jumlahHari.addEventListener('input', function () { isiSelesaiDariJumlah(); updateLama(); });
         tanggalSelesai.addEventListener('change', function () {
             if (tanggalSelesai.value < tanggal.value) tanggalSelesai.value = tanggal.value;
             const { kerja } = rincian(dariIso(tanggal.value), dariIso(tanggalSelesai.value));

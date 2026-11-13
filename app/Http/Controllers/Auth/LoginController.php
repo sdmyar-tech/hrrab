@@ -54,7 +54,7 @@ class LoginController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        if (! $user || ! $this->sandiCocok($user, (string) $request->password)) {
             return redirect()->back()
                 ->withInput($request->only('email'))
                 ->with('error', 'Email atau kata sandi yang Anda masukkan salah.');
@@ -100,6 +100,36 @@ class LoginController extends Controller
         }
 
         return redirect()->route('login')->with('error', 'Role tidak dikenali.');
+    }
+
+    /**
+     * Cocokkan kata sandi. Bila sandi diubah langsung di database (backend) sebagai teks biasa atau hash yang
+     * tidak dikenali, Hash::check melempar error "does not use the Bcrypt algorithm" (halaman error + Coba lagi
+     * tak pernah berhasil). Di sini: teks biasa yang cocok diterima lalu langsung di-hash ulang dengan benar.
+     */
+    private function sandiCocok(User $user, string $sandi): bool
+    {
+        $tersimpan = (string) $user->getRawOriginal('password');
+
+        try {
+            if (Hash::check($sandi, $tersimpan)) {
+                if (Hash::needsRehash($tersimpan)) {
+                    $user->forceFill(['password' => $sandi])->saveQuietly();
+                }
+
+                return true;
+            }
+
+            return false;
+        } catch (\RuntimeException) {
+            if ($tersimpan !== '' && hash_equals($tersimpan, $sandi)) {
+                $user->forceFill(['password' => $sandi])->saveQuietly();
+
+                return true;
+            }
+
+            return false;
+        }
     }
 
     public function logout(Request $request): RedirectResponse

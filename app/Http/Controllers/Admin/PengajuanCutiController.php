@@ -7,6 +7,8 @@ use App\Models\DataPegawai;
 use App\Models\PengajuanCuti;
 use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\Kalender;
+use Carbon\Carbon;
 use App\Support\FilterTanggal;
 use App\Support\HitungStatus;
 use App\Support\Notifikasi;
@@ -192,8 +194,7 @@ class PengajuanCutiController extends Controller
             'kategori_cuti_besar' => ['nullable', 'required_if:jenis_cuti,besar', Rule::in(array_keys(PengajuanCuti::KATEGORI_BESAR_OPTIONS))],
             'tanggal_mulai' => ['required', 'date'],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
-            'lama_cuti' => ['required', 'integer', 'min:1', 'max:365'],
-            // Dipilih dari daftar pegawai aktif (nilai lama tetap boleh dipertahankan).
+            // Pengganti tugas: dipilih dari daftar pegawai aktif (nilai lama tetap boleh dipertahankan).
             'pengganti_nama' => ['nullable', 'string', 'max:150',
                 Rule::in([...DataPegawai::opsiPilihan()->pluck('nama'), $pengajuanCuti->pengganti_nama])],
             'keterangan' => ['nullable', 'string', 'max:1000'],
@@ -204,6 +205,8 @@ class PengajuanCutiController extends Controller
         $pengajuanCuti->update([
             ...$v,
             'kategori_cuti_besar' => $v['jenis_cuti'] === PengajuanCuti::JENIS_BESAR ? $v['kategori_cuti_besar'] : null,
+            // Lama cuti selalu otomatis (hari kerja, sama dengan pengajuan pegawai), tidak diisi manual.
+            'lama_cuti' => max(1, Kalender::jumlahHariKerja(Carbon::parse($v['tanggal_mulai']), Carbon::parse($v['tanggal_selesai']))),
             ...PengajuanWorkflow::statusAdmin($pengajuanCuti, $v['status'], $v['current_level'] ?? null, Auth::user()),
         ]);
 
