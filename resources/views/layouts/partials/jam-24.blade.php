@@ -64,13 +64,15 @@
         periksa(el);
     }, true);
 
-    // ---- Pemilih jam (tombol ikon jam di kanan isian): kolom jam 00–23 & menit 00–59 yang bisa digulir/diputar. ----
+    // ---- Pemilih jam (ikon jam di kanan isian): kolom jam 00–23 & menit 00–59 yang bisa digulir/diputar. ----
     const gaya = document.createElement('style');
     gaya.textContent = `
-        .jam24-tombol { position: absolute; z-index: 5; display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; padding: 0;
-            border: 0; background: transparent; color: var(--admin-muted, #6c757d); cursor: pointer; border-radius: 0 .375rem .375rem 0; }
-        .jam24-tombol:hover:not(:disabled), .jam24-tombol:focus-visible { color: var(--bs-primary, #880f12); }
-        .jam24-tombol:disabled { opacity: .45; cursor: not-allowed; }
+        /* Ikon jam di kanan isian (gambar latar, jadi selalu tampil walau isian tersembunyi/tervalidasi); klik di area ikon membuka pemilih. */
+        input[data-jam24], input[data-jam24].is-invalid, input[data-jam24].is-valid, .was-validated input[data-jam24]:invalid, .was-validated input[data-jam24]:valid {
+            padding-right: 2.5rem;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%236c757d' stroke-width='1.2' stroke-linecap='round' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6.4'/%3E%3Cpath d='M8 4.2V8l2.6 1.6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right .75rem center; background-size: 1.1rem 1.1rem;
+        }
         .jam24-pop { position: absolute; z-index: 2000; display: flex; gap: .25rem; padding: .5rem; background: var(--bs-body-bg, #fff); color: var(--bs-body-color, #212529);
             border: 1px solid var(--bs-border-color, #dee2e6); border-radius: .5rem; box-shadow: 0 .5rem 1.25rem rgba(0, 0, 0, .18); }
         .jam24-kolom { width: 3.5rem; max-height: 12.5rem; overflow-y: auto; scroll-snap-type: y proximity; overscroll-behavior: contain; }
@@ -85,41 +87,23 @@
     let pop = null;
     const tutup = () => { if (pop) { pop.remove(); pop = null; } };
 
-    function pasangTombol(el) {
-        if (el.dataset.jam24Siap) return;
-        el.dataset.jam24Siap = '1';
-        const induk = el.parentElement;
-        if (getComputedStyle(induk).position === 'static') induk.style.position = 'relative';
-        const tombol = document.createElement('button');
-        tombol.type = 'button';
-        tombol.className = 'jam24-tombol';
-        tombol.setAttribute('aria-label', 'Pilih jam');
-        tombol.tabIndex = -1;
-        tombol.innerHTML = '<i class="bi bi-clock" aria-hidden="true"></i>';
-        el.after(tombol);
-        el.style.paddingRight = '2.5rem';
-
-        const letak = () => {
-            tombol.hidden = el.offsetWidth === 0;
-            tombol.style.top = el.offsetTop + 'px';
-            tombol.style.height = el.offsetHeight + 'px';
-            tombol.style.left = (el.offsetLeft + el.offsetWidth - tombol.offsetWidth) + 'px';
-            tombol.disabled = el.disabled || el.readOnly;
-        };
-        letak();
-        if ('ResizeObserver' in window) new ResizeObserver(letak).observe(el);
-        window.addEventListener('resize', letak);
-        new MutationObserver(letak).observe(el, { attributes: true, attributeFilter: ['disabled', 'readonly', 'hidden', 'class'] });
-
-        tombol.addEventListener('click', function (e) {
-            e.stopPropagation();
-            if (pop && pop.dataset.untuk === el.id) { tutup(); return; }
-            tutup();
-            buka(el, tombol);
-        });
+    // Klik di area ikon (2,5 rem terkanan) atau tekan F4 / Alt+↓ → buka pemilih; tutup bila sudah terbuka untuk isian yang sama.
+    function alihkan(el) {
+        if (el.disabled || el.readOnly) return;
+        if (pop && pop.dataset.untuk === el.id) { tutup(); return; }
+        tutup();
+        buka(el);
     }
+    document.addEventListener('click', function (e) {
+        const el = e.target;
+        if (!cocok(el)) return;
+        if (e.clientX >= el.getBoundingClientRect().right - 40) { e.stopPropagation(); alihkan(el); }
+    }, true);
+    document.addEventListener('keydown', function (e) {
+        if (cocok(e.target) && (e.key === 'F4' || (e.altKey && e.key === 'ArrowDown'))) { e.preventDefault(); alihkan(e.target); }
+    });
 
-    function buka(el, tombol) {
+    function buka(el) {
         const [jamNow, menitNow] = VALID.test(el.value) ? el.value.split(':') : [null, null];
         pop = document.createElement('div');
         pop.className = 'jam24-pop';
@@ -175,11 +159,6 @@
 
     document.addEventListener('click', (e) => { if (pop && !pop.contains(e.target)) tutup(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') tutup(); });
-
-    function pasangSemua() { document.querySelectorAll('input[data-jam24]').forEach(pasangTombol); }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pasangSemua); else pasangSemua();
-    // Isian yang muncul belakangan (dialog, bagian yang dibuka) ikut dipasangi.
-    new MutationObserver(pasangSemua).observe(document.documentElement, { childList: true, subtree: true });
 
     // Tolak kirim formulir bila ada jam tak valid (mis. 25:00).
     document.addEventListener('submit', function (e) {
