@@ -481,6 +481,10 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         // Tangga Alur Pengajuan: alur persetujuan cuti/lembur/izin keluar per bagian (pegawai biasa & koordinator).
         Route::prefix('tangga-alur')->name('tangga-alur.')->group(function () {
             Route::get('/', [AdminTanggaAlurController::class, 'index'])->name('index');
+            // Tangga khusus satu orang (didahulukan atas tangga bagian).
+            Route::get('/pegawai/{pegawai}', [AdminTanggaAlurController::class, 'editPribadi'])->name('pribadi.edit');
+            Route::put('/pegawai/{pegawai}', [AdminTanggaAlurController::class, 'updatePribadi'])->name('pribadi.update');
+            Route::delete('/pegawai/{pegawai}', [AdminTanggaAlurController::class, 'destroyPribadi'])->name('pribadi.destroy');
             Route::get('/{unit}/{sasaran}', [AdminTanggaAlurController::class, 'edit'])->name('edit')->whereIn('sasaran', ['staf', 'koordinator']);
             Route::put('/{unit}/{sasaran}', [AdminTanggaAlurController::class, 'update'])->name('update')->whereIn('sasaran', ['staf', 'koordinator']);
             Route::delete('/{unit}/{sasaran}', [AdminTanggaAlurController::class, 'destroy'])->name('destroy')->whereIn('sasaran', ['staf', 'koordinator']);

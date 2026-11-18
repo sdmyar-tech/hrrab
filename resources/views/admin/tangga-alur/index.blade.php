@@ -92,6 +92,41 @@
                 <x-empty-state icon="bi-search" title="Bagian tidak ditemukan">Coba kata lain, contoh: KEUANGAN.</x-empty-state>
             </div>
         </div>
+
+        {{-- Tangga khusus per orang: didahulukan atas tangga bagian. Dibuat dari detail pegawai (tab Penugasan → Alur Persetujuan). --}}
+        <x-card class="mt-4" title="Tangga Khusus Per Orang" icon="bi-person-gear"
+            subtitle="Pegawai yang alurnya diatur sendiri. Alur ini didahulukan atas tangga bagian. Tambah dari detail pegawai.">
+            @forelse ($pribadi as $p)
+                @php $pg = $p['model']->dataPegawai; @endphp
+                <section class="tangga-sel {{ $p['peringatan'] ? 'is-peringatan' : '' }} mb-3">
+                    <div class="tangga-sel-kepala">
+                        <h3 class="tangga-sel-judul d-flex flex-wrap align-items-center gap-2">
+                            <i class="bi bi-person" aria-hidden="true"></i>
+                            {{ $pg?->nama_lengkap ?? 'Pegawai terhapus' }}
+                            @if ($p['unit'])<x-badge tone="neutral">{{ $p['unit'] }}</x-badge>@endif
+                            @if ($p['peringatan'])<x-badge tone="warning" icon="bi-exclamation-triangle">Ada tahap tanpa penyetuju</x-badge>@endif
+                        </h3>
+                        @if ($pg)
+                            <div class="tangga-sel-aksi">
+                                <x-button size="sm" variant="outline" icon="bi-pencil" :href="route('admin.tangga-alur.pribadi.edit', $pg)">Ubah</x-button>
+                                <form action="{{ route('admin.tangga-alur.pribadi.destroy', $pg) }}" method="POST"
+                                    data-confirm="Hapus tangga khusus {{ $pg->nama_lengkap }}? Pengajuan baru kembali memakai tangga bagian / alur otomatis.">
+                                    @csrf @method('DELETE')
+                                    <x-button type="submit" size="sm" variant="ghost" icon="bi-arrow-counterclockwise">Kembali Otomatis</x-button>
+                                </form>
+                            </div>
+                        @endif
+                    </div>
+                    <x-tangga-alur :tahap="$p['tahap']" :awal="$pg?->nama_lengkap ?? 'Pegawai'" akhir="Disetujui" :label="'Tangga khusus ' . ($pg?->nama_lengkap ?? '')" />
+                    <p class="tangga-sel-info">
+                        Diubah {{ $p['model']->pengubah?->name ? 'oleh ' . $p['model']->pengubah->name : '' }} · {{ $p['model']->updated_at?->translatedFormat('d M Y H:i') }}
+                        @if ($p['model']->catatan) · {{ $p['model']->catatan }} @endif
+                    </p>
+                </section>
+            @empty
+                <p class="text-muted small mb-0">Belum ada. Buka detail pegawai → Alur Persetujuan → Atur Tangga Khusus.</p>
+            @endforelse
+        </x-card>
     </div>
 </main>
 @endsection

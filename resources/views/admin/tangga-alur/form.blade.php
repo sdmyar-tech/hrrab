@@ -3,13 +3,16 @@
 @section('content')
 @use('App\Models\TanggaAlur')
 @php
-    $labelSasaran = TanggaAlur::SASARAN_LABEL[$sasaran];
-    $awal = ($sasaran === TanggaAlur::SASARAN_STAF ? 'Pegawai ' : 'Koordinator ') . $unit->nama;
+    $pribadi = $sasaran === TanggaAlur::SASARAN_PRIBADI;
+    $labelSasaran = TanggaAlur::SASARAN_LABEL[$sasaran] ?? 'Khusus satu orang';
+    $awal = $pribadi ? $pegawai->nama_lengkap : (($sasaran === TanggaAlur::SASARAN_STAF ? 'Pegawai ' : 'Koordinator ') . $unit->nama);
+    $namaUnitIni = $unit?->nama ?? 'bagian pengaju';
+    $aksi = $pribadi ? route('admin.tangga-alur.pribadi.update', $pegawai) : route('admin.tangga-alur.update', [$unit, $sasaran]);
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
-        <x-page-header :title="'Tangga Alur · ' . $unit->nama" eyebrow="Tangga Alur Pengajuan"
-            :subtitle="'Pengaju: ' . $labelSasaran . ' bagian ' . $unit->nama . '. Berlaku untuk cuti, lembur, dan izin.'"
+        <x-page-header :title="$pribadi ? 'Tangga Alur · ' . $pegawai->nama_lengkap : 'Tangga Alur · ' . $unit->nama" eyebrow="Tangga Alur Pengajuan"
+            :subtitle="$pribadi ? 'Khusus ' . $pegawai->nama_lengkap . ($unit ? ' (bagian ' . $unit->nama . ')' : '') . '. Didahulukan atas tangga bagian. Berlaku untuk cuti, lembur, dan izin.' : 'Pengaju: ' . $labelSasaran . ' bagian ' . $unit->nama . '. Berlaku untuk cuti, lembur, dan izin.'"
             :back="route('admin.tangga-alur.index')" back-label="Tangga Alur Pengajuan">
             @if ($tangga)
                 <x-badge tone="success" dot>Diatur</x-badge>
@@ -18,7 +21,7 @@
             @endif
         </x-page-header>
 
-        <form method="POST" action="{{ route('admin.tangga-alur.update', [$unit, $sasaran]) }}" id="formTangga" novalidate>
+        <form method="POST" action="{{ $aksi }}" id="formTangga" novalidate>
             @csrf @method('PUT')
             <input type="hidden" name="tahap_json" id="tahapJson">
 
@@ -35,6 +38,7 @@
                     <x-card title="Pengaturan Lain" icon="bi-sliders">
                         <x-input name="catatan" label="Catatan" optional maxlength="255" :value="$tangga?->catatan"
                             placeholder="Tulis keterangan singkat, contoh: berlaku selama koordinator GA merangkap DRIVER" />
+                        @unless ($pribadi)
                         <details class="mt-3">
                             <summary class="fw-semibold small">Terapkan juga ke bagian lain ({{ $unitLain->count() }} bagian)</summary>
                             <p class="small text-muted mt-2 mb-2">
@@ -54,6 +58,7 @@
                                 @endforeach
                             </div>
                         </details>
+                        @endunless
                     </x-card>
                 </div>
 
@@ -83,8 +88,8 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const P = @json($pilihan);
-        const UNIT_INI = {{ $unit->id }};
-        const NAMA_UNIT = @json($unit->nama);
+        const UNIT_INI = @json($unit?->id);
+        const NAMA_UNIT = @json($namaUnitIni);
         const AWAL = @json($awal);
         const TIPE = @json(TanggaAlur::TIPE_LABEL);
         const IKON_TIPE = { koordinator: 'bi-person-badge', gm: 'bi-diagram-3', kepala_sdm: 'bi-shield-check', jabatan: 'bi-briefcase', akun: 'bi-person' };

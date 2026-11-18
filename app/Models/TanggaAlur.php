@@ -50,9 +50,30 @@ class TanggaAlur extends Model
 
     public const MAKS_TAHAP = 10;
 
-    protected $fillable = ['unit_id', 'sasaran', 'tahap', 'catatan', 'diubah_oleh'];
+    /** Sasaran tangga milik satu orang (data_pegawai_id terisi, unit_id kosong). */
+    public const SASARAN_PRIBADI = 'pribadi';
+
+    protected $fillable = ['unit_id', 'data_pegawai_id', 'sasaran', 'tahap', 'catatan', 'diubah_oleh'];
 
     protected $casts = ['tahap' => 'array'];
+
+    public function dataPegawai(): BelongsTo
+    {
+        return $this->belongsTo(DataPegawai::class);
+    }
+
+    /** Tangga pribadi pegawai ini, atau null. Aman bila migrasi belum dijalankan. */
+    public static function pribadi(?int $dataPegawaiId): ?self
+    {
+        if (! $dataPegawaiId) {
+            return null;
+        }
+        try {
+            return self::where('data_pegawai_id', $dataPegawaiId)->first();
+        } catch (\Illuminate\Database\QueryException) {
+            return null;
+        }
+    }
 
     public function unit(): BelongsTo
     {

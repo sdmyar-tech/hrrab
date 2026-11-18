@@ -388,6 +388,7 @@
                                         </h2>
                                         @if ($bolehAturAkun && $akun)
                                             <div class="d-flex flex-wrap gap-2">
+                                                <x-button size="sm" variant="outline" icon="bi-signpost-split" :href="route('admin.tangga-alur.pribadi.edit', $pegawai)">Atur Tangga Khusus</x-button>
                                                 @if ($alurKhusus)
                                                     <form action="{{ route('admin.pegawai.alur.destroy', $pegawai) }}" method="POST"
                                                         data-confirm="Kembalikan alur persetujuan {{ $pegawai->nama_lengkap }} ke otomatis (mengikuti bagian & jabatan)?">

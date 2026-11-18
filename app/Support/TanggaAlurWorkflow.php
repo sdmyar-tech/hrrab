@@ -35,6 +35,10 @@ class TanggaAlurWorkflow
      */
     public static function untuk(User $user, ?string $unit): ?TanggaAlur
     {
+        // Tangga pribadi (diatur per orang) menang atas alur khusus lama, tangga bagian, dan alur otomatis.
+        if ($pribadi = TanggaAlur::pribadi($user->data_pegawai_id)) {
+            return $pribadi;
+        }
         if (! $unit || ! $user->data_pegawai_id || AlurPegawai::milik($user->data_pegawai_id)
             || PengajuanWorkflow::submitterLevel($user) === PengajuanWorkflow::LEVEL_GM
             || ! ($unitId = array_search($unit, self::namaUnit(), true))) {

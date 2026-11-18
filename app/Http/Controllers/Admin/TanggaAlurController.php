@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\DataPegawai;
 use App\Models\Jabatan;
 use App\Models\Kepegawaian;
 use App\Models\Penugasan;
@@ -26,7 +27,15 @@ class TanggaAlurController extends Controller
 {
     public function index(Request $request): View
     {
-        $tangga = TanggaAlur::with('pengubah:id,name')->get()->groupBy('unit_id');
+        $semuaTangga = TanggaAlur::with('pengubah:id,name')->get();
+        $tangga = $semuaTangga->whereNotNull('unit_id')->groupBy('unit_id');
+        $pribadi = $semuaTangga->whereNotNull('data_pegawai_id')->load('dataPegawai.kepegawaian')
+            ->map(function (TanggaAlur $t) {
+                $unit = $t->dataPegawai?->kepegawaian?->unit_kerja ?? '';
+                $ringkas = self::ringkas($t, $unit, TanggaAlur::SASARAN_STAF);
+
+                return ['model' => $t, 'unit' => $unit, 'tahap' => $ringkas['tahap'], 'peringatan' => $ringkas['peringatan']];
+            })->sortBy(fn ($b) => $b['model']->dataPegawai?->nama_lengkap)->values();
         $semua = Unit::orderBy('urutan')->orderBy('nama')->get()->map(fn (Unit $unit) => [
             'unit' => $unit,
             'tangga' => collect(array_keys(TanggaAlur::SASARAN_LABEL))->mapWithKeys(fn ($sasaran) => [
@@ -44,6 +53,7 @@ class TanggaAlurController extends Controller
             'baris' => $tampil === 'semua' ? $semua : $semua->filter($saring[$tampil])->values(),
             'tampil' => $tampil,
             'jumlah' => ['semua' => $semua->count(), ...array_map(fn ($f) => $semua->filter($f)->count(), $saring)],
+            'pribadi' => $pribadi,
             'jumlahDiatur' => $tangga->flatten()->count(),
             'jumlahPeringatan' => $semua->sum(fn ($b) => $b['tangga']->filter(fn ($t) => $t['peringatan'])->count()),
         ]);
@@ -64,7 +74,57 @@ class TanggaAlurController extends Controller
         ]);
     }
 
-    public function update(Request $request, Unit $unit, string $sasaran): RedirectResponse
+    /** Form tangga khusus satu orang: berlaku untuk cuti, lembur, dan izin orang itu saja. */
+    public function editPribadi(DataPegawai $pegawai): View
+    {
+        $tangga = TanggaAlur::where('data_pegawai_id', $pegawai->id)->first();
+        $lama = old('tahap_json') ? json_decode(old('tahap_json'), true) : null;
+        $namaUnit = $pegawai->kepegawaian?->unit_kerja;
+        $unit = $namaUnit ? Unit::where('nama', $namaUnit)->first() : null;
+        $sasaranAwal = $unit && PengajuanWorkflow::memimpin($pegawai->id, $namaUnit) ? TanggaAlur::SASARAN_KOORDINATOR : TanggaAlur::SASARAN_STAF;
+
+        return view('admin.tangga-alur.form', [
+            'pegawai' => $pegawai,
+            'unit' => $unit,
+            'sasaran' => TanggaAlur::SASARAN_PRIBADI,
+            'tangga' => $tangga,
+            'tahapAwal' => is_array($lama) ? $lama : ($tangga?->daftarTahap() ?? self::tahapBawaan($sasaranAwal)),
+            'pilihan' => self::pilihan(),
+            'unitLain' => collect(),
+        ]);
+    }
+
+    public function updatePribadi(Request $request, DataPegawai $pegawai): RedirectResponse
+    {
+        [$v, $tahap] = $this->validasiTahap($request);
+        TanggaAlur::updateOrCreate(['data_pegawai_id' => $pegawai->id], [
+            'unit_id' => null, 'sasaran' => TanggaAlur::SASARAN_PRIBADI,
+            'tahap' => $tahap, 'catatan' => $v['catatan'] ?? null, 'diubah_oleh' => Auth::id(),
+        ]);
+        $baru = TanggaAlur::where('data_pegawai_id', $pegawai->id)->first();
+        $unit = $pegawai->kepegawaian?->unit_kerja ?? '';
+        $kosong = collect(self::ringkas($baru, $unit, TanggaAlur::SASARAN_STAF)['tahap'])->filter(fn ($t) => $t['kosong'])->pluck('label');
+        $redirect = redirect()->route('admin.tangga-alur.index')
+            ->with('success', "Tangga alur khusus {$pegawai->nama_lengkap} disimpan. Berlaku untuk pengajuan baru; pengajuan yang sedang berjalan tetap memakai tangga saat diajukan.");
+
+        return $kosong->isEmpty() ? $redirect
+            : $redirect->with('warning', 'Tahap tanpa penyetuju (pengajuan akan ditolak sistem sampai diisi): ' . $kosong->take(5)->implode('; ') . '.');
+    }
+
+    public function destroyPribadi(DataPegawai $pegawai): RedirectResponse
+    {
+        TanggaAlur::where('data_pegawai_id', $pegawai->id)->delete();
+
+        return redirect()->route('admin.tangga-alur.index')
+            ->with('success', "Tangga alur khusus {$pegawai->nama_lengkap} dihapus. Pegawai ini kembali mengikuti tangga bagian / alur otomatis.");
+    }
+
+    /**
+     * Validasi isian tahap dari form + rapikan.
+     *
+     * @return array{0: array, 1: list<array>}
+     */
+    private function validasiTahap(Request $request): array
     {
         $request->merge(['tahap' => json_decode((string) $request->input('tahap_json'), true) ?: []]);
         $unitSah = [TanggaAlur::UNIT_PENGAJU, TanggaAlur::UNIT_SEMUA, ...Unit::pluck('id')->map(fn ($id) => (string) $id)];
@@ -105,6 +165,13 @@ class TanggaAlurController extends Controller
                 }
             }
         }
+
+        return [$v, $tahap];
+    }
+
+    public function update(Request $request, Unit $unit, string $sasaran): RedirectResponse
+    {
+        [$v, $tahap] = $this->validasiTahap($request);
 
         $unitIds = collect([$unit->id, ...($v['terapkan_ke'] ?? [])])->map(fn ($id) => (int) $id)->unique();
         DB::transaction(function () use ($unitIds, $sasaran, $tahap, $v) {
