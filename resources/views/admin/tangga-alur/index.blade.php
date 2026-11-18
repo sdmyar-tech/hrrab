@@ -5,18 +5,28 @@
 <main class="dashboard-content">
     <div class="container-fluid px-3 px-lg-4 py-4">
         <x-page-header title="Tangga Alur Pengajuan" eyebrow="Kepegawaian"
-            subtitle="Atur siapa yang menyetujui cuti, lembur, dan izin di tiap bagian: urutan bebas, boleh lintas bagian, dan setiap tahap wajib dilalui." />
+            subtitle="Atur siapa yang menyetujui cuti, lembur, dan izin: per bagian, atau khusus untuk satu orang. Urutan bebas, boleh lintas bagian, dan setiap tahap wajib dilalui.">
+            <x-button icon="bi-person-plus" data-bs-toggle="modal" data-bs-target="#modalTambahKhusus">Tambah Tangga Khusus</x-button>
+        </x-page-header>
 
         <x-alert tone="info">
-            Bagian yang belum diatur memakai <strong>alur otomatis</strong>. Alur khusus per pegawai (di detail pegawai) tetap didahulukan.
+            Urutan yang dipakai: <strong>tangga khusus orang</strong> → tangga bagian → alur otomatis.
             Perubahan berlaku untuk pengajuan baru; pengajuan yang sedang berjalan tetap memakai tangga saat diajukan.
         </x-alert>
 
-        <div class="row g-3 mb-4">
-            <div class="col-sm-4"><x-stat-card label="Bagian" :value="$jumlah['semua']" icon="bi-buildings" tone="info" meta="tiap bagian punya 2 tangga" /></div>
-            <div class="col-sm-4"><x-stat-card label="Tangga diatur" :value="$jumlahDiatur" icon="bi-signpost-split" tone="primary" meta="sisanya mengikuti alur otomatis" /></div>
-            <div class="col-sm-4"><x-stat-card label="Perlu perhatian" :value="$jumlahPeringatan" icon="bi-exclamation-triangle" :tone="$jumlahPeringatan ? 'warning' : 'success'" meta="tahap tanpa penyetuju" /></div>
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-lg-3"><x-stat-card label="Bagian" :value="$jumlah['semua']" icon="bi-buildings" tone="info" meta="tiap bagian punya 2 tangga" /></div>
+            <div class="col-6 col-lg-3"><x-stat-card label="Tangga bagian diatur" :value="$jumlahDiatur" icon="bi-signpost-split" tone="primary" meta="sisanya alur otomatis" /></div>
+            <div class="col-6 col-lg-3"><x-stat-card label="Tangga khusus orang" :value="$pribadi->count()" icon="bi-person-gear" tone="primary" meta="didahulukan atas bagian" /></div>
+            <div class="col-6 col-lg-3"><x-stat-card label="Perlu perhatian" :value="$jumlahPeringatan + $pribadi->where('peringatan', true)->count()" icon="bi-exclamation-triangle" :tone="($jumlahPeringatan + $pribadi->where('peringatan', true)->count()) ? 'warning' : 'success'" meta="tahap tanpa penyetuju" /></div>
         </div>
+
+        <nav class="pub-chips mb-4" aria-label="Loncat ke bagian halaman">
+            <x-chip href="#per-bagian" icon="bi-buildings" :count="$jumlah['semua']">Per bagian</x-chip>
+            <x-chip href="#per-orang" icon="bi-person-gear" :count="$pribadi->count()">Khusus per orang</x-chip>
+        </nav>
+
+        <h2 class="h5 mb-3" id="per-bagian"><i class="bi bi-buildings me-1" aria-hidden="true"></i>Tangga Per Bagian</h2>
 
         <div class="lamaran-filter mb-3">
             <nav class="pub-chips" aria-label="Saring bagian">
@@ -94,8 +104,11 @@
         </div>
 
         {{-- Tangga khusus per orang: didahulukan atas tangga bagian. Dibuat dari detail pegawai (tab Penugasan → Alur Persetujuan). --}}
-        <x-card class="mt-4" title="Tangga Khusus Per Orang" icon="bi-person-gear"
-            subtitle="Pegawai yang alurnya diatur sendiri. Alur ini didahulukan atas tangga bagian. Tambah dari detail pegawai.">
+        <x-card class="mt-4" id="per-orang" title="Tangga Khusus Per Orang" icon="bi-person-gear"
+            subtitle="Pegawai yang alurnya diatur sendiri. Alur ini didahulukan atas tangga bagian.">
+            <x-slot:actions>
+                <x-button size="sm" icon="bi-person-plus" data-bs-toggle="modal" data-bs-target="#modalTambahKhusus">Tambah</x-button>
+            </x-slot:actions>
             @forelse ($pribadi as $p)
                 @php $pg = $p['model']->dataPegawai; @endphp
                 <section class="tangga-sel {{ $p['peringatan'] ? 'is-peringatan' : '' }} mb-3">
@@ -124,9 +137,36 @@
                     </p>
                 </section>
             @empty
-                <p class="text-muted small mb-0">Belum ada. Buka detail pegawai → Alur Persetujuan → Atur Tangga Khusus.</p>
+                <p class="text-muted small mb-0">Belum ada. Klik <strong>Tambah</strong>, atau buka detail pegawai → Alur Persetujuan → Atur Tangga Khusus.</p>
             @endforelse
         </x-card>
     </div>
 </main>
+
+{{-- Pilih pegawai → langsung ke form tangga khusus orang itu. --}}
+<div class="modal fade" id="modalTambahKhusus" tabindex="-1" aria-labelledby="judulTambahKhusus" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="judulTambahKhusus"><i class="bi bi-person-plus me-1"></i>Tambah Tangga Khusus</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">Pilih pegawai yang alur persetujuannya ingin diatur sendiri. Hanya pegawai aktif yang belum punya tangga khusus.</p>
+                <x-input name="cari-khusus" type="search" icon="bi-search" placeholder="Cari nama atau bagian, contoh: Siti" aria-label="Cari pegawai" data-saring="#daftar-calon" />
+                <p class="small text-muted my-2"><span data-saring-jumlah="#daftar-calon">{{ $calonPribadi->count() }}</span> pegawai</p>
+                <div class="list-group" id="daftar-calon" style="max-height: 50vh; overflow-y: auto;">
+                    @foreach ($calonPribadi as $c)
+                        <a href="{{ route('admin.tangga-alur.pribadi.edit', $c) }}" class="list-group-item list-group-item-action"
+                            data-cari="{{ mb_strtolower($c->nama_lengkap . ' ' . $c->kepegawaian?->unit_kerja . ' ' . $c->kepegawaian?->jabatan) }}">
+                            <span class="fw-semibold d-block">{{ $c->nama_lengkap }}</span>
+                            <span class="small text-muted">{{ collect([$c->kepegawaian?->jabatan, $c->kepegawaian?->unit_kerja])->filter()->implode(' · ') ?: '-' }}</span>
+                        </a>
+                    @endforeach
+                </div>
+                <div data-saring-kosong="#daftar-calon" hidden class="text-muted small mt-2">Pegawai tidak ditemukan.</div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection

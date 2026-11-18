@@ -54,6 +54,11 @@ class TanggaAlurController extends Controller
             'tampil' => $tampil,
             'jumlah' => ['semua' => $semua->count(), ...array_map(fn ($f) => $semua->filter($f)->count(), $saring)],
             'pribadi' => $pribadi,
+            // Pegawai aktif yang belum punya tangga khusus: pilihan di jendela "Tambah Tangga Khusus".
+            'calonPribadi' => DataPegawai::with('kepegawaian:id,data_pegawai_id,unit_kerja,jabatan')
+                ->whereHas('kepegawaian', fn ($q) => $q->where('status_rekrutmen', 'Aktif'))
+                ->whereNotIn('id', $pribadi->pluck('model.data_pegawai_id')->filter()->all())
+                ->orderBy('nama_lengkap')->get(['id', 'nama_lengkap']),
             'jumlahDiatur' => $tangga->flatten()->count(),
             'jumlahPeringatan' => $semua->sum(fn ($b) => $b['tangga']->filter(fn ($t) => $t['peringatan'])->count()),
         ]);
