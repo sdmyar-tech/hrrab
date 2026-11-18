@@ -218,17 +218,63 @@
     // Kotak cari daftar ([data-cari-otomatis]): form dikirim 0,5 detik setelah pengguna berhenti mengetik.
     function initCariOtomatis() {
       var inputs = document.querySelectorAll("input[data-cari-otomatis]");
+      // Halaman dimuat ulang tiap kali cari dikirim: ingat kotak yang sedang diketik agar fokus & kursor kembali
+      // (tanpa ini pengguna harus mengklik kotak lagi setelah tiap pencarian).
+      var KUNCI = "hrrab.cariFokus";
+      var kunciKotak = function (input) {
+        return location.pathname + "|" + (input.name || "") + "|" + Array.prototype.indexOf.call(inputs, input);
+      };
+      try {
+        var simpan = JSON.parse(sessionStorage.getItem(KUNCI) || "null");
+        sessionStorage.removeItem(KUNCI);
+        if (simpan && Date.now() - simpan.waktu < 15000) {
+          Array.prototype.forEach.call(inputs, function (input) {
+            if (kunciKotak(input) === simpan.kunci) {
+              var akhir = input.value.length;
+              input.focus({ preventScroll: true });
+              try { input.setSelectionRange(akhir, akhir); } catch (e) { /* type=search: abaikan */ }
+            }
+          });
+        }
+      } catch (e) { /* penyimpanan diblokir: fokus tidak dipulihkan */ }
 
       Array.prototype.forEach.call(inputs, function (input) {
         var timer;
+        var terakhir = input.value;
+        function kirim() {
+          if (!input.form) {
+            return;
+          }
+          clearTimeout(timer);
+          try { sessionStorage.setItem(KUNCI, JSON.stringify({ kunci: kunciKotak(input), waktu: Date.now() })); } catch (e) { /* abaikan */ }
+          input.form.requestSubmit ? input.form.requestSubmit() : input.form.submit();
+        }
         input.addEventListener("input", function (event) {
           if (event.isComposing || !input.form) {
             return;
           }
           clearTimeout(timer);
+          // Jeda 0,7 dtk setelah berhenti mengetik; tidak dikirim bila isinya kembali seperti semula.
           timer = setTimeout(function () {
-            input.form.requestSubmit ? input.form.requestSubmit() : input.form.submit();
-          }, 500);
+            if (input.value !== terakhir) {
+              terakhir = input.value;
+              kirim();
+            }
+          }, 700);
+        });
+        // Enter = kirim sekarang juga (tanpa menunggu jeda); tombol ✕ bawaan kotak cari juga langsung mengirim.
+        input.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" && !event.isComposing) {
+            event.preventDefault();
+            terakhir = input.value;
+            kirim();
+          }
+        });
+        input.addEventListener("search", function () {
+          if (input.value === "" && terakhir !== "") {
+            terakhir = "";
+            kirim();
+          }
         });
       });
     }
