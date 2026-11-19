@@ -5,7 +5,7 @@
 @section('content')
 @php
     // Ada saringan aktif (pencarian, dropdown, atau klik grafik dashboard) → tampilkan "ditemukan" & Reset filter.
-    $adaFilter = request()->hasAny(['q', 'unit_kerja', 'unit_organisasi', 'status_rekrutmen', 'tanggal_dari', 'tanggal_sampai']) || $saringanDashboard;
+    $adaFilter = request()->hasAny(['q', 'unit_kerja', 'unit_organisasi', 'status_rekrutmen', 'tanggal_dari', 'tanggal_sampai', 'kontrak_dari', 'kontrak_sampai']) || $saringanDashboard;
     $toneStatus = fn (string $status) => match (strtolower($status)) {
         'tetap', 'aktif' => 'success',
         'kontrak' => 'info',
@@ -58,6 +58,7 @@
                     </select>
                 @endif
                 @include('partials.filter-tanggal', ['tanggalLabel' => 'Tgl masuk'])
+                @include('partials.filter-tanggal', ['tanggalLabel' => 'Habis kontrak', 'tanggalNama' => 'kontrak'])
                 @include('partials.urut', ['urutForm' => 'filterPegawaiForm'])
 
                 {{-- Filter dari klik grafik dashboard: tetap terbawa saat mencari, bisa dilepas satu per satu. --}}

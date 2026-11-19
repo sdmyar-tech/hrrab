@@ -45,7 +45,13 @@ final class FilterTanggal
     /** Terapkan rentang tanggal selesai (selesai_dari / selesai_sampai) ke kolom tanggal selesai. */
     public static function terapkanSelesai($query, string $kolom, Request $request)
     {
-        [$dari, $sampai] = self::rentang($request, self::SELESAI_DARI, self::SELESAI_SAMPAI);
+        return self::terapkanNama($query, $kolom, $request, 'selesai');
+    }
+
+    /** Rentang bernama bebas: ?{nama}_dari=…&{nama}_sampai=… (mis. kontrak → kontrak_dari / kontrak_sampai). */
+    public static function terapkanNama($query, string $kolom, Request $request, string $nama)
+    {
+        [$dari, $sampai] = self::rentang($request, $nama . '_dari', $nama . '_sampai');
 
         return $query
             ->when($dari, fn ($q) => $q->whereDate($kolom, '>=', $dari->toDateString()))

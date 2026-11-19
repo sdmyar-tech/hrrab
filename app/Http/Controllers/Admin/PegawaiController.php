@@ -182,6 +182,11 @@ class PegawaiController extends Controller
             $query->whereHas('kepegawaian', fn ($q) => FilterTanggal::terapkan($q, 'tanggal_masuk', $request));
         }
 
+        // Rentang tanggal habis kontrak (kontrak_dari / kontrak_sampai); pegawai tanpa tanggal (tetap) tidak ikut.
+        if ($request->filled('kontrak_dari') || $request->filled('kontrak_sampai')) {
+            $query->whereHas('kepegawaian', fn ($q) => FilterTanggal::terapkanNama($q, 'tanggal_habis_kontrak', $request, 'kontrak'));
+        }
+
         // Filter dari grafik dashboard (status kerja, jenis kelamin, masa kerja, usia, pendidikan, area, bulan masuk/keluar, kontrak).
         $saringan = KelompokPegawai::terapkan($query, $request->query());
 
