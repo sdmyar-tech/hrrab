@@ -41,7 +41,7 @@ class Pengumuman extends Model
 
     protected $fillable = [
         'judul', 'isi', 'kategori', 'jadwal', 'tanggal', 'hari', 'jam_mulai', 'jam_selesai', 'lokasi',
-        'sasaran_unit', 'penting', 'tampil_sampai', 'dibuat_oleh',
+        'sasaran_unit', 'sasaran_jabatan', 'sasaran_user', 'penting', 'tampil_sampai', 'dibuat_oleh',
         'absen_aktif', 'absen_buka', 'absen_tutup', 'absen_kriteria',
     ];
 
@@ -52,6 +52,8 @@ class Pengumuman extends Model
         'tanggal' => 'date',
         'tampil_sampai' => 'date',
         'sasaran_unit' => 'array',
+        'sasaran_jabatan' => 'array',
+        'sasaran_user' => 'array',
         'penting' => 'boolean',
         'hari' => 'integer',
         'absen_aktif' => 'boolean',
@@ -87,13 +89,20 @@ class Pengumuman extends Model
         }
 
         $units = array_values(array_unique([...$user->unitsAktif(), ...$user->unitsDipimpin()]));
+        $jabatan = $user->jabatanAktif();
 
-        return $query->where(function ($q) use ($user, $units) {
-            $q->whereNull('sasaran_unit')->orWhere('dibuat_oleh', $user->id)
-                // Peserta absen acara selalu melihat pengumumannya walau di luar unit sasaran.
-                ->orWhereHas('peserta', fn ($p) => $p->where('user_id', $user->id));
+        return $query->where(function ($q) use ($user, $units, $jabatan) {
+            // Semua sasaran kosong = untuk semua pegawai; selain itu cukup cocok salah satu (bagian ATAU jabatan ATAU nama).
+            $q->where(fn ($s) => $s->whereNull('sasaran_unit')->whereNull('sasaran_jabatan')->whereNull('sasaran_user'))
+                ->orWhere('dibuat_oleh', $user->id)
+                // Peserta absen acara selalu melihat pengumumannya walau di luar sasaran.
+                ->orWhereHas('peserta', fn ($p) => $p->where('user_id', $user->id))
+                ->orWhereJsonContains('sasaran_user', $user->id);
             foreach ($units as $unit) {
                 $q->orWhereJsonContains('sasaran_unit', $unit);
+            }
+            foreach ($jabatan as $j) {
+                $q->orWhereJsonContains('sasaran_jabatan', $j);
             }
         });
     }
@@ -169,6 +178,12 @@ class Pengumuman extends Model
 
     public function sasaranLabel(): string
     {
-        return $this->sasaran_unit ? implode(', ', $this->sasaran_unit) : 'Semua pegawai';
+        $bagian = collect([
+            $this->sasaran_unit ? implode(', ', $this->sasaran_unit) : null,
+            $this->sasaran_jabatan ? 'Jabatan: ' . implode(', ', $this->sasaran_jabatan) : null,
+            $this->sasaran_user ? count($this->sasaran_user) . ' orang tertentu' : null,
+        ])->filter();
+
+        return $bagian->isEmpty() ? 'Semua pegawai' : $bagian->implode(' · ');
     }
 }

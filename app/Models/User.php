@@ -320,6 +320,21 @@ class User extends Authenticatable
     }
 
     /**
+     * Jabatan aktif (penugasan aktif, atau jabatan kepegawaian); sama dengan cara AbsenAcara::kandidat. Akun pimpinan tanpa Data Pegawai: nama perannya.
+     *
+     * @return list<string>
+     */
+    public function jabatanAktif(): array
+    {
+        if (! $this->data_pegawai_id) {
+            return [$this->roleLabel()];
+        }
+        $jabatan = $this->penugasanAktif()->pluck('jabatan')->filter()->unique()->values()->all();
+
+        return $jabatan ?: array_values(array_filter([$this->dataPegawai?->kepegawaian?->jabatan]));
+    }
+
+    /**
      * @return list<string>
      */
     public function unitsDipimpin(): array

@@ -4,7 +4,6 @@
 @php
     $baru = ! $pengumuman->exists;
     $jadwal = old('jadwal', $pengumuman->jadwal ?? 'sekali');
-    $sasaran = old('sasaran_unit', $pengumuman->sasaran_unit ?? []);
 @endphp
 <main class="dashboard-content">
     <div class="container-fluid">
@@ -74,23 +73,7 @@
                     </x-card>
 
                     <x-card title="Ditujukan Kepada" icon="bi-people">
-                        <p class="small text-muted mb-2">
-                            {!! $wajibUnit ? 'Pilih bagian yang Anda pimpin.' : 'Kosongkan untuk <strong>semua pegawai</strong>, atau pilih bagian tertentu.' !!}
-                        </p>
-                        <div class="form-check pb-2 mb-2 border-bottom">
-                            <input class="form-check-input" type="checkbox" id="pilih-semua-unit" data-pilih-semua="sasaran_unit[]">
-                            <label class="form-check-label small fw-semibold" for="pilih-semua-unit">
-                                Pilih semua bagian <span class="text-muted fw-normal" data-jumlah-terpilih></span>
-                            </label>
-                        </div>
-                        <div class="notif-pilihan">
-                            @foreach ($pilihanUnit as $u)
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="sasaran_unit[]" value="{{ $u }}" id="unit-{{ $loop->index }}" @checked(in_array($u, $sasaran, true))>
-                                    <label class="form-check-label small" for="unit-{{ $loop->index }}">{{ $u }}</label>
-                                </div>
-                            @endforeach
-                        </div>
+                        @include('pengumuman._form-sasaran')
                         <div class="mt-3">
                             <x-toggle name="penting" id="penting" label="Sematkan sebagai penting" :checked="(bool) $pengumuman->penting" help="Tampil paling atas dengan tanda merah." />
                         </div>

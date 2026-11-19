@@ -103,7 +103,8 @@ class PengumumanController extends Controller
         abort_unless($user->can(Izin::PENGUMUMAN_MANAGE), 403);
 
         return view('pengumuman.form', ['layout' => $user->panelLayout(), 'pengumuman' => new Pengumuman(['kategori' => 'kegiatan', 'jadwal' => 'sekali']),
-            'pilihanUnit' => $this->pilihanUnit($user), 'wajibUnit' => $user->isKepalaBagian(), 'absen' => $this->dataFormAbsen($user)]);
+            'pilihanUnit' => $this->pilihanUnit($user), 'wajibUnit' => $user->isKepalaBagian(), 'absen' => $this->dataFormAbsen($user),
+            'sasaran' => $this->dataSasaran($user)]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -124,7 +125,8 @@ class PengumumanController extends Controller
         $this->bolehUbah($user, $pengumuman);
 
         return view('pengumuman.form', ['layout' => $user->panelLayout(), 'pengumuman' => $pengumuman,
-            'pilihanUnit' => $this->pilihanUnit($user), 'wajibUnit' => $user->isKepalaBagian(), 'absen' => $this->dataFormAbsen($user)]);
+            'pilihanUnit' => $this->pilihanUnit($user), 'wajibUnit' => $user->isKepalaBagian(), 'absen' => $this->dataFormAbsen($user),
+            'sasaran' => $this->dataSasaran($user)]);
     }
 
     public function update(Request $request, Pengumuman $pengumuman): RedirectResponse
@@ -160,6 +162,7 @@ class PengumumanController extends Controller
     private function validasi(Request $request, User $user): array
     {
         $pilihan = $this->pilihanUnit($user);
+        $sasaran = $this->dataSasaran($user);
 
         $v = $request->validate([
             'judul' => ['required', 'string', 'max:150'],
@@ -172,16 +175,26 @@ class PengumumanController extends Controller
             'jam_mulai' => ['nullable', 'date_format:H:i'],
             'jam_selesai' => ['nullable', 'date_format:H:i', 'after:jam_mulai'],
             'lokasi' => ['nullable', 'string', 'max:150'],
-            'sasaran_unit' => [$user->isKepalaBagian() ? 'required' : 'nullable', 'array'],
+            'sasaran_unit' => ['nullable', 'array'],
             'sasaran_unit.*' => [Rule::in($pilihan)],
+            'sasaran_jabatan' => ['nullable', 'array'],
+            'sasaran_jabatan.*' => [Rule::in($sasaran['jabatan'] ? array_keys($sasaran['jabatan']) : [])],
+            'sasaran_user' => ['nullable', 'array'],
+            'sasaran_user.*' => ['integer', Rule::in($sasaran['kandidat']->pluck('id')->all())],
             'penting' => ['nullable', 'boolean'],
             'tampil_sampai' => ['nullable', 'date', ...($user->can(Izin::OVERRIDE) ? [] : ['after_or_equal:today'])],
         ], [
             'hari.required_if' => 'Pilih hari untuk kegiatan mingguan.',
             'jam_selesai.after' => 'Jam selesai harus setelah jam mulai.',
-            'sasaran_unit.required' => 'Pilih bagian yang dituju.',
+            'sasaran_jabatan.*.in' => 'Ada jabatan yang tidak bisa dipilih.',
+            'sasaran_user.*.in' => 'Ada pegawai yang tidak bisa dipilih.',
             'tanggal.after_or_equal' => 'Tanggal kegiatan tidak boleh di masa lalu.',
         ]);
+
+        // Kepala bagian wajib membatasi sasaran (bagian yang dipimpin atau nama pegawainya).
+        if ($user->isKepalaBagian() && empty($v['sasaran_unit']) && empty($v['sasaran_user'])) {
+            throw ValidationException::withMessages(['sasaran_unit' => 'Pilih bagian atau nama pegawai yang dituju.']);
+        }
 
         $sekali = $v['jadwal'] === Pengumuman::JADWAL_SEKALI;
 
@@ -190,6 +203,8 @@ class PengumumanController extends Controller
             'tanggal' => $sekali ? ($v['tanggal'] ?? null) : null,
             'hari' => $v['jadwal'] === Pengumuman::JADWAL_MINGGUAN ? $v['hari'] : null,
             'sasaran_unit' => array_values(array_unique($v['sasaran_unit'] ?? [])) ?: null,
+            'sasaran_jabatan' => array_values(array_unique($v['sasaran_jabatan'] ?? [])) ?: null,
+            'sasaran_user' => array_values(array_unique(array_map('intval', $v['sasaran_user'] ?? []))) ?: null,
             'penting' => $request->boolean('penting'),
             'tampil_sampai' => $v['tampil_sampai'] ?? ($sekali ? ($v['tanggal'] ?? now()->addDays(14)->toDateString()) : null),
         ];
@@ -281,6 +296,24 @@ class PengumumanController extends Controller
         $total = $pengumuman->peserta()->count();
 
         return " Absen acara aktif untuk {$total} pegawai" . ($baru->isNotEmpty() ? " ({$baru->count()} diberi notifikasi)." : '.');
+    }
+
+    /**
+     * Pilihan sasaran per jabatan & per nama (sumber sama dengan absen acara). Kepala bagian hanya boleh memilih
+     * pegawai di bagian yang dipimpinnya dan tidak per jabatan (jabatan yang sama ada di bagian lain).
+     *
+     * @return array{kandidat: Collection, jabatan: array<string, int>}
+     */
+    private function dataSasaran(User $user): array
+    {
+        $pilihan = AbsenAcara::pilihan($user);
+        if ($user->isKepalaBagian()) {
+            $unit = $this->pilihanUnit($user);
+
+            return ['kandidat' => $pilihan['kandidat']->filter(fn ($k) => array_intersect($k['unit'], $unit))->values(), 'jabatan' => []];
+        }
+
+        return ['kandidat' => $pilihan['kandidat'], 'jabatan' => $pilihan['jabatan']];
     }
 
     private function pilihanUnit(User $user): array
