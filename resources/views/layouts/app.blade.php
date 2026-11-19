@@ -18,6 +18,7 @@
     <meta name="description" content="HRRAB - Sistem Informasi SDM Yayasan Abdurrab">
     @include('layouts.partials.pra-muat')
     @include('layouts.partials.favicon')
+    @include('layouts.partials.pwa')
     @include('layouts.partials.judul-halaman', ['cadangan' => $judulCadangan ?? 'HRRAB'])
     @include('layouts.partials.css')
     @stack('head')

@@ -88,7 +88,7 @@
 @endsection
 
 @section('scripts')
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="{{ asset('assets-admin/vendors/qr/qrcode.min.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const LANGKAH = {{ $langkah }};

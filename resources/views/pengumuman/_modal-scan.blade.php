@@ -22,7 +22,7 @@
     .pembaca-qr { width: 100%; min-height: 260px; }
     .pembaca-qr video { width: 100% !important; object-fit: cover; }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="{{ asset('assets-admin/vendors/qr/html5-qrcode.min.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const modalEl = document.getElementById('modalScanAcara');

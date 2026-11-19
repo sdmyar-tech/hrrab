@@ -16,12 +16,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @include('layouts.partials.favicon')
+    @include('layouts.partials.pwa')
     @stack('head')
     <title>@yield('title', 'Masuk') | HRRAB</title>
 
     <link rel="stylesheet" href="{{ asset('assets-admin/css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets-admin/vendors/bootstrap-icons/bootstrap-icons.css') }}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="{{ asset('assets-admin/vendors/sweetalert2/sweetalert2.min.css') }}">
     @include('layouts.partials.ui-css')
 
     @yield('styles')
@@ -32,7 +33,7 @@
 
     <script src="{{ asset('assets-admin/js/bootstrap.bundle.min.js') }}"></script>
     @include('layouts.partials.placeholder-dropdown')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('assets-admin/vendors/sweetalert2/sweetalert2.min.js') }}"></script>
     @include('layouts.partials.sweetalert', ['pakaiBanner' => trim($__env->yieldContent('pakai-banner')) === '1'])
     @include('layouts.partials.tanpa-spasi')
 

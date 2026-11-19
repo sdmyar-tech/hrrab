@@ -1,0 +1,14 @@
+{
+    "name": "HRRAB - Sistem Informasi SDM Yayasan Abdurrab",
+    "short_name": "HRRAB",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#880f12",
+    "lang": "id",
+    "icons": [
+        { "src": "/favicon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+        { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+    ]
+}

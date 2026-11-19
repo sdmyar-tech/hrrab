@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#880f12">
+<title>Tidak ada koneksi · HRRAB</title>
+<style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; box-sizing: border-box;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: #faf7f7; color: #2b2224; }
+    main { max-width: 420px; text-align: center; background: #fff; border: 1px solid #eadfe0; border-radius: 16px; padding: 32px 24px; box-shadow: 0 8px 24px rgba(136, 15, 18, .08); }
+    img { width: 64px; height: 64px; border-radius: 14px; }
+    h1 { font-size: 1.25rem; margin: 16px 0 8px; }
+    p { margin: 0 0 20px; color: #6b5d60; line-height: 1.55; font-size: .95rem; }
+    button { font: inherit; font-weight: 600; background: #880f12; color: #fff; border: 0; border-radius: 10px; padding: 10px 20px; cursor: pointer; }
+    button:focus-visible { outline: 3px solid #e0a3a5; outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+    <img src="/favicon-192x192.png" alt="" width="64" height="64">
+    <h1>Tidak ada koneksi internet</h1>
+    <p>Halaman ini belum pernah dibuka di perangkat ini, jadi belum tersimpan. Halaman yang sudah pernah Anda buka tetap bisa dibaca. Menyimpan data (mengajukan, absen, dsb.) baru bisa dilakukan saat tersambung kembali.</p>
+    <button type="button" onclick="location.reload()">Coba lagi</button>
+</main>
+<script>addEventListener('online', function () { location.reload(); });</script>
+</body>
+</html>
