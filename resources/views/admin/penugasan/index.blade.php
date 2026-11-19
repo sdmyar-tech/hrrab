@@ -4,7 +4,7 @@
 
 @section('content')
 @php
-    $adaFilter = request()->hasAny(['q', 'jenis', 'status', 'tanggal_dari', 'tanggal_sampai']);
+    $adaFilter = request()->hasAny(['q', 'jenis', 'status', 'tanggal_dari', 'tanggal_sampai', 'selesai_dari', 'selesai_sampai']);
     $isAdmin = auth()->user()->can('sistem.override');
 @endphp
 <main class="dashboard-content">
@@ -51,6 +51,7 @@
                     <option value="selesai" @selected(request('status') === 'selesai')>Selesai</option>
                 </select>
                 @include('partials.filter-tanggal', ['tanggalLabel' => 'Mulai'])
+                @include('partials.filter-tanggal', ['tanggalLabel' => 'Selesai', 'tanggalNama' => 'selesai'])
                 @include('partials.urut', ['urutForm' => 'filterPenugasanForm'])
             </x-filter-bar>
 

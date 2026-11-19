@@ -4,7 +4,7 @@
 
 @section('content')
 @php
-    $adaFilter = request()->hasAny(['q', 'jenis_cuti', 'status', 'tanggal_dari', 'tanggal_sampai']);
+    $adaFilter = request()->hasAny(['q', 'jenis_cuti', 'status', 'tanggal_dari', 'tanggal_sampai', 'selesai_dari', 'selesai_sampai']);
     $reset = route('admin.pengajuan-cuti.index', $bidangTabs ? ['bidang' => request('bidang', 'saya')] : []);
 @endphp
 <main class="dashboard-content">
@@ -34,6 +34,7 @@
                     <option value="besar" @selected(request('jenis_cuti') == 'besar')>Cuti Besar</option>
                 </select>
                 @include('partials.filter-tanggal', ['tanggalLabel' => 'Tgl mulai'])
+                @include('partials.filter-tanggal', ['tanggalLabel' => 'Tgl selesai', 'tanggalNama' => 'selesai'])
                 @include('partials.urut', ['urutForm' => 'filterCutiForm'])
                 @if ($bidangTabs)
                     <x-slot:hidden><input type="hidden" name="bidang" value="{{ request('bidang', 'saya') }}"></x-slot:hidden>

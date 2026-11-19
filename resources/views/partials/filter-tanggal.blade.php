@@ -1,15 +1,17 @@
 {{--
     Filter rentang tanggal untuk bilah filter daftar (App\Support\FilterTanggal): [Label] [dari] s/d [sampai].
-    Param: $tanggalLabel (singkat, mis. "Tgl masuk"), opsional $tanggalForm (id form bila kontrol di luar <form>).
+    Param: $tanggalLabel (singkat, mis. "Tgl masuk"), opsional $tanggalForm (id form bila kontrol di luar <form>),
+    opsional $tanggalNama = 'selesai' untuk rentang kedua (selesai_dari / selesai_sampai; bawaan tanggal_dari / tanggal_sampai).
     Halaman dikirim ulang saat tanggal diganti.
 --}}
+@php $namaDari = isset($tanggalNama) ? $tanggalNama . '_dari' : 'tanggal_dari'; $namaSampai = isset($tanggalNama) ? $tanggalNama . '_sampai' : 'tanggal_sampai'; @endphp
 <div class="input-group input-group-sm filter-tanggal" role="group" aria-label="Saring {{ mb_strtolower($tanggalLabel) }}">
     <span class="input-group-text" title="{{ $tanggalLabel }}"><i class="bi bi-calendar-range" aria-hidden="true"></i><span class="filter-tanggal-teks ms-1">{{ $tanggalLabel }}</span></span>
-    <input type="date" name="tanggal_dari" class="form-control" value="{{ request('tanggal_dari') }}"
+    <input type="date" name="{{ $namaDari }}" class="form-control" value="{{ request($namaDari) }}"
         aria-label="{{ $tanggalLabel }} dari" title="{{ $tanggalLabel }} dari" @isset($tanggalForm) form="{{ $tanggalForm }}" @endisset
         onchange="this.form.submit()">
     <span class="input-group-text">s/d</span>
-    <input type="date" name="tanggal_sampai" class="form-control" value="{{ request('tanggal_sampai') }}"
+    <input type="date" name="{{ $namaSampai }}" class="form-control" value="{{ request($namaSampai) }}"
         aria-label="{{ $tanggalLabel }} sampai" title="{{ $tanggalLabel }} sampai" @isset($tanggalForm) form="{{ $tanggalForm }}" @endisset
         onchange="this.form.submit()">
 </div>

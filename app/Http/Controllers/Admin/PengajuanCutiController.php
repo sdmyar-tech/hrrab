@@ -111,6 +111,7 @@ class PengajuanCutiController extends Controller
 
         // Rentang tanggal (urutan terbalik ditukar, tanggal tidak sah diabaikan).
         FilterTanggal::terapkan($query, 'tanggal_mulai', $request);
+        FilterTanggal::terapkanSelesai($query, 'tanggal_selesai', $request);
 
         // Dari kartu dashboard "Cuti Hari Ini": cuti disetujui yang sedang berlangsung.
         if ($request->boolean('berlangsung')) {

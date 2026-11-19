@@ -94,6 +94,7 @@ class PenugasanController extends Controller
 
         // Rentang tanggal mulai berlaku.
         FilterTanggal::terapkan($query, 'tanggal_mulai', $request);
+        FilterTanggal::terapkanSelesai($query, 'tanggal_selesai', $request);
 
         return $query;
     }

@@ -17,11 +17,16 @@ final class FilterTanggal
 
     public const SAMPAI = 'tanggal_sampai';
 
+    /** Rentang kedua untuk daftar yang punya tanggal selesai: ?selesai_dari=…&selesai_sampai=… */
+    public const SELESAI_DARI = 'selesai_dari';
+
+    public const SELESAI_SAMPAI = 'selesai_sampai';
+
     /** @return array{0: ?CarbonInterface, 1: ?CarbonInterface} */
-    public static function rentang(Request $request): array
+    public static function rentang(Request $request, string $namaDari = self::DARI, string $namaSampai = self::SAMPAI): array
     {
-        $dari = self::tanggal($request->query(self::DARI));
-        $sampai = self::tanggal($request->query(self::SAMPAI));
+        $dari = self::tanggal($request->query($namaDari));
+        $sampai = self::tanggal($request->query($namaSampai));
 
         if ($dari && $sampai && $dari->gt($sampai)) {
             [$dari, $sampai] = [$sampai, $dari];
@@ -35,6 +40,16 @@ final class FilterTanggal
         [$dari, $sampai] = self::rentang($request);
 
         return $dari !== null || $sampai !== null;
+    }
+
+    /** Terapkan rentang tanggal selesai (selesai_dari / selesai_sampai) ke kolom tanggal selesai. */
+    public static function terapkanSelesai($query, string $kolom, Request $request)
+    {
+        [$dari, $sampai] = self::rentang($request, self::SELESAI_DARI, self::SELESAI_SAMPAI);
+
+        return $query
+            ->when($dari, fn ($q) => $q->whereDate($kolom, '>=', $dari->toDateString()))
+            ->when($sampai, fn ($q) => $q->whereDate($kolom, '<=', $sampai->toDateString()));
     }
 
     /** Terapkan rentang ke kolom tanggal pada query Eloquent/relasi. */
