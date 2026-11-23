@@ -26,7 +26,7 @@ class AbsensiPengaturanController extends Controller
     {
         $query = $this->filter($request);
         [$daftar, $urut] = $this->daftarUrut($query);
-        $tanpaFinger = AksesAbsensi::aktif(DataPegawai::whereNull('finger_id'))->with('kepegawaian:id,data_pegawai_id,unit_kerja')
+        $tanpaFinger = AksesAbsensi::aktif(DataPegawai::where(fn ($q) => $q->whereNull('finger_id')->orWhereIn('finger_id', ['', '0'])))->with('kepegawaian:id,data_pegawai_id,unit_kerja')
             ->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip', 'ikut_absensi']);
         $belumDipetakan = $this->belumDipetakan()->each(fn ($b) => $b->saran = self::saranPegawai($b->nama_mesin, $tanpaFinger));
 
@@ -39,7 +39,7 @@ class AbsensiPengaturanController extends Controller
             'unitOpsi' => DB::table('kepegawaians')->whereNotNull('unit_kerja')->distinct()->orderBy('unit_kerja')->pluck('unit_kerja'),
             'statistik' => [
                 'ikut' => AksesAbsensi::aktif(DataPegawai::where('ikut_absensi', true))->count(),
-                'tanpa_finger' => AksesAbsensi::aktif(DataPegawai::where('ikut_absensi', true)->whereNull('finger_id'))->count(),
+                'tanpa_finger' => AksesAbsensi::aktif(DataPegawai::where(fn ($q) => $q->whereNull('finger_id')->orWhereIn('finger_id', ['', '0'])))->count(),
                 'tanpa_jadwal' => AksesAbsensi::aktif(DataPegawai::where('ikut_absensi', true)->doesntHave('jadwalKerja'))->count(),
             ],
             'belumDipetakan' => $belumDipetakan,
@@ -263,7 +263,7 @@ class AbsensiPengaturanController extends Controller
         return DataPegawai::query()
             ->when($request->input('ikut') === 'ya', fn ($q) => $q->where('ikut_absensi', true))
             ->when($request->input('ikut') === 'tidak', fn ($q) => $q->where('ikut_absensi', false))
-            ->when($request->input('masalah') === 'tanpa_finger', fn ($q) => $q->where('ikut_absensi', true)->whereNull('finger_id'))
+            ->when($request->input('masalah') === 'tanpa_finger', fn ($q) => $q->where(fn ($w) => $w->whereNull('finger_id')->orWhereIn('finger_id', ['', '0'])))
             ->when($request->input('masalah') === 'tanpa_jadwal', fn ($q) => $q->where('ikut_absensi', true)->doesntHave('jadwalKerja'))
             ->when($request->filled('unit'), fn ($q) => $q->whereHas('kepegawaian', fn ($k) => $k->where('unit_kerja', $request->input('unit'))))
             ->when($request->filled('q'), function ($q) use ($request) {
