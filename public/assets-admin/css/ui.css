@@ -2320,9 +2320,9 @@ a.hr-opsi:focus-visible { outline: 2px solid var(--hr-focus); outline-offset: 2p
 .hr-kartu-aksi .hr-konteks-ringkas + * { margin-top: var(--hr-space-3); }
 
 /* Bilah "Perlu keputusan Anda" di atas detail (< 1200px), karena kartu Tindakan baru tampil di bawah. */
-.hr-aksi-cepat { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--hr-space-3); padding: var(--hr-space-3) var(--hr-space-4); border: 1px solid var(--hr-warning); border-radius: var(--hr-radius); background: var(--hr-warning-soft); color: var(--admin-heading); }
-.hr-aksi-cepat-tombol { display: flex; flex-wrap: wrap; gap: var(--hr-space-2); }
-@media (max-width: 575.98px) { .hr-aksi-cepat > * { flex: 1 1 100%; } .hr-aksi-cepat-tombol > .btn { flex: 1 1 0; } }
+.hr-aksi-spanduk { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--hr-space-3); padding: var(--hr-space-3) var(--hr-space-4); border: 1px solid var(--hr-warning); border-radius: var(--hr-radius); background: var(--hr-warning-soft); color: var(--admin-heading); }
+.hr-aksi-spanduk-tombol { display: flex; flex-wrap: wrap; gap: var(--hr-space-2); }
+@media (max-width: 575.98px) { .hr-aksi-spanduk > * { flex: 1 1 100%; } .hr-aksi-spanduk-tombol > .btn { flex: 1 1 0; } }
 
 /* ---------- Batch 5: Absensi admin (abs-*) ---------- */
 /* =====================================================================

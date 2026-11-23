@@ -188,12 +188,12 @@
             <div class="col-xl-8 d-grid gap-4 align-content-start">
                 @if ($aksiTahap)
                     {{-- Layar < 1200px: kartu Tindakan baru tampil di bawah, jadi tindakan tahap ini ditaruh di atas. --}}
-                    <div class="hr-aksi-cepat d-xl-none" role="region" aria-label="Tindakan cepat">
+                    <div class="hr-aksi-spanduk d-xl-none" role="region" aria-label="Tindakan cepat">
                         <div class="min-w-0">
                             <strong class="d-block">{{ $canReview ? 'Perlu tindakan Anda' : 'Tugas Anda' }}</strong>
                             <span class="hr-sel-sub">{{ $langkah }}</span>
                         </div>
-                        <div class="hr-aksi-cepat-tombol">
+                        <div class="hr-aksi-spanduk-tombol">
                             @include('admin.lamaran._aksi-tahap', ['ukuran' => 'sm'])
                         </div>
                     </div>
