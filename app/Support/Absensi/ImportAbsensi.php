@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\DB;
  * Import hasil baca file mesin ke tabel absensis.
  *  - Kunci unik: finger_id + tanggal → import ulang file/periode yang sama tidak membuat data dobel.
  *  - Hari yang sudah dikoreksi SDM/Admin TIDAK ditimpa.
- *  - Semua ID disimpan (termasuk yang belum dipetakan / pegawai tidak ikut absensi) agar bisa dinilai kemudian.
+ *  - ID/nama di file yang tidak ada di sistem (belum dipetakan ke pegawai) DILEWATI, tidak disimpan.
+ *  - Pegawai yang ada tapi tidak ikut absensi tetap disimpan agar bisa dinilai kemudian.
  */
 class ImportAbsensi
 {
@@ -28,7 +29,7 @@ class ImportAbsensi
             'periode_dari' => $baris->min('tanggal'),
             'periode_sampai' => $baris->max('tanggal'),
             'total' => $baris->count(),
-            'baru' => 0, 'diperbarui' => 0, 'sama' => 0, 'dikoreksi' => 0,
+            'baru' => 0, 'diperbarui' => 0, 'sama' => 0, 'dikoreksi' => 0, 'dilewati_tak_dikenal' => 0,
             'kosong' => $hasilBaca['kosong'],
             'tidak_valid' => $hasilBaca['tidak_valid'],
             'pegawai_dinilai' => [],
@@ -38,14 +39,19 @@ class ImportAbsensi
 
         foreach ($baris as $b) {
             $p = $pegawai[$b['finger_id']] ?? null;
+            $kunci = $b['finger_id'];
+            if (! $p) {
+                // ID/nama di file mesin tidak ada di sistem → dilewati (tidak disimpan).
+                $ringkas['belum_dipetakan'][$kunci] ??= ['finger_id' => $kunci, 'nama' => $b['nama'], 'hari' => 0];
+                $ringkas['belum_dipetakan'][$kunci]['hari']++;
+                $ringkas['dilewati_tak_dikenal']++;
+                continue;
+            }
+
             $lama = self::cariLama($ada, $b, $p);
             $ringkas[self::jenis($lama, $b)]++;
 
-            $kunci = $b['finger_id'];
-            if (! $p) {
-                $ringkas['belum_dipetakan'][$kunci] ??= ['finger_id' => $kunci, 'nama' => $b['nama'], 'hari' => 0];
-                $ringkas['belum_dipetakan'][$kunci]['hari']++;
-            } elseif (! $p->ikut_absensi) {
+            if (! $p->ikut_absensi) {
                 $ringkas['tidak_ikut'][$kunci] ??= ['finger_id' => $kunci, 'nama' => $p->nama_lengkap, 'hari' => 0];
                 $ringkas['tidak_ikut'][$kunci]['hari']++;
             } else {
@@ -73,7 +79,7 @@ class ImportAbsensi
                 'jumlah_baris' => $ringkas['total'],
                 'jumlah_baru' => $ringkas['baru'],
                 'jumlah_diperbarui' => $ringkas['diperbarui'],
-                'jumlah_dilewati' => $ringkas['sama'] + $ringkas['dikoreksi'] + count($ringkas['tidak_valid']),
+                'jumlah_dilewati' => $ringkas['sama'] + $ringkas['dikoreksi'] + $ringkas['dilewati_tak_dikenal'] + count($ringkas['tidak_valid']),
                 'ringkasan' => collect($ringkas)->except('tidak_valid')->all() + ['tidak_valid' => count($ringkas['tidak_valid'])],
                 'diimport_oleh' => $oleh->id,
             ]);
@@ -84,12 +90,15 @@ class ImportAbsensi
 
             foreach ($baris as $b) {
                 $p = $pegawai[$b['finger_id']] ?? null;
+                if (! $p) {
+                    continue; // tidak ada di sistem → dilewati
+                }
                 $lama = self::cariLama($ada, $b, $p);
                 $jenis = self::jenis($lama, $b);
 
                 if ($jenis === 'baru') {
                     $sisip[] = [
-                        'data_pegawai_id' => $p?->id, 'finger_id' => $b['finger_id'], 'nama_mesin' => $b['nama'], 'tanggal' => $b['tanggal'],
+                        'data_pegawai_id' => $p->id, 'finger_id' => $b['finger_id'], 'nama_mesin' => $b['nama'], 'tanggal' => $b['tanggal'],
                         'scan_masuk' => $b['masuk'], 'scan_keluar' => $b['keluar'], 'jam_masuk' => $b['masuk'], 'jam_keluar' => $b['keluar'],
                         'absensi_import_id' => $import->id, 'created_at' => $sekarang, 'updated_at' => $sekarang,
                     ];

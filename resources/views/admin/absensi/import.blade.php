@@ -30,7 +30,7 @@
                                 <strong>{{ $hasil['baru'] }}</strong> hari baru, <strong>{{ $hasil['diperbarui'] }}</strong> diperbarui, {{ $hasil['dilewati'] }} dilewati.</p>
                             <div class="abs-hasil-aksi">
                                 @if ($hasil['belum_dipetakan'])
-                                    <x-button variant="outline" :href="route('admin.absensi.pengaturan', ['tab' => 'pemetaan'])" icon="bi-link-45deg">Hubungkan {{ $hasil['belum_dipetakan'] }} ID mesin baru</x-button>
+                                    <p class="small text-muted w-100 mb-1">{{ $hasil['belum_dipetakan'] }} ID/nama di file tidak ada di sistem sehingga dilewati.</p>
                                 @endif
                                 <x-button variant="secondary" :href="route('admin.absensi.rekap', ['dari' => $hasil['dari'], 'sampai' => $hasil['sampai']])" :icon="$ik['rekap']">Lihat rekap</x-button>
                                 <x-button :href="route('admin.absensi.harian', ['tanggal' => $hasil['sampai']])" :icon="$ik['harian']">Lihat absensi</x-button>

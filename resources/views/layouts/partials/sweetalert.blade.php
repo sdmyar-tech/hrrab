@@ -238,3 +238,4 @@ document.addEventListener('DOMContentLoaded', function () {
 
 });
 </script>
+@include('layouts.partials.modal-galat')

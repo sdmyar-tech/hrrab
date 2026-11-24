@@ -42,7 +42,7 @@
         </section>
 
         <x-card :padding="false" title="Pemeriksaan per Baris" icon="bi-list-check" class="abs-kartu-periksa"
-            subtitle="Baris rusak ditandai merah dan dilewati. ID yang belum dikenali tetap disimpan.">
+            subtitle="Baris rusak ditandai merah dan dilewati. ID/nama yang tidak ada di sistem juga dilewati.">
             @if ($jumlahMasalah)
                 <x-slot:actions>
                     @if (count($r['tidak_valid']))<x-badge tone="danger">{{ count($r['tidak_valid']) }} baris rusak</x-badge>@endif
@@ -71,8 +71,8 @@
                     <tr class="abs-baris-peringatan">
                         <td class="text-nowrap"><span class="hr-sel-judul">ID {{ $b['finger_id'] }}</span></td>
                         <td>{{ $b['nama'] ?? 'Tanpa nama' }}<span class="hr-sel-sub">{{ $b['hari'] }} hari data</span></td>
-                        <td><x-badge tone="warning" icon="bi-question-circle">Belum dikenali</x-badge></td>
-                        <td>Tetap disimpan. Setelah import, hubungkan ke pegawainya agar ikut dinilai.</td>
+                        <td><x-badge tone="warning" icon="bi-skip-forward">Dilewati</x-badge></td>
+                        <td>Tidak ada di sistem, jadi tidak disimpan. Isi ID mesin pegawainya dulu (Pengaturan → Pemetaan) bila ingin ikut diimport.</td>
                     </tr>
                 @endforeach
                 @foreach ($r['tidak_ikut'] as $b)
@@ -85,7 +85,7 @@
                 @endforeach
                 @unless ($jumlahMasalah)
                     <x-table-empty :colspan="4" icon="bi-check-circle" title="Semua baris valid">
-                        Semua ID di file sudah dikenali dan tidak ada baris bermasalah.
+                        Semua ID di file ada di sistem dan tidak ada baris bermasalah.
                     </x-table-empty>
                 @endunless
             </x-table>
