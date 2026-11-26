@@ -25,7 +25,7 @@
                 :count="$daftar->count()" :unit="'SP pada ' . $bulan->translatedFormat('F Y')" :filtered="$adaCari" :reset="$resetBulan">
                 <div class="input-group input-group-sm sp-bulan">
                     <span class="input-group-text"><i class="bi bi-calendar3" aria-hidden="true"></i><span class="ms-1">Bulan</span></span>
-                    <input type="month" name="bulan" class="form-control" value="{{ $bulan->format('Y-m') }}" onchange="this.form.submit()" aria-label="Bulan">
+                    <input type="month" name="bulan" class="form-control" value="{{ $bulan->format('Y-m') }}" data-kirim-tanggal aria-label="Bulan">
                 </div>
                 <x-slot:summary>
                     <span class="d-inline-flex flex-wrap gap-1" aria-label="Jumlah per tingkat">

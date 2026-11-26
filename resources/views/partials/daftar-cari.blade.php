@@ -1,5 +1,5 @@
 {{--
-    Kotak cari di bilah filter daftar. Form dikirim otomatis setelah berhenti mengetik (main.js: [data-cari-otomatis]).
+    Kotak cari di bilah filter daftar. Form dikirim lewat Enter atau tombol "Cari" (main.js: [data-cari-otomatis]), tidak otomatis saat mengetik.
     Param: $cariTeks (placeholder umum + contoh isian), $cariLabel (label pembaca layar & tooltip: kolom apa saja yang dicari),
     opsional $cariNama (default "q"), $cariId.
 --}}
@@ -9,4 +9,5 @@
         class="form-control border-start-0" placeholder="{{ $cariTeks }}"
         aria-label="{{ $cariLabel ?? $cariTeks }}" title="{{ $cariLabel ?? $cariTeks }}"
         value="{{ request($cariNama ?? 'q') }}" autocomplete="off" data-cari-otomatis>
+    <button type="submit" class="btn btn-outline-secondary" data-tombol-cari title="Cari (atau tekan Enter)">Cari</button>
 </div>

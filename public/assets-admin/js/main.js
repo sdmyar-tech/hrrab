@@ -249,20 +249,17 @@
           try { sessionStorage.setItem(KUNCI, JSON.stringify({ kunci: kunciKotak(input), waktu: Date.now() })); } catch (e) { /* abaikan */ }
           input.form.requestSubmit ? input.form.requestSubmit() : input.form.submit();
         }
-        input.addEventListener("input", function (event) {
-          if (event.isComposing || !input.form) {
-            return;
-          }
-          clearTimeout(timer);
-          // Jeda 0,7 dtk setelah berhenti mengetik; tidak dikirim bila isinya kembali seperti semula.
-          timer = setTimeout(function () {
-            if (input.value !== terakhir) {
-              terakhir = input.value;
-              kirim();
-            }
-          }, 700);
-        });
-        // Enter = kirim sekarang juga (tanpa menunggu jeda); tombol ✕ bawaan kotak cari juga langsung mengirim.
+        // Tidak ada pencarian otomatis saat mengetik (mengganggu: halaman dimuat ulang sebelum selesai mengetik).
+        // Pencarian dikirim hanya lewat Enter, tombol "Cari", atau tombol ✕ untuk mengosongkan.
+        var tombolCari = input.form && input.form.querySelector("[data-tombol-cari]");
+        if (tombolCari) {
+          tombolCari.addEventListener("click", function (event) {
+            event.preventDefault();
+            terakhir = input.value;
+            kirim();
+          });
+        }
+        // Enter = kirim sekarang juga; tombol ✕ bawaan kotak cari juga langsung mengirim.
         input.addEventListener("keydown", function (event) {
           if (event.key === "Enter" && !event.isComposing) {
             event.preventDefault();
@@ -275,6 +272,35 @@
             terakhir = "";
             kirim();
           }
+        });
+      });
+    }
+
+    // Filter tanggal/bulan ([data-kirim-tanggal]): Chrome memicu "change" di tiap angka tahun yang diketik
+    // (0002, 0020, 0202, 2026 ...). Dikirim hanya bila tanggalnya wajar (tahun 1990–2100) dan sudah diam 0,9 detik,
+    // atau seketika saat kolom ditinggalkan. Memilih dari kalender tetap terasa cepat.
+    function initKirimTanggal() {
+      Array.prototype.forEach.call(document.querySelectorAll("input[data-kirim-tanggal]"), function (input) {
+        var timer;
+        var awal = input.value;
+        function wajar() {
+          if (input.value === "") { return true; } // mengosongkan = hapus filter
+          var tahun = parseInt(input.value.slice(0, 4), 10);
+          return tahun >= 1990 && tahun <= 2100;
+        }
+        function kirim() {
+          clearTimeout(timer);
+          if (!input.form || input.value === awal || !wajar()) { return; }
+          awal = input.value;
+          input.form.requestSubmit ? input.form.requestSubmit() : input.form.submit();
+        }
+        input.addEventListener("change", function () {
+          clearTimeout(timer);
+          if (wajar()) { timer = setTimeout(kirim, 900); }
+        });
+        input.addEventListener("blur", kirim);
+        input.addEventListener("keydown", function (event) {
+          if (event.key === "Enter") { event.preventDefault(); kirim(); }
         });
       });
     }
@@ -458,6 +484,7 @@
     initLokasiMaps();
     initSaringLangsung();
     initCariOtomatis();
+    initKirimTanggal();
     initFilterMemuat();
     initTooltipIkon();
     initTableDropdowns();

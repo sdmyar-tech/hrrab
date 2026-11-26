@@ -2,7 +2,7 @@
     Bilah filter daftar (Batch 4): cari + saringan (pilihan/chip/tanggal/urutan) + ringkasan jumlah + Reset filter.
     Dipasang paling atas di dalam <x-card :padding="false">, tepat sebelum <x-table>.
 
-    Server (form GET, cari otomatis 0,5 dtk):
+    Server (form GET; cari dikirim lewat Enter / tombol Cari, tidak otomatis saat mengetik):
         <x-filter-bar :action="route('admin.pegawai.index')" id="filterPegawai" search="Cari pegawai, contoh: Siti"
             :count="$pegawais->total()" unit="pegawai" :filtered="$adaFilter" :reset="route('admin.pegawai.index')">
             <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">…</select>
@@ -40,6 +40,7 @@
                     <input type="search" class="form-control" placeholder="{{ $search }}" aria-label="{{ $searchLabel ?? $search }}"
                         title="{{ $searchLabel ?? $search }}" autocomplete="off" @if ($searchId) id="{{ $searchId }}" @endif
                         @if ($action) name="{{ $searchName }}" value="{{ $kataCari }}" data-cari-otomatis @elseif ($target) data-saring="{{ $target }}" @endif>
+                    @if ($action)<button type="submit" class="btn btn-outline-secondary" data-tombol-cari title="Cari (atau tekan Enter)">Cari</button>@endif
                 </div>
             @endif
             {{ $slot }}

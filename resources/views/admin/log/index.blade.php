@@ -64,9 +64,9 @@
                 {{-- Rentang tanggal memakai nama isian log sendiri (dari / sampai). --}}
                 <div class="input-group input-group-sm filter-tanggal" role="group" aria-label="Saring rentang tanggal">
                     <span class="input-group-text"><i class="bi bi-calendar-range" aria-hidden="true"></i><span class="filter-tanggal-teks ms-1">Tanggal</span></span>
-                    <input type="date" name="dari" class="form-control" value="{{ request('dari') }}" aria-label="Dari tanggal" title="Dari tanggal" onchange="this.form.submit()">
+                    <input type="date" name="dari" class="form-control" value="{{ request('dari') }}" aria-label="Dari tanggal" title="Dari tanggal" data-kirim-tanggal>
                     <span class="input-group-text">s/d</span>
-                    <input type="date" name="sampai" class="form-control" value="{{ request('sampai') }}" aria-label="Sampai tanggal" title="Sampai tanggal" onchange="this.form.submit()">
+                    <input type="date" name="sampai" class="form-control" value="{{ request('sampai') }}" aria-label="Sampai tanggal" title="Sampai tanggal" data-kirim-tanggal>
                 </div>
                 @include('partials.urut', ['urutForm' => 'filterLogForm'])
             </x-filter-bar>

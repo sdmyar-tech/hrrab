@@ -9,11 +9,11 @@
     <span class="input-group-text" title="{{ $tanggalLabel }}"><i class="bi bi-calendar-range" aria-hidden="true"></i><span class="filter-tanggal-teks ms-1">{{ $tanggalLabel }}</span></span>
     <input type="date" name="{{ $namaDari }}" class="form-control" value="{{ request($namaDari) }}"
         aria-label="{{ $tanggalLabel }} dari" title="{{ $tanggalLabel }} dari" @isset($tanggalForm) form="{{ $tanggalForm }}" @endisset
-        onchange="this.form.submit()">
+        data-kirim-tanggal>
     <span class="input-group-text">s/d</span>
     <input type="date" name="{{ $namaSampai }}" class="form-control" value="{{ request($namaSampai) }}"
         aria-label="{{ $tanggalLabel }} sampai" title="{{ $tanggalLabel }} sampai" @isset($tanggalForm) form="{{ $tanggalForm }}" @endisset
-        onchange="this.form.submit()">
+        data-kirim-tanggal>
 </div>
 @once
     <style>

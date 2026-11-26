@@ -43,7 +43,7 @@
                 <x-icon-button icon="bi-chevron-left" label="Hari sebelumnya" :href="$urlTanggal($tanggal->copy()->subDay()->toDateString())" />
                 <label class="visually-hidden" for="pilihTanggal">Pilih tanggal</label>
                 <input type="date" name="tanggal" id="pilihTanggal" class="form-control form-control-lg abs-tanggal-isian" value="{{ $tglStr }}"
-                    max="{{ now()->toDateString() }}" onchange="this.form.submit()">
+                    max="{{ now()->toDateString() }}" data-kirim-tanggal>
                 @if ($tanggal->lt(now()->startOfDay()))
                     <x-icon-button icon="bi-chevron-right" label="Hari berikutnya" :href="$urlTanggal($tanggal->copy()->addDay()->toDateString())" />
                 @else
