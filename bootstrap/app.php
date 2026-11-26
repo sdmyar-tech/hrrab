@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureIsAdmin;
 use App\Http\Middleware\EnsureIsInternal;
 use App\Http\Middleware\EnsureIsPegawai;
 use App\Http\Middleware\EnsureIsPelamar;
+use App\Http\Middleware\KembaliKeHalamanAsal;
 use App\Http\Middleware\PaksaGantiPassword;
 use App\Http\Middleware\PreventBackHistory;
 use App\Http\Middleware\RedirectIfPelamar;
@@ -33,7 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'nocache' => PreventBackHistory::class,
         ]);
 
-        $middleware->web(append: [PaksaGantiPassword::class, CatatAktivitas::class]);
+        $middleware->web(append: [PaksaGantiPassword::class, CatatAktivitas::class, KembaliKeHalamanAsal::class]);
 
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->is('pelamar/*')) {
