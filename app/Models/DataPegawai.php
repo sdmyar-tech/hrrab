@@ -82,6 +82,12 @@ class DataPegawai extends Model
         return $this->hasOne(Kepegawaian::class);
     }
 
+    /** Riwayat kontrak (input manual): Masa Training, PKWT 1…, PKWTT — urut tanggal mulai. */
+    public function kontrak(): HasMany
+    {
+        return $this->hasMany(KontrakPegawai::class)->orderBy('tanggal_mulai')->orderBy('id');
+    }
+
     public function kontakDarurat(): HasOne
     {
         return $this->hasOne(KontakDarurat::class);

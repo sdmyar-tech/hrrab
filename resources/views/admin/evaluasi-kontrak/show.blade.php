@@ -88,21 +88,26 @@
 
                     <section class="hr-detail-bagian" aria-labelledby="judul-riwayat-kontrak">
                         <h2 class="hr-detail-judul" id="judul-riwayat-kontrak"><i class="bi bi-journal-text" aria-hidden="true"></i>Riwayat Kontrak</h2>
-                        @php $jumlahKontrak = count($riwayatKontrak); $diperpanjang = collect($riwayatKontrak)->filter(fn ($r) => $r['evaluasi']?->keputusan === EK::PERPANJANG)->count(); @endphp
+                        @php $jumlahKontrak = collect($riwayatKontrak)->whereNotNull('ke')->count(); $adaCatatan = \App\Models\KontrakPegawai::tersedia() && $p?->kontrak()->exists(); @endphp
                         <p class="hr-sel-sub mb-2">
-                            Tercatat <strong>{{ $jumlahKontrak }} kontrak</strong>{{ $diperpanjang ? ', ' . $diperpanjang . ' kali diperpanjang' : '' }} di sistem.
-                            Perpanjangan sebelum sistem ini dipakai tidak ikut terhitung.
+                            Tercatat <strong>{{ $jumlahKontrak }} kali dikontrak</strong>{{ $jumlahKontrak > 1 ? ', ' . ($jumlahKontrak - 1) . ' kali diperpanjang' : '' }}.
+                            @if ($adaCatatan)
+                                Berdasarkan catatan riwayat kontrak pegawai.
+                            @else
+                                Dihitung dari evaluasi di sistem; perpanjangan sebelumnya belum tercatat.
+                            @endif
+                            @can('pegawai.view')<a href="{{ route('admin.riwayat-kontrak.show', $p) }}" class="ms-1">{{ $adaCatatan ? 'Lihat / ubah riwayat' : 'Lengkapi riwayat kontrak' }}</a>@endcan
                         </p>
                         @forelse ($riwayatKontrak as $rk)
                             <div class="d-flex justify-content-between align-items-start gap-3 py-2 border-top {{ $rk['evaluasi']?->is($e) ? 'bg-body-tertiary rounded px-2' : '' }}">
                                 <div class="min-w-0">
                                     <div class="fw-semibold">
-                                        Kontrak ke-{{ $rk['ke'] }}
-                                        <x-badge :tone="$rk['tone']">{{ ['selesai' => 'Selesai dievaluasi', 'evaluasi' => 'Sedang dievaluasi', 'berjalan' => 'Berjalan'][$rk['status']] }}</x-badge>
+                                        {{ $rk['label'] }}{{ $rk['ke'] && ! str_starts_with($rk['label'], 'Kontrak') ? ' (kontrak ke-' . $rk['ke'] . ')' : '' }}
+                                        <x-badge :tone="$rk['tone']">{{ ['selesai' => 'Selesai dievaluasi', 'evaluasi' => 'Sedang dievaluasi', 'berjalan' => 'Berjalan', 'catatan' => 'Tercatat'][$rk['status']] }}</x-badge>
                                         @if ($rk['evaluasi']?->is($e))<x-badge tone="primary">Evaluasi ini</x-badge>@endif
                                     </div>
                                     <span class="hr-sel-sub">
-                                        {{ $rk['mulai']?->translatedFormat('d M Y') ?? 'awal tidak tercatat' }} – {{ $rk['habis']?->translatedFormat('d M Y') }}{{ $rk['bulan'] ? ' · ± ' . $rk['bulan'] . ' bulan' : '' }}
+                                        {{ $rk['mulai']?->translatedFormat('d M Y') ?? 'awal tidak tercatat' }} – {{ $rk['habis']?->translatedFormat('d M Y') ?? 'tanpa batas' }}{{ $rk['bulan'] ? ' · ± ' . $rk['bulan'] . ' bulan' : '' }}
                                     </span>
                                     <span class="d-block small mt-1">{{ $rk['keterangan'] }}</span>
                                     @if ($rk['catatan'])<span class="d-block small text-muted mt-1"><i class="bi bi-chat-left-text me-1" aria-hidden="true"></i>{{ $rk['catatan'] }}</span>@endif

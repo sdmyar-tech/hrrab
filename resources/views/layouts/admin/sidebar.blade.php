@@ -38,6 +38,7 @@
             ['Permintaan Ganti Sandi', 'bi-key', 'admin.permintaan-password.index', 'admin.permintaan-password.*', $u->can('pegawai.alur.manage'), null],
             ['Unit', 'bi-grid-3x3-gap', 'admin.master-unit.index', 'admin.master-unit.*', $u->can('penugasan.manage'), null],
             ['Evaluasi Kontrak', 'bi-clipboard-check', 'admin.evaluasi-kontrak.index', 'admin.evaluasi-kontrak.*', ! $penyetuju && $evaluasi, $hitung['evaluasi_kontrak'] ?? null],
+            ['Riwayat Kontrak', 'bi-journal-bookmark', 'admin.riwayat-kontrak.index', 'admin.riwayat-kontrak.*', $u->can('pegawai.view'), null],
             ['Surat Peringatan', 'bi-exclamation-octagon', 'admin.surat-peringatan.index', 'admin.surat-peringatan.*', \App\Support\SuratPeringatanAkses::bolehMembuka($u), null],
         ]],
         // Izin telat/pulang cepat diakses dari tab modul & tombol di halaman Harian (menu tetap ringkas).

@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\LokasiKerjaController as AdminLokasiKerjaControll
 use App\Http\Controllers\Admin\LowonganController as AdminLowonganController;
 use App\Http\Controllers\Admin\PegawaiController as AdminPegawaiController;
 use App\Http\Controllers\Admin\PegawaiKeluarController;
+use App\Http\Controllers\Admin\RiwayatKontrakController;
 use App\Http\Controllers\Admin\PengajuanCutiController as AdminPengajuanCutiController;
 use App\Http\Controllers\Admin\PengajuanFormasiController as AdminPengajuanFormasiController;
 use App\Http\Controllers\Admin\PengajuanLemburController as AdminPengajuanLemburController;
@@ -120,6 +121,20 @@ Route::middleware(['auth', 'nocache'])->group(function () {
         Route::delete('/pegawai/{pegawai}', [AdminPegawaiController::class, 'destroy'])->name('pegawai.destroy')->middleware('can:pegawai.delete');
         Route::get('/pegawai/{pegawai}', [AdminPegawaiController::class, 'show'])->name('pegawai.show')->middleware('can:pegawai.view');
         Route::get('/pegawai/{pegawai}/export', [AdminPegawaiController::class, 'exportDetail'])->name('pegawai.export-detail')->middleware('can:pegawai.view');
+
+        // Riwayat kontrak pegawai (Masa Training → PKWT 1, 2 … → PKWTT; input manual untuk data lama).
+        Route::prefix('riwayat-kontrak')->name('riwayat-kontrak.')->group(function () {
+            Route::middleware('can:pegawai.view')->group(function () {
+                Route::get('/', [RiwayatKontrakController::class, 'index'])->name('index');
+                Route::get('/export', [RiwayatKontrakController::class, 'export'])->name('export');
+                Route::get('/{pegawai}', [RiwayatKontrakController::class, 'show'])->name('show');
+            });
+            Route::middleware('can:pegawai.update')->group(function () {
+                Route::post('/{pegawai}', [RiwayatKontrakController::class, 'store'])->name('store');
+                Route::put('/{pegawai}/{kontrak}', [RiwayatKontrakController::class, 'update'])->name('update');
+                Route::delete('/{pegawai}/{kontrak}', [RiwayatKontrakController::class, 'destroy'])->name('destroy');
+            });
+        });
 
         // Absensi (mesin fingerprint): lihat = absensi.view (Kepala Bagian: unitnya); kelola = absensi.manage (semua unit).
         Route::prefix('absensi')->name('absensi.')->group(function () {

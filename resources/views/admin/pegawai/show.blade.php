@@ -138,6 +138,7 @@
                                 data-confirm-text="Ya, Hapus" data-cancel-text="Batal">Hapus</x-button>
                         </form>
                     @endcan
+                    <x-button variant="secondary" icon="bi-journal-bookmark" :href="route('admin.riwayat-kontrak.show', $pegawai)">Riwayat Kontrak</x-button>
                     @can('pegawai.update')
                         <x-button :href="route('admin.pegawai.edit', $pegawai)" icon="bi-pencil">Ubah Data</x-button>
                     @endcan
