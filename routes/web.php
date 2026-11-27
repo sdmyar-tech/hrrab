@@ -128,6 +128,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
                 Route::get('/', [RiwayatKontrakController::class, 'index'])->name('index');
                 Route::get('/export', [RiwayatKontrakController::class, 'export'])->name('export');
                 Route::get('/{pegawai}', [RiwayatKontrakController::class, 'show'])->name('show');
+                Route::get('/{pegawai}/detail', [RiwayatKontrakController::class, 'detail'])->name('detail');
             });
             Route::middleware('can:pegawai.update')->group(function () {
                 Route::post('/{pegawai}', [RiwayatKontrakController::class, 'store'])->name('store');
@@ -320,6 +321,7 @@ Route::middleware(['auth', 'nocache'])->group(function () {
             Route::get('/', [AdminEvaluasiKontrakController::class, 'index'])->name('index');
             Route::get('/export', [AdminEvaluasiKontrakController::class, 'export'])->name('export');
             Route::get('/{evaluasiKontrak}', [AdminEvaluasiKontrakController::class, 'show'])->name('show');
+            Route::get('/{evaluasiKontrak}/riwayat', [AdminEvaluasiKontrakController::class, 'riwayat'])->name('riwayat');
             Route::post('/{evaluasiKontrak}/isi', [AdminEvaluasiKontrakController::class, 'isi'])->name('isi');
             Route::post('/{evaluasiKontrak}/putuskan', [AdminEvaluasiKontrakController::class, 'putuskan'])->name('putuskan');
             Route::post('/{evaluasiKontrak}/jadwal-ttd', [AdminEvaluasiKontrakController::class, 'jadwalTtd'])->name('jadwal-ttd');

@@ -7,6 +7,7 @@ use App\Models\DataPegawai;
 use App\Models\KontrakPegawai;
 use App\Models\User;
 use App\Support\ExcelExporter;
+use App\Support\RiwayatKontrak;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -66,6 +67,19 @@ class RiwayatKontrakController extends Controller
             'jumlahPkwt' => $kontrak->filter->dihitung()->count(),
             'berlaku' => $berlaku,
             'bolehUbah' => Auth::user()->can('pegawai.update'),
+        ]);
+    }
+
+    /** Isi jendela "Detail" pada kolom Aksi daftar (potongan HTML, dimuat lewat fetch). */
+    public function detail(DataPegawai $pegawai): View
+    {
+        $this->pastikanBolehLihat($pegawai);
+        $pegawai->load('kepegawaian');
+
+        return view('admin.riwayat-kontrak._detail', [
+            'pegawai' => $pegawai,
+            'rows' => RiwayatKontrak::untuk($pegawai),
+            'urlLengkap' => route('admin.riwayat-kontrak.show', $pegawai),
         ]);
     }
 

@@ -154,6 +154,22 @@ class EvaluasiKontrakController extends Controller
         ]);
     }
 
+    /** Isi jendela "Detail" pada kolom Aksi daftar evaluasi: kontrak ke berapa + riwayat & keterangannya (potongan HTML). */
+    public function riwayat(EvaluasiKontrak $evaluasiKontrak): View
+    {
+        $user = $this->pengguna();
+        $e = $evaluasiKontrak->load('dataPegawai.kepegawaian');
+        abort_unless(EvaluasiKontrakAlur::bisaLihat($user, $e) && $e->dataPegawai, 403, 'Anda tidak berwenang melihat evaluasi ini.');
+
+        return view('admin.riwayat-kontrak._detail', [
+            'pegawai' => $e->dataPegawai,
+            'rows' => RiwayatKontrak::untuk($e->dataPegawai),
+            'saatIni' => $e,
+            'urlEvaluasi' => route('admin.evaluasi-kontrak.show', $e),
+            'urlLengkap' => $user->can('pegawai.view') ? route('admin.riwayat-kontrak.show', $e->dataPegawai) : null,
+        ]);
+    }
+
     /** Penilai memberi nilai 50 butir (+ catatan). Bila sekaligus pemutus, keputusan & jadwal TTD ikut diisi. */
     public function isi(Request $request, EvaluasiKontrak $evaluasiKontrak): RedirectResponse
     {

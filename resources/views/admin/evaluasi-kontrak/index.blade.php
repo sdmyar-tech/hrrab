@@ -85,6 +85,8 @@
                         </td>
                         <td class="text-end hr-kolom-aksi">
                             <div class="hr-aksi-baris">
+                                <x-icon-button icon="bi-card-list" label="Detail kontrak" data-detail-kontrak="{{ route('admin.evaluasi-kontrak.riwayat', $e) }}"
+                                    data-nama="{{ $e->dataPegawai?->nama_lengkap }}" />
                                 {{-- Ada tugas untuk Anda → ikon utama (marun); selain itu cukup lihat detail. --}}
                                 @if ($tugas)
                                     <x-icon-button icon="bi-pencil-square" tone="primary" :href="route('admin.evaluasi-kontrak.show', $e)"
@@ -114,4 +116,5 @@
         </x-card>
     </div>
 </main>
+@include('admin.riwayat-kontrak._modal-detail')
 @endsection

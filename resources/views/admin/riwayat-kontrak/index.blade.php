@@ -68,6 +68,8 @@
                         </td>
                         <td class="text-end hr-kolom-aksi">
                             <div class="hr-aksi-baris">
+                                <x-icon-button icon="bi-card-list" label="Detail kontrak" data-detail-kontrak="{{ route('admin.riwayat-kontrak.detail', $p) }}"
+                                    data-nama="{{ $p->nama_lengkap }}" />
                                 <x-icon-button :icon="$bolehUbah ? 'bi-pencil-square' : 'bi-eye'" :tone="$bolehUbah && ! $p->kontrak_count ? 'primary' : null"
                                     :href="route('admin.riwayat-kontrak.show', $p)" :label="$bolehUbah ? ($p->kontrak_count ? 'Lihat / ubah riwayat' : 'Isi riwayat kontrak') : 'Lihat riwayat'" />
                             </div>
@@ -89,4 +91,5 @@
         </x-card>
     </div>
 </main>
+@include('admin.riwayat-kontrak._modal-detail')
 @endsection
