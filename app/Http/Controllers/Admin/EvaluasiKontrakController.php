@@ -12,6 +12,7 @@ use App\Support\EvaluasiKontrakAlur;
 use App\Support\ExcelExporter;
 use App\Support\FilterTanggal;
 use App\Support\Notifikasi;
+use App\Support\RiwayatKontrak;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -44,6 +45,7 @@ class EvaluasiKontrakController extends Controller
             'daftar' => $daftar,
             'tab' => $tab,
             'jumlahTab' => array_map(fn ($c) => $c->count(), $kelompok),
+            'nomorKontrak' => $this->nomorKontrak(),
         ]);
     }
 
@@ -58,9 +60,10 @@ class EvaluasiKontrakController extends Controller
         $butir = array_keys(EvaluasiKontrak::butir());
         $bagian = array_column(config('penilaian_kontrak.bagian'), 'kode');
 
+        $nomor = $this->nomorKontrak();
         $ringkas = $daftar->map(fn (EvaluasiKontrak $e) => [
             $e->dataPegawai?->nama_lengkap, $e->dataPegawai?->nip, $e->unit_kerja, $e->status_kerja,
-            $e->tanggal_habis_kontrak->format('d-m-Y'), $e->sisaHari(), $e->statusLabel(),
+            'Ke-' . ($nomor[$e->id] ?? 1), $e->tanggal_habis_kontrak->format('d-m-Y'), $e->sisaHari(), $e->statusLabel(),
             $e->pengisi?->name, $e->diisi_pada?->format('d-m-Y H:i'), $e->total_nilai, $e->rataNilai(), EvaluasiKontrak::predikat($e->total_nilai),
             $e->rekomendasi ? $e->labelRekomendasi() : null, $e->catatan,
             $e->keputusan ? $e->labelKeputusan() : null, $e->pemutus?->name, $e->diputuskan_pada?->format('d-m-Y H:i'), $e->catatan_sdm, $e->labelTtd(),
@@ -73,7 +76,7 @@ class EvaluasiKontrakController extends Controller
 
         return ExcelExporter::downloadMultiSheet(ExcelExporter::namaFile('evaluasi-kontrak-' . $tab), [
             ['name' => 'Evaluasi Kontrak', 'headers' => [
-                'Pegawai', 'NIP', 'Bagian', 'Status Kerja', 'Habis Kontrak', 'Sisa Hari', 'Status', 'Penilai', 'Dinilai Pada', 'Total Nilai', 'Rata-rata',
+                'Pegawai', 'NIP', 'Bagian', 'Status Kerja', 'Kontrak Ke-', 'Habis Kontrak', 'Sisa Hari', 'Status', 'Penilai', 'Dinilai Pada', 'Total Nilai', 'Rata-rata',
                 'Predikat', 'Rekomendasi Penilai', 'Catatan Penilai', 'Keputusan', 'Diputuskan Oleh', 'Diputuskan Pada', 'Catatan SDM', 'Jadwal TTD',
             ], 'rows' => $ringkas],
             ['name' => 'Nilai per Butir', 'headers' => [
@@ -140,6 +143,8 @@ class EvaluasiKontrakController extends Controller
                 ->whereDate('tanggal', '<=', $periodeSelesai ?? $e->tanggal_habis_kontrak)
                 ->orderBy('tanggal')->orderBy('tingkat')->get(),
             'riwayat' => EvaluasiKontrak::where('data_pegawai_id', $e->data_pegawai_id)->whereKeyNot($e->id)->latest('tanggal_habis_kontrak')->get(),
+            'riwayatKontrak' => $pegawai ? RiwayatKontrak::untuk($pegawai) : [],
+            'kontrakKe' => $this->nomorKontrak()[$e->id] ?? 1,
             'penilai' => $pegawai ? EvaluasiKontrakAlur::penilai($pegawai, $e->unit_kerja) : collect(),
             'pemutus' => $pegawai ? EvaluasiKontrakAlur::pemutus($pegawai, $e->unit_kerja) : collect(),
             'bisaIsi' => EvaluasiKontrakAlur::bisaIsi($user, $e),
@@ -278,6 +283,12 @@ class EvaluasiKontrakController extends Controller
         Notifikasi::evaluasiKontrakDiputuskan($e);
 
         return $hasil . ($e->labelTtd() ? ' TTD kontrak: ' . $e->labelTtd() . '.' : '');
+    }
+
+    /** Kontrak ke-berapa untuk tiap evaluasi: [id evaluasi => N] (dihitung dari seluruh evaluasi pegawai). */
+    private function nomorKontrak(): array
+    {
+        return RiwayatKontrak::nomorPerEvaluasi(EvaluasiKontrak::get(['id', 'data_pegawai_id', 'tanggal_habis_kontrak', 'keputusan']));
     }
 
     private function pengguna(): User

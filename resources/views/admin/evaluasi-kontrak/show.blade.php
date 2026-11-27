@@ -81,8 +81,39 @@
                             'Masa kerja' => $masa ? ($masa->y ? $masa->y . ' tahun ' : '') . $masa->m . ' bulan' : null,
                             'Divisi / bagian' => collect([$e->unit_kerja, $k?->jabatan])->filter()->implode(' · '),
                             'Status kerja' => $e->status_kerja,
+                            'Kontrak yang dievaluasi' => 'Kontrak ke-' . $kontrakKe . ($kontrakKe > 1 ? ' (sudah diperpanjang ' . ($kontrakKe - 1) . ' kali)' : ' (kontrak pertama)'),
                             'Periode penilaian' => $bisaIsi ? false : ($periodeMulai?->translatedFormat('d M Y') ?? '-') . ' – ' . $periodeSelesai?->translatedFormat('d M Y'),
                         ], fn ($v) => $v !== false)" />
+                    </section>
+
+                    <section class="hr-detail-bagian" aria-labelledby="judul-riwayat-kontrak">
+                        <h2 class="hr-detail-judul" id="judul-riwayat-kontrak"><i class="bi bi-journal-text" aria-hidden="true"></i>Riwayat Kontrak</h2>
+                        @php $jumlahKontrak = count($riwayatKontrak); $diperpanjang = collect($riwayatKontrak)->filter(fn ($r) => $r['evaluasi']?->keputusan === EK::PERPANJANG)->count(); @endphp
+                        <p class="hr-sel-sub mb-2">
+                            Tercatat <strong>{{ $jumlahKontrak }} kontrak</strong>{{ $diperpanjang ? ', ' . $diperpanjang . ' kali diperpanjang' : '' }} di sistem.
+                            Perpanjangan sebelum sistem ini dipakai tidak ikut terhitung.
+                        </p>
+                        @forelse ($riwayatKontrak as $rk)
+                            <div class="d-flex justify-content-between align-items-start gap-3 py-2 border-top {{ $rk['evaluasi']?->is($e) ? 'bg-body-tertiary rounded px-2' : '' }}">
+                                <div class="min-w-0">
+                                    <div class="fw-semibold">
+                                        Kontrak ke-{{ $rk['ke'] }}
+                                        <x-badge :tone="$rk['tone']">{{ ['selesai' => 'Selesai dievaluasi', 'evaluasi' => 'Sedang dievaluasi', 'berjalan' => 'Berjalan'][$rk['status']] }}</x-badge>
+                                        @if ($rk['evaluasi']?->is($e))<x-badge tone="primary">Evaluasi ini</x-badge>@endif
+                                    </div>
+                                    <span class="hr-sel-sub">
+                                        {{ $rk['mulai']?->translatedFormat('d M Y') ?? 'awal tidak tercatat' }} – {{ $rk['habis']?->translatedFormat('d M Y') }}{{ $rk['bulan'] ? ' · ± ' . $rk['bulan'] . ' bulan' : '' }}
+                                    </span>
+                                    <span class="d-block small mt-1">{{ $rk['keterangan'] }}</span>
+                                    @if ($rk['catatan'])<span class="d-block small text-muted mt-1"><i class="bi bi-chat-left-text me-1" aria-hidden="true"></i>{{ $rk['catatan'] }}</span>@endif
+                                </div>
+                                @if ($rk['evaluasi'] && ! $rk['evaluasi']->is($e))
+                                    <a href="{{ route('admin.evaluasi-kontrak.show', $rk['evaluasi']) }}" class="btn btn-sm btn-outline-secondary text-nowrap">Lihat</a>
+                                @endif
+                            </div>
+                        @empty
+                            <p class="mb-0 text-muted">Belum ada data kontrak.</p>
+                        @endforelse
                     </section>
 
                     <section class="hr-detail-bagian" aria-labelledby="judul-pendukung">

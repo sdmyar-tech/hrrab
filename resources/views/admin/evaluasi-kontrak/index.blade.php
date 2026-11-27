@@ -36,6 +36,7 @@
                 <x-slot:head>
                     <tr>
                         <th>Pegawai</th>
+                        <th>Kontrak Ke-</th>
                         <th>Habis Kontrak</th>
                         <th>Status</th>
                         <th>Penilaian</th>
@@ -52,6 +53,11 @@
                         <td>
                             <a href="{{ route('admin.evaluasi-kontrak.show', $e) }}" class="hr-sel-judul">{{ $e->dataPegawai?->nama_lengkap ?? '-' }}</a>
                             <span class="hr-sel-sub">{{ collect([$e->dataPegawai?->kepegawaian?->jabatan, $e->unit_kerja])->filter()->implode(' · ') }}</span>
+                        </td>
+                        <td>
+                            @php $ke = $nomorKontrak[$e->id] ?? 1; @endphp
+                            <x-badge :tone="$ke > 1 ? 'info' : 'neutral'">Ke-{{ $ke }}</x-badge>
+                            <span class="hr-sel-sub">{{ $ke === 1 ? 'Kontrak pertama' : 'Sudah diperpanjang ' . ($ke - 1) . ' kali' }}</span>
                         </td>
                         <td>
                             <span class="text-nowrap">{{ $e->tanggal_habis_kontrak->translatedFormat('d M Y') }}</span>
@@ -90,7 +96,7 @@
                         </td>
                     </tr>
                 @empty
-                    <x-table-empty :colspan="6" :icon="$adaFilter ? 'bi-search' : ($tab === 'tugas' ? 'bi-check2-circle' : 'bi-clipboard-check')"
+                    <x-table-empty :colspan="7" :icon="$adaFilter ? 'bi-search' : ($tab === 'tugas' ? 'bi-check2-circle' : 'bi-clipboard-check')"
                         :title="$adaFilter ? 'Tidak ada evaluasi yang cocok' : ($tab === 'tugas' ? 'Tidak ada yang menunggu tindakan Anda' : 'Belum ada evaluasi kontrak di sini')">
                         Evaluasi dibuat otomatis {{ \App\Models\EvaluasiKontrak::HARI_SEBELUM }} hari sebelum kontrak pegawai habis.
                         @if ($adaFilter)
